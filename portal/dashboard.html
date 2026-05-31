@@ -148,13 +148,13 @@
             <div id="panel-panoramica" class="tab-panel space-y-6">
                 <div class="border border-white/10 p-6 bg-black/40 relative overflow-hidden">
                     <div class="relative z-10 space-y-2">
-                        <h2 class="font-headline text-xl font-bold uppercase">Benvenuto nel Consiglio Direttivo</h2>
-                        <p class="text-xs text-gray-400 uppercase tracking-wide">Adrenalina Club - Portale Amministrativo Riforma 2026</p>
+                        <h2 id="welcome-title" class="font-headline text-xl font-bold uppercase">Benvenuto nel Portale</h2>
+                        <p id="welcome-subtitle" class="text-xs text-gray-400 uppercase tracking-wide">Adrenalina Club - Portale Atleti e Amministrazione</p>
                     </div>
                 </div>
 
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <!-- Stats Grid (Board members only) -->
+                <div id="board-stats-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     <div class="border border-white/10 p-4 bg-black/20">
                         <p class="text-[10px] text-gray-500 font-headline uppercase">SOCI IN ATTESA DELIBERA</p>
                         <p id="stat-soci-attesa" class="text-2xl font-headline font-black text-primary mt-1">-</p>
@@ -169,8 +169,8 @@
                     </div>
                 </div>
 
-                <!-- Alert Board -->
-                <div class="border border-white/10 p-4 bg-yellow-500/5 border-l-4 border-yellow-500 space-y-2">
+                <!-- Alert Board (Board members only) -->
+                <div id="board-alert-board" class="border border-white/10 p-4 bg-yellow-500/5 border-l-4 border-yellow-500 space-y-2">
                     <p class="font-headline text-xs font-bold text-yellow-500 flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">warning</span> ALERT LEGALI E ADEMPIMENTI
                     </p>
@@ -179,6 +179,21 @@
                         <li>• Verifica Certificazione Medica obbligatoria per atleti tesserati attivi.</li>
                         <li>• Controllo indirizzo PEC dell'Associazione (deve essere PEC dell'ente, non del Presidente).</li>
                     </ul>
+                </div>
+
+                <!-- User Profile / Pending Status Banner (Non-board members / pending) -->
+                <div id="user-status-container" class="hidden space-y-6">
+                    <div class="border border-white/10 p-6 bg-yellow-500/5 border-l-4 border-yellow-500 space-y-4">
+                        <h3 class="font-headline text-sm font-bold text-yellow-500 uppercase tracking-widest flex items-center gap-2">
+                            <span class="material-symbols-outlined">warning</span> DOMANDA IN ATTESA DI DELIBERA
+                        </h3>
+                        <p class="text-xs text-gray-300 uppercase leading-relaxed font-mono">
+                            La tua domanda di ammissione a socio è stata firmata digitalmente con successo ed è in fase di valutazione da parte del Consiglio Direttivo dell'Associazione (Art. 21 CTS).
+                        </p>
+                        <p class="text-xs text-gray-400 uppercase leading-relaxed font-mono">
+                            Non appena la domanda verrà deliberata e ratificata nel libro soci da parte del Presidente, riceverai un'e-mail contenente il link ufficiale per procedere al pagamento della quota sociale e attivare il tuo profilo atleti.
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -425,10 +440,46 @@
                 'vice_presidente': 'Accesso Completo Superiore. Abilitazione completa alla firma delle delibere, inserimento dei verbali, gestione delle quote associative e visualizzazione dei dati anagrafici e tesseramenti.',
                 'segretario': 'Livello Segreteria. Abilitato all\'editing delle anagrafiche dei soci, alla scrittura dei verbali e al pre-controllo dei documenti e dei tesserati.',
                 'tesoriere': 'Livello Amministrazione Finanziaria. Abilitato al tracciamento dei pagamenti, alla riscossione delle quote e alla gestione delle scadenze contabili.',
-                'consigliere': 'Livello Consultivo. Visualizzazione dei registri e dell\'archivio dei verbali. Partecipazione al consiglio con funzioni di sola lettura.'
+                'consigliere': 'Livello Consultivo. Visualizzazione dei registri e dell\'archivio dei verbali. Partecipazione al consiglio con funzioni di sola lettura.',
+                'socio_approvato': 'Livello Socio Attivo. Accesso alle funzionalità atleti e ai tuoi protocolli fisici personali.',
+                'socio_in_attesa': 'Socio in attesa di delibera da parte del Consiglio Direttivo.',
+                'tesserato_esterno': 'Atleta tesserato attivo. Visualizzazione del tuo profilo sportivo.'
             };
 
-            descEl.textContent = descrizioni[userRole] || 'Nessuna autorizzazione speciale configurata per questo ruolo.';
+            descEl.textContent = descrizioni[userRole] || 'Profilo atleta registrato.';
+
+            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
+            
+            if (isBoardMember) {
+                // Consiglio Direttivo: mostra pannelli amministrativi
+                document.getElementById('welcome-title').textContent = "Benvenuto nel Consiglio Direttivo";
+                document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Amministrativo Riforma 2026";
+                document.getElementById('board-stats-grid').classList.remove('hidden');
+                document.getElementById('board-alert-board').classList.remove('hidden');
+                document.getElementById('user-status-container').classList.add('hidden');
+                
+                document.getElementById('tab-btn-soci').classList.remove('hidden');
+                document.getElementById('tab-btn-tesserati').classList.remove('hidden');
+                document.getElementById('tab-btn-quote').classList.remove('hidden');
+                document.getElementById('tab-btn-verbali').classList.remove('hidden');
+            } else {
+                // Utente Generico / Socio in attesa / Tesserato: nasconde funzionalità amministrative
+                document.getElementById('welcome-title').textContent = "Benvenuto in Adrenalina Club";
+                document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Atleti Ufficiale";
+                document.getElementById('board-stats-grid').classList.add('hidden');
+                document.getElementById('board-alert-board').classList.add('hidden');
+                
+                document.getElementById('tab-btn-soci').classList.add('hidden');
+                document.getElementById('tab-btn-tesserati').classList.add('hidden');
+                document.getElementById('tab-btn-quote').classList.add('hidden');
+                document.getElementById('tab-btn-verbali').classList.add('hidden');
+
+                if (userRole === 'socio_in_attesa') {
+                    document.getElementById('user-status-container').classList.remove('hidden');
+                } else {
+                    document.getElementById('user-status-container').classList.add('hidden');
+                }
+            }
 
             // Mostra/Nascondi pulsanti operativi a seconda del ruolo
             if (['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
