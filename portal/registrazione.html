@@ -156,7 +156,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.02</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.03</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -209,7 +209,7 @@
                             <span id="cf_validation_status" class="text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold">Inserisci il codice fiscale per la verifica formale.</span>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                             <div class="group">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI NASCITA</label>
                                 <input type="date" id="data_nascita" class="brutalist-input" required>
@@ -217,6 +217,10 @@
                             <div class="group">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">EMAIL</label>
                                 <input type="email" id="email" class="brutalist-input" placeholder="WARRIOR@ADRENALINA.IT" required>
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PASSWORD *</label>
+                                <input type="password" id="password" class="brutalist-input" placeholder="••••••••" minlength="6" required>
                             </div>
                         </div>
 
@@ -1500,11 +1504,14 @@
                 createdUserSession = { user: { id: userId, email: email }, access_token: jwtToken };
             } else {
                 try {
-                    const randomPassword = crypto.randomUUID() + "Adrenalina2026!";
+                    const chosenPassword = document.getElementById('password').value;
+                    if (!chosenPassword || chosenPassword.length < 6) {
+                        throw new Error("La password deve essere di almeno 6 caratteri.");
+                    }
                     
                     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                         email: email,
-                        password: randomPassword
+                        password: chosenPassword
                     });
 
                     if (authError) throw authError;
