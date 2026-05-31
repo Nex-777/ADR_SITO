@@ -379,9 +379,9 @@
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
                 if (error || !session) {
-                    // Se non autenticato, rimanda alla registrazione (o login)
+                    // Se non autenticato, rimanda al login
                     console.warn("Sessione non trovata. Reindirizzamento...");
-                    window.location.href = "registrazione.html?login=true";
+                    window.location.href = "login.html";
                     return;
                 }
                 
@@ -839,7 +839,7 @@
         // Logout
         async function handleLogout() {
             await supabase.auth.signOut();
-            window.location.href = "registrazione.html?login=true";
+            window.location.href = "login.html";
         }
 
         // Start checking session immediately
