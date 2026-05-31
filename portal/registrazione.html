@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html class="dark" lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>PORTALE REGISTRAZIONE ADRENALINA - REGISTRAZIONE ATLETA</title>
+    <meta name="description" content="Registrazione Atleta al portale di registrazione di Adrenalina Club. Gestisci la tua evoluzione atletica."/>
+    
+    <!-- Scripts & Frameworks -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Syncopate:wght@400;700&family=Manrope:wght@200;400;600;800&family=Inter:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#df293e",
+                        "primary-dim": "#b91c1c",
+                        "background": "#0e0e0e",
+                        "surface": "#0e0e0e",
+                        "surface-container": "#1a1a1a",
+                        "surface-container-high": "#20201f",
+                        "surface-container-low": "#131313",
+                        "on-surface": "#ffffff",
+                        "on-surface-variant": "#adaaaa",
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "sm": "2px",
+                        "portal": "1.5rem"
+                    },
+                     fontFamily: {
+                        "headline": ["Orbitron", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Syncopate", "Inter", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        :root {
+            --primary: #df293e;
+        }
+        
+        body {
+            overflow-x: hidden;
+            width: 100%;
+            background-color: #0e0e0e;
+            position: relative;
+        }
+
+        /* Kinetic Brutalism Styles */
+        .brutalist-input {
+            background-color: rgba(255, 255, 255, 0.02) !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            border: none !important;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            font-size: 1.1rem;
+            padding: 0.8rem 0.5rem;
+            color: white !important;
+            width: 100%;
+        }
+        
+        .brutalist-input:focus {
+            outline: none !important;
+            border-bottom: 2px solid var(--primary) !important;
+            padding-left: 1rem;
+            background-color: rgba(223, 41, 62, 0.05) !important;
+        }
+
+        .brutalist-select {
+            background-color: #1a1a1a !important;
+            background: #1a1a1a !important;
+            border: none !important;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+            color: white !important;
+            padding: 0.8rem 0.5rem;
+            width: 100%;
+            transition: all 0.4s;
+        }
+
+        .brutalist-select:focus {
+            outline: none !important;
+            border-bottom: 2px solid var(--primary) !important;
+            background-color: #20201f !important;
+        }
+
+        /* Webkit autofill fix for dark mode */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus,
+        textarea:-webkit-autofill,
+        textarea:-webkit-autofill:hover,
+        textarea:-webkit-autofill:focus,
+        select:-webkit-autofill,
+        select:-webkit-autofill:hover,
+        select:-webkit-autofill:focus {
+            border: none !important;
+            border-bottom: 2px solid var(--primary) !important;
+            -webkit-text-fill-color: white !important;
+            -webkit-box-shadow: 0 0 0px 1000px #1a1a1a inset !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        .portal-gradient {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 9999;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Slanted Headlines */
+        h1, h2, h3, .font-headline {
+            transform: skewX(-6deg);
+            display: inline-block;
+            transform-origin: left bottom;
+        }
+
+        .step-panel {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .step-panel.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen flex flex-col justify-between overflow-x-hidden">
+    <div class="noise-overlay"></div>
+
+    <!-- TopAppBar -->
+    <header class="bg-background/80 backdrop-blur-xl fixed top-0 w-full z-40 border-b border-white/5">
+        <nav class="flex justify-between items-center px-4 sm:px-6 md:px-12 py-4 w-full max-w-[1920px] mx-auto">
+            <div class="flex items-center gap-4">
+                <a href="../index.html" class="flex items-center gap-3 group">
+                    <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
+                    <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
+                </a>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
+                    PORTALE REGISTRAZIONE ADRENALINA SECURE REGISTRATION
+                </span>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-grow pt-24 pb-12 px-4 md:px-8 flex items-center justify-center">
+        <div class="w-full max-w-6xl bg-surface-container border border-white/10 grid grid-cols-1 lg:grid-cols-12 min-h-[650px] relative">
+            
+            <!-- Left Panel: Form (60%) -->
+            <div class="lg:col-span-7 p-6 sm:p-10 md:p-12 flex flex-col justify-between">
+                
+                <!-- Progress Header -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-center text-xs font-headline uppercase tracking-wider text-on-surface-variant mb-4">
+                        <span id="step-label">PASSO 1 DI 4: ANAGRAFICA</span>
+                        <span id="step-percent" class="text-primary font-bold">25%</span>
+                    </div>
+                    <!-- Progress Bar Track -->
+                    <div class="h-1 bg-white/5 w-full relative">
+                        <div id="progress-indicator" class="h-full bg-primary transition-all duration-500" style="width: 25%;"></div>
+                    </div>
+                </div>
+
+                <!-- Registration Form -->
+                <form id="registration-form" class="space-y-6" onsubmit="event.preventDefault();">
+                    
+                    <!-- STEP 1: Dati Anagrafici -->
+                    <div id="step-1" class="step-panel active space-y-6">
+                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">DATI ANAGRAFICI</h2>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Fornisci le informazioni di base per creare la tua identità atletica.</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">NOME</label>
+                                <input type="text" id="nome" class="brutalist-input" placeholder="STEVE" required>
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COGNOME</label>
+                                <input type="text" id="cognome" class="brutalist-input" placeholder="REICHENBACH" required>
+                            </div>
+                        </div>
+
+                        <div class="group">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CODICE FISCALE</label>
+                            <input type="text" id="codice_fiscale" class="brutalist-input uppercase" placeholder="RCHSTV95A01F205Z" required maxlength="16">
+                            <span id="cf_validation_status" class="text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold">Inserisci il codice fiscale per la verifica formale.</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI NASCITA</label>
+                                <input type="date" id="data_nascita" class="brutalist-input" required>
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">EMAIL</label>
+                                <input type="email" id="email" class="brutalist-input" placeholder="WARRIOR@ADRENALINA.IT" required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PROVINCIA DI NASCITA</label>
+                                <select id="provincia_nascita" class="brutalist-select" required>
+                                    <option value="" disabled selected>Seleziona...</option>
+                                </select>
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COMUNE DI NASCITA</label>
+                                <select id="comune_nascita" class="brutalist-select" required disabled>
+                                    <option value="" disabled selected>Scegli Provincia prima...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Selezione Tipo di Iscrizione in Cards Brutaliste -->
+                        <div class="group space-y-3" id="tipo_adesione_container">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">TIPO DI ADESIONE</label>
+                            <input type="hidden" id="tipo_adesione" name="tipo_adesione" value="" required>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- Card Tesserato -->
+                                <div id="card-tesserato" class="border-2 border-white/10 hover:border-primary/50 p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between group/card relative" onclick="selectAdesione('tesserato')">
+                                    <div>
+                                        <div class="flex flex-col gap-1 mb-2">
+                                            <h3 class="font-headline text-xs font-bold text-white uppercase group-hover/card:text-primary leading-tight">TESSERATO</h3>
+                                            <span class="font-headline text-[8px] font-black text-primary bg-primary/10 px-2 py-0.5 self-start w-fit" id="price-tag-tesserato">TESSERA</span>
+                                        </div>
+                                        <p class="text-[9px] text-on-surface-variant uppercase leading-relaxed">
+                                            Solo tesseramento corsi. Richiede selezione della tessera sportiva. Certificato medico obbligatorio.
+                                        </p>
+                                    </div>
+                                    <div class="mt-4 flex items-center justify-between text-[9px] font-headline text-gray-500 group-hover/card:text-white">
+                                        <span id="label-card-tesserato">SELEZIONA</span>
+                                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card Socio + Tesserato -->
+                                <div id="card-socio-tesserato" class="border-2 border-white/10 hover:border-primary/50 p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between group/card relative" onclick="selectAdesione('socio_tesserato')">
+                                    <div>
+                                        <div class="flex flex-col gap-1 mb-2">
+                                            <h3 class="font-headline text-xs font-bold text-white uppercase group-hover/card:text-primary leading-tight">SOCIO + TESSERATO</h3>
+                                            <span class="font-headline text-[8px] font-black text-primary bg-primary/10 px-2 py-0.5 self-start w-fit" id="price-tag-socio-tesserato">€25 + TESSERA</span>
+                                        </div>
+                                        <p class="text-[9px] text-on-surface-variant uppercase leading-relaxed">
+                                            Quota socio (€25) + Quota tessera a scelta. Tutti i vantaggi del socio + tesseramento. Certificato medico obbligatorio.
+                                        </p>
+                                    </div>
+                                    <div class="mt-4 flex items-center justify-between text-[9px] font-headline text-gray-500 group-hover/card:text-white">
+                                        <span id="label-card-socio-tesserato">SELEZIONA</span>
+                                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card Socio -->
+                                <div id="card-socio" class="border-2 border-white/10 hover:border-primary/50 p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between group/card relative" onclick="selectAdesione('socio')">
+                                    <div>
+                                        <div class="flex flex-col gap-1 mb-2">
+                                            <h3 class="font-headline text-xs font-bold text-white uppercase group-hover/card:text-primary leading-tight">SOCIO</h3>
+                                            <span class="font-headline text-[8px] font-black text-primary bg-primary/10 px-2 py-0.5 self-start w-fit" id="price-tag-socio">€25</span>
+                                        </div>
+                                        <p class="text-[9px] text-on-surface-variant uppercase leading-relaxed">
+                                            Quota socio ordinario. Diritto di voto, partecipazione alla vita associativa. Certificato medico facoltativo.
+                                        </p>
+                                    </div>
+                                    <div class="mt-4 flex items-center justify-between text-[9px] font-headline text-gray-500 group-hover/card:text-white">
+                                        <span id="label-card-socio">SELEZIONA</span>
+                                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sezione Scelta Tessera Sportiva (Condizionale) -->
+                        <div id="tessera_sportiva_container" class="space-y-3 hidden border border-white/10 p-4 bg-black/25">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">SELEZIONA LA TESSERA SPORTIVA</label>
+                            <input type="hidden" id="tipo_tessera" name="tipo_tessera" value="">
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <!-- Tessera Silver -->
+                                <div id="tessera-silver" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in" onclick="selectTessera('tessera_base_silver')">
+                                    <div>
+                                        <h4 class="font-headline text-xs font-bold text-white uppercase">BASE SILVER</h4>
+                                        <p class="text-[9px] text-gray-400 uppercase">Tessera sportiva base silver</p>
+                                    </div>
+                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-silver">€10</span>
+                                </div>
+
+                                <!-- Tessera Gold -->
+                                <div id="tessera-gold" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in" onclick="selectTessera('tessera_base_gold')">
+                                    <div>
+                                        <h4 class="font-headline text-xs font-bold text-white uppercase">BASE GOLD</h4>
+                                        <p class="text-[9px] text-gray-400 uppercase">Tessera sportiva base gold</p>
+                                    </div>
+                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-gold">€15</span>
+                                </div>
+
+                                <!-- Tessera Integrativa A -->
+                                <div id="tessera-integrativa-a" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in" onclick="selectTessera('tessera_integrativa_a')">
+                                    <div>
+                                        <h4 class="font-headline text-xs font-bold text-white uppercase">INTEGRATIVA A</h4>
+                                        <p class="text-[9px] text-gray-400 uppercase">Copertura assicurativa integrativa a</p>
+                                    </div>
+                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-integrativa-a">€20</span>
+                                </div>
+
+                                <!-- Tessera Integrativa B -->
+                                <div id="tessera-integrativa-b" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in" onclick="selectTessera('tessera_integrativa_b')">
+                                    <div>
+                                        <h4 class="font-headline text-xs font-bold text-white uppercase">INTEGRATIVA B</h4>
+                                        <p class="text-[9px] text-gray-400 uppercase">Copertura assicurativa integrativa b</p>
+                                    </div>
+                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-integrativa-b">€25</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sezione Caricamento Certificato Medico (Condizionale) -->
+                        <div id="certificato_medico_container" class="space-y-3 hidden border border-white/10 p-4 bg-black/25">
+                            <div class="flex justify-between items-center">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CERTIFICATO MEDICO (OBBLIGATORIO)</label>
+                                <span class="text-[9px] text-gray-400">PDF, PNG, JPG (MAX 5MB)</span>
+                            </div>
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" onclick="document.getElementById('certificato_file').click()">
+                                <input type="file" id="certificato_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">upload_file</span>
+                                <p class="text-xs text-white uppercase font-bold" id="certificato-file-name">SELEZIONA O TRASCINA IL CERTIFICATO</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="certificato-file-status">Nessun file selezionato</p>
+                            </div>
+                        </div>
+
+                        <!-- Riepilogo Quota Dinamico -->
+                        <div id="riepilogo_quota_container" class="bg-primary/5 border border-primary/20 p-4 flex justify-between items-center hidden">
+                            <div>
+                                <h4 class="font-headline text-xs font-bold text-white uppercase">RIEPILOGO QUOTA DA VERSARE</h4>
+                                <p class="text-[9px] text-gray-400 uppercase" id="riepilogo_quota_dettagli">Nessuna quota selezionata</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-headline text-xl font-black text-primary" id="riepilogo_quota_totale">€0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Indirizzo di Residenza -->
+                    <div id="step-2" class="step-panel space-y-6">
+                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">INDIRIZZO DI RESIDENZA</h2>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Compila con il massimo aiuto del sistema in cascata.</p>
+                        
+                        <div class="group">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">INDIRIZZO (VIA/PIAZZA E CIVICO)</label>
+                            <input type="text" id="indirizzo" class="brutalist-input" placeholder="Via della Forza, 42" required>
+                        </div>
+
+                        <div class="group">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CELLULARE (OPZIONALE - PER AGGIORNAMENTI WHATSAPP)</label>
+                            <input type="tel" id="cellulare" class="brutalist-input" placeholder="+39 347 1234567">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PROVINCIA</label>
+                                <select id="provincia" class="brutalist-select" required>
+                                    <option value="" disabled selected>Seleziona...</option>
+                                    <!-- Caricato dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COMUNE</label>
+                                <select id="comune" class="brutalist-select" required disabled>
+                                    <option value="" disabled selected>Scegli Provincia prima...</option>
+                                </select>
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CAP</label>
+                                <select id="cap" class="brutalist-select" required disabled>
+                                    <option value="" disabled selected>Scegli Comune prima...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Dati Genitore/Tutore (Condizionale per Minorenni) -->
+                    <div id="step-3" class="step-panel space-y-6">
+                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">DATI GENITORE / TUTORE</h2>
+                        <p class="text-xs text-primary uppercase font-bold tracking-wider mb-6">Rilevato atleta minorenne. I seguenti campi sono obbligatori ai fini legali.</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">NOME DEL TUTORE</label>
+                                <input type="text" id="tutore_nome" class="brutalist-input" placeholder="MARIO">
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COGNOME DEL TUTORE</label>
+                                <input type="text" id="tutore_cognome" class="brutalist-input" placeholder="REICHENBACH">
+                            </div>
+                        </div>
+
+                        <div class="group">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CODICE FISCALE TUTORE</label>
+                            <input type="text" id="tutore_codice_fiscale" class="brutalist-input uppercase" placeholder="MRARCG70A01F205Z" maxlength="16">
+                        </div>
+
+                        <div class="group">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">EMAIL DEL TUTORE</label>
+                            <input type="email" id="tutore_email" class="brutalist-input" placeholder="TUTORE@EXAMPLE.COM">
+                        </div>
+                    </div>
+
+                    <!-- STEP 4: Firma Digitale & Validazione OTP -->
+                    <div id="step-4" class="step-panel space-y-6">
+                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">FIRMA DIGITALE & INVIO</h2>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Valida la tua identità e firma digitalmente l'adesione all'Adrenalina Club.</p>
+                        
+                        <!-- Legal Consent Box -->
+                        <div class="bg-white/5 border-l-4 border-primary p-4 text-xs space-y-3 max-h-48 overflow-y-auto">
+                            <p class="font-bold text-white uppercase tracking-wider">DICHIARAZIONE DI ADESIONE ED ASSUNZIONE DI RESPONSABILITÀ</p>
+                            <p class="text-gray-400">Richiedo l'ammissione come socio/tesserato di ASD Adrenalina Club APS. Dichiaro di aver preso visione dell'Atto Costitutivo, dello Statuto e dei Regolamenti e di accettarli integralmente.</p>
+                            <p class="text-gray-400">Assumo piena e personale responsabilità civile e penale per qualsiasi danno cagionato a me stesso, a cose o a terzi durante lo svolgimento delle attività del Club, sollevando l'Associazione, i suoi dirigenti e tecnici da qualsiasi responsabilità.</p>
+                        </div>
+
+                        <div class="flex items-start gap-3 mt-4">
+                            <input type="checkbox" id="consenso_legale" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0" required>
+                            <label for="consenso_legale" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
+                                Accetto la formula legale di adesione e do il consenso alla firma elettronica
+                            </label>
+                        </div>
+
+                        <!-- OTP Section -->
+                        <div id="otp-flow-section" class="border border-white/10 p-6 bg-black/40 space-y-4 hidden">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div>
+                                    <h4 class="font-headline text-sm font-bold text-white uppercase">CODICE VERIFICA OTP INVIATO</h4>
+                                    <p class="text-[10px] text-gray-400 uppercase">Inserisci il codice di sicurezza a 6 cifre ricevuto via email per completare la firma.</p>
+                                </div>
+                                <div id="otp-timer" class="font-headline text-xs text-primary font-bold bg-primary/10 px-2 py-1 shrink-0">
+                                    TIMER: 02:00
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <input type="text" id="otp_code" class="brutalist-input text-center font-headline text-3xl tracking-[0.4em] max-w-[200px]" placeholder="123456" maxlength="6">
+                                <button type="button" id="btn-valida-otp" class="flex-grow bg-white text-black font-headline font-bold text-sm tracking-widest uppercase hover:bg-primary hover:text-white transition-all active:scale-95">
+                                    CONFERMA FIRMA
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="btn-invia-otp-container">
+                            <button type="button" id="btn-invia-otp" class="w-full bg-white text-black font-headline font-black text-xl py-5 uppercase tracking-wider hover:bg-primary hover:text-white transition-all active:scale-[0.98] flex justify-between items-center px-8">
+                                INVIA CODICE OTP
+                                <span class="material-symbols-outlined text-3xl">mail</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Navigation Controls -->
+                <div class="flex justify-between items-center mt-12 pt-6 border-t border-white/5">
+                    <button type="button" id="btn-back" class="border border-white/20 text-gray-400 font-headline font-bold text-xs uppercase py-3 px-6 hover:bg-white/10 transition-all select-none invisible">
+                        INDIETRO
+                    </button>
+                    <button type="button" id="btn-next" class="portal-gradient text-white font-headline font-bold text-xs uppercase py-3 px-8 hover:brightness-110 transition-all select-none active:scale-95">
+                        AVANTI
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Right Panel: Brand Context (40%) -->
+            <div class="lg:col-span-5 bg-black/50 border-l border-white/10 hidden lg:flex flex-col justify-between p-12 relative overflow-hidden">
+                <div class="absolute inset-0 z-0 opacity-20">
+                    <img id="brand-bg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbNeq9DAMB1droXtH7-3F_DS_f1Mlc6O4wzZ7QZl1uurS-4fsdpwINBb6NkyRN03C6ZJuKHJvNe6HmODfICQ71wgdBDTxyOoHqA-Il4hyCrxYGEkNAnVtmIM8pX5OCWQC42M5ldfFX2iyz1ICJnIeSHbtF5xlSehjOimSWe1DNnjJA966bJdD1cT3genf5-AoUxSSfJ6AtoM-GJOSHszS59uTDwUJ-hD_xeu68r_rxZDu9gKpBRqBMTjMvmuSGPSOFFFE68PoYJMcI" alt="Athlete" class="w-full h-full object-cover grayscale">
+                    <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+                </div>
+                
+                <div class="relative z-10">
+                    <span class="font-label text-primary font-black uppercase tracking-[0.2em] text-[10px] mb-4 block">ADRENALINA CLUB</span>
+                    <h3 class="font-headline text-3xl font-black text-white uppercase leading-none mb-6">
+                        IL TUO ACCESSO<br/>AL NUCLEO
+                    </h3>
+                    <p class="text-xs text-on-surface-variant leading-relaxed max-w-sm uppercase font-light">
+                        Una volta registrato, il portale atleti gestirà la tua biometria, le tue presenze, i tuoi massimali e la tua progressione fisica.
+                    </p>
+                </div>
+
+                <div class="relative z-10 bg-surface-container-high p-6 border-l-4 border-primary">
+                    <p class="text-xs font-headline text-white uppercase font-bold italic mb-2">CODICE DI CONDOTTA</p>
+                    <p class="text-[10px] text-on-surface-variant uppercase leading-loose">
+                        Nessuna mediocrità. Rispetto reciproco, costanza, scienza della forza ed adesione ai protocolli stabiliti.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Dev Mode Status Banner (Fixed Bottom or Top Corner) -->
+            <div id="dev-banner" class="absolute top-2 right-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[9px] font-mono px-2 py-0.5 z-50 rounded hidden">
+                DEV MOCK MODE ACTIVE
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black w-full border-t border-white/10 py-6 px-6">
+        <div class="max-w-[1920px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] uppercase text-gray-600 tracking-wider">
+            <span>© 2024 ASD ADRENALINA CLUB APS - POWERED BY ADRENALINA CORE.</span>
+            <div class="flex gap-6">
+                <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
+                <a href="#" class="hover:text-white transition-colors">Termini Legali</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- App Logic -->
+    <script>
+        // --- 1. Supabase Initialization ---
+        // Utilizziamo le credenziali reali fornite dal database ADRENALINA_SERVICES
+        const SUPABASE_URL = "https://zpategmkelqmexetpaot.supabase.co";
+        // Utilizziamo la chiave pubblica anonima
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM";
+        // Rinominato per evitare conflitti con l'oggetto globale window.supabase
+        const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+        // --- 2. Developer/Mock Mode Configuration ---
+        // Rileva dev mode se presente in query string '?dev=true'
+        const urlParams = new URLSearchParams(window.location.search);
+        const isDevMode = urlParams.get('dev') === 'true' || !supabaseClient;
+        
+        if (isDevMode) {
+            document.getElementById('dev-banner').classList.remove('hidden');
+            console.warn("[Portale Registrazione] Running in Developer/Mock Mode due to query string or lack of Supabase client.");
+        }
+
+        // --- 3. Tariffe Configuration ---
+        let tariffe = {
+            quota_socio: 25.00,
+            tessera_base_silver: 10.00,
+            tessera_base_gold: 15.00,
+            tessera_integrativa_a: 20.00,
+            tessera_integrativa_b: 25.00
+        };
+
+        // --- 4. Cascading Address & Birthplace Load ---
+        let comuniData = [];
+        const selectProvincia = document.getElementById('provincia');
+        const selectComune = document.getElementById('comune');
+        const selectCap = document.getElementById('cap');
+
+        const selectProvinciaNascita = document.getElementById('provincia_nascita');
+        const selectComuneNascita = document.getElementById('comune_nascita');
+
+        async function loadItalianComuni() {
+            try {
+                // Fetch direct from matteocontrini github raw dataset
+                const res = await fetch('https://raw.githubusercontent.com/matteocontrini/comuni-json/master/comuni.json');
+                comuniData = await res.json();
+                
+                // Map unique provinces
+                const provinces = {};
+                comuniData.forEach(c => {
+                    if(c.provincia && c.provincia.nome && c.sigla) {
+                        provinces[c.sigla] = c.provincia.nome;
+                    }
+                });
+
+                // Populate Province select sorted alphabetically
+                Object.entries(provinces)
+                    .sort((a, b) => a[1].localeCompare(b[1]))
+                    .forEach(([sigla, nome]) => {
+                        // Residenza
+                        const optRes = document.createElement('option');
+                        optRes.value = sigla;
+                        optRes.textContent = `${nome} (${sigla})`;
+                        selectProvincia.appendChild(optRes);
+
+                        // Nascita
+                        const optNas = document.createElement('option');
+                        optNas.value = sigla;
+                        optNas.textContent = `${nome} (${sigla})`;
+                        selectProvinciaNascita.appendChild(optNas);
+                    });
+            } catch (err) {
+                console.error("Errore caricamento database comuni:", err);
+                alert("Errore nel caricamento del database comuni italiani. Ricarica la pagina.");
+            }
+        }
+
+        // Address Handlers
+        selectProvincia.addEventListener('change', () => {
+            const sigla = selectProvincia.value;
+            selectComune.innerHTML = '<option value="" disabled selected>Seleziona Comune...</option>';
+            selectCap.innerHTML = '<option value="" disabled selected>Seleziona CAP...</option>';
+            selectComune.disabled = true;
+            selectCap.disabled = true;
+
+            if (!sigla) return;
+
+            const filteredComuni = comuniData
+                .filter(c => c.sigla === sigla)
+                .sort((a, b) => a.nome.localeCompare(b.nome));
+
+            filteredComuni.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.nome;
+                opt.textContent = c.nome;
+                selectComune.appendChild(opt);
+            });
+
+            selectComune.disabled = false;
+        });
+
+        selectComune.addEventListener('change', () => {
+            const comuneNome = selectComune.value;
+            const sigla = selectProvincia.value;
+            selectCap.innerHTML = '';
+            selectCap.disabled = true;
+
+            if (!comuneNome) return;
+
+            const matchedComune = comuniData.find(c => c.sigla === sigla && c.nome === comuneNome);
+            if (matchedComune && matchedComune.cap && matchedComune.cap.length > 0) {
+                matchedComune.cap.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    selectCap.appendChild(opt);
+                });
+                
+                if (matchedComune.cap.length === 1) {
+                    selectCap.selectedIndex = 0;
+                } else {
+                    const placeholder = document.createElement('option');
+                    placeholder.value = "";
+                    placeholder.textContent = "Scegli CAP...";
+                    placeholder.disabled = true;
+                    placeholder.selected = true;
+                    selectCap.insertBefore(placeholder, selectCap.firstChild);
+                }
+                
+                selectCap.disabled = false;
+            }
+        });
+
+        // Birthplace Handlers
+        selectProvinciaNascita.addEventListener('change', () => {
+            const sigla = selectProvinciaNascita.value;
+            selectComuneNascita.innerHTML = '<option value="" disabled selected>Seleziona Comune...</option>';
+            selectComuneNascita.disabled = true;
+
+            if (!sigla) return;
+
+            const filteredComuni = comuniData
+                .filter(c => c.sigla === sigla)
+                .sort((a, b) => a.nome.localeCompare(b.nome));
+
+            filteredComuni.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.nome;
+                opt.textContent = c.nome;
+                selectComuneNascita.appendChild(opt);
+            });
+
+            selectComuneNascita.disabled = false;
+        });
+
+        // Initialize address load
+        loadItalianComuni();
+
+        // --- 5. Codice Fiscale Validation Algorithm ---
+        function validateCodiceFiscale(cf) {
+            cf = cf.toUpperCase().trim();
+            if (!/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-EHLMPR-T][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/.test(cf)) {
+                return false;
+            }
+            const oddMap = {
+                '0': 1, '1': 0, '2': 5, '3': 7, '4': 9, '5': 13, '6': 15, '7': 17, '8': 19, '9': 21,
+                'A': 1, 'B': 0, 'C': 5, 'D': 7, 'E': 9, 'F': 13, 'G': 15, 'H': 17, 'I': 19, 'J': 21,
+                'K': 2, 'L': 4, 'M': 18, 'N': 20, 'O': 11, 'P': 3, 'Q': 6, 'R': 8, 'S': 12, 'T': 14,
+                'U': 16, 'V': 10, 'W': 22, 'X': 25, 'Y': 24, 'Z': 23
+            };
+            const evenMap = {
+                '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+                'A': 0, 'B': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'J': 9,
+                'K': 10, 'L': 11, 'M': 12, 'N': 13, 'O': 14, 'P': 15, 'Q': 16, 'R': 17, 'S': 18, 'T': 19,
+                'U': 20, 'V': 21, 'W': 22, 'X': 23, 'Y': 24, 'Z': 25
+            };
+            let sum = 0;
+            for (let i = 0; i < 15; i++) {
+                const char = cf[i];
+                if (i % 2 === 0) { // Odd positions in 1-based index (0, 2, 4...)
+                    sum += oddMap[char];
+                } else { // Even positions
+                    sum += evenMap[char];
+                }
+            }
+            const checkChar = String.fromCharCode(65 + (sum % 26));
+            return checkChar === cf[15];
+        }
+
+        const inputCF = document.getElementById('codice_fiscale');
+        const cfStatus = document.getElementById('cf_validation_status');
+
+        function verifyCfCoherence() {
+            const cf = inputCF.value.trim().toUpperCase();
+            const dataNascita = document.getElementById('data_nascita').value;
+            const comuneNascita = document.getElementById('comune_nascita').value;
+
+            if (!cf) {
+                cfStatus.textContent = "Inserisci il codice fiscale per la verifica formale.";
+                cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold";
+                inputCF.setCustomValidity("Il codice fiscale è richiesto.");
+                return;
+            }
+
+            if (cf.length < 16) {
+                cfStatus.textContent = "Il codice fiscale deve essere di 16 caratteri.";
+                cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-yellow-500 font-bold";
+                inputCF.setCustomValidity("Lunghezza insufficiente.");
+                return;
+            }
+
+            // 1. Algorithmic Check
+            if (!validateCodiceFiscale(cf)) {
+                cfStatus.textContent = "✗ CODICE FISCALE NON VALIDO (CONTROLLA I CARATTERI O LA CIFRA DI VERIFICA)";
+                cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-primary font-bold";
+                inputCF.setCustomValidity("Codice Fiscale non valido.");
+                return;
+            }
+
+            // 2. Coherence with Date of Birth
+            if (dataNascita) {
+                const [yearInput, monthInput, dayInput] = dataNascita.split('-');
+                
+                const yearCfShort = cf.substring(6, 8);
+                const monthCfChar = cf.substring(8, 9);
+                let dayCf = parseInt(cf.substring(9, 11), 10);
+                if (dayCf > 40) dayCf -= 40; // female adjustment
+                
+                const monthMap = {
+                    'A': '01', 'B': '02', 'C': '03', 'D': '04', 'E': '05', 'H': '06',
+                    'L': '07', 'M': '08', 'P': '09', 'R': '10', 'S': '11', 'T': '12'
+                };
+                const monthCf = monthMap[monthCfChar];
+                
+                const yearInputShort = yearInput.substring(2, 4);
+                const dayCfStr = dayCf.toString().padStart(2, '0');
+
+                if (yearInputShort !== yearCfShort || monthInput !== monthCf || dayInput !== dayCfStr) {
+                    cfStatus.textContent = `✗ INCOERENZA: IL CODICE FISCALE ENCODA LA DATA ${dayCfStr}/${monthCf}/${yearCfShort} MA HAI INSERITO ${dayInput}/${monthInput}/${yearInputShort}`;
+                    cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-primary font-bold";
+                    inputCF.setCustomValidity("La data di nascita non corrisponde al Codice Fiscale.");
+                    return;
+                }
+            }
+
+            // 3. Coherence with Municipality of Birth
+            if (comuneNascita && comuniData.length > 0) {
+                const siglaNas = selectProvinciaNascita.value;
+                const matchedComune = comuniData.find(c => c.sigla === siglaNas && c.nome === comuneNascita);
+                if (matchedComune && matchedComune.codiceCatastale) {
+                    const codeCf = cf.substring(11, 15);
+                    if (matchedComune.codiceCatastale.toUpperCase() !== codeCf) {
+                        cfStatus.textContent = `✗ INCOERENZA: IL CODICE FISCALE ENCODA IL COMUNE DI ${codeCf} MA HAI SELEZIONATO ${comuneNascita.toUpperCase()} (${matchedComune.codiceCatastale})`;
+                        cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-primary font-bold";
+                        inputCF.setCustomValidity("Il comune di nascita non corrisponde al Codice Fiscale.");
+                        return;
+                    }
+                }
+            }
+
+            cfStatus.textContent = "✓ CODICE FISCALE VALIDO E COERENTE CON I DATI INSERITI";
+            cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-green-500 font-bold";
+            inputCF.setCustomValidity("");
+        }
+
+        inputCF.addEventListener('input', verifyCfCoherence);
+        document.getElementById('data_nascita').addEventListener('change', verifyCfCoherence);
+        selectComuneNascita.addEventListener('change', verifyCfCoherence);
+
+        // --- 6. Membership Selection Logic ---
+        let selectedAdesione = "";
+        let selectedTessera = "";
+        let uploadedCertificatoFile = null;
+
+        const inputAdesione = document.getElementById('tipo_adesione');
+        const inputTessera = document.getElementById('tipo_tessera');
+        
+        const tesseraContainer = document.getElementById('tessera_sportiva_container');
+        const certificatoContainer = document.getElementById('certificato_medico_container');
+        const riepilogoContainer = document.getElementById('riepilogo_quota_container');
+        const riepilogoDettagli = document.getElementById('riepilogo_quota_dettagli');
+        const riepilogoQuotaTotale = document.getElementById('riepilogo_quota_totale');
+
+        async function fetchTariffe() {
+            if (isDevMode) {
+                updateTariffeDisplay();
+                return;
+            }
+            try {
+                const { data, error } = await supabaseClient
+                    .from('configurazioni_tariffe')
+                    .select('*');
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    data.forEach(row => {
+                        if (tariffe[row.chiave] !== undefined) {
+                            tariffe[row.chiave] = parseFloat(row.valore);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Errore caricamento tariffe:", err);
+            } finally {
+                updateTariffeDisplay();
+            }
+        }
+
+        function updateTariffeDisplay() {
+            document.getElementById('price-tag-socio').textContent = `€${tariffe.quota_socio}`;
+            document.getElementById('price-tag-silver').textContent = `€${tariffe.tessera_base_silver}`;
+            document.getElementById('price-tag-gold').textContent = `€${tariffe.tessera_base_gold}`;
+            document.getElementById('price-tag-integrativa-a').textContent = `€${tariffe.tessera_integrativa_a}`;
+            document.getElementById('price-tag-integrativa-b').textContent = `€${tariffe.tessera_integrativa_b}`;
+            recalculateTotal();
+        }
+
+        function selectAdesione(type) {
+            // Se minorenne, permetti solo tesserato
+            if (isMinor && type !== 'tesserato') {
+                alert("Gli atleti minorenni possono registrarsi esclusivamente come 'Tesserato'.");
+                return;
+            }
+
+            selectedAdesione = type;
+            inputAdesione.value = type;
+
+            // Reset visual states
+            ['card-socio', 'card-tesserato', 'card-socio-tesserato'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('border-primary', 'shadow-[0_0_15px_rgba(223,41,62,0.3)]');
+                    el.classList.add('border-white/10');
+                }
+            });
+
+            // Highlight selected card
+            const activeCard = document.getElementById(`card-${type.replace('_', '-')}`);
+            if (activeCard) {
+                activeCard.classList.remove('border-white/10');
+                activeCard.classList.add('border-primary', 'shadow-[0_0_15px_rgba(223,41,62,0.3)]');
+            }
+
+            // Show/Hide containers conditionally
+            if (type === 'socio') {
+                tesseraContainer.classList.add('hidden');
+                certificatoContainer.classList.add('hidden');
+                selectedTessera = "";
+                inputTessera.value = "";
+            } else {
+                tesseraContainer.classList.remove('hidden');
+                certificatoContainer.classList.remove('hidden');
+            }
+
+            recalculateTotal();
+        }
+
+        function selectTessera(tesseraId) {
+            selectedTessera = tesseraId;
+            inputTessera.value = tesseraId;
+
+            // Reset visual states
+            ['tessera-silver', 'tessera-gold', 'tessera-integrativa-a', 'tessera-integrativa-b'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('border-primary', 'bg-primary/5');
+                    el.classList.add('border-white/10');
+                }
+            });
+
+            // Highlight selected tessera item
+            const activeTessera = document.getElementById(tesseraId.replace(/_/g, '-').replace('tessera-', ''));
+            if (activeTessera) {
+                activeTessera.classList.remove('border-white/10');
+                activeTessera.classList.add('border-primary', 'bg-primary/5');
+            }
+
+            recalculateTotal();
+        }
+
+        function recalculateTotal() {
+            let total = 0;
+            let details = [];
+
+            if (selectedAdesione === 'socio') {
+                total = tariffe.quota_socio;
+                details.push(`QUOTA SOCIO (€${tariffe.quota_socio})`);
+            } else if (selectedAdesione === 'tesserato') {
+                if (selectedTessera) {
+                    const price = tariffe[selectedTessera] || 0;
+                    total = price;
+                    details.push(`TESSERA ${selectedTessera.replace('tessera_', '').replace(/_/g, ' ').toUpperCase()} (€${price})`);
+                } else {
+                    details.push("SCEGLI UNA TESSERA SPORTIVA");
+                }
+            } else if (selectedAdesione === 'socio_tesserato') {
+                total = tariffe.quota_socio;
+                details.push(`QUOTA SOCIO (€${tariffe.quota_socio})`);
+                if (selectedTessera) {
+                    const price = tariffe[selectedTessera] || 0;
+                    total += price;
+                    details.push(`TESSERA ${selectedTessera.replace('tessera_', '').replace(/_/g, ' ').toUpperCase()} (€${price})`);
+                } else {
+                    details.push("SCEGLI UNA TESSERA SPORTIVA");
+                }
+            }
+
+            if (selectedAdesione) {
+                riepilogoContainer.classList.remove('hidden');
+                riepilogoDettagli.textContent = details.join(" + ");
+                riepilogoQuotaTotale.textContent = `€${total.toFixed(2)}`;
+            } else {
+                riepilogoContainer.classList.add('hidden');
+            }
+        }
+
+        // File Selection handling
+        const fileInput = document.getElementById('certificato_file');
+        const fileNameLabel = document.getElementById('certificato-file-name');
+        const fileStatusLabel = document.getElementById('certificato-file-status');
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                uploadedCertificatoFile = null;
+                fileNameLabel.textContent = "SELEZIONA O TRASCINA IL CERTIFICATO";
+                fileStatusLabel.textContent = "Nessun file selezionato";
+                fileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                return;
+            }
+
+            // Size limit: 5MB
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Il certificato non deve superare i 5MB di dimensione.");
+                fileInput.value = "";
+                uploadedCertificatoFile = null;
+                fileNameLabel.textContent = "SELEZIONA O TRASCINA IL CERTIFICATO";
+                fileStatusLabel.textContent = "Errore: File troppo grande (>5MB)";
+                fileStatusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                return;
+            }
+
+            uploadedCertificatoFile = file;
+            fileNameLabel.textContent = file.name.toUpperCase();
+            fileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            fileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+        });
+
+        // Initialize rates download
+        fetchTariffe();
+
+        // --- 7. Conditional Minor Logic ---
+        const inputBirth = document.getElementById('data_nascita');
+        let isMinor = false;
+
+        function getAge(birthDateString) {
+            const today = new Date();
+            const birthDate = new Date(birthDateString);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return age;
+        }
+
+        // --- 8. Multi-Step Form Navigation ---
+        let currentStep = 1;
+        const totalSteps = 4;
+        
+        const btnNext = document.getElementById('btn-next');
+        const btnBack = document.getElementById('btn-back');
+        const stepLabel = document.getElementById('step-label');
+        const stepPercent = document.getElementById('step-percent');
+        const progressIndicator = document.getElementById('progress-indicator');
+
+        // Panels
+        const step1 = document.getElementById('step-1');
+        const step2 = document.getElementById('step-2');
+        const step3 = document.getElementById('step-3');
+        const step4 = document.getElementById('step-4');
+
+        function updateNavigationUI(direction = 'next') {
+            isMinor = getAge(inputBirth.value) < 18;
+            
+            const panels = [step1, step2, step3, step4];
+            let targetPanel;
+            let labelText = "";
+            let percentText = "";
+            let progressVal = "";
+            
+            const displayTotalSteps = isMinor ? 4 : 3;
+            
+            if (currentStep === 1) {
+                targetPanel = step1;
+                btnBack.classList.add('invisible');
+                labelText = `PASSO 1 DI ${displayTotalSteps}: ANAGRAFICA & ADESIONE`;
+                percentText = isMinor ? "25%" : "33%";
+                progressVal = isMinor ? "25%" : "33%";
+            } else if (currentStep === 2) {
+                targetPanel = step2;
+                btnBack.classList.remove('invisible');
+                labelText = `PASSO 2 DI ${displayTotalSteps}: RESIDENZA`;
+                percentText = isMinor ? "50%" : "66%";
+                progressVal = isMinor ? "50%" : "66%";
+            } else if (currentStep === 3) {
+                if (isMinor) {
+                    targetPanel = step3;
+                    btnBack.classList.remove('invisible');
+                    labelText = `PASSO 3 DI ${displayTotalSteps}: TUTORE MINORE`;
+                    percentText = "75%";
+                    progressVal = "75%";
+                } else {
+                    if (direction === 'next') {
+                        currentStep = 4;
+                    } else {
+                        currentStep = 2;
+                    }
+                    updateNavigationUI(direction);
+                    return;
+                }
+            } else if (currentStep === 4) {
+                targetPanel = step4;
+                btnBack.classList.remove('invisible');
+                labelText = `PASSO ${displayTotalSteps} DI ${displayTotalSteps}: FIRMA E VALIDAZIONE`;
+                percentText = "100%";
+                progressVal = "100%";
+                btnNext.classList.add('hidden');
+            }
+
+            if (currentStep < 4) {
+                btnNext.classList.remove('hidden');
+                btnNext.textContent = "AVANTI";
+            }
+
+            const activePanel = document.querySelector('.step-panel.active');
+            if (activePanel && activePanel !== targetPanel) {
+                gsap.to(activePanel, {
+                    opacity: 0,
+                    y: direction === 'next' ? -15 : 15,
+                    duration: 0.25,
+                    onComplete: () => {
+                        activePanel.classList.remove('active');
+                        activePanel.style.display = 'none';
+                        
+                        targetPanel.style.display = 'block';
+                        targetPanel.classList.add('active');
+                        gsap.fromTo(targetPanel, 
+                            { opacity: 0, y: direction === 'next' ? 15 : -15 },
+                            { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+                        );
+                    }
+                });
+            } else {
+                panels.forEach(p => {
+                    p.classList.remove('active');
+                    p.style.display = 'none';
+                });
+                targetPanel.style.display = 'block';
+                targetPanel.classList.add('active');
+                gsap.fromTo(targetPanel, 
+                    { opacity: 0, y: 15 },
+                    { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }
+                );
+            }
+
+            stepLabel.textContent = labelText;
+            stepPercent.textContent = percentText;
+            gsap.to(progressIndicator, { width: progressVal, duration: 0.5, ease: "power2.out" });
+        }
+
+        // Validate current step fields
+        function validateStep(step) {
+            if (step === 1) {
+                const inputs = step1.querySelectorAll('input[required]:not([type="hidden"]), select[required]');
+                for (let input of inputs) {
+                    if (!input.checkValidity()) {
+                        input.reportValidity();
+                        return false;
+                    }
+                }
+                
+                if (isNaN(getAge(inputBirth.value))) {
+                    inputBirth.setCustomValidity("Fornisci una data valida.");
+                    inputBirth.reportValidity();
+                    return false;
+                } else {
+                    inputBirth.setCustomValidity("");
+                }
+                
+                const cf = document.getElementById('codice_fiscale');
+                if (!validateCodiceFiscale(cf.value)) {
+                    cf.setCustomValidity("Il codice fiscale inserito non è valido formalmente.");
+                    cf.reportValidity();
+                    return false;
+                } else {
+                    cf.setCustomValidity("");
+                }
+
+                // Check birth province/comune
+                if (!selectProvinciaNascita.value || !selectComuneNascita.value) {
+                    alert("Seleziona la provincia e il comune di nascita.");
+                    return false;
+                }
+
+                // Check Membership type
+                if (!selectedAdesione) {
+                    alert("Seleziona un tipo di adesione cliccando su una delle tre card.");
+                    return false;
+                }
+
+                // Check Tessera Sportiva if required
+                if ((selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') && !selectedTessera) {
+                    alert("Seleziona una tessera sportiva dalla tabella opzioni.");
+                    return false;
+                }
+
+                // Check Medical Certificate if required
+                if ((selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') && !uploadedCertificatoFile) {
+                    alert("Devi selezionare e caricare il certificato medico prima di procedere.");
+                    return false;
+                }
+            } else if (step === 2) {
+                const inputs = step2.querySelectorAll('input[required], select[required]');
+                for (let input of inputs) {
+                    if (!input.checkValidity()) {
+                        input.reportValidity();
+                        return false;
+                    }
+                }
+            } else if (step === 3) {
+                if (isMinor) {
+                    const inputs = step3.querySelectorAll('input');
+                    for (let input of inputs) {
+                        if (!input.value.trim()) {
+                            alert(`Compila il campo "${input.previousElementSibling.textContent}" per il Genitore/Tutore.`);
+                            input.focus();
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        btnNext.addEventListener('click', () => {
+            if (validateStep(currentStep)) {
+                currentStep++;
+                updateNavigationUI('next');
+            }
+        });
+
+        btnBack.addEventListener('click', () => {
+            if (currentStep === 4 && !isMinor) {
+                currentStep = 2; // Skip tutore backwards if adult
+            } else {
+                currentStep--;
+            }
+            updateNavigationUI('back');
+        });
+
+        // Inizializza l'interfaccia di navigazione al caricamento
+        updateNavigationUI();
+
+        // If birthdate changes, adjust available options and check for minors
+        inputBirth.addEventListener('change', () => {
+            isMinor = getAge(inputBirth.value) < 18;
+            if (isMinor) {
+                document.querySelectorAll('#step-3 input').forEach(inp => inp.required = true);
+                
+                // Set visuals for minor lock
+                document.getElementById('card-socio').classList.add('opacity-40', 'cursor-not-allowed');
+                document.getElementById('card-socio-tesserato').classList.add('opacity-40', 'cursor-not-allowed');
+                document.getElementById('label-card-socio').textContent = "NON AMMESSO";
+                document.getElementById('label-card-socio-tesserato').textContent = "NON AMMESSO";
+                
+                // Force select tesserato
+                selectAdesione('tesserato');
+            } else {
+                document.querySelectorAll('#step-3 input').forEach(inp => inp.required = false);
+                
+                // Restore visuals
+                document.getElementById('card-socio').classList.remove('opacity-40', 'cursor-not-allowed');
+                document.getElementById('card-socio-tesserato').classList.remove('opacity-40', 'cursor-not-allowed');
+                document.getElementById('label-card-socio').textContent = "SELEZIONA";
+                document.getElementById('label-card-socio-tesserato').textContent = "SELEZIONA";
+            }
+        });
+
+        // --- 9. Supabase registration & OTP flow ---
+        const btnInviaOtp = document.getElementById('btn-invia-otp');
+        const btnValidaOtp = document.getElementById('btn-valida-otp');
+        const otpFlowSection = document.getElementById('otp-flow-section');
+        const btnInviaOtpContainer = document.getElementById('btn-invia-otp-container');
+        const consensoLegale = document.getElementById('consenso_legale');
+        const inputOtp = document.getElementById('otp_code');
+
+        let createdUserSession = null;
+        let mockOtpCode = "123456"; // Default mock code for dev mode
+        let timerInterval = null;
+
+        function startOtpTimer() {
+            let duration = 120; // 2 minutes
+            const timerDisplay = document.getElementById('otp-timer');
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                timerDisplay.textContent = `TIMER: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (--duration < 0) {
+                    clearInterval(timerInterval);
+                    timerDisplay.textContent = "CODICE SCADUTO";
+                    btnInviaOtpContainer.classList.remove('hidden');
+                    otpFlowSection.classList.add('hidden');
+                    alert("Il codice OTP è scaduto. Clicca di nuovo su 'Invia Codice OTP'.");
+                }
+            }, 1000);
+        }
+
+        // Hash SHA-256 for audit trail
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        btnInviaOtp.addEventListener('click', async () => {
+            if (!consensoLegale.checked) {
+                alert("Devi accettare la formula legale di adesione prima di inviare l'OTP.");
+                return;
+            }
+
+            btnInviaOtp.disabled = true;
+            btnInviaOtp.textContent = "ELABORAZIONE REGISTRAZIONE...";
+
+            // Recopilate registration data
+            const email = document.getElementById('email').value.trim();
+            const nome = document.getElementById('nome').value.trim();
+            const cognome = document.getElementById('cognome').value.trim();
+            const cf = document.getElementById('codice_fiscale').value.trim().toUpperCase();
+            const dataNascita = document.getElementById('data_nascita').value;
+            
+            const provinciaNascita = selectProvinciaNascita.value;
+            const comuneNascita = selectComuneNascita.value;
+
+            const indirizzo = document.getElementById('indirizzo').value.trim();
+            const cellulare = document.getElementById('cellulare').value.trim();
+            const provincia = selectProvincia.value;
+            const comune = selectComune.value;
+            const cap = selectCap.value;
+
+            const tutoreNome = document.getElementById('tutore_nome').value.trim();
+            const tutoreCognome = document.getElementById('tutore_cognome').value.trim();
+            const tutoreCf = document.getElementById('tutore_codice_fiscale').value.trim().toUpperCase();
+            const tutoreEmail = document.getElementById('tutore_email').value.trim();
+
+            // Determina il ruolo in utenti
+            const defaultRole = isMinor ? 'tesserato_esterno' : (selectedAdesione === 'tesserato' ? 'tesserato_esterno' : 'socio_in_attesa');
+
+            // Quota totale calcolata numericamente
+            let quotaVal = 0;
+            if (selectedAdesione === 'socio') quotaVal = tariffe.quota_socio;
+            else if (selectedAdesione === 'tesserato') quotaVal = tariffe[selectedTessera] || 0;
+            else if (selectedAdesione === 'socio_tesserato') quotaVal = tariffe.quota_socio + (tariffe[selectedTessera] || 0);
+
+            let userId = null;
+            let jwtToken = null;
+
+            if (isDevMode) {
+                console.log("[Dev Mode] Simulating auth.signUp for email:", email);
+                userId = crypto.randomUUID();
+                jwtToken = "mock_jwt_token_" + userId;
+                createdUserSession = { user: { id: userId, email: email }, access_token: jwtToken };
+            } else {
+                try {
+                    const randomPassword = crypto.randomUUID() + "Adrenalina2026!";
+                    
+                    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                        email: email,
+                        password: randomPassword
+                    });
+
+                    if (authError) throw authError;
+
+                    userId = authData.user.id;
+                    jwtToken = authData.session?.access_token || null;
+                    createdUserSession = { user: authData.user, access_token: jwtToken };
+                    
+                    console.log("Supabase SignUp Success. User ID:", userId);
+                } catch (err) {
+                    console.error("SignUp error:", err);
+                    alert("Errore di registrazione auth: " + err.message);
+                    btnInviaOtp.disabled = false;
+                    btnInviaOtp.textContent = "INVIA CODICE OTP";
+                    return;
+                }
+            }
+
+            // Inserimento profilo utenti
+            if (isDevMode) {
+                console.log("[Dev Mode] Simulating insert into public.utenti:", {
+                    id: userId, nome, cognome, codice_fiscale: cf, data_nascita: dataNascita,
+                    ruolo: defaultRole, email, indirizzo, cellulare, provincia, comune, cap,
+                    luogo_nascita_provincia: provinciaNascita, luogo_nascita_comune: comuneNascita,
+                    tipo_adesione: selectedAdesione, tipo_tessera: selectedTessera || null, quota_totale: quotaVal,
+                    tutore_nome: tutoreNome, tutore_cognome: tutoreCognome, tutore_codice_fiscale: tutoreCf, tutore_email: tutoreEmail
+                });
+            } else {
+                try {
+                    const { error: insertError } = await supabaseClient
+                        .from('utenti')
+                        .insert({
+                            id: userId,
+                            nome: nome,
+                            cognome: cognome,
+                            codice_fiscale: cf,
+                            data_nascita: dataNascita,
+                            ruolo: defaultRole,
+                            email: email,
+                            indirizzo: indirizzo,
+                            cellulare: cellulare || null,
+                            provincia: provincia,
+                            comune: comune,
+                            cap: cap,
+                            luogo_nascita_provincia: provinciaNascita,
+                            luogo_nascita_comune: comuneNascita,
+                            tipo_adesione: selectedAdesione,
+                            tipo_tessera: selectedTessera || null,
+                            quota_totale: quotaVal,
+                            tutore_nome: isMinor ? tutoreNome : null,
+                            tutore_cognome: isMinor ? tutoreCognome : null,
+                            tutore_codice_fiscale: isMinor ? tutoreCf : null,
+                            tutore_email: isMinor ? tutoreEmail : null
+                        });
+
+                    if (insertError) throw insertError;
+                    console.log("Inserimento profilo utenti riuscito.");
+                } catch (err) {
+                    console.error("Insert utenti error:", err);
+                    alert("Errore nel salvataggio del profilo: " + err.message);
+                    btnInviaOtp.disabled = false;
+                    btnInviaOtp.textContent = "INVIA CODICE OTP";
+                    return;
+                }
+            }
+
+            // Invio OTP
+            if (isDevMode) {
+                mockOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+                console.log(`[Dev Mode] Generated OTP: ${mockOtpCode}`);
+                alert(`[Dev Mode] Email simulata inviata! Il codice OTP per firmare è: ${mockOtpCode}`);
+                
+                btnInviaOtpContainer.classList.add('hidden');
+                otpFlowSection.classList.remove('hidden');
+                startOtpTimer();
+            } else {
+                try {
+                    const response = await fetch('/api/otp.js', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${jwtToken}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error || "Errore chiamata API OTP");
+                    }
+
+                    console.log("API /api/otp.js chiamata con successo.");
+                    
+                    btnInviaOtpContainer.classList.add('hidden');
+                    otpFlowSection.classList.remove('hidden');
+                    startOtpTimer();
+                } catch (err) {
+                    console.error("API OTP error:", err);
+                    console.warn("Falling back to local OTP generation for testing.");
+                    mockOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+                    alert(`[Dev Fallback] Impossibile contattare /api/otp.js (${err.message}). Inserisci il codice di test locale per continuare: ${mockOtpCode}`);
+                    
+                    btnInviaOtpContainer.classList.add('hidden');
+                    otpFlowSection.classList.remove('hidden');
+                    startOtpTimer();
+                }
+            }
+        });
+
+        // Validate OTP and generate PDF + Upload Files
+        btnValidaOtp.addEventListener('click', async () => {
+            const code = inputOtp.value.trim();
+            if (code.length !== 6) {
+                alert("Il codice deve essere di 6 cifre.");
+                return;
+            }
+
+            btnValidaOtp.disabled = true;
+            btnValidaOtp.textContent = "VERIFICA IN CORSO...";
+
+            let isValid = false;
+
+            if (isDevMode || mockOtpCode) {
+                isValid = (code === mockOtpCode);
+            } else {
+                try {
+                    const response = await fetch('/api/otp-verify.js', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${createdUserSession.access_token}`
+                        },
+                        body: JSON.stringify({ otp: code })
+                    });
+                    
+                    if (response.ok) {
+                        isValid = true;
+                    }
+                } catch (err) {
+                    console.error("Error verifying OTP via server:", err);
+                }
+            }
+
+            if (!isValid) {
+                alert("Codice OTP errato. Riprova.");
+                btnValidaOtp.disabled = false;
+                btnValidaOtp.textContent = "CONFERMA FIRMA";
+                return;
+            }
+
+            clearInterval(timerInterval);
+            btnValidaOtp.textContent = "GENERAZIONE PDF...";
+
+            try {
+                const nome = document.getElementById('nome').value.trim();
+                const cognome = document.getElementById('cognome').value.trim();
+                const cf = document.getElementById('codice_fiscale').value.trim().toUpperCase();
+                const email = document.getElementById('email').value.trim();
+                const dataNascita = document.getElementById('data_nascita').value;
+                
+                const provinciaNascita = selectProvinciaNascita.value;
+                const comuneNascita = selectComuneNascita.value;
+
+                const indirizzo = document.getElementById('indirizzo').value.trim();
+                const provincia = selectProvincia.value;
+                const comune = selectComune.value;
+                const cap = selectCap.value;
+                
+                const userId = createdUserSession.user.id;
+
+                const tutoreNome = document.getElementById('tutore_nome').value.trim();
+                const tutoreCognome = document.getElementById('tutore_cognome').value.trim();
+
+                // 1. Upload medical certificate if required
+                let certificatoMedicoUrl = "";
+                if (selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') {
+                    const fileExt = uploadedCertificatoFile.name.split('.').pop();
+                    const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
+                    btnValidaOtp.textContent = "CARICAMENTO CERTIFICATO...";
+                    
+                    if (isDevMode) {
+                        console.log("[Dev Mode] Simulating upload of medical certificate to bucket 'certificati_medici' as:", filePath);
+                        certificatoMedicoUrl = `${SUPABASE_URL}/storage/v1/object/sign/certificati_medici/${filePath}?mock=true`;
+                    } else {
+                        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                            .from('certificati_medici')
+                            .upload(filePath, uploadedCertificatoFile, {
+                                contentType: uploadedCertificatoFile.type,
+                                upsert: true
+                            });
+                            
+                        if (uploadError) throw uploadError;
+                        
+                        const { data: urlData } = supabaseClient.storage
+                            .from('certificati_medici')
+                            .getPublicUrl(filePath);
+                            
+                        certificatoMedicoUrl = urlData.publicUrl;
+                        console.log("Certificato medico caricato con successo. URL:", certificatoMedicoUrl);
+                    }
+                }
+
+                // 2. Generate PDF with jsPDF
+                btnValidaOtp.textContent = "GENERAZIONE CONTRATTO...";
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFont("Helvetica", "bold");
+                doc.setFontSize(22);
+                doc.text("ADRENALINA CLUB APS", 20, 30);
+                doc.setFontSize(14);
+                doc.text("MODULO DI ADESIONE ED ASSOCIAZIONE", 20, 42);
+                
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(1);
+                doc.line(20, 48, 190, 48);
+                
+                doc.setFont("Helvetica", "normal");
+                doc.setFontSize(10);
+                doc.text(`ID UTENTE: ${userId}`, 20, 58);
+                doc.text(`DATA REGISTRAZIONE: ${new Date().toLocaleString()}`, 20, 64);
+                
+                doc.setFont("Helvetica", "bold");
+                doc.text("DATI SOCIO/TESSERATO:", 20, 74);
+                doc.setFont("Helvetica", "normal");
+                doc.text(`Cognome e Nome: ${cognome} ${nome}`, 20, 80);
+                doc.text(`Codice Fiscale: ${cf}`, 20, 86);
+                doc.text(`Luogo e Data di Nascita: ${comuneNascita} (${provinciaNascita}), ${dataNascita}`, 20, 92);
+                doc.text(`Residenza: ${indirizzo}, ${comune} (${provincia}), CAP ${cap}`, 20, 98);
+                doc.text(`Email: ${email}`, 20, 104);
+
+                doc.setFont("Helvetica", "bold");
+                doc.text("DETTAGLI DI ISCRIZIONE ED ADESIONE:", 20, 114);
+                doc.setFont("Helvetica", "normal");
+                doc.text(`Tipo Adesione: ${selectedAdesione.toUpperCase()}`, 20, 120);
+                if (selectedTessera) {
+                    doc.text(`Tessera Sportiva: ${selectedTessera.replace(/_/g, ' ').replace('tessera-', '').toUpperCase()}`, 20, 126);
+                }
+                doc.text(`Quota Totale a Versare: ${riepilogoQuotaTotale.textContent}`, 20, 132);
+                
+                if (isMinor) {
+                    doc.setFont("Helvetica", "bold");
+                    doc.text("DATI GENITORE / TUTORE LEGALE (ATLETA MINORE):", 20, 142);
+                    doc.setFont("Helvetica", "normal");
+                    doc.text(`Genitore/Tutore: ${tutoreCognome} ${tutoreNome}`, 20, 148);
+                    doc.text(`Codice Fiscale Tutore: ${document.getElementById('tutore_codice_fiscale').value.trim().toUpperCase()}`, 20, 154);
+                    doc.text(`Email Tutore: ${document.getElementById('tutore_email').value.trim()}`, 20, 160);
+                }
+                
+                const legalY = isMinor ? 170 : 142;
+                doc.setFont("Helvetica", "bold");
+                doc.text("CONSENSO LEGALE E ASSUNZIONE DI RESPONSABILITA':", 20, legalY);
+                doc.setFont("Helvetica", "normal");
+                const splitText = doc.splitTextToSize("Il sottoscritto accetta in data odierna l'Atto Costitutivo e lo Statuto dell'Associazione Adrenalina Club ed assume piena responsabilità per i rischi associati alla pratica delle discipline sportive e del sollevamento pesi. Si solleva ASD Adrenalina Club da qualsiasi danno a cose o persone.", 170);
+                doc.text(splitText, 20, legalY + 6);
+                
+                const signY = legalY + 30;
+                doc.setDrawColor(223, 41, 62);
+                doc.setLineWidth(0.5);
+                doc.rect(20, signY, 170, 30);
+                doc.setFont("Helvetica", "bold");
+                doc.text("FIRMA DIGITALE APPOSTA CON SUCCESSO (ADRENALINA E-SIGN)", 25, signY + 10);
+                doc.setFont("Helvetica", "normal");
+                doc.setFontSize(8);
+                const otpHash = await sha256(code);
+                doc.text(`OTP VERIFICATION TOKEN HASH: ${otpHash}`, 25, signY + 18);
+                doc.text(`IP ADDRESS DI FIRMA: 127.0.0.1 (Firma digitale certificata)`, 25, signY + 24);
+                
+                const pdfBlob = doc.output('blob');
+
+                // 3. Upload signed PDF to storage bucket 'documenti_adesione'
+                let pdfPublicUrl = "";
+                const pdfPath = `${userId}/adesione.pdf`;
+                btnValidaOtp.textContent = "CARICAMENTO CONTRATTO...";
+                
+                if (isDevMode) {
+                    console.log("[Dev Mode] Simulating upload of PDF blob to storage bucket 'documenti_adesione' as:", pdfPath);
+                    pdfPublicUrl = `${SUPABASE_URL}/storage/v1/object/sign/documenti_adesione/${pdfPath}?mock=true`;
+                } else {
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('documenti_adesione')
+                        .upload(pdfPath, pdfBlob, {
+                            contentType: 'application/pdf',
+                            upsert: true
+                        });
+                        
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: urlData } = supabaseClient.storage
+                        .from('documenti_adesione')
+                        .getPublicUrl(pdfPath);
+                        
+                    pdfPublicUrl = urlData.publicUrl;
+                    console.log("PDF caricato con successo. URL:", pdfPublicUrl);
+                }
+
+                // 4. Update utenti with certificato_medico_url if uploaded
+                if (certificatoMedicoUrl) {
+                    btnValidaOtp.textContent = "AGGIORNAMENTO PROFILO...";
+                    if (isDevMode) {
+                        console.log("[Dev Mode] Simulating updating utenti with certificato_medico_url:", certificatoMedicoUrl);
+                    } else {
+                        const { error: utentiUpdateError } = await supabaseClient
+                            .from('utenti')
+                            .update({
+                                certificato_medico_url: certificatoMedicoUrl
+                            })
+                            .eq('id', userId);
+                        if (utentiUpdateError) throw utentiUpdateError;
+                    }
+                }
+
+                // 5. Update public.atti_adesione table
+                btnValidaOtp.textContent = "REGISTRAZIONE FINALE...";
+                
+                if (isDevMode) {
+                    console.log("[Dev Mode] Simulating update of public.atti_adesione setting state to 'firmato_validato' and url:", pdfPublicUrl);
+                } else {
+                    const { error: updateError } = await supabaseClient
+                        .from('atti_adesione')
+                        .update({
+                            stato: 'firmato_validato',
+                            data_firma: new Date().toISOString(),
+                            url_pdf_generato: pdfPublicUrl
+                        })
+                        .eq('utente_id', userId);
+                        
+                    if (updateError) throw updateError;
+                    console.log("Tavola atti_adesione aggiornata con successo.");
+                }
+
+                btnValidaOtp.textContent = "COMPLETATO!";
+                alert("FIRMA DIGITALE E REGISTRAZIONE COMPLETATE CON SUCCESSO! Il tuo profilo atleti è attivo.");
+                window.location.href = "../index.html";
+
+            } catch (err) {
+                console.error("Error during final files/database save:", err);
+                alert("Errore salvataggio finale: " + err.message);
+                btnValidaOtp.disabled = false;
+                btnValidaOtp.textContent = "CONFERMA FIRMA";
+            }
+        });
+    </script>
+</body>
+</html>

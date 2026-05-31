@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html class="dark" lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ADRENALINA CLUB - FUORI DALLE REGOLE</title>
+    <meta name="description" content="Adrenalina Club: Elite Functional Training, Athletic Community e Scherma Antica. Sfidiamo la mediocrità con la scienza della forza. Registrati ed entra nel nostro portale atleti."/>
+    
+    <!-- Scripts & Frameworks -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.33/dist/lenis.min.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Syncopate:wght@400;700&family=Manrope:wght@200;400;600;800&family=Inter:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#df293e",
+                        "primary-dim": "#b91c1c",
+                        "background": "#0e0e0e",
+                        "surface": "#0e0e0e",
+                        "surface-container": "#1a1a1a",
+                        "surface-container-high": "#20201f",
+                        "surface-container-low": "#131313",
+                        "on-surface": "#ffffff",
+                        "on-surface-variant": "#adaaaa",
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "sm": "2px",
+                        "portal": "1.5rem"
+                    },
+                     fontFamily: {
+                        "headline": ["Orbitron", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Syncopate", "Inter", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+    
+    <style>
+        :root {
+            --primary: #df293e;
+        }
+        
+        body {
+            overflow-x: hidden;
+            width: 100%;
+            background-color: #0e0e0e;
+            position: relative;
+        }
+
+        main {
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Kinetic Brutalism Custom Styles */
+        .brutalist-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            font-size: 1.5rem;
+            padding: 1rem 0;
+            color: white;
+            width: 100%;
+        }
+        
+        .brutalist-input:focus {
+            outline: none;
+            border-bottom: 2px solid var(--primary);
+            padding-left: 1rem;
+            background: rgba(255, 141, 141, 0.05);
+        }
+
+        .hero-mask {
+            background: linear-gradient(to bottom, rgba(14, 14, 14, 0.2), rgba(14, 14, 14, 1));
+        }
+
+        .portal-gradient {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 9999;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0e0e0e; }
+        ::-webkit-scrollbar-thumb { background: #333; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        .reveal-header { opacity: 0; transform: translateY(30px) skewX(-10deg); }
+        .reveal-text { opacity: 0; transform: translateY(20px); }
+        
+        .kinetic-skew:hover { transform: skewX(-2deg) scale(1.02); }
+
+        /* Slanted Headlines */
+        h1, h2, h3, .font-headline {
+            transform: skewX(-10deg);
+            display: inline-block;
+            transform-origin: left bottom;
+            max-width: 100%;
+        }
+
+        /* Responsive Headlines refined for elite impact without overflow */
+        .header-scale-lg { font-size: clamp(2.5rem, 8vw, 9rem); line-height: 0.85; }
+        .header-scale-xl { font-size: clamp(3.5rem, 10vw, 11rem); line-height: 0.85; }
+
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* ADR Hexagon Watermark */
+        .adr-watermark {
+            position: fixed;
+            bottom: -20%;
+            right: -10%;
+            width: 80vw;
+            max-width: 800px;
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: -1;
+            animation: spin-slow 120s linear infinite;
+        }
+
+        /* Mobile Menu Overlay */
+        #mobile-menu-overlay {
+            clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+            transition: clip-path 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+        }
+        #mobile-menu-overlay.active {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+        }
+
+        /* Glitch Effect */
+        .glitch-hover:hover {
+            animation: glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); filter: drop-shadow(2px 0 #fff); }
+            40% { transform: translate(-2px, -2px); filter: drop-shadow(-2px 0 #df293e); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary max-w-[100vw] overflow-x-hidden">
+    <div class="noise-overlay"></div>
+    <img src="assets/logo_icon.png" alt="" class="adr-watermark hidden md:block">
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu-overlay" class="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[100] flex flex-col justify-center items-center p-8 lg:hidden">
+        <button id="close-menu" class="absolute top-8 right-8 text-white hover:text-primary">
+            <span class="material-symbols-outlined text-5xl">close</span>
+        </button>
+        <div class="flex flex-col gap-8 text-center">
+            <a class="mobile-nav-link font-headline text-4xl sm:text-5xl text-white font-black uppercase hover:text-primary tracking-tighter" href="#activities">Discipline</a>
+            <a class="mobile-nav-link font-headline text-4xl sm:text-5xl text-white font-black uppercase hover:text-primary tracking-tighter" href="#about">About</a>
+            <a class="mobile-nav-link font-headline text-4xl sm:text-5xl text-white font-black uppercase hover:text-primary tracking-tighter" href="#strongman">Strongman</a>
+            <a class="mobile-nav-link font-headline text-4xl sm:text-5xl text-white font-black uppercase hover:text-primary tracking-tighter" href="#scherma">Scherma</a>
+            <a class="mobile-nav-link font-headline text-4xl sm:text-5xl text-white font-black uppercase hover:text-primary tracking-tighter" href="#contact">Contact</a>
+            <a class="mt-8 portal-gradient text-white px-8 py-4 font-black uppercase tracking-widest text-lg rounded-portal inline-block" href="portal/registrazione.html">REGISTRAZIONE</a>
+        </div>
+    </div>
+
+    <!-- TopAppBar -->
+    <header class="bg-background/80 backdrop-blur-xl fixed top-0 w-full z-40 border-b border-white/5">
+        <nav class="flex justify-between items-center px-4 sm:px-6 md:px-12 py-4 w-full max-w-[1920px] mx-auto overflow-hidden">
+            <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+                <a href="#" class="flex items-center gap-3 group">
+                    <img src="assets/logo_icon.png" alt="Icon" class="h-8 md:h-12 w-auto object-contain glitch-hover group-hover:rotate-180 transition-transform duration-700 ease-in-out">
+                    <img src="assets/logo.png" alt="ADRENALINA CLUB" class="h-5 md:h-7 w-auto object-contain hidden sm:block">
+                </a>
+            </div>
+            <div class="hidden lg:flex gap-12 font-headline tracking-tighter uppercase font-bold text-xs shrink-0">
+                <a class="text-gray-400 hover:text-primary transition-all hover:skew-x-[-5deg]" href="#activities">Discipline</a>
+                <a class="text-gray-400 hover:text-primary transition-all hover:skew-x-[-5deg]" href="#about">About</a>
+                <a class="text-gray-400 hover:text-primary transition-all hover:skew-x-[-5deg]" href="#strongman">Strongman</a>
+                <a class="text-gray-400 hover:text-primary transition-all hover:skew-x-[-5deg]" href="#scherma">Scherma</a>
+                <a class="text-gray-400 hover:text-primary transition-all hover:skew-x-[-5deg]" href="#contact">Contact</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <a class="hidden sm:inline-block portal-gradient text-white px-4 py-2 sm:px-6 sm:py-2 font-bold tracking-widest uppercase text-[10px] sm:text-xs rounded-portal hover:brightness-110 transition-all active:scale-95 shrink-0" href="portal/registrazione.html">
+                    REGISTRAZIONE
+                </a>
+                <!-- Mobile Menu Button -->
+                <button id="open-menu" class="lg:hidden text-white hover:text-primary transition-colors p-2 shrink-0">
+                    <span class="material-symbols-outlined text-4xl">menu</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Section 1: Hero -->
+        <section class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden px-6 pt-20">
+            <div class="absolute inset-0 z-0 overflow-hidden">
+                <img id="hero-bg" alt="Hero background" class="w-full h-full object-cover grayscale opacity-30 scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbNeq9DAMB1droXtH7-3F_DS_f1Mlc6O4wzZ7QZl1uurS-4fsdpwINBb6NkyRN03C6ZJuKHJvNe6HmODfICQ71wgdBDTxyOoHqA-Il4hyCrxYGEkNAnVtmIM8pX5OCWQC42M5ldfFX2iyz1ICJnIeSHbtF5xlSehjOimSWe1DNnjJA966bJdD1cT3genf5-AoUxSSfJ6AtoM-GJOSHszS59uTDwUJ-hD_xeu68r_rxZDu9gKpBRqBMTjMvmuSGPSOFFFE68PoYJMcI"/>
+                <div class="absolute inset-0 hero-mask"></div>
+            </div>
+            
+            <div class="relative z-10 text-center flex flex-col items-center gap-8 max-w-6xl">
+                <div class="reveal-text mb-4 mt-8 md:mt-0">
+                    <span class="font-label text-primary font-black uppercase tracking-[0.3em] text-xs">ELITE FUNCTIONAL TRAINING</span>
+                </div>
+                <h1 id="hero-title" class="reveal-header font-headline font-black tracking-tighter text-white leading-[0.85] uppercase header-scale-xl">
+                    ARCHITETTURA<br/>DELLA <span class="text-white outline-text" style="-webkit-text-stroke: 1px white; color: transparent;">FORZA.</span><br/>
+                    <span class="text-primary">DOMINANZA FISICA.</span>
+                </h1>
+                <p class="reveal-text font-body text-xl md:text-2xl text-on-surface-variant max-w-2xl tracking-wide uppercase font-light mt-4">
+                    Protocolli d'élite per l'atleta totale. Dove il dato crudo scolpisce l'eccellenza.
+                </p>
+                <div class="reveal-text mt-12 flex flex-col sm:flex-row gap-6">
+                    <a href="portal/registrazione.html" class="portal-gradient text-white font-bold uppercase py-6 px-12 tracking-widest text-lg rounded-portal hover:brightness-110 transition-all active:scale-95 flex items-center gap-3">
+                        PORTALE REGISTRAZIONE
+                        <span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+                    </a>
+                    <button class="border border-white/20 text-white font-bold uppercase py-6 px-12 tracking-widest text-lg hover:bg-white/10 hover:skew-x-[-2deg] transition-all">
+                        ACCESS PROTOCOLS
+                    </button>
+                </div>
+            </div>
+            
+            <div id="scroll-prompt" class="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce opacity-30">
+                <span class="material-symbols-outlined text-4xl">keyboard_double_arrow_down</span>
+            </div>
+        </section>
+
+        <!-- Section 2: Activities (Bento Grid) -->
+        <section class="py-32 px-6 max-w-[1500px] mx-auto" id="activities">
+            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-16 md:mb-24 gap-8">
+                <div class="reveal-header w-full">
+                    <h2 class="font-headline font-black text-white uppercase break-words header-scale-xl">
+                        LE NOSTRE<br/><span class="text-primary">DISCIPLINE</span>
+                    </h2>
+                </div>
+                <div class="reveal-text max-w-md text-on-surface-variant font-body text-lg border-l-4 border-primary pl-8 py-2 shrink-0">
+                    <p>Distruggiamo ogni limite biologico. Quattro protocolli di dominanza fisica, un unico standard d'élite.</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 h-auto">
+                <!-- Circuit Training -->
+                <div class="md:col-span-8 bg-surface-container-high h-[600px] relative overflow-hidden group kinetic-skew">
+                    <img class="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-1000" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbH5SIeIEZ_MdcLyvLSjdjP5L3a5sNT7tnTO6iy4EGTcTAfoKPjpKbY1bZAxbYTdoHPgtZyC39AHDrt9nvFBKzs7VWaM6QJO70PeQepILP9SrKnbFa11S8wZzT4eB7edJtwOJ1OH2p2fH-Cv9sfZVxTf_nedGzQBYmLNuLXZQ5mQsCuURN9J4sTtMEzHtw7SC7gnV3W0zN90AqxSBcO40gOkcr03SJT3vpelUEM3coEszt3QzOBICMorPs6oadtbi6Qel5OyirRcOL"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                    <div class="absolute bottom-12 left-12">
+                        <span class="text-primary font-black uppercase tracking-widest text-sm mb-4 block">METABOLIC WARFARE</span>
+                        <h3 class="font-headline text-6xl text-white font-black uppercase italic leading-none">Metabolic Overdrive</h3>
+                    </div>
+                </div>
+                <!-- Functional -->
+                <div class="md:col-span-4 bg-surface-container h-[600px] relative overflow-hidden group kinetic-skew">
+                    <img class="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-1000" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvuP-y45xYh4tHNPFCyDpZhvVNZr_bQXAciM5GjIK3iDwF1_v0pTazubI-ujGUWN5u416W-0qwsM4p5J3YOE39G9FqYbBZjt4huVy20iM8byxUfKUa3ordpeK61YXDC8qA9Et4_FtZVswwnl7Am2UboA1oIqFtBnnTZpixF7BjSWyv_pvpRWt9nRThjZdwZ8_yFm7GkaJey4gDdvWiWsr8bNn3f4jF_YU0sR-Yy2Y_W2b6ZqqvMW5Zc0x7Mymf-gde3XEtKFJJdseN"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                    <div class="absolute bottom-12 left-12">
+                        <span class="text-primary font-black uppercase tracking-widest text-sm mb-4 block">BIOMECHANIC PRECISION</span>
+                        <h3 class="font-headline text-5xl text-white font-black uppercase italic leading-none">Kinetic Functional</h3>
+                    </div>
+                </div>
+                <!-- Strongman -->
+                <div class="md:col-span-6 bg-surface-container h-[550px] relative overflow-hidden group kinetic-skew" id="strongman">
+                    <img class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000" src="assets/strongman.png"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                    <div class="absolute bottom-12 left-12">
+                        <span class="text-primary font-black uppercase tracking-widest text-sm mb-4 block">MAXIMUM OUTPUT</span>
+                        <h3 class="font-headline text-5xl md:text-6xl text-white font-black uppercase italic leading-none">Force Dominance</h3>
+                    </div>
+                </div>
+                <!-- Scherma Antica -->
+                <div class="md:col-span-6 bg-surface-container h-[550px] relative overflow-hidden group kinetic-skew" id="scherma">
+                    <img class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000" src="assets/scherma.png"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+                    <div class="absolute bottom-12 left-12">
+                        <span class="text-primary font-black uppercase tracking-widest text-sm mb-4 block">MARTIAL CONDITIONING</span>
+                        <h3 class="font-headline text-5xl md:text-6xl text-white font-black uppercase italic leading-none">Martial Precision</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="py-40 bg-surface-container-low overflow-hidden relative" id="about">
+            <div class="absolute -right-40 top-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none hidden xl:block">
+                <img src="assets/logo_icon.png" alt="" class="w-[800px] h-[800px] animate-[spin_120s_linear_infinite]">
+            </div>
+            <div class="max-w-7xl mx-auto px-6 relative z-10 grid grid-cols-1 xl:grid-cols-12 gap-16 lg:gap-24 items-start">
+                <div class="reveal-header xl:col-span-8 min-w-0 pr-4 xl:pr-12">
+                    <span class="font-label text-primary font-black uppercase tracking-[0.3em] text-sm mb-8 block">THE FOUNDATION</span>
+                    <h2 class="font-headline font-black text-white uppercase mb-12 text-5xl sm:text-6xl md:text-8xl lg:text-9xl xl:text-7xl 2xl:text-9xl leading-[0.85] z-20 relative">
+                        IL NUCLEO<br/>DELL'AVAN-<br/>GUARDIA<br/><span class="text-primary">ATLETICA.</span>
+                    </h2>
+                    <p class="font-body text-xl md:text-2xl text-on-surface leading-relaxed max-w-xl opacity-80">
+                        Oltre il concetto di palestra. Un ecosistema di alta prestazione dove la biometria incontra il rigore marziale.
+                    </p>
+                </div>
+                
+                <div class="flex flex-col gap-8 xl:mt-32 xl:col-span-4 z-20">
+                    <div class="reveal-text bg-surface-container-high p-8 md:p-12 border-l-[12px] border-primary group hover:bg-surface-container transition-all hover:translate-x-2">
+                        <h4 class="font-headline text-white font-black text-3xl md:text-4xl uppercase mb-4 italic">HARDWARE BIOLOGICO</h4>
+                        <p class="text-on-surface-variant text-lg md:text-xl">Rompere gli standard. Creare l'atleta totale attraverso l'integrazione di forza e tecnica.</p>
+                    </div>
+                    <div class="reveal-text bg-surface-container-high p-8 md:p-12 border-l-[12px] border-primary group hover:bg-surface-container transition-all hover:translate-x-2">
+                        <h4 class="font-headline text-white font-black text-3xl md:text-4xl uppercase mb-4 italic">SOFTWARE SCIENTIFICO</h4>
+                        <p class="text-on-surface-variant text-lg md:text-xl">Dati oggettivi. Analisi costante. La scienza al servizio del condizionamento fisico estremo.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Contact Form (Brutalist) -->
+        <section class="py-40 bg-surface px-6 relative" id="contact">
+            <div class="max-w-5xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-20">
+                    <div class="lg:col-span-12 reveal-header mb-16 px-4 md:px-0">
+                        <h2 class="font-headline font-black text-white uppercase header-scale-lg mb-10 w-full">
+                            RICHIEDI<br/><span class="text-primary">ACCESSO</span>
+                        </h2>
+                    </div>
+                    
+                    <div class="lg:col-span-4 reveal-header">
+                        <div class="space-y-8 text-on-surface-variant font-label font-bold uppercase tracking-widest text-sm">
+                            <div class="flex items-center gap-6 group cursor-pointer">
+                                <span class="w-12 h-12 flex items-center justify-center bg-white/5 group-hover:bg-primary group-hover:text-black transition-all">
+                                    <span class="material-symbols-outlined">location_on</span>
+                                </span>
+                                <span>Via della Forza 42, Milano</span>
+                            </div>
+                            <div class="flex items-center gap-6 group cursor-pointer">
+                                <span class="w-12 h-12 flex items-center justify-center bg-white/5 group-hover:bg-primary group-hover:text-black transition-all">
+                                    <span class="material-symbols-outlined">mail</span>
+                                </span>
+                                <span>info@adrenalinaclub.it</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:col-span-8 reveal-text">
+                        <form class="space-y-12" onsubmit="event.preventDefault(); alert('Message Sent! (Production mode: integrate backend)');">
+                            <div class="group">
+                                <label class="block font-headline text-xs font-black uppercase tracking-widest text-primary mb-2">NOME COMPLETO</label>
+                                <input type="text" class="brutalist-input" placeholder="REICHENBACH STEVE">
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-xs font-black uppercase tracking-widest text-primary mb-2">EMAIL ARCHIVE</label>
+                                <input type="email" class="brutalist-input" placeholder="WARRIOR@EXAMPLE.IT">
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-xs font-black uppercase tracking-widest text-primary mb-2">MESSAGGIO</label>
+                                <textarea class="brutalist-input min-h-[150px] resize-none" placeholder="DEFINISCI IL TUO TRAGUARDO ATLETICO..."></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-white text-black font-headline font-black text-3xl py-8 uppercase tracking-tighter hover:bg-primary transition-all active:scale-[0.98] group flex justify-between items-center px-12">
+                                INVIA RICHIESTA
+                                <span class="material-symbols-outlined text-4xl group-hover:translate-x-4 transition-transform">arrow_right_alt</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Portale Registrazione -->
+        <section class="py-40 bg-surface-container-low text-center px-6 relative overflow-hidden" id="registrazione">
+            <div class="absolute inset-0 opacity-5 flex items-center justify-center pointer-events-none">
+                <span class="font-headline font-black text-[25rem] leading-none select-none tracking-tighter">PORTAL</span>
+            </div>
+            <div class="max-w-4xl mx-auto relative z-10">
+                <div class="reveal-text inline-flex items-center gap-4 bg-white/5 px-6 py-2 mb-12 border border-white/10 backdrop-blur-xl">
+                    <span class="material-symbols-outlined text-[#8B5CF6]">terminal</span>
+                    <span class="font-label text-xs font-black uppercase tracking-widest text-white">System Status: Operational</span>
+                </div>
+                <h2 class="reveal-header font-headline text-7xl md:text-9xl font-black text-white uppercase italic leading-none mb-10">
+                    REGISTRAZIONE:<br/><span class="text-[#8B5CF6]">PORTALE ATLETI</span>
+                </h2>
+                <p class="reveal-text font-body text-2xl text-on-surface-variant mb-16 max-w-2xl mx-auto uppercase font-light tracking-wide">
+                    IL TUO POSTO NEL NUCLEO. GESTISCI ISCRIZIONI, STATUS ASSOCIATIVO E SCHEDULAZIONE PROTOCOLLI IN UN'UNICA INTERFACCIA.
+                </p>
+                <div class="reveal-text relative group inline-block p-1">
+                    <div class="absolute -inset-4 portal-gradient opacity-20 group-hover:opacity-60 transition duration-700 blur-2xl"></div>
+                    <a href="portal/registrazione.html" class="portal-gradient text-white font-black uppercase py-8 px-20 text-3xl rounded-portal hover:brightness-110 transition-all active:scale-90 flex items-center gap-6 relative z-10">
+                        INIZIA REGISTRAZIONE
+                        <span class="material-symbols-outlined text-4xl">login</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black w-full border-t border-white/10 py-20 px-6 overflow-hidden">
+        <div class="max-w-[1920px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-16 items-start">
+            <div class="flex flex-col gap-6">
+                <img src="assets/logo.png" alt="ADRENALINA CLUB" class="h-10 md:h-16 w-fit object-contain">
+                <p class="font-body text-[10px] sm:text-xs tracking-[0.2em] sm:tracking-[0.3em] uppercase text-gray-600 max-w-xs leading-loose">
+                    © 2024 ASD ADRENALINA CLUB APS.<br/>P.IVA 01234567890<br/>POWERED BY ADRENALINA CORE.
+                </p>
+            </div>
+            
+            <div class="flex flex-col gap-8">
+                <span class="font-headline text-xs font-black uppercase tracking-widest text-primary">NAVIGATION</span>
+                <div class="grid grid-cols-2 gap-4 font-body text-xs tracking-widest uppercase font-bold">
+                    <a class="text-gray-500 hover:text-white transition-all" href="#">Home</a>
+                    <a class="text-gray-500 hover:text-white transition-all" href="#activities">Activities</a>
+                    <a class="text-gray-500 hover:text-white transition-all" href="#about">About</a>
+                    <a class="text-gray-500 hover:text-white transition-all" href="#contact">Contact</a>
+                    <a class="text-gray-500 hover:text-white transition-all" href="#">Privacy</a>
+                    <a class="text-gray-500 hover:text-white transition-all" href="#">Legal</a>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-8 items-start md:items-end">
+                <span class="font-headline text-xs font-black uppercase tracking-widest text-primary text-right">SOCIAL ARTIFACTS</span>
+                <div class="flex gap-4">
+                    <a href="https://www.instagram.com/adrenalina_strengthbox/" target="_blank" class="w-14 h-14 flex items-center justify-center bg-white/5 hover:bg-white hover:text-black transition-all">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.85-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    </a>
+                    <a href="https://www.facebook.com/Adr.Adrenalina" target="_blank" class="w-14 h-14 flex items-center justify-center bg-white/5 hover:bg-white hover:text-black transition-all">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    </a>
+                    <a href="https://www.tiktok.com/@adrenalina.club" target="_blank" class="w-14 h-14 flex items-center justify-center bg-white/5 hover:bg-white hover:text-black transition-all">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31 0 2.591.21 3.793.602V4.54c-.752-.222-1.547-.336-2.368-.336-3.13 0-5.666 2.536-5.666 5.666v1.393h3.793v3.793H8.284V24h-4.2V15.02c0-4.646 3.766-8.411 8.411-8.411.01 0 .02 0 .03 0V.02zm8.412 4.193c-.01 0-.02 0-.03 0V.02h-.42V4.214C19.284 4.214 18 2.93 18 1.396V0h-4.214v1.396c0 3.313 2.687 6 6 6h.42v-4.193z"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // GSAP Initialization
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Lenis Smooth Scroll Optimized
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            smoothWheel: true,
+            wheelMultiplier: 1,
+        });
+
+        lenis.on('scroll', ScrollTrigger.update);
+
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
+        requestAnimationFrame(raf);
+
+        gsap.ticker.add((time) => {
+            lenis.raf(time * 1000);
+        });
+        gsap.ticker.lagSmoothing(0);
+
+        // Hero Parallax & Scroll Fade
+        gsap.to("#hero-bg", {
+            y: "20%",
+            ease: "none",
+            scrollTrigger: {
+                trigger: "section",
+                start: "top top",
+                end: "bottom top",
+                scrub: true
+            }
+        });
+
+        gsap.to("#scroll-prompt", {
+            opacity: 0,
+            y: -50,
+            scrollTrigger: {
+                trigger: "#activities",
+                start: "top 90%",
+                end: "top 60%",
+                scrub: true
+            }
+        });
+
+        // Reveal Animations
+        const revealHeaders = document.querySelectorAll('.reveal-header');
+        revealHeaders.forEach(el => {
+            gsap.to(el, {
+                opacity: 1,
+                y: 0,
+                skewY: 0,
+                duration: 1.2,
+                ease: "power4.out",
+                scrollTrigger: {
+                    trigger: el,
+                    start: "top 85%",
+                    toggleActions: "play none none none"
+                }
+            });
+        });
+
+        const revealTexts = document.querySelectorAll('.reveal-text');
+        revealTexts.forEach(el => {
+            gsap.to(el, {
+                opacity: 1,
+                y: 0,
+                duration: 1,
+                delay: 0.2,
+                ease: "power3.out",
+                scrollTrigger: {
+                    trigger: el,
+                    start: "top 90%",
+                    toggleActions: "play none none none"
+                }
+            });
+        });
+
+        // Search for all anchor links and add click event
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    lenis.scrollTo(target);
+                }
+            });
+        });
+
+        // Mobile Menu Logic
+        const menuOverlay = document.getElementById('mobile-menu-overlay');
+        const openBtn = document.getElementById('open-menu');
+        const closeBtn = document.getElementById('close-menu');
+        const navLinks = document.querySelectorAll('.mobile-nav-link');
+
+        function toggleMenu() {
+            menuOverlay.classList.toggle('active');
+            if (menuOverlay.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        openBtn.addEventListener('click', toggleMenu);
+        closeBtn.addEventListener('click', toggleMenu);
+        navLinks.forEach(link => link.addEventListener('click', toggleMenu));
+    </script>
+</body>
+</html>
