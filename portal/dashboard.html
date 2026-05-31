@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html class="dark" lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ADRENALINA CLUB - DASHBOARD DIRETTIVA</title>
+    <meta name="description" content="Pannello di controllo della direzione sportiva ed amministrativa di Adrenalina Club."/>
+    
+    <!-- Scripts & Frameworks -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Syncopate:wght@400;700&family=Manrope:wght@200;400;600;800&family=Inter:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#df293e",
+                        "primary-dim": "#b91c1c",
+                        "background": "#0e0e0e",
+                        "surface": "#0e0e0e",
+                        "surface-container": "#1a1a1a",
+                        "surface-container-high": "#20201f",
+                        "surface-container-low": "#131313",
+                        "on-surface": "#ffffff",
+                        "on-surface-variant": "#a3a3a3",
+                    },
+                    fontFamily: {
+                        headline: ["Orbitron", "sans-serif"],
+                        label: ["Syncopate", "sans-serif"],
+                        body: ["Manrope", "sans-serif"],
+                    }
+                }
+            }
+        };
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #0e0e0e;
+            color: #ffffff;
+        }
+        .font-headline { font-family: 'Orbitron', sans-serif; }
+        .font-label { font-family: 'Syncopate', sans-serif; }
+        
+        /* Brutalist styles */
+        .brutalist-border {
+            border: 2px solid #ffffff;
+        }
+        .brutalist-input {
+            background-color: #000000;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-family: 'Manrope', sans-serif;
+            padding: 12px 16px;
+            transition: all 0.2s ease;
+        }
+        .brutalist-input:focus {
+            border-color: #df293e;
+            outline: none;
+            box-shadow: 0 0 10px rgba(223, 41, 62, 0.2);
+        }
+        .brutalist-btn {
+            border: 1px solid #ffffff;
+            transition: all 0.2s ease;
+        }
+        .brutalist-btn:hover {
+            background-color: #df293e;
+            border-color: #df293e;
+            box-shadow: 4px 4px 0px #ffffff;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0e0e0e; }
+        ::-webkit-scrollbar-thumb { background: #df293e; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-background text-on-surface">
+
+    <!-- Header / Navbar -->
+    <header class="border-b border-white/10 bg-black/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <span class="font-label text-primary font-black tracking-widest text-lg">ADRENALINA CLUB</span>
+                <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p id="user-display-name" class="text-xs font-bold uppercase tracking-wider">Caricamento...</p>
+                    <p id="user-display-role" class="text-[9px] text-primary font-headline font-bold uppercase tracking-widest">Ruolo: -</p>
+                </div>
+                <button onclick="handleLogout()" class="border border-white/10 hover:border-primary/50 text-gray-400 hover:text-white px-3 py-1.5 text-xs font-headline uppercase tracking-wider transition-all">
+                    LOGOUT
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="lg:col-span-1 space-y-4">
+            <div class="border border-white/10 p-4 bg-black/40 space-y-2">
+                <p class="text-[10px] font-label text-primary font-bold tracking-wider mb-3">PANNELLI DISPONIBILI</p>
+                
+                <!-- Nav Links -->
+                <button onclick="switchTab('panoramica')" id="tab-btn-panoramica" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-primary/30 bg-primary/10 text-white flex items-center gap-3">
+                    <span class="material-symbols-outlined text-sm">dashboard</span> PANORAMICA
+                </button>
+                
+                <button onclick="switchTab('soci')" id="tab-btn-soci" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-sm">group</span> GESTIONE SOCI
+                </button>
+                
+                <button onclick="switchTab('tesserati')" id="tab-btn-tesserati" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-sm">sports_kabaddi</span> TESSERATI RASD
+                </button>
+
+                <button onclick="switchTab('quote')" id="tab-btn-quote" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-sm">payments</span> QUOTE E CASSA
+                </button>
+
+                <button onclick="switchTab('verbali')" id="tab-btn-verbali" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-sm">gavel</span> VERBALI DIRETTIVO
+                </button>
+            </div>
+
+            <!-- Role Summary Card -->
+            <div class="border border-white/10 p-4 bg-black/25 space-y-2">
+                <h4 class="font-headline text-[10px] text-primary font-bold uppercase tracking-widest">LIVELLO AUTORIZZAZIONE</h4>
+                <p id="auth-description" class="text-[11px] text-gray-400 uppercase leading-relaxed font-light">
+                    Rilevazione permessi in corso...
+                </p>
+            </div>
+        </aside>
+
+        <!-- Dynamic Panels -->
+        <section class="lg:col-span-3 space-y-6">
+
+            <!-- TAB 1: PANORAMICA (TUTTI I RUOLI) -->
+            <div id="panel-panoramica" class="tab-panel space-y-6">
+                <div class="border border-white/10 p-6 bg-black/40 relative overflow-hidden">
+                    <div class="relative z-10 space-y-2">
+                        <h2 class="font-headline text-xl font-bold uppercase">Benvenuto nel Consiglio Direttivo</h2>
+                        <p class="text-xs text-gray-400 uppercase tracking-wide">Adrenalina Club - Portale Amministrativo Riforma 2026</p>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div class="border border-white/10 p-4 bg-black/20">
+                        <p class="text-[10px] text-gray-500 font-headline uppercase">SOCI IN ATTESA DELIBERA</p>
+                        <p id="stat-soci-attesa" class="text-2xl font-headline font-black text-primary mt-1">-</p>
+                    </div>
+                    <div class="border border-white/10 p-4 bg-black/20">
+                        <p class="text-[10px] text-gray-500 font-headline uppercase">ISCRITTI ATTIVI</p>
+                        <p id="stat-soci-attivi" class="text-2xl font-headline font-black text-white mt-1">-</p>
+                    </div>
+                    <div class="border border-white/10 p-4 bg-black/20">
+                        <p class="text-[10px] text-gray-500 font-headline uppercase">CERTIFICATI SCADUTI / SOSPESI</p>
+                        <p id="stat-certificati-scaduti" class="text-2xl font-headline font-black text-yellow-500 mt-1">-</p>
+                    </div>
+                </div>
+
+                <!-- Alert Board -->
+                <div class="border border-white/10 p-4 bg-yellow-500/5 border-l-4 border-yellow-500 space-y-2">
+                    <p class="font-headline text-xs font-bold text-yellow-500 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">warning</span> ALERT LEGALI E ADEMPIMENTI
+                    </p>
+                    <ul class="text-[11px] text-gray-400 uppercase space-y-1 font-mono">
+                        <li>• Deposito Bilancio d'Esercizio (Art. 48 CTS): Scadenza RUNTS entro 180 giorni (Termine 30 Giugno).</li>
+                        <li>• Verifica Certificazione Medica obbligatoria per atleti tesserati attivi.</li>
+                        <li>• Controllo indirizzo PEC dell'Associazione (deve essere PEC dell'ente, non del Presidente).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- TAB 2: GESTIONE SOCI (PRESIDENTE, VP, SEGRETARIO, CONSIGLIERI READ-ONLY) -->
+            <div id="panel-soci" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Registro Generale Soci</h2>
+                        <p class="text-xs text-gray-500 uppercase">Domande e delibere per la governance ETS</p>
+                    </div>
+                </div>
+
+                <!-- Soci Table -->
+                <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                            <tr>
+                                <th class="p-4">Nominativo</th>
+                                <th class="p-4">Codice Fiscale</th>
+                                <th class="p-4">Data Domanda</th>
+                                <th class="p-4">Stato Socio</th>
+                                <th class="p-4 text-right">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="soci-list-body" class="divide-y divide-white/5 uppercase font-mono">
+                            <!-- Popolato dinamicamente -->
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: TESSERATI (TUTTI I RUOLI - PRESIDENTE/VP E SEGRETARIO CON AZIONI) -->
+            <div id="panel-tesserati" class="tab-panel space-y-6 hidden">
+                <div>
+                    <h2 class="font-headline text-lg font-bold uppercase">Registro Tesserati Sportivi (ASD)</h2>
+                    <p class="text-xs text-gray-500 uppercase">Flusso atleti e trasmissione RASD / CSEN</p>
+                </div>
+
+                <!-- Tesserati Table -->
+                <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                            <tr>
+                                <th class="p-4">Atleta</th>
+                                <th class="p-4">Tessera CSEN</th>
+                                <th class="p-4">Copertura</th>
+                                <th class="p-4">Certificato Medico</th>
+                                <th class="p-4">Stato Tesseramento</th>
+                                <th class="p-4 text-right">Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tesserati-list-body" class="divide-y divide-white/5 uppercase font-mono">
+                            <!-- Popolato dinamicamente -->
+                            <tr>
+                                <td colspan="6" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 4: QUOTE E CASSA (PRESIDENTE, VP, TESORIERE, CONSIGLIERI READ-ONLY) -->
+            <div id="panel-quote" class="tab-panel space-y-6 hidden">
+                <div>
+                    <h2 class="font-headline text-lg font-bold uppercase">Stato Quote Associative e Tesseramenti</h2>
+                    <p class="text-xs text-gray-500 uppercase">Controllo scadenze quote solari e pagamenti</p>
+                </div>
+
+                <!-- Quote Table -->
+                <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                            <tr>
+                                <th class="p-4">Nominativo</th>
+                                <th class="p-4">Tipo Adesione</th>
+                                <th class="p-4">Quota Totale</th>
+                                <th class="p-4">Scadenza Quota</th>
+                                <th class="p-4 text-right">Stato / Azione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quote-list-body" class="divide-y divide-white/5 uppercase font-mono">
+                            <!-- Popolato dinamicamente -->
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 5: VERBALI (TUTTI - PRES/VP APPROVA, SEGRETARIO SCRIVE, ALTRI READ) -->
+            <div id="panel-verbali" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Verbali del Consiglio Direttivo</h2>
+                        <p class="text-xs text-gray-500 uppercase">Archivio delle riunioni e delle delibere legali</p>
+                    </div>
+                    <button id="btn-crea-verbale-toggle" onclick="showNewVerbaleModal()" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
+                        REDIGI NUOVO VERBALE
+                    </button>
+                </div>
+
+                <!-- Verbali List -->
+                <div class="space-y-4" id="verbali-container">
+                    <!-- Popolato dinamicamente -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal per Approva Socio (Presidente / VP / Segretario) -->
+    <div id="modal-approvazione" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4">
+            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">DELIBERA CONSIGLIO DIRETTIVO</h3>
+            <p class="text-xs text-gray-400 uppercase">Inserisci i dati della riunione del consiglio per approvare ufficialmente la domanda di ammissione.</p>
+            
+            <div class="space-y-3">
+                <input type="hidden" id="approvazione-socio-id">
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">NUMERO VERBALE *</label>
+                    <input type="text" id="delibera-numero-verbale" class="w-full brutalist-input" placeholder="E.g. VERB-2026-05" required>
+                </div>
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA VERBALE / RIUNIONE *</label>
+                    <input type="date" id="delibera-data" class="w-full brutalist-input" required>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 pt-2">
+                <button onclick="closeModalApprovazione()" class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all">
+                    ANNULLA
+                </button>
+                <button onclick="submitApprovazione()" class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all">
+                    REGISTRA DELIBERA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal per Nuovo Verbale (Segretario, Presidente, VP) -->
+    <div id="modal-nuovo-verbale" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="border border-white/10 bg-[#121212] p-6 max-w-lg w-full space-y-4">
+            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">REDIGI VERBALE DI CONSIGLIO</h3>
+            
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">NUMERO VERBALE *</label>
+                        <input type="text" id="verbale-numero" class="w-full brutalist-input" placeholder="E.g. VERB-2026-08" required>
+                    </div>
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA RIUNIONE *</label>
+                        <input type="date" id="verbale-data" class="w-full brutalist-input" required>
+                    </div>
+                </div>
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TESTO DELIBERA / ODG *</label>
+                    <textarea id="verbale-testo" rows="6" class="w-full brutalist-input" placeholder="Scrivi qui il testo e le decisioni del Consiglio Direttivo..." required></textarea>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 pt-2">
+                <button onclick="closeModalVerbale()" class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all">
+                    ANNULLA
+                </button>
+                <button onclick="submitVerbale()" class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all">
+                    SALVA E PUBBLICA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-black w-full border-t border-white/10 py-6 px-6 mt-12">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] uppercase text-gray-600 tracking-wider">
+            <span>© 2026 ASD ADRENALINA CLUB APS - AREA RISERVATA DIRETTIVO.</span>
+        </div>
+    </footer>
+
+    <!-- App Logic -->
+    <script>
+        // Supabase Initialization
+        const SUPABASE_URL = "https://zpategmkelqmexetpaot.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentUser = null;
+        let userRole = null; // presidente, vice_presidente, segretario, tesoriere, consigliere, etc.
+
+        // Rilevazione Sessione ed Autorizzazioni
+        async function checkSession() {
+            try {
+                // Recupera sessione
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error || !session) {
+                    // Se non autenticato, rimanda alla registrazione (o login)
+                    console.warn("Sessione non trovata. Reindirizzamento...");
+                    window.location.href = "registrazione.html?login=true";
+                    return;
+                }
+                
+                const user = session.user;
+                currentUser = user;
+                
+                // Fetch info ruolo dal database utenti
+                const { data: profile, error: profileError } = await supabase
+                    .from('utenti')
+                    .select('*')
+                    .eq('id', user.id)
+                    .maybeSingle();
+
+                if (profileError || !profile) {
+                    alert("Errore caricamento profilo direttivo.");
+                    return;
+                }
+
+                userRole = profile.ruolo;
+                document.getElementById('user-display-name').textContent = `${profile.nome} ${profile.cognome}`;
+                document.getElementById('user-display-role').textContent = `Ruolo: ${userRole.replace('_', ' ')}`;
+
+                applyRolePermissions();
+                loadStats();
+                loadSoci();
+                loadTesserati();
+                loadQuote();
+                loadVerbali();
+            } catch (err) {
+                console.error("Errore check session:", err);
+            }
+        }
+
+        // Configurazione delle Viste e dei Pulsanti a seconda del Ruolo
+        function applyRolePermissions() {
+            const descEl = document.getElementById('auth-description');
+            
+            // Definisce la descrizione permessi basata sulla logica a cascata
+            const descrizioni = {
+                'presidente': 'Accesso Completo Superiore. Abilitazione completa alla firma delle delibere, inserimento dei verbali, gestione delle quote associative e visualizzazione dei dati anagrafici e tesseramenti.',
+                'vice_presidente': 'Accesso Completo Superiore. Abilitazione completa alla firma delle delibere, inserimento dei verbali, gestione delle quote associative e visualizzazione dei dati anagrafici e tesseramenti.',
+                'segretario': 'Livello Segreteria. Abilitato all\'editing delle anagrafiche dei soci, alla scrittura dei verbali e al pre-controllo dei documenti e dei tesserati.',
+                'tesoriere': 'Livello Amministrazione Finanziaria. Abilitato al tracciamento dei pagamenti, alla riscossione delle quote e alla gestione delle scadenze contabili.',
+                'consigliere': 'Livello Consultivo. Visualizzazione dei registri e dell\'archivio dei verbali. Partecipazione al consiglio con funzioni di sola lettura.'
+            };
+
+            descEl.textContent = descrizioni[userRole] || 'Nessuna autorizzazione speciale configurata per questo ruolo.';
+
+            // Mostra/Nascondi pulsanti operativi a seconda del ruolo
+            if (['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
+                document.getElementById('btn-crea-verbale-toggle').classList.remove('hidden');
+            }
+        }
+
+        // Caricamento Dati Panoramica
+        async function loadStats() {
+            try {
+                // Conteggio Soci in Attesa
+                const { count: sociAttesa } = await supabase
+                    .from('registro_soci')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('stato_socio', 'IN_ATTESA_DELIBERA');
+                
+                document.getElementById('stat-soci-attesa').textContent = sociAttesa !== null ? sociAttesa : 0;
+
+                // Conteggio Soci Attivi
+                const { count: sociAttivi } = await supabase
+                    .from('registro_soci')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('stato_socio', 'ATTIVO');
+
+                document.getElementById('stat-soci-attivi').textContent = sociAttivi !== null ? sociAttivi : 0;
+
+                // Conteggio certificati scaduti/sospesi
+                const { count: certSospesi } = await supabase
+                    .from('registro_tesserati')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('stato_tesseramento', 'SOSPESO');
+
+                document.getElementById('stat-certificati-scaduti').textContent = certSospesi !== null ? certSospesi : 0;
+            } catch (err) {
+                console.error("Errore caricamento statistiche:", err);
+            }
+        }
+
+        // Caricamento Tabella Soci
+        async function loadSoci() {
+            const body = document.getElementById('soci-list-body');
+            body.innerHTML = '';
+
+            try {
+                // Fetch soci con dettagli utenti tramite query relazionale
+                const { data, error } = await supabase
+                    .from('registro_soci')
+                    .select(`
+                        id_socio,
+                        stato_socio,
+                        data_domanda,
+                        anagrafiche (
+                            nome,
+                            cognome,
+                            codice_fiscale
+                        )
+                    `);
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    body.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Nessuna domanda di associazione presente.</td></tr>';
+                    return;
+                }
+
+                data.forEach(socio => {
+                    const row = document.createElement('tr');
+                    
+                    const nomeComp = socio.anagrafiche ? `${socio.anagrafiche.nome} ${socio.anagrafiche.cognome}` : 'N/D';
+                    const cf = socio.anagrafiche ? socio.anagrafiche.codice_fiscale : 'N/D';
+                    
+                    let badgeColor = 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30';
+                    if (socio.stato_socio === 'ATTIVO') badgeColor = 'text-green-500 bg-green-500/10 border-green-500/30';
+                    if (socio.stato_socio === 'RESPINTO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
+
+                    let actionBtn = '';
+                    if (socio.stato_socio === 'IN_ATTESA_DELIBERA' && ['presidente', 'vice_presidente'].includes(userRole)) {
+                        actionBtn = `<button onclick="openModalApprovazione(${socio.id_socio})" class="bg-white text-black font-headline text-[10px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase">DELIBERA</button>`;
+                    } else if (socio.stato_socio === 'IN_ATTESA_DELIBERA') {
+                        actionBtn = '<span class="text-[9px] text-gray-500 italic uppercase">Attesa approvazione Pres.</span>';
+                    } else {
+                        actionBtn = '<span class="text-[9px] text-gray-500 uppercase">Gestito</span>';
+                    }
+
+                    row.innerHTML = `
+                        <td class="p-4 font-bold text-white">${nomeComp}</td>
+                        <td class="p-4 text-gray-400 font-mono">${cf}</td>
+                        <td class="p-4 text-gray-400">${socio.data_domanda}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeColor}">${socio.stato_socio.replace(/_/g, ' ')}</span>
+                        </td>
+                        <td class="p-4 text-right">${actionBtn}</td>
+                    `;
+                    body.appendChild(row);
+                });
+            } catch (err) {
+                console.error("Errore caricamento soci:", err);
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-primary font-bold">Errore nel caricamento del database soci.</td></tr>`;
+            }
+        }
+
+        // Caricamento Tabella Tesserati
+        async function loadTesserati() {
+            const body = document.getElementById('tesserati-list-body');
+            body.innerHTML = '';
+
+            try {
+                const { data, error } = await supabase
+                    .from('registro_tesserati')
+                    .select(`
+                        id_tesserato,
+                        numero_tessera_csen,
+                        stato_tesseramento,
+                        livello_copertura,
+                        anagrafiche (
+                            nome,
+                            cognome,
+                            certificati_medici (
+                                tipologia,
+                                data_scadenza,
+                                file_url
+                            )
+                        )
+                    `);
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    body.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500">Nessun tesseramento presente.</td></tr>';
+                    return;
+                }
+
+                data.forEach(tess => {
+                    const row = document.createElement('tr');
+                    const nomeComp = tess.anagrafiche ? `${tess.anagrafiche.nome} ${tess.anagrafiche.cognome}` : 'N/D';
+                    const certInfo = tess.anagrafiche && tess.anagrafiche.certificati_medici && tess.anagrafiche.certificati_medici.length > 0 
+                        ? tess.anagrafiche.certificati_medici[0] 
+                        : null;
+
+                    let certHtml = '<span class="text-primary font-bold">MANCANTE</span>';
+                    if (certInfo) {
+                        const scaduto = new Date(certInfo.data_scadenza) < new Date();
+                        const color = scaduto ? 'text-primary' : 'text-green-500';
+                        certHtml = `<a href="${certInfo.file_url}" target="_blank" class="underline ${color} font-bold">${certInfo.tipologia} (SCAD. ${certInfo.data_scadenza})</a>`;
+                    }
+
+                    let badgeColor = 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30';
+                    if (tess.stato_tesseramento === 'ATTIVO') badgeColor = 'text-green-500 bg-green-500/10 border-green-500/30';
+                    if (tess.stato_tesseramento === 'SOSPESO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
+
+                    let actionBtn = '';
+                    if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && ['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
+                        actionBtn = `<button onclick="attivaTesseramento(${tess.id_tesserato})" class="bg-white text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
+                    } else {
+                        actionBtn = '-';
+                    }
+
+                    row.innerHTML = `
+                        <td class="p-4 font-bold text-white">${nomeComp}</td>
+                        <td class="p-4 text-gray-400 font-mono">${tess.numero_tessera_csen || 'ASSEGNAZIONE IN CORSO'}</td>
+                        <td class="p-4 text-gray-400">${tess.livello_copertura}</td>
+                        <td class="p-4">${certHtml}</td>
+                        <td class="p-4">
+                            <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeColor}">${tess.stato_tesseramento}</span>
+                        </td>
+                        <td class="p-4 text-right">${actionBtn}</td>
+                    `;
+                    body.appendChild(row);
+                });
+            } catch (err) {
+                console.error("Errore caricamento tesserati:", err);
+                body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-primary font-bold">Errore nel caricamento del database tesserati.</td></tr>`;
+            }
+        }
+
+        // Caricamento Tabella Quote Associative
+        async function loadQuote() {
+            const body = document.getElementById('quote-list-body');
+            body.innerHTML = '';
+
+            try {
+                // Selezioniamo utenti e la loro quota totale
+                const { data, error } = await supabase
+                    .from('utenti')
+                    .select('id, nome, cognome, tipo_adesione, quota_totale');
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    body.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Nessuna transazione registrata.</td></tr>';
+                    return;
+                }
+
+                data.forEach(userRow => {
+                    if (!userRow.tipo_adesione) return;
+
+                    const row = document.createElement('tr');
+                    const nomeComp = `${userRow.nome} ${userRow.cognome}`;
+                    
+                    let actionHtml = '';
+                    if (['presidente', 'vice_presidente', 'tesoriere'].includes(userRole)) {
+                        actionHtml = `<button onclick="registraPagamento('${userRow.id}')" class="bg-white text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-primary hover:text-white transition-all uppercase">SALDA</button>`;
+                    } else {
+                        actionHtml = '<span class="text-[9px] text-gray-500 uppercase">Sola lettura</span>';
+                    }
+
+                    row.innerHTML = `
+                        <td class="p-4 font-bold text-white">${nomeComp}</td>
+                        <td class="p-4 text-gray-400 uppercase">${userRow.tipo_adesione.replace(/_/g, ' ')}</td>
+                        <td class="p-4 text-primary font-bold">€${userRow.quota_totale || '0.00'}</td>
+                        <td class="p-4 text-gray-400">31-12-2026</td>
+                        <td class="p-4 text-right">${actionHtml}</td>
+                    `;
+                    body.appendChild(row);
+                });
+            } catch (err) {
+                console.error("Errore caricamento quote:", err);
+            }
+        }
+
+        // Caricamento Verbali
+        async function loadVerbali() {
+            const container = document.getElementById('verbali-container');
+            container.innerHTML = '';
+
+            try {
+                const { data, error } = await supabase
+                    .from('verbali_consiglio')
+                    .select('*')
+                    .order('data_riunione', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="border border-dashed border-white/20 p-8 text-center text-gray-500 uppercase text-xs">Nessun verbale depositato in archivio.</div>';
+                    return;
+                }
+
+                data.forEach(verb => {
+                    const el = document.createElement('div');
+                    el.className = 'border border-white/10 p-5 bg-black/30 space-y-3';
+                    
+                    el.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-headline text-xs font-bold text-primary uppercase">${verb.numero_verbale}</h4>
+                                <p class="text-[10px] text-gray-500 uppercase">Data Riunione: ${verb.data_riunione}</p>
+                            </div>
+                            <span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded font-bold uppercase">DEPOSITATO</span>
+                        </div>
+                        <p class="text-xs text-gray-300 leading-relaxed uppercase whitespace-pre-wrap font-mono">${verb.delibera_testo}</p>
+                    `;
+                    container.appendChild(el);
+                });
+            } catch (err) {
+                console.error("Errore caricamento verbali:", err);
+            }
+        }
+
+        // Attivazione Tesseramento
+        async function attivaTesseramento(tessId) {
+            try {
+                // Generazione di un numero tessera casuale per simulare la ricezione CSEN
+                const csenNum = `CSEN-${Math.floor(1000000 + Math.random() * 9000000)}`;
+                const { error } = await supabase
+                    .from('registro_tesserati')
+                    .update({
+                        stato_tesseramento: 'ATTIVO',
+                        numero_tessera_csen: csenNum
+                    })
+                    .eq('id_tesserato', tessId);
+
+                if (error) throw error;
+
+                alert(`Tesseramento attivato con successo. Numero Tessera CSEN generato: ${csenNum}`);
+                loadTesserati();
+                loadStats();
+            } catch (err) {
+                alert("Errore durante l'attivazione: " + err.message);
+            }
+        }
+
+        // Registrazione Pagamento
+        async function registraPagamento(userId) {
+            try {
+                const { error } = await supabase
+                    .from('utenti')
+                    .update({
+                        quota_totale: 0.00
+                    })
+                    .eq('id', userId);
+
+                if (error) throw error;
+                alert("Quota associativa/tesseramento saldata correttamente!");
+                loadQuote();
+            } catch (err) {
+                alert("Errore registrazione pagamento: " + err.message);
+            }
+        }
+
+        // Modal Delibera Socio
+        function openModalApprovazione(socioId) {
+            document.getElementById('approvazione-socio-id').value = socioId;
+            document.getElementById('delibera-data').value = new Date().toISOString().substring(0, 10);
+            document.getElementById('modal-approvazione').classList.remove('hidden');
+        }
+
+        function closeModalApprovazione() {
+            document.getElementById('modal-approvazione').classList.add('hidden');
+        }
+
+        async function submitApprovazione() {
+            const id = document.getElementById('approvazione-socio-id').value;
+            const verbale = document.getElementById('delibera-numero-verbale').value;
+            const dataVerbale = document.getElementById('delibera-data').value;
+
+            if (!verbale || !dataVerbale) {
+                alert("Tutti i campi contrassegnati con l'asterisco sono obbligatori.");
+                return;
+            }
+
+            try {
+                // 1. Aggiorna lo stato del socio nel database
+                const { error } = await supabase
+                    .from('registro_soci')
+                    .update({
+                        stato_socio: 'ATTIVO',
+                        data_delibera_direttivo: dataVerbale,
+                        numero_verbale: verbale
+                    })
+                    .eq('id_socio', id);
+
+                if (error) throw error;
+
+                alert("Socio deliberato ed ammesso ufficialmente a libro soci!");
+                closeModalApprovazione();
+                loadSoci();
+                loadStats();
+            } catch (err) {
+                alert("Errore approvazione: " + err.message);
+            }
+        }
+
+        // Modal Nuovo Verbale
+        function showNewVerbaleModal() {
+            document.getElementById('verbale-data').value = new Date().toISOString().substring(0, 10);
+            document.getElementById('modal-nuovo-verbale').classList.remove('hidden');
+        }
+
+        function closeModalVerbale() {
+            document.getElementById('modal-nuovo-verbale').classList.add('hidden');
+        }
+
+        async function submitVerbale() {
+            const numero = document.getElementById('verbale-numero').value;
+            const data = document.getElementById('verbale-data').value;
+            const testo = document.getElementById('verbale-testo').value;
+
+            if (!numero || !data || !testo) {
+                alert("Tutti i campi sono obbligatori.");
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('verbali_consiglio')
+                    .insert({
+                        numero_verbale: numero,
+                        data_riunione: data,
+                        delibera_testo: testo,
+                        redatto_da: currentUser.id
+                    });
+
+                if (error) throw error;
+
+                alert("Verbale inserito e salvato in archivio.");
+                closeModalVerbale();
+                loadVerbali();
+            } catch (err) {
+                alert("Errore salvataggio verbale: " + err.message);
+            }
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            // Nasconde tutti i pannelli
+            const panels = document.querySelectorAll('.tab-panel');
+            panels.forEach(p => p.classList.add('hidden'));
+
+            // Mostra il pannello attivo
+            document.getElementById(`panel-${tabId}`).classList.remove('hidden');
+
+            // Reset stile bottoni navigation
+            const navButtons = document.querySelectorAll('aside button');
+            navButtons.forEach(btn => {
+                btn.classList.remove('border-primary/30', 'bg-primary/10', 'text-white');
+                btn.classList.add('border-transparent', 'text-gray-400', 'hover:text-white', 'hover:bg-white/5');
+            });
+
+            // Imposta lo stile del bottone attivo
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-gray-400', 'hover:text-white', 'hover:bg-white/5');
+                activeBtn.classList.add('border-primary/30', 'bg-primary/10', 'text-white');
+            }
+        }
+
+        // Logout
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            window.location.href = "registrazione.html?login=true";
+        }
+
+        // Start checking session immediately
+        checkSession();
+    </script>
+</body>
+</html>

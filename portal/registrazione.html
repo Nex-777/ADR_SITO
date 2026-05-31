@@ -295,7 +295,19 @@
 
                         <!-- Sezione Scelta Tessera Sportiva (Condizionale) -->
                         <div id="tessera_sportiva_container" class="space-y-3 hidden border border-white/10 p-4 bg-black/25">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">SELEZIONA LA TESSERA SPORTIVA</label>
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">SELEZIONA LA TESSERA SPORTIVA</label>
+                                <div class="flex flex-wrap gap-x-4 gap-y-1">
+                                    <a href="../CSEN_Estratti_polize/ESTRATTO INFORTUNI BASE 25-26.pdf" target="_blank" class="text-[9px] font-bold text-gray-400 hover:text-primary uppercase tracking-wider flex items-center gap-1 transition-colors">
+                                        <span class="material-symbols-outlined text-[12px]">description</span>
+                                        Estratto Infortuni Base Silver/Gold
+                                    </a>
+                                    <a href="../CSEN_Estratti_polize/ESTRATTO INTEGRATIVA 25-26.pdf" target="_blank" class="text-[9px] font-bold text-gray-400 hover:text-primary uppercase tracking-wider flex items-center gap-1 transition-colors">
+                                        <span class="material-symbols-outlined text-[12px]">description</span>
+                                        Estratto Integrativa A/B
+                                    </a>
+                                </div>
+                            </div>
                             <input type="hidden" id="tipo_tessera" name="tipo_tessera" value="">
                             
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -394,9 +406,7 @@
                             </div>
                             <div class="group">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CAP</label>
-                                <select id="cap" class="brutalist-select" required disabled>
-                                    <option value="" disabled selected>Scegli Comune prima...</option>
-                                </select>
+                                <input type="text" id="cap" class="brutalist-input w-full" placeholder="00100" required readonly>
                             </div>
                         </div>
                     </div>
@@ -426,6 +436,20 @@
                             <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">EMAIL DEL TUTORE</label>
                             <input type="email" id="tutore_email" class="brutalist-input" placeholder="TUTORE@EXAMPLE.COM">
                         </div>
+
+                        <!-- Caricamento Documento d'Identità del Genitore (Obbligatorio per Minorenni) -->
+                        <div class="group space-y-2 pt-2">
+                            <div class="flex justify-between items-center">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">DOCUMENTO D'IDENTITÀ DEL GENITORE/TUTORE (OBBLIGATORIO)</label>
+                                <span class="text-[9px] text-gray-400">PDF, PNG, JPG (MAX 5MB)</span>
+                            </div>
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" onclick="document.getElementById('tutore_documento_file').click()">
+                                <input type="file" id="tutore_documento_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">upload_file</span>
+                                <p class="text-xs text-white uppercase font-bold" id="tutore-documento-file-name">SELEZIONA O TRASCINA IL DOCUMENTO</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="tutore-documento-file-status">Nessun file selezionato</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- STEP 4: Firma Digitale & Validazione OTP -->
@@ -433,18 +457,85 @@
                         <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">FIRMA DIGITALE & INVIO</h2>
                         <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Valida la tua identità e firma digitalmente l'adesione all'Adrenalina Club.</p>
                         
-                        <!-- Legal Consent Box -->
-                        <div class="bg-white/5 border-l-4 border-primary p-4 text-xs space-y-3 max-h-48 overflow-y-auto">
-                            <p class="font-bold text-white uppercase tracking-wider">DICHIARAZIONE DI ADESIONE ED ASSUNZIONE DI RESPONSABILITÀ</p>
-                            <p class="text-gray-400">Richiedo l'ammissione come socio/tesserato di ASD Adrenalina Club APS. Dichiaro di aver preso visione dell'Atto Costitutivo, dello Statuto e dei Regolamenti e di accettarli integralmente.</p>
-                            <p class="text-gray-400">Assumo piena e personale responsabilità civile e penale per qualsiasi danno cagionato a me stesso, a cose o a terzi durante lo svolgimento delle attività del Club, sollevando l'Associazione, i suoi dirigenti e tecnici da qualsiasi responsabilità.</p>
+                        <!-- Modulo Statuto e Vincolo Associativo (Condizionale per Socio / Socio + Tesserato) -->
+                        <div id="statuto_box_container" class="space-y-3 hidden">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">ACCETTAZIONE STATUTO E VINCOLO ASSOCIATIVO</label>
+                            <div class="bg-white/5 border border-white/10 p-4 text-xs max-h-32 overflow-y-auto text-gray-400 space-y-2">
+                                <p class="font-bold text-white uppercase tracking-wider">DOMANDA DI AMMISSIONE A SOCIO ASD ADRENALINA CLUB APS</p>
+                                <p>Con la presente richiesta il sottoscritto dichiara sotto la propria responsabilità di aver preso visione dello Statuto Sociale e dei Regolamenti dell'ente. Si impegna a rispettarli integralmente, a condividerne le finalità civiche, solidaristiche e di utilità sociale, a collaborare attivamente alla vita associativa e ad effettuare il pagamento della quota annuale stabilita.</p>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <input type="checkbox" id="consenso_statuto" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0">
+                                <label for="consenso_statuto" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
+                                    Accetto integralmente lo Statuto, i regolamenti dell'Associazione ed il vincolo associativo *
+                                </label>
+                            </div>
                         </div>
 
-                        <div class="flex items-start gap-3 mt-4">
-                            <input type="checkbox" id="consenso_legale" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0" required>
-                            <label for="consenso_legale" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
-                                Accetto la formula legale di adesione e do il consenso alla firma elettronica
-                            </label>
+                        <!-- Informativa Privacy Istituzionale con Scroll Obbligatorio (Tutti) -->
+                        <div class="space-y-3">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">INFORMATIVA PRIVACY ISTITUZIONALE (REG. UE 2016/679)</label>
+                            <div id="privacy_scroll_box" class="bg-white/5 border border-white/10 p-4 text-xs max-h-40 overflow-y-auto text-gray-400 space-y-3 scrollbar-thin">
+                                <p class="font-bold text-white uppercase tracking-wider">INFORMATIVA SUL TRATTAMENTO DEI DATI PERSONALI (ART. 13 GDPR)</p>
+                                <p>Ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR), ASD Adrenalina Club APS informa che i dati personali anagrafici e, se presenti, sanitari o riguardanti minori, forniti durante la registrazione verranno trattati esclusivamente per:</p>
+                                <p>1. Gestione del rapporto associativo/di tesseramento (invio convocazioni, gestione quote, partecipazione ad attività istituzionali).</p>
+                                <p>2. Adempimento di obblighi di legge (trasmissione dei dati al Registro Nazionale delle Attività Sportive Dilettantistiche - RASD, comunicazione al RUNTS ed allo CSEN ai fini assicurativi).</p>
+                                <p>I dati contrassegnati come obbligatori sono necessari per la costituzione del rapporto associativo o per l'erogazione del tesseramento sportivo. In caso di rifiuto a fornire tali dati non sarà possibile completare la registrazione.</p>
+                                <p class="text-white font-bold uppercase">SCORRI QUESTO TESTO FINO IN FONDO PER ABILITARE LA PRESA VISIONE.</p>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <input type="checkbox" id="consenso_privacy" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0" disabled>
+                                <label for="consenso_privacy" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer opacity-40" id="label_consenso_privacy">
+                                    Dichiaro di aver preso visione dell'informativa privacy istituzionale obbligatoria *
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Consenso Trattamento Audiovisivi (Foto/Video) (Condizionale per Socio / Socio + Tesserato) -->
+                        <div id="audiovisivi_box_container" class="space-y-3 hidden">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CONSENSO TRATTAMENTO AUDIOVISIVI (FOTO/VIDEO)</label>
+                            <p class="text-[9px] text-gray-400 uppercase leading-relaxed">
+                                Presto il consenso all'utilizzo e alla pubblicazione di foto o riprese video che mi ritraggono durante le attività istituzionali per scopi descrittivi, promozionali e social del Club.
+                            </p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-foto-acconsento">
+                                    <span class="text-xs font-bold text-white uppercase">ACCONSENTO</span>
+                                    <input type="radio" name="consenso_audiovisivi" value="acconsento" class="accent-primary h-4 w-4">
+                                </label>
+                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-foto-nego">
+                                    <span class="text-xs font-bold text-white uppercase">NON ACCONSENTO</span>
+                                    <input type="radio" name="consenso_audiovisivi" value="nego" class="accent-primary h-4 w-4">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Consenso Comunicazioni Commerciali/Sponsor (Tutti) -->
+                        <div class="space-y-3">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CONSENSO COMUNICAZIONI COMMERCIALI E SPONSOR</label>
+                            <p class="text-[9px] text-gray-400 uppercase leading-relaxed">
+                                Presto il consenso all'invio di newsletter, offerte commerciali, promozioni e comunicazioni da parte di partner o sponsor commerciali terzi convenzionati con ASD Adrenalina Club.
+                            </p>
+                            <div class="grid grid-cols-2 gap-4">
+                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-marketing-acconsento">
+                                    <span class="text-xs font-bold text-white uppercase">ACCONSENTO</span>
+                                    <input type="radio" name="consenso_marketing" value="acconsento" class="accent-primary h-4 w-4">
+                                </label>
+                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-marketing-nego">
+                                    <span class="text-xs font-bold text-white uppercase">NON ACCONSENTO</span>
+                                    <input type="radio" name="consenso_marketing" value="nego" class="accent-primary h-4 w-4">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Consenso Firma Elettronica ed E-Sign (Tutti) -->
+                        <div class="space-y-3 pt-3 border-t border-white/5">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">FIRMA ELETTRONICA SEMPLICE (E-SIGN)</label>
+                            <div class="flex items-start gap-3">
+                                <input type="checkbox" id="consenso_legale" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0">
+                                <label for="consenso_legale" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
+                                    Accetto la formula legale di adesione e presto il consenso alla firma elettronica *
+                                </label>
+                            </div>
                         </div>
 
                         <!-- OTP Section -->
@@ -607,9 +698,8 @@
         selectProvincia.addEventListener('change', () => {
             const sigla = selectProvincia.value;
             selectComune.innerHTML = '<option value="" disabled selected>Seleziona Comune...</option>';
-            selectCap.innerHTML = '<option value="" disabled selected>Seleziona CAP...</option>';
+            selectCap.value = '';
             selectComune.disabled = true;
-            selectCap.disabled = true;
 
             if (!sigla) return;
 
@@ -630,32 +720,13 @@
         selectComune.addEventListener('change', () => {
             const comuneNome = selectComune.value;
             const sigla = selectProvincia.value;
-            selectCap.innerHTML = '';
-            selectCap.disabled = true;
+            selectCap.value = '';
 
             if (!comuneNome) return;
 
             const matchedComune = comuniData.find(c => c.sigla === sigla && c.nome === comuneNome);
             if (matchedComune && matchedComune.cap && matchedComune.cap.length > 0) {
-                matchedComune.cap.forEach(c => {
-                    const opt = document.createElement('option');
-                    opt.value = c;
-                    opt.textContent = c;
-                    selectCap.appendChild(opt);
-                });
-                
-                if (matchedComune.cap.length === 1) {
-                    selectCap.selectedIndex = 0;
-                } else {
-                    const placeholder = document.createElement('option');
-                    placeholder.value = "";
-                    placeholder.textContent = "Scegli CAP...";
-                    placeholder.disabled = true;
-                    placeholder.selected = true;
-                    selectCap.insertBefore(placeholder, selectCap.firstChild);
-                }
-                
-                selectCap.disabled = false;
+                selectCap.value = matchedComune.cap[0];
             }
         });
 
@@ -720,9 +791,7 @@
 
         function verifyCfCoherence() {
             const cf = inputCF.value.trim().toUpperCase();
-            const dataNascita = document.getElementById('data_nascita').value;
-            const comuneNascita = document.getElementById('comune_nascita').value;
-
+            
             if (!cf) {
                 cfStatus.textContent = "Inserisci il codice fiscale per la verifica formale.";
                 cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold";
@@ -745,48 +814,60 @@
                 return;
             }
 
-            // 2. Coherence with Date of Birth
-            if (dataNascita) {
-                const [yearInput, monthInput, dayInput] = dataNascita.split('-');
-                
-                const yearCfShort = cf.substring(6, 8);
-                const monthCfChar = cf.substring(8, 9);
-                let dayCf = parseInt(cf.substring(9, 11), 10);
-                if (dayCf > 40) dayCf -= 40; // female adjustment
-                
-                const monthMap = {
-                    'A': '01', 'B': '02', 'C': '03', 'D': '04', 'E': '05', 'H': '06',
-                    'L': '07', 'M': '08', 'P': '09', 'R': '10', 'S': '11', 'T': '12'
-                };
-                const monthCf = monthMap[monthCfChar];
-                
-                const yearInputShort = yearInput.substring(2, 4);
-                const dayCfStr = dayCf.toString().padStart(2, '0');
+            // --- Auto-popolazione dati dal codice fiscale ---
+            // Data di nascita
+            const yearCfShort = cf.substring(6, 8);
+            const monthCfChar = cf.substring(8, 9);
+            let dayCf = parseInt(cf.substring(9, 11), 10);
+            if (dayCf > 40) dayCf -= 40; // female adjustment
+            const dayCfStr = dayCf.toString().padStart(2, '0');
 
-                if (yearInputShort !== yearCfShort || monthInput !== monthCf || dayInput !== dayCfStr) {
-                    cfStatus.textContent = `✗ INCOERENZA: IL CODICE FISCALE ENCODA LA DATA ${dayCfStr}/${monthCf}/${yearCfShort} MA HAI INSERITO ${dayInput}/${monthInput}/${yearInputShort}`;
-                    cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-primary font-bold";
-                    inputCF.setCustomValidity("La data di nascita non corrisponde al Codice Fiscale.");
-                    return;
-                }
+            const monthMap = {
+                'A': '01', 'B': '02', 'C': '03', 'D': '04', 'E': '05', 'H': '06',
+                'L': '07', 'M': '08', 'P': '09', 'R': '10', 'S': '11', 'T': '12'
+            };
+            const monthCf = monthMap[monthCfChar];
+
+            // Calcola anno a 4 cifre (assumendo che un atleta che si iscrive oggi abbia meno di 100 anni)
+            const currentYear = new Date().getFullYear();
+            const currentCentury = Math.floor(currentYear / 100) * 100;
+            let fullYear = currentCentury + parseInt(yearCfShort, 10);
+            if (fullYear > currentYear) {
+                fullYear -= 100;
+            }
+            const dateStr = `${fullYear}-${monthCf}-${dayCfStr}`;
+            
+            const birthInput = document.getElementById('data_nascita');
+            if (birthInput && birthInput.value !== dateStr) {
+                birthInput.value = dateStr;
+                // Trigger change event for minor checking
+                birthInput.dispatchEvent(new Event('change'));
             }
 
-            // 3. Coherence with Municipality of Birth
-            if (comuneNascita && comuniData.length > 0) {
-                const siglaNas = selectProvinciaNascita.value;
-                const matchedComune = comuniData.find(c => c.sigla === siglaNas && c.nome === comuneNascita);
-                if (matchedComune && matchedComune.codiceCatastale) {
-                    const codeCf = cf.substring(11, 15);
-                    if (matchedComune.codiceCatastale.toUpperCase() !== codeCf) {
-                        cfStatus.textContent = `✗ INCOERENZA: IL CODICE FISCALE ENCODA IL COMUNE DI ${codeCf} MA HAI SELEZIONATO ${comuneNascita.toUpperCase()} (${matchedComune.codiceCatastale})`;
-                        cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-primary font-bold";
-                        inputCF.setCustomValidity("Il comune di nascita non corrisponde al Codice Fiscale.");
-                        return;
+            // Luogo di nascita (comune e provincia)
+            if (comuniData && comuniData.length > 0) {
+                const codeCf = cf.substring(11, 15);
+                const matchedComune = comuniData.find(c => c.codiceCatastale && c.codiceCatastale.toUpperCase() === codeCf);
+                if (matchedComune) {
+                    const siglaNas = matchedComune.sigla;
+                    const nomeComune = matchedComune.nome;
+
+                    // Imposta provincia di nascita
+                    if (selectProvinciaNascita.value !== siglaNas) {
+                        selectProvinciaNascita.value = siglaNas;
+                        // Ricarica la lista dei comuni per questa provincia
+                        selectProvinciaNascita.dispatchEvent(new Event('change'));
+                    }
+
+                    // Imposta comune di nascita
+                    if (selectComuneNascita.value !== nomeComune) {
+                        selectComuneNascita.value = nomeComune;
+                        selectComuneNascita.dispatchEvent(new Event('change'));
                     }
                 }
             }
 
-            cfStatus.textContent = "✓ CODICE FISCALE VALIDO E COERENTE CON I DATI INSERITI";
+            cfStatus.textContent = "✓ CODICE FISCALE VALIDO E DATI COMPILATI";
             cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-green-500 font-bold";
             inputCF.setCustomValidity("");
         }
@@ -896,10 +977,16 @@
             });
 
             // Highlight selected tessera item
-            const activeTessera = document.getElementById(tesseraId.replace(/_/g, '-').replace('tessera-', ''));
+            const idMap = {
+                'tessera_base_silver': 'tessera-silver',
+                'tessera_base_gold': 'tessera-gold',
+                'tessera_integrativa_a': 'tessera-integrativa-a',
+                'tessera_integrativa_b': 'tessera-integrativa-b'
+            };
+            const activeTessera = document.getElementById(idMap[tesseraId]);
             if (activeTessera) {
                 activeTessera.classList.remove('border-white/10');
-                activeTessera.classList.add('border-primary', 'bg-primary/5');
+                activeTessera.classList.add('border-primary', 'bg-primary/5', 'shadow-[0_0_10px_rgba(223,41,62,0.2)]');
             }
 
             recalculateTotal();
@@ -1157,13 +1244,17 @@
                 }
             } else if (step === 3) {
                 if (isMinor) {
-                    const inputs = step3.querySelectorAll('input');
+                    const inputs = step3.querySelectorAll('input:not([type="file"])');
                     for (let input of inputs) {
                         if (!input.value.trim()) {
                             alert(`Compila il campo "${input.previousElementSibling.textContent}" per il Genitore/Tutore.`);
                             input.focus();
                             return false;
                         }
+                    }
+                    if (!uploadedTutoreDocumentoFile) {
+                        alert("Devi selezionare e caricare il documento d'identità del genitore/tutore prima di procedere.");
+                        return false;
                     }
                 }
             }
@@ -1185,6 +1276,80 @@
             }
             updateNavigationUI('back');
         });
+
+        // Gestione caricamento file documento genitore
+        let uploadedTutoreDocumentoFile = null;
+        const tutoreFileInput = document.getElementById('tutore_documento_file');
+        const tutoreFileNameLabel = document.getElementById('tutore-documento-file-name');
+        const tutoreFileStatusLabel = document.getElementById('tutore-documento-file-status');
+
+        if (tutoreFileInput) {
+            tutoreFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) {
+                    uploadedTutoreDocumentoFile = null;
+                    tutoreFileNameLabel.textContent = "SELEZIONA O TRASCINA IL DOCUMENTO";
+                    tutoreFileStatusLabel.textContent = "Nessun file selezionato";
+                    tutoreFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("Il documento non deve superare i 5MB di dimensione.");
+                    tutoreFileInput.value = "";
+                    uploadedTutoreDocumentoFile = null;
+                    tutoreFileNameLabel.textContent = "SELEZIONA O TRASCINA IL DOCUMENTO";
+                    tutoreFileStatusLabel.textContent = "Errore: File troppo grande (>5MB)";
+                    tutoreFileStatusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                    return;
+                }
+
+                uploadedTutoreDocumentoFile = file;
+                tutoreFileNameLabel.textContent = file.name.toUpperCase();
+                tutoreFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                tutoreFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+            });
+        }
+
+        // Gestione scroll privacy obbligatorio
+        const privacyScrollBox = document.getElementById('privacy_scroll_box');
+        const checkboxPrivacy = document.getElementById('consenso_privacy');
+        const labelPrivacy = document.getElementById('label_consenso_privacy');
+
+        if (privacyScrollBox) {
+            privacyScrollBox.addEventListener('scroll', () => {
+                // Calcola lo scroll rimanente con tolleranza di 5px
+                const scrollDifference = privacyScrollBox.scrollHeight - privacyScrollBox.clientHeight;
+                if (Math.abs(privacyScrollBox.scrollTop - scrollDifference) < 5) {
+                    checkboxPrivacy.removeAttribute('disabled');
+                    labelPrivacy.classList.remove('opacity-40');
+                }
+            });
+        }
+
+        // Funzione per aggiornare la visibilità dei consensi dello step 4
+        function updateConsentsVisibility() {
+            const statutoBox = document.getElementById('statuto_box_container');
+            const audiovisiviBox = document.getElementById('audiovisivi_box_container');
+
+            if (selectedAdesione === 'socio' || selectedAdesione === 'socio_tesserato') {
+                statutoBox.classList.remove('hidden');
+                audiovisiviBox.classList.remove('hidden');
+                document.getElementById('consenso_statuto').required = true;
+            } else {
+                statutoBox.classList.add('hidden');
+                audiovisiviBox.classList.add('hidden');
+                document.getElementById('consenso_statuto').required = false;
+                document.getElementById('consenso_statuto').checked = false;
+            }
+        }
+
+        // Assegna la visibilità dei consensi al cambio di adesione
+        const originalSelectAdesione = selectAdesione;
+        selectAdesione = function(type) {
+            originalSelectAdesione(type);
+            updateConsentsVisibility();
+        };
 
         // Inizializza l'interfaccia di navigazione al caricamento
         updateNavigationUI();
@@ -1255,8 +1420,39 @@
         }
 
         btnInviaOtp.addEventListener('click', async () => {
+            // Controlla il consenso della Privacy (obbligatorio per tutti)
+            const checkboxPrivacy = document.getElementById('consenso_privacy');
+            if (checkboxPrivacy.disabled || !checkboxPrivacy.checked) {
+                alert("Devi scorrere l'informativa privacy istituzionale fino in fondo ed accettarla per procedere.");
+                return;
+            }
+
+            // Controlla il consenso dello Statuto (obbligatorio per Soci e Socio+Tesserato)
+            if (selectedAdesione === 'socio' || selectedAdesione === 'socio_tesserato') {
+                const checkboxStatuto = document.getElementById('consenso_statuto');
+                if (!checkboxStatuto.checked) {
+                    alert("Devi accettare lo Statuto e il vincolo associativo per iscriverti come Socio.");
+                    return;
+                }
+
+                // Verifica selezione opzione Foto/Video (Granulare)
+                const consensoAudiovisivi = document.querySelector('input[name="consenso_audiovisivi"]:checked');
+                if (!consensoAudiovisivi) {
+                    alert("Seleziona se acconsenti o meno all'utilizzo del materiale Foto/Video.");
+                    return;
+                }
+            }
+
+            // Verifica selezione opzione Marketing (Granulare - tutti)
+            const consensoMarketing = document.querySelector('input[name="consenso_marketing"]:checked');
+            if (!consensoMarketing) {
+                alert("Seleziona se acconsenti o meno alla ricezione di comunicazioni commerciali e sponsor.");
+                return;
+            }
+
+            // Controlla firma elettronica
             if (!consensoLegale.checked) {
-                alert("Devi accettare la formula legale di adesione prima di inviare l'OTP.");
+                alert("Devi accettare la formula legale di adesione e prestare il consenso alla firma elettronica.");
                 return;
             }
 
@@ -1603,17 +1799,47 @@
                     console.log("PDF caricato con successo. URL:", pdfPublicUrl);
                 }
 
-                // 4. Update utenti with certificato_medico_url if uploaded
-                if (certificatoMedicoUrl) {
-                    btnValidaOtp.textContent = "AGGIORNAMENTO PROFILO...";
+                // 4. Update utenti with certificato_medico_url if uploaded, and tutore_documento_url if uploaded
+                let tutoreDocumentoUrl = "";
+                if (isMinor && uploadedTutoreDocumentoFile) {
+                    const fileExt = uploadedTutoreDocumentoFile.name.split('.').pop();
+                    const filePath = `${userId}/documento_tutore_${Date.now()}.${fileExt}`;
+                    btnValidaOtp.textContent = "CARICAMENTO DOCUMENTO TUTORE...";
+
                     if (isDevMode) {
-                        console.log("[Dev Mode] Simulating updating utenti with certificato_medico_url:", certificatoMedicoUrl);
+                        console.log("[Dev Mode] Simulating upload of parent ID document to bucket 'documenti_tutori' as:", filePath);
+                        tutoreDocumentoUrl = `${SUPABASE_URL}/storage/v1/object/sign/documenti_tutori/${filePath}?mock=true`;
+                    } else {
+                        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                            .from('documenti_tutori')
+                            .upload(filePath, uploadedTutoreDocumentoFile, {
+                                contentType: uploadedTutoreDocumentoFile.type,
+                                upsert: true
+                            });
+
+                        if (uploadError) throw uploadError;
+
+                        const { data: urlData } = supabaseClient.storage
+                            .from('documenti_tutori')
+                            .getPublicUrl(filePath);
+
+                        tutoreDocumentoUrl = urlData.publicUrl;
+                        console.log("Documento tutore caricato con successo. URL:", tutoreDocumentoUrl);
+                    }
+                }
+
+                if (certificatoMedicoUrl || tutoreDocumentoUrl) {
+                    btnValidaOtp.textContent = "AGGIORNAMENTO PROFILO...";
+                    const updatePayload = {};
+                    if (certificatoMedicoUrl) updatePayload.certificato_medico_url = certificatoMedicoUrl;
+                    if (tutoreDocumentoUrl) updatePayload.tutore_documento_url = tutoreDocumentoUrl;
+
+                    if (isDevMode) {
+                        console.log("[Dev Mode] Simulating updating utenti with payload:", updatePayload);
                     } else {
                         const { error: utentiUpdateError } = await supabaseClient
                             .from('utenti')
-                            .update({
-                                certificato_medico_url: certificatoMedicoUrl
-                            })
+                            .update(updatePayload)
                             .eq('id', userId);
                         if (utentiUpdateError) throw utentiUpdateError;
                     }
