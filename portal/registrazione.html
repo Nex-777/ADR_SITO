@@ -156,7 +156,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.03</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.04</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -220,7 +220,12 @@
                             </div>
                             <div class="group">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PASSWORD *</label>
-                                <input type="password" id="password" class="brutalist-input" placeholder="••••••••" minlength="6" required>
+                                <div class="relative">
+                                    <input type="password" id="password" class="brutalist-input w-full pr-12" placeholder="••••••••" minlength="6" required>
+                                    <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-lg">visibility</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -627,6 +632,18 @@
 
     <!-- App Logic -->
     <script>
+        function togglePasswordVisibility(inputId, buttonEl) {
+            const input = document.getElementById(inputId);
+            const icon = buttonEl.querySelector('.material-symbols-outlined');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility_off';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility';
+            }
+        }
+
         // --- 1. Supabase Initialization ---
         // Utilizziamo le credenziali reali fornite dal database ADRENALINA_SERVICES
         const SUPABASE_URL = "https://zpategmkelqmexetpaot.supabase.co";

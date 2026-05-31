@@ -95,7 +95,12 @@
                 </div>
                 <div class="group">
                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">PASSWORD *</label>
-                    <input type="password" id="password" class="w-full brutalist-input" placeholder="••••••••" required>
+                    <div class="relative">
+                        <input type="password" id="password" class="w-full brutalist-input pr-12" placeholder="••••••••" required>
+                        <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white flex items-center justify-center">
+                            <span class="material-symbols-outlined text-lg">visibility</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="error-message" class="text-xs text-primary font-bold uppercase hidden">
@@ -119,9 +124,21 @@
 
     <!-- Script Logic -->
     <script>
+        function togglePasswordVisibility(inputId, buttonEl) {
+            const input = document.getElementById(inputId);
+            const icon = buttonEl.querySelector('.material-symbols-outlined');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.textContent = 'visibility_off';
+            } else {
+                input.type = 'password';
+                icon.textContent = 'visibility';
+            }
+        }
+
         const SUPABASE_URL = "https://zpategmkelqmexetpaot.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const form = document.getElementById('login-form');
         const errorEl = document.getElementById('error-message');
@@ -134,7 +151,7 @@
             const password = document.getElementById('password').value;
 
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
@@ -142,7 +159,7 @@
                 if (error) throw error;
 
                 // Controllo del ruolo utente nel database pubblico
-                const { data: profile, error: profileError } = await supabase
+                const { data: profile, error: profileError } = await supabaseClient
                     .from('utenti')
                     .select('ruolo')
                     .eq('id', data.user.id)
