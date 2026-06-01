@@ -1,14 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-
-const stripe = new Stripe(stripeSecretKey);
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 // Disabilita il body parser automatico di Vercel per poter validare la firma con il raw body
 export const config = {
     api: {
@@ -30,15 +22,25 @@ export default async function handler(req, res) {
         return res.status(405).end('Method Not Allowed');
     }
 
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+    if (!stripeSecretKey || !webhookSecret) {
+        console.error('Configurazione webhook di Stripe mancante su Vercel.');
+        return res.status(500).send('Webhook Error: Stripe is not configured properly');
+    }
+
     let event;
 
     try {
+        const stripe = new Stripe(stripeSecretKey);
         const rawBody = await getRawBody(req);
         const sig = req.headers['stripe-signature'];
 
-        if (!sig || !webhookSecret) {
-            console.error('Manca la firma Stripe o il webhook secret.');
-            return res.status(400).send('Webhook Error: Missing signature or secret');
+        if (!sig) {
+            return res.status(400).send('Webhook Error: Missing signature');
         }
 
         // Valida la firma del webhook
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
 
         try {
             console.log(`Elaborazione saldo per utente: ${utenteId}, importo: €${importoStr}`);
+            const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
             // 1. Recupera dati utente per conferma causale
             const { data: userProfile, error: userError } = await supabase

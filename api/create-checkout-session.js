@@ -1,13 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY; // Fallback per dev locale se manca la service role key
-
-const stripe = new Stripe(stripeSecretKey);
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -26,11 +19,27 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Estrai le chiavi all'interno del handler per catturare eventuali errori di configurazione
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+    if (!stripeSecretKey) {
+        return res.status(500).json({ error: 'Configurazione incompleta: manca STRIPE_SECRET_KEY su Vercel.' });
+    }
+    if (!supabaseUrl || !supabaseServiceKey) {
+        return res.status(500).json({ error: 'Configurazione incompleta: mancano le credenziali Supabase su Vercel.' });
+    }
+
     try {
         const { utenteId } = req.body;
         if (!utenteId) {
             return res.status(400).json({ error: 'ID utente obbligatorio.' });
         }
+
+        // Inizializza Stripe e Supabase all'interno del blocco try
+        const stripe = new Stripe(stripeSecretKey);
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
         // 1. Recupera le informazioni del profilo utente da Supabase
         const { data: profile, error: profileError } = await supabase
@@ -39,8 +48,12 @@ export default async function handler(req, res) {
             .eq('id', utenteId)
             .maybeSingle();
 
-        if (profileError || !profile) {
-            return res.status(404).json({ error: 'Profilo utente non trovato.' });
+        if (profileError) {
+            return res.status(500).json({ error: 'Errore query Supabase: ' + profileError.message });
+        }
+
+        if (!profile) {
+            return res.status(404).json({ error: 'Profilo utente non trovato su Supabase.' });
         }
 
         const quota = parseFloat(profile.quota_totale);
@@ -87,6 +100,6 @@ export default async function handler(req, res) {
 
     } catch (err) {
         console.error('Errore creazione checkout session:', err);
-        return res.status(500).json({ error: err.message });
+        return res.status(500).json({ error: 'Errore interno: ' + err.message });
     }
 }
