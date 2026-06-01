@@ -49,6 +49,7 @@
     <style>
         :root {
             --primary: #df293e;
+            color-scheme: dark;
         }
         
         body {
@@ -104,6 +105,15 @@
             outline: none !important;
             border-bottom: 2px solid var(--primary) !important;
             background-color: #20201f !important;
+        }
+
+        select option {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+        }
+
+        select {
+            color-scheme: dark !important;
         }
 
         /* Webkit autofill fix for dark mode */
@@ -167,7 +177,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.06</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.07</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -371,16 +381,31 @@
                         </div>
 
                         <!-- Sezione Caricamento Certificato Medico (Condizionale) -->
-                        <div id="certificato_medico_container" class="space-y-3 hidden border border-white/10 p-4 bg-black/25">
+                        <div id="certificato_medico_container" class="space-y-4 hidden border border-white/10 p-4 bg-black/25">
                             <div class="flex justify-between items-center">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CERTIFICATO MEDICO (OBBLIGATORIO)</label>
                                 <span class="text-[9px] text-gray-400">PDF, PNG, JPG (MAX 5MB)</span>
                             </div>
-                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" onclick="document.getElementById('certificato_file').click()">
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative mb-3" onclick="document.getElementById('certificato_file').click()">
                                 <input type="file" id="certificato_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
                                 <span class="material-symbols-outlined text-2xl text-primary mb-1">upload_file</span>
                                 <p class="text-xs text-white uppercase font-bold" id="certificato-file-name">SELEZIONA O TRASCINA IL CERTIFICATO</p>
                                 <p class="text-[9px] text-gray-400 mt-1 uppercase" id="certificato-file-status">Nessun file selezionato</p>
+                            </div>
+                            <!-- Nuovi Campi Certificato (Tipologia e Data Emissione) -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="group">
+                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">TIPOLOGIA CERTIFICATO *</label>
+                                    <select id="certificato_tipologia" class="brutalist-select text-xs">
+                                        <option value="" disabled selected>SELEZIONA TIPOLOGIA</option>
+                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
+                                        <option value="AGONISTICO">AGONISTICO</option>
+                                    </select>
+                                </div>
+                                <div class="group">
+                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI EMISSIONE *</label>
+                                    <input type="date" id="certificato_data_emissione" class="w-full brutalist-input bg-black text-white text-xs p-2">
+                                </div>
                             </div>
                         </div>
 
@@ -508,6 +533,20 @@
                                 <input type="checkbox" id="consenso_privacy" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0" disabled>
                                 <label for="consenso_privacy" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer opacity-40" id="label_consenso_privacy">
                                     Dichiaro di aver preso visione dell'informativa privacy istituzionale obbligatoria *
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Consenso Trattamento Dati Sanitari e Automazione (Condizionale per Tesserati) -->
+                        <div id="sanitari_box_container" class="space-y-3 hidden">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">TRATTAMENTO DATI SANITARI ED ELABORAZIONE AUTOMATIZZATA</label>
+                            <p class="text-[9px] text-gray-400 uppercase leading-relaxed">
+                                Acconsento al trattamento dei miei dati relativi alla salute (certificato medico di idoneità sportiva) ed alla sua elaborazione automatizzata tramite algoritmi di intelligenza artificiale visiva per estrazione e verifica automatica di data di emissione, scadenza e tipologia.
+                            </p>
+                            <div class="flex items-start gap-3">
+                                <input type="checkbox" id="consenso_sanitari" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0">
+                                <label for="consenso_sanitari" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
+                                    Presto il consenso al trattamento dei dati sanitari e verifica AI *
                                 </label>
                             </div>
                         </div>
@@ -988,6 +1027,8 @@
                 certificatoContainer.classList.add('hidden');
                 selectedTessera = "";
                 inputTessera.value = "";
+                document.getElementById('certificato_tipologia').value = "";
+                document.getElementById('certificato_data_emissione').value = "";
             } else {
                 tesseraContainer.classList.remove('hidden');
                 certificatoContainer.classList.remove('hidden');
@@ -1263,9 +1304,23 @@
                 }
 
                 // Check Medical Certificate if required
-                if ((selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') && !uploadedCertificatoFile) {
-                    alert("Devi selezionare e caricare il certificato medico prima di procedere.");
-                    return false;
+                if (selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') {
+                    if (!uploadedCertificatoFile) {
+                        alert("Devi selezionare e caricare il certificato medico prima di procedere.");
+                        return false;
+                    }
+                    const certTipo = document.getElementById('certificato_tipologia');
+                    if (!certTipo.value) {
+                        alert("Seleziona la tipologia di certificato medico.");
+                        certTipo.focus();
+                        return false;
+                    }
+                    const certData = document.getElementById('certificato_data_emissione');
+                    if (!certData.value) {
+                        alert("Seleziona la data di emissione del certificato medico.");
+                        certData.focus();
+                        return false;
+                    }
                 }
             } else if (step === 2) {
                 const inputs = step2.querySelectorAll('input[required], select[required]');
@@ -1364,6 +1419,7 @@
         function updateConsentsVisibility() {
             const statutoBox = document.getElementById('statuto_box_container');
             const audiovisiviBox = document.getElementById('audiovisivi_box_container');
+            const sanitariBox = document.getElementById('sanitari_box_container');
 
             if (selectedAdesione === 'socio' || selectedAdesione === 'socio_tesserato') {
                 statutoBox.classList.remove('hidden');
@@ -1374,6 +1430,15 @@
                 audiovisiviBox.classList.add('hidden');
                 document.getElementById('consenso_statuto').required = false;
                 document.getElementById('consenso_statuto').checked = false;
+            }
+
+            if (selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') {
+                sanitariBox.classList.remove('hidden');
+                document.getElementById('consenso_sanitari').required = true;
+            } else {
+                sanitariBox.classList.add('hidden');
+                document.getElementById('consenso_sanitari').required = false;
+                document.getElementById('consenso_sanitari').checked = false;
             }
         }
 
@@ -1481,6 +1546,15 @@
             if (!consensoMarketing) {
                 alert("Seleziona se acconsenti o meno alla ricezione di comunicazioni commerciali e sponsor.");
                 return;
+            }
+
+            // Controlla il consenso dei dati sanitari (obbligatorio per Tesserati)
+            if (selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') {
+                const checkboxSanitari = document.getElementById('consenso_sanitari');
+                if (!checkboxSanitari.checked) {
+                    alert("Devi prestare il consenso al trattamento dei dati sanitari ed all'analisi automatizzata del certificato.");
+                    return;
+                }
             }
 
             // Controlla firma elettronica
@@ -1867,7 +1941,11 @@
                 if (certificatoMedicoUrl || tutoreDocumentoUrl) {
                     btnValidaOtp.textContent = "AGGIORNAMENTO PROFILO...";
                     const updatePayload = {};
-                    if (certificatoMedicoUrl) updatePayload.certificato_medico_url = certificatoMedicoUrl;
+                    if (certificatoMedicoUrl) {
+                        updatePayload.certificato_medico_url = certificatoMedicoUrl;
+                        updatePayload.certificato_tipologia = document.getElementById('certificato_tipologia').value;
+                        updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione').value;
+                    }
                     if (tutoreDocumentoUrl) updatePayload.tutore_documento_url = tutoreDocumentoUrl;
 
                     if (isDevMode) {
@@ -1901,8 +1979,13 @@
                 }
 
                 btnValidaOtp.textContent = "COMPLETATO!";
-                alert("FIRMA DIGITALE E REGISTRAZIONE COMPLETATE CON SUCCESSO! Il tuo profilo atleti è attivo.");
-                window.location.href = "../index.html";
+                if (selectedAdesione === 'tesserato') {
+                    alert("REGISTRAZIONE RICEVUTA CON SUCCESSO!\n\nI nostri sistemi verificheranno la validità del certificato medico tramite scansione AI. Potrai procedere al pagamento non appena la verifica sarà completata con successo.");
+                    window.location.href = "pagamento.html?id=" + userId;
+                } else {
+                    alert("DOMANDA DI ISCRIZIONE RICEVUTA CON SUCCESSO!\n\nLa tua richiesta di ammissione socio è in attesa di delibera da parte del Consiglio Direttivo. Riceverai un'e-mail per procedere al pagamento non appena la domanda verrà deliberata.");
+                    window.location.href = "../index.html";
+                }
 
             } catch (err) {
                 console.error("Error during final files/database save:", err);

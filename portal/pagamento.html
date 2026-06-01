@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html class="dark" lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ADRENALINA CLUB - SALDO QUOTA</title>
+    <meta name="description" content="Procedi al pagamento sicuro tramite Stripe per attivare la tua iscrizione."/>
+    
+    <!-- Scripts & Frameworks -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Syncopate:wght@400;700&family=Manrope:wght@200;400;600;800&family=Inter:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#df293e",
+                        "primary-dim": "#b91c1c",
+                        "background": "#0e0e0e",
+                        "surface": "#0e0e0e",
+                        "surface-container": "#1a1a1a",
+                        "surface-container-high": "#20201f",
+                        "surface-container-low": "#131313",
+                        "on-surface": "#ffffff",
+                        "on-surface-variant": "#a3a3a3",
+                    },
+                    fontFamily: {
+                        headline: ["Orbitron", "sans-serif"],
+                        label: ["Syncopate", "sans-serif"],
+                        body: ["Manrope", "sans-serif"],
+                    }
+                }
+            }
+        };
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #0e0e0e;
+            color: #ffffff;
+        }
+        .font-headline { font-family: 'Orbitron', sans-serif; }
+        .font-label { font-family: 'Syncopate', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-background text-on-surface">
+
+    <!-- Header -->
+    <header class="border-b border-white/10 py-6 px-6 bg-black">
+        <div class="max-w-[1920px] mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <a href="../index.html" class="flex items-center gap-3 group">
+                    <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
+                    <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
+                </a>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.06</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">PORTALE PAGAMENTI</span>
+            </div>
+            <a href="login.html" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase tracking-wider transition-all">
+                ACCEDI
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Section -->
+    <main class="flex-grow flex items-center justify-center p-6">
+        <div class="max-w-md w-full glass-card p-8 space-y-6 relative overflow-hidden">
+            <!-- Glow background effect -->
+            <div class="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+            <div id="loader" class="text-center py-12 space-y-4">
+                <div class="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-xs text-gray-400 font-headline uppercase tracking-widest">Caricamento dettagli quota...</p>
+            </div>
+
+            <div id="payment-content" class="hidden space-y-6">
+                <div class="text-center space-y-2">
+                    <span class="font-label text-primary font-bold text-[10px] tracking-widest block uppercase">SALDO QUOTA ASSOCIATIVA</span>
+                    <h2 class="font-headline text-2xl font-black uppercase text-white tracking-wider" id="user-name">...</h2>
+                    <p class="text-xs text-gray-500 uppercase" id="user-email">...</p>
+                </div>
+
+                <!-- Info Box -->
+                <div class="border border-white/10 bg-black/40 p-5 space-y-4">
+                    <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                        <span class="text-xs text-gray-400 uppercase font-headline">Tipologia Adesione</span>
+                        <span class="text-xs text-white uppercase font-headline font-bold" id="membership-type">-</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-xs text-gray-400 uppercase font-headline">Importo da Versare</span>
+                        <span class="text-2xl text-primary font-headline font-black" id="total-amount">€0.00</span>
+                    </div>
+                </div>
+
+                <!-- Cancel Notification -->
+                <div id="cancel-notification" class="hidden border border-primary/20 bg-primary/5 text-primary text-xs uppercase font-bold p-4 text-center rounded-sm">
+                    ⚠️ Pagamento annullato. Puoi effettuare la transazione in qualsiasi momento.
+                </div>
+
+                <!-- Stripe Checkout Trigger Button -->
+                <button id="pay-btn" onclick="startStripeCheckout()" class="w-full bg-white text-black font-headline font-black py-4 uppercase tracking-wider hover:bg-primary hover:text-white transition-all active:scale-[0.98] flex justify-between items-center px-6">
+                    PAGA CON STRIPE
+                    <span class="material-symbols-outlined text-xl">credit_card</span>
+                </button>
+                
+                <p class="text-[9px] text-gray-600 text-center uppercase tracking-wider leading-relaxed">
+                    Pagamento protetto e crittografato tramite Stripe. Adrenalina Club non memorizza i dettagli della tua carta di credito.
+                </p>
+            </div>
+
+            <!-- Error Box -->
+            <div id="error-box" class="hidden text-center py-8 space-y-4">
+                <span class="material-symbols-outlined text-4xl text-primary">error</span>
+                <h3 class="font-headline text-lg font-black uppercase text-white tracking-wider">Errore caricamento</h3>
+                <p class="text-xs text-gray-400 uppercase leading-relaxed" id="error-message">Impossibile trovare il profilo o pagamento già saldato.</p>
+                <a href="login.html" class="inline-block bg-white/5 border border-white/10 text-white font-headline text-xs px-6 py-3 uppercase tracking-wider hover:bg-white hover:text-black transition-all">
+                    ACCEDI ALLA DASHBOARD
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black w-full border-t border-white/10 py-6 px-6">
+        <div class="max-w-[1920px] mx-auto text-center text-[10px] uppercase text-gray-600 tracking-wider">
+            © 2026 ASD ADRENALINA CLUB APS.
+        </div>
+    </footer>
+
+    <!-- Script Logic -->
+    <script>
+        const SUPABASE_URL = "https://zpategmkelqmexetpaot.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM";
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let utenteId = null;
+        let quota = 0;
+
+        async function init() {
+            const params = new URLSearchParams(window.location.search);
+            utenteId = params.get('id');
+            const isCancel = params.get('payment') === 'cancel';
+
+            if (isCancel) {
+                document.getElementById('cancel-notification').classList.remove('hidden');
+            }
+
+            if (!utenteId) {
+                showError("ID Utente non valido o mancante nella richiesta.");
+                return;
+            }
+
+            try {
+                // Fetch utente details directly from Supabase
+                const { data: userProfile, error } = await supabaseClient
+                    .from('utenti')
+                    .select('nome, cognome, email, quota_totale, tipo_adesione, anagrafiche(id, registro_soci(stato_socio), certificati_medici(*))')
+                    .eq('id', utenteId)
+                    .maybeSingle();
+
+                if (error || !userProfile) {
+                    showError("Impossibile recuperare i dettagli dell'associato.");
+                    return;
+                }
+
+                const anag = Array.isArray(userProfile.anagrafiche) ? userProfile.anagrafiche[0] : userProfile.anagrafiche;
+                const regSocio = anag && anag.registro_soci ? (Array.isArray(anag.registro_soci) ? anag.registro_soci[0] : anag.registro_soci) : null;
+                const cert = anag && anag.certificati_medici ? (Array.isArray(anag.certificati_medici) ? anag.certificati_medici[0] : anag.certificati_medici) : null;
+
+                // Check governance status if they are registering as a member (socio or socio_tesserato)
+                if ((userProfile.tipo_adesione === 'socio' || userProfile.tipo_adesione === 'socio_tesserato') && regSocio && regSocio.stato_socio === 'IN_ATTESA_DELIBERA') {
+                    showError("La tua domanda di ammissione socio è in attesa di delibera da parte del Consiglio Direttivo. Potrai procedere al pagamento non appena la delibera sarà ratificata.");
+                    return;
+                }
+
+                // Check medical certificate validation status for sport users
+                if (userProfile.tipo_adesione === 'tesserato' || userProfile.tipo_adesione === 'socio_tesserato') {
+                    if (!cert) {
+                        showError("Certificato medico mancante. Accedi al portale atleti per caricare il certificato medico ed abilitare il pagamento.");
+                        return;
+                    }
+                    const status = cert.stato_validazione;
+                    const scaduto = new Date(cert.data_scadenza) < new Date();
+                    
+                    if (scaduto) {
+                        showError("Il tuo certificato medico risulta scaduto. Accedi al portale atleti per caricare un certificato in corso di validità.");
+                        return;
+                    }
+                    if (status === 'ROSSO') {
+                        showError(`Il tuo certificato medico è stato rifiutato. Motivo: ${cert.note_ai || 'File non leggibile'}. Ricarica un certificato valido nel portale.`);
+                        return;
+                    }
+                    if (status === 'IN_ATTESA') {
+                        showError("Verifica del certificato medico tramite scansione AI in corso. Ricarica questa pagina tra qualche istante per procedere.");
+                        return;
+                    }
+                    if (status === 'GIALLO') {
+                        showError("Il tuo certificato medico richiede approvazione manuale da parte della segreteria. Potrai pagare non appena sarà validato.");
+                        return;
+                    }
+                }
+
+                quota = parseFloat(userProfile.quota_totale) || 0;
+                if (quota <= 0) {
+                    showError("Questa quota è già stata saldata o non presenta importi insoluti.");
+                    return;
+                }
+
+                // Render page content
+                document.getElementById('user-name').textContent = `${userProfile.nome} ${userProfile.cognome}`.toUpperCase();
+                document.getElementById('user-email').textContent = userProfile.email;
+                document.getElementById('membership-type').textContent = userProfile.tipo_adesione ? userProfile.tipo_adesione.replace(/_/g, ' ') : 'Socio';
+                document.getElementById('total-amount').textContent = `€${quota.toFixed(2)}`;
+
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('payment-content').classList.remove('hidden');
+
+            } catch (err) {
+                console.error("Initialization error:", err);
+                showError("Errore di connessione al database.");
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('payment-content').classList.add('hidden');
+            document.getElementById('error-message').textContent = msg;
+            document.getElementById('error-box').classList.remove('hidden');
+        }
+
+        async function startStripeCheckout() {
+            const payBtn = document.getElementById('pay-btn');
+            payBtn.disabled = true;
+            payBtn.innerHTML = `ELABORAZIONE IN CORSO... <div class="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>`;
+
+            try {
+                const response = await fetch('/api/create-checkout-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ utenteId: utenteId })
+                });
+
+                const data = await response.json();
+                if (data.url) {
+                    // Redirect to Stripe checkout
+                    window.location.href = data.url;
+                } else {
+                    throw new Error(data.error || "Impossibile avviare il checkout.");
+                }
+            } catch (err) {
+                console.error("Stripe Checkout Error:", err);
+                alert("Errore nell'avviare il pagamento: " + err.message);
+                payBtn.disabled = false;
+                payBtn.innerHTML = `PAGA CON STRIPE <span class="material-symbols-outlined text-xl">credit_card</span>`;
+            }
+        }
+
+        // Initialize Page
+        init();
+    </script>
+</body>
+</html>

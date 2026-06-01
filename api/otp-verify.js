@@ -211,14 +211,14 @@ export default async function handler(req, res) {
                 });
             if (tessError) throw tessError;
 
-            const pagamentoLink = `https://adrenalinaclub.it/portal/pagamento?id=${utenteId}&amount=${profile.quota_totale}`;
-            emailSubject = 'Tesseramento Sportivo Registrato - Procedi al Pagamento';
+            const pagamentoLink = `https://adrenalinaclub.it/portal/pagamento.html?id=${utenteId}`;
+            emailSubject = 'Tesseramento Sportivo Registrato - Verifica Certificato in corso';
             emailHtml = `
                 <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
                     <h1 style="color: #df293e; font-size: 22px;">ADRENALINA CLUB</h1>
-                    <p style="color: #ccc;">Ciao ${profile.nome}, il tuo tesseramento sportivo CSEN è stato registrato ed è pronto per essere attivato.</p>
-                    <p style="color: #aaa; font-size: 13px;">Trattandosi di tesseramento sportivo diretto (senza ammissione alla governance), non è richiesta la delibera del consiglio.</p>
-                    <a href="${pagamentoLink}" style="background-color: #df293e; color: #fff; padding: 12px 24px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px;">PAGA LA QUOTA DI €${profile.quota_totale}</a>
+                    <p style="color: #ccc;">Ciao ${profile.nome}, il tuo tesseramento sportivo CSEN è stato registrato.</p>
+                    <p style="color: #aaa; font-size: 13px;">Prima di poter procedere al pagamento della quota, i nostri sistemi verificheranno la validità del certificato medico da te caricato (scansione AI). Potrai verificare lo stato della validazione ed effettuare il saldo cliccando sul link sottostante non appena il certificato risulterà approvato:</p>
+                    <a href="${pagamentoLink}" style="background-color: #df293e; color: #fff; padding: 12px 24px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px;">PROSEGUI AL PORTALE PAGAMENTI</a>
                 </div>
             `;
         }
