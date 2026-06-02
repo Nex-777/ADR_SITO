@@ -10,7 +10,12 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
-    const allowedOrigins = ['https://adrenalinaclub.it', 'https://www.adrenalinaclub.it', 'http://localhost:3000'];
+    const allowedOrigins = [
+        'https://adrenalinaclub.it',
+        'https://www.adrenalinaclub.it',
+        'https://adr-sito.vercel.app',
+        'http://localhost:3000'
+    ];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -47,6 +52,17 @@ export default async function handler(req, res) {
         }
         
         const utenteId = user.id;
+
+        // Rate limiting check
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+        const { data: allowed } = await supabase.rpc('check_rate_limit', {
+            p_key: `otp-verify:${clientIp}`,
+            p_max_requests: 5,
+            p_window_seconds: 300
+        });
+        if (allowed === false) {
+            return res.status(429).json({ error: 'Troppe richieste di verifica OTP. Riprova più tardi.' });
+        }
         
         // 3. Get OTP from request body
         const { otp } = req.body;
@@ -61,7 +77,7 @@ export default async function handler(req, res) {
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { data: atti, error: queryError } = await supabase
             .from('atti_adesione')
-            .select('id, data_firma')
+            .select('id, data_firma, tentativi_falliti')
             .eq('utente_id', utenteId)
             .eq('otp_codice_hash', submittedHash)
             .eq('stato', 'in_attesa_otp')
@@ -73,7 +89,31 @@ export default async function handler(req, res) {
         }
         
         if (!atti) {
-            return res.status(400).json({ error: 'Invalid or expired OTP code' });
+            // Contatore tentativi falliti
+            const { data: pendingRecord } = await supabase
+                .from('atti_adesione')
+                .select('id, tentativi_falliti')
+                .eq('utente_id', utenteId)
+                .eq('stato', 'in_attesa_otp')
+                .maybeSingle();
+
+            if (pendingRecord) {
+                const newAttempts = (pendingRecord.tentativi_falliti || 0) + 1;
+                if (newAttempts >= 3) {
+                    await supabase
+                        .from('atti_adesione')
+                        .delete()
+                        .eq('id', pendingRecord.id);
+                    return res.status(400).json({ error: 'Codice OTP invalidato dopo 3 tentativi falliti. Riapri il wizard per inviare un nuovo codice.' });
+                } else {
+                    await supabase
+                        .from('atti_adesione')
+                        .update({ tentativi_falliti: newAttempts })
+                        .eq('id', pendingRecord.id);
+                    return res.status(400).json({ error: `Codice OTP errato. Tentativo ${newAttempts} di 3.` });
+                }
+            }
+            return res.status(400).json({ error: 'Codice OTP non valido o scaduto.' });
         }
         
         // OTP IS VALID! Proceed to populate polymorphic database structure.
@@ -254,6 +294,6 @@ export default async function handler(req, res) {
         
     } catch (error) {
         console.error('API Verify OTP Handler Error:', error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: 'Si è verificato un errore interno. Riprova più tardi.' });
     }
 }

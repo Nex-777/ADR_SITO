@@ -4,7 +4,12 @@ import Stripe from 'stripe';
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
-    const allowedOrigins = ['https://adrenalinaclub.it', 'https://www.adrenalinaclub.it', 'http://localhost:3000'];
+    const allowedOrigins = [
+        'https://adrenalinaclub.it',
+        'https://www.adrenalinaclub.it',
+        'https://adr-sito.vercel.app',
+        'http://localhost:3000'
+    ];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -50,6 +55,17 @@ export default async function handler(req, res) {
  
     try {
         const utenteId = user.id;
+ 
+        // Rate limiting check
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+        const { data: allowed } = await supabase.rpc('check_rate_limit', {
+            p_key: `checkout:${clientIp}`,
+            p_max_requests: 5,
+            p_window_seconds: 3600
+        });
+        if (allowed === false) {
+            return res.status(429).json({ error: 'Troppe richieste di checkout. Riprova più tardi.' });
+        }
  
         // Inizializza Stripe all'interno del blocco try
         const stripe = new Stripe(stripeSecretKey);
@@ -113,6 +129,6 @@ export default async function handler(req, res) {
 
     } catch (err) {
         console.error('Errore creazione checkout session:', err);
-        return res.status(500).json({ error: 'Errore interno: ' + err.message });
+        return res.status(500).json({ error: 'Si è verificato un errore interno. Riprova più tardi.' });
     }
 }

@@ -47,7 +47,7 @@ export default async function handler(req, res) {
         event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
     } catch (err) {
         console.error(`❌ Errore di validazione firma webhook: ${err.message}`);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
+        return res.status(400).send('Webhook signature verification failed.');
     }
 
     console.log(`🔔 Ricevuto evento Stripe: ${event.type}`);
@@ -82,18 +82,13 @@ export default async function handler(req, res) {
             const importo = parseFloat(importoStr || userProfile.quota_totale || 0);
             const annoFiscale = new Date().getFullYear();
 
-            // 2. Calcola il numero progressivo di ricevuta per l'anno corrente
-            const { data: maxReceipt, error: maxError } = await supabase
-                .from('ricevute_pagamenti')
-                .select('numero_ricevuta')
-                .eq('anno_fiscale', annoFiscale)
-                .order('numero_ricevuta', { ascending: false })
-                .limit(1);
-
-            let nextNum = 1;
-            if (!maxError && maxReceipt && maxReceipt.length > 0) {
-                nextNum = maxReceipt[0].numero_ricevuta + 1;
+            // 2. Calcola il numero progressivo di ricevuta per l'anno corrente (tramite stored procedure con FOR UPDATE)
+            const { data: nextNumData, error: nextNumError } = await supabase
+                .rpc('prossimo_numero_ricevuta', { p_anno: annoFiscale });
+            if (nextNumError) {
+                throw new Error("Errore nel calcolo del prossimo numero di ricevuta: " + nextNumError.message);
             }
+            const nextNum = nextNumData;
 
             // 3. Inserisci la ricevuta nel database
             const { data: recData, error: recError } = await supabase
@@ -148,7 +143,7 @@ export default async function handler(req, res) {
 
         } catch (err) {
             console.error('❌ Errore durante l\'aggiornamento del database post-pagamento:', err);
-            return res.status(500).json({ error: 'Errore interno nel processare il webhook: ' + err.message });
+            return res.status(500).json({ error: 'Errore interno del server.' });
         }
     }
 

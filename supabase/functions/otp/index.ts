@@ -3,7 +3,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Get CORS headers dynamically based on origin
 function getCorsHeaders(req: Request) {
-  const allowedOrigins = ['https://adrenalinaclub.it', 'https://www.adrenalinaclub.it', 'http://localhost:3000'];
+  const allowedOrigins = [
+    'https://adrenalinaclub.it',
+    'https://www.adrenalinaclub.it',
+    'https://adr-sito.vercel.app',
+    'http://localhost:3000'
+  ];
   const origin = req.headers.get('origin') ?? "";
   const allowOrigin = allowedOrigins.includes(origin) ? origin : 'https://adrenalinaclub.it';
   return {

@@ -77,4 +77,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
     - REM-09: Switched to cryptographically secure random number generation (`crypto.randomInt` in Node.js, `crypto.getRandomValues` in Edge function).
     - REM-10: Created missing private storage bucket `documenti_tutori` and RLS policies on Supabase.
 
-
+## [2026-06-02] update | Phase 1 Backend Hardening
+- Implemented Phase 1 Backend Hardening Remediations:
+    - REM-11: Replaced insecure `getPublicUrl` with dynamic `openSignedFile` helper in `portal/dashboard.html` to generate on-the-fly signed URLs for medical certificates.
+    - REM-12: Added rate limiting checks to `api/otp.js`, `api/otp-verify.js` (with a 3-strikes OTP invalidation logic), and `api/create-checkout-session.js`.
+    - REM-13: Fixed cron authentication check in `api/cron-scadenze.js` to fail-closed instead of fail-open.
+    - REM-14: Added authorization check in stored procedure `salva_verbale_relazionale` restricting access to board members.
+    - REM-15: Sanitized all API handler catch blocks to return generic internal server error messages instead of leaking database/runtime details.
+    - REM-16: Solved invoice receipt number race conditions in `api/stripe-webhook.js` using Postgres sequence and `prossimo_numero_ricevuta` stored function.
+    - REM-17: Secured SELECT policy on `utenti` table to allow profile retrieval only for owner and board members, preventing recursive policy resolution.
+## [2026-06-02] update | Finalizing Phase 1 Storage URL Hardening
+- Completed REM-11 storage hardening in [dashboard.html](../portal/dashboard.html) and [registrazione.html](../portal/registrazione.html) by fully replacing all remaining `getPublicUrl()` calls with `createSignedUrl()` to match private bucket security rules.

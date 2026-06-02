@@ -13,7 +13,12 @@ const resend = new Resend(resendApiKey);
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
-    const allowedOrigins = ['https://adrenalinaclub.it', 'https://www.adrenalinaclub.it', 'http://localhost:3000'];
+    const allowedOrigins = [
+        'https://adrenalinaclub.it',
+        'https://www.adrenalinaclub.it',
+        'https://adr-sito.vercel.app',
+        'http://localhost:3000'
+    ];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -51,6 +56,17 @@ export default async function handler(req, res) {
         
         const utenteId = user.id;
         const email = user.email;
+        
+        // Rate limiting check
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+        const { data: allowed } = await supabase.rpc('check_rate_limit', {
+            p_key: `otp:${clientIp}`,
+            p_max_requests: 3,
+            p_window_seconds: 60
+        });
+        if (allowed === false) {
+            return res.status(429).json({ error: 'Troppe richieste di generazione OTP. Riprova tra un minuto.' });
+        }
         
         // 3. Generate 6-digit OTP
         const otpCode = crypto.randomInt(100000, 999999).toString();
@@ -105,6 +121,6 @@ export default async function handler(req, res) {
         
     } catch (error) {
         console.error('API OTP Handler Error:', error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: 'Si è verificato un errore interno. Riprova più tardi.' });
     }
 }

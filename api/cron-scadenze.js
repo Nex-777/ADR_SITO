@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 export default async function handler(req, res) {
     // Basic verification (e.g. check secret token to prevent unauthorized execution)
     const cronSecret = req.headers['x-cron-secret'];
-    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+    if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 
