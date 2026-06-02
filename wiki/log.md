@@ -184,6 +184,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Modified the Dashboard's "Registro Approvazioni" panel to display a clickable "APPROVA CERT." button for certificates in `GIALLO` (Revisione) state, allowing the President to manually force a green status without leaving the tab.
 - Bumped application version to `1.00.30`.
 
+## [2026-06-02] update | Dashboard UI improvement (v1.00.31)
+- Added the "ELIMINA" button for pending Tesserati in the "REGISTRO APPROVAZIONI" panel, allowing the President to completely clean up failed or duplicate registrations using the deep-clean `elimina_utente_completo` RPC function.
+- Bumped application version to `1.00.31`.
+
 ## [2026-06-02] update | Ingest Portal Pages & Ghost User Management
 - Created documentation for `portal/dashboard.html` in [portal_dashboard.md](portal_dashboard.md).
 - Created documentation for `portal/login.html` and `portal/pagamento.html` in [auth_and_payments.md](auth_and_payments.md).
