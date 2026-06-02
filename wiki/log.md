@@ -175,6 +175,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Added the `GEMINI_API_KEY` to the Vercel environment variables.
 - Bumped application version to `1.00.28`.
 
+## [2026-06-02] hotfix | Fix certificati_medici insertion crash (v1.00.29)
+- Fixed a backend crash in `api/otp-verify.js` where the insertion into `certificati_medici` failed silently due to Postgres `NOT NULL` constraints on `data_scadenza` and `medico_rilascio`. Added fallback dummy values that will be immediately overwritten by the AI validation step.
+- Bumped application version to `1.00.29`.
+
 ## [2026-06-02] update | Ingest Portal Pages & Ghost User Management
 - Created documentation for `portal/dashboard.html` in [portal_dashboard.md](portal_dashboard.md).
 - Created documentation for `portal/login.html` and `portal/pagamento.html` in [auth_and_payments.md](auth_and_payments.md).

@@ -209,13 +209,25 @@ export default async function handler(req, res) {
         // C2. Insert into public.certificati_medici if present
         if (profile.certificato_medico_url) {
             await supabase.from('certificati_medici').delete().eq('anagrafica_id', anagraficaId);
+            
+            // Calcola una data di scadenza fittizia (1 anno) per bypassare il constraint NOT NULL,
+            // verrà sovrascritta dall'AI fra pochi secondi.
+            let fallbackScadenza = '2099-12-31';
+            if (profile.certificato_data_emissione) {
+                const emDate = new Date(profile.certificato_data_emissione);
+                emDate.setFullYear(emDate.getFullYear() + 1);
+                fallbackScadenza = emDate.toISOString().split('T')[0];
+            }
+
             const { error: certError } = await supabase
                 .from('certificati_medici')
                 .insert({
                     anagrafica_id: anagraficaId,
                     file_url: profile.certificato_medico_url,
                     tipologia: profile.certificato_tipologia || 'NON_SPECIFICATO',
-                    data_rilascio: profile.certificato_data_emissione || null,
+                    data_rilascio: profile.certificato_data_emissione || new Date().toISOString().split('T')[0],
+                    data_scadenza: fallbackScadenza,
+                    medico_rilascio: 'In elaborazione AI...',
                     stato_validazione: 'IN_ATTESA'
                 });
             if (certError) {
