@@ -84,15 +84,15 @@ export default async function handler(req, res) {
         // 4. Hash submitted OTP
         const submittedHash = crypto.createHash('sha256').update(otp).digest('hex');
         
-        // 5. Query matching pending sign request in public.atti_adesione (within 5 minutes)
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        // 5. Query matching pending sign request in public.atti_adesione (within 15 minutes)
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
         const { data: atti, error: queryError } = await supabase
             .from('atti_adesione')
             .select('id, data_firma, tentativi_falliti')
             .eq('utente_id', utenteId)
             .eq('otp_codice_hash', submittedHash)
             .eq('stato', 'in_attesa_otp')
-            .gte('created_at', fiveMinutesAgo)
+            .gte('created_at', fifteenMinutesAgo)
             .maybeSingle();
             
         if (queryError) {

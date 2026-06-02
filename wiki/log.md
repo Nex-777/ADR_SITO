@@ -113,4 +113,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Modified [registrazione.html](../portal/registrazione.html) to implement:
   - A preventive database check searching for the input email prior to calling `auth.signUp` or `signInWithPassword`.
   - A block prohibiting registration resumption/upserts if the logged-in user already has an administrative role or is fully registered.
-- Bumped application version to `1.00.16`.
+
+## [2026-06-02] update | OTP Expiration Extension & Manual Resend
+- Increased the OTP validity period from 5 minutes to 15 minutes in the backend verification service `api/otp-verify.js` and updated the frontend countdown timer duration from 2 minutes to 15 minutes (900 seconds) in `portal/registrazione.html`.
+- Added a manual resend link ("Non hai ricevuto la mail? Rinvia codice") in `portal/registrazione.html` allowing candidates to request a fresh OTP immediately without reloading or waiting for the timer to expire.
+- Bumped application version to `1.00.17`.
