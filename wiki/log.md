@@ -159,4 +159,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Updated `portal/dashboard.html` to include a new "REGISTRAZIONI INCOMPLETE" section within the "Registro Approvazioni" panel, allowing the President to delete stuck registrations with one click.
 - Bumped application version to `1.00.25`.
 
+## [2026-06-02] fix | Dashboard JS Syntax Error (v1.00.26)
+- Fixed an `Uncaught SyntaxError` in `portal/dashboard.html` caused by using `await` inside the synchronous `renderApprovazioniTables` function. Converted the function to `async`.
+- Bumped application version to `1.00.26`.
+
 
