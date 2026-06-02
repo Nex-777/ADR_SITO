@@ -156,10 +156,12 @@ export default async function handler(req, res) {
 
         // 6. Polymorphic Inserts
         
-        // A. Insert into public.anagrafiche
+        // A. Insert (or update on retry) into public.anagrafiche
+        // Using upsert on codice_fiscale to handle cases where a previous attempt
+        // partially completed (OTP crash mid-insert leaves an orphan anagrafica row).
         const { data: anagData, error: anagError } = await supabase
             .from('anagrafiche')
-            .insert({
+            .upsert({
                 utente_id: utenteId,
                 nome: profile.nome,
                 cognome: profile.cognome,
@@ -168,7 +170,7 @@ export default async function handler(req, res) {
                 data_nascita: profile.data_nascita,
                 provincia_nascita: profile.luogo_nascita_provincia,
                 comune_nascita: profile.luogo_nascita_comune
-            })
+            }, { onConflict: 'codice_fiscale' })
             .select('id')
             .single();
 
@@ -177,27 +179,27 @@ export default async function handler(req, res) {
         }
         const anagraficaId = anagData.id;
 
-        // B. Insert into public.indirizzi_residenza
+        // B. Insert (or update on retry) into public.indirizzi_residenza
         const { error: indError } = await supabase
             .from('indirizzi_residenza')
-            .insert({
+            .upsert({
                 anagrafica_id: anagraficaId,
                 via_piazza: streetName,
                 civico: streetNumber,
                 provincia: profile.provincia,
                 comune: profile.comune,
                 cap: profile.cap
-            });
+            }, { onConflict: 'anagrafica_id' });
         if (indError) console.error("Errore inserimento indirizzo:", indError);
 
-        // C. Insert into public.contatti
+        // C. Insert (or update on retry) into public.contatti
         const { error: contError } = await supabase
             .from('contatti')
-            .insert({
+            .upsert({
                 anagrafica_id: anagraficaId,
                 telefono: profile.cellulare || 'N/D',
                 email: profile.email
-            });
+            }, { onConflict: 'anagrafica_id' });
         if (contError) console.error("Errore inserimento contatti:", contError);
 
         // D. Split Flow Decision Logic (Casistica 1, 2, 3)
