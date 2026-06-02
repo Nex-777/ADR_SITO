@@ -143,3 +143,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-06-02] fix | Registration ON CONFLICT trigger error (v1.00.22)
 - Fixed a bug in `sync_utente_to_normalized_tables()` trigger function where `ON CONFLICT (utente_id)` failed on `anagrafiche` insert because `utente_id` is not uniquely constrained. Changed it to `ON CONFLICT (codice_fiscale)` which is correctly indexed as unique.
 - Bumped application version to `1.00.22`.
+
+## [2026-06-02] fix | Registration redundant trigger & Date Validation (v1.00.23)
+- Dropped the redundant DB trigger `tr_sync_utente_to_normalized` on `utenti` table. The trigger was conflicting with the OTP registration flow which already handles the exact same inserts via `api/otp-verify.js`, resolving the `record "new" has no field "step_registrazione"` error.
+- Added frontend JS validation in `portal/registrazione.html` to prevent users from selecting a medical certificate issue date in the future.
+- Bumped application version to `1.00.23`.
