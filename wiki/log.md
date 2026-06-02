@@ -139,3 +139,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-06-02] release | Gapless Registry & Dashboard Fixes (v1.00.21)
 - Finalized registry restructure, dashboard UI, and security fixes.
 - Bumped application version to `1.00.21`.
+
+## [2026-06-02] fix | Registration ON CONFLICT trigger error (v1.00.22)
+- Fixed a bug in `sync_utente_to_normalized_tables()` trigger function where `ON CONFLICT (utente_id)` failed on `anagrafiche` insert because `utente_id` is not uniquely constrained. Changed it to `ON CONFLICT (codice_fiscale)` which is correctly indexed as unique.
+- Bumped application version to `1.00.22`.

@@ -143,7 +143,7 @@ BEGIN
             NEW.id, NEW.nome, NEW.cognome, NEW.codice_fiscale, NEW.data_nascita,
             NEW.comune_nascita, NEW.provincia_nascita, NEW.sesso
         )
-        ON CONFLICT (utente_id) DO UPDATE SET
+        ON CONFLICT (codice_fiscale) DO UPDATE SET
             nome = EXCLUDED.nome,
             cognome = EXCLUDED.cognome,
             codice_fiscale = EXCLUDED.codice_fiscale,
