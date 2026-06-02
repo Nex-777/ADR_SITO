@@ -179,6 +179,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Fixed a backend crash in `api/otp-verify.js` where the insertion into `certificati_medici` failed silently due to Postgres `NOT NULL` constraints on `data_scadenza` and `medico_rilascio`. Added fallback dummy values that will be immediately overwritten by the AI validation step.
 - Bumped application version to `1.00.29`.
 
+## [2026-06-02] hotfix | Fix Gemini SDK parsing & Dashboard manual approval (v1.00.30)
+- Fixed a backend crash in `api/validate-cert.js` caused by `response.text()` being used instead of `response.text` for the new `@google/genai` SDK.
+- Modified the Dashboard's "Registro Approvazioni" panel to display a clickable "APPROVA CERT." button for certificates in `GIALLO` (Revisione) state, allowing the President to manually force a green status without leaving the tab.
+- Bumped application version to `1.00.30`.
+
 ## [2026-06-02] update | Ingest Portal Pages & Ghost User Management
 - Created documentation for `portal/dashboard.html` in [portal_dashboard.md](portal_dashboard.md).
 - Created documentation for `portal/login.html` and `portal/pagamento.html` in [auth_and_payments.md](auth_and_payments.md).

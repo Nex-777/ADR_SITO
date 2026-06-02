@@ -62,7 +62,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
             ]
         });
 
-        let responseText = response.text().trim();
+        let responseText = (typeof response.text === 'function' ? response.text() : response.text).trim();
         // Remove markdown formatting if the model still outputs it
         if (responseText.startsWith('```json')) {
             responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
