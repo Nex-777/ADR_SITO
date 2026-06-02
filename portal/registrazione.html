@@ -693,12 +693,25 @@
 
         // --- 1. Supabase Initialization ---
         // Utilizziamo le credenziali reali fornite dal database ADRENALINA_SERVICES
+        if (typeof APP_CONFIG === 'undefined') {
+            window.APP_CONFIG = {
+                SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
+                SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
+                API_BASE_URL: "",
+                VERSION: "1.00.12"
+            };
+        }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
         // --- 2. Developer/Mock Mode Configuration ---
         const isDevMode = false;
+        
+        // Auto-configure backend API URL for local dev if page is served on port 8080
+        if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '8888') {
+            APP_CONFIG.API_BASE_URL = 'http://127.0.0.1:8888';
+        }
 
         // --- 3. Tariffe Configuration ---
         let tariffe = {
