@@ -179,7 +179,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.15</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.16</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -698,7 +698,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "",
-                VERSION: "1.00.15"
+                VERSION: "1.00.16"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1596,6 +1596,34 @@
             else if (selectedAdesione === 'tesserato') quotaVal = tariffe[selectedTessera] || 0;
             else if (selectedAdesione === 'socio_tesserato') quotaVal = tariffe.quota_socio + (tariffe[selectedTessera] || 0);
 
+            // 1. Controllo preventivo sul database utenti per evitare la sovrascrittura di profili esistenti/amministrativi
+            try {
+                const { data: dbUser, error: checkError } = await supabaseClient
+                    .from('utenti')
+                    .select('id, ruolo, tipo_adesione')
+                    .eq('email', email)
+                    .maybeSingle();
+
+                if (checkError) {
+                    console.warn("Errore durante il controllo preventivo dell'email:", checkError.message);
+                }
+
+                if (dbUser) {
+                    const adminRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
+                    const hasAdminRole = adminRoles.includes(dbUser.ruolo);
+                    const isFullyRegistered = dbUser.tipo_adesione !== null;
+
+                    if (hasAdminRole || isFullyRegistered) {
+                        alert("Questa email è già associata ad un account attivo o amministrativo. Si prega di utilizzare la pagina di login.");
+                        btnInviaOtp.disabled = false;
+                        btnInviaOtp.textContent = "INVIA CODICE OTP";
+                        return;
+                    }
+                }
+            } catch (checkErr) {
+                console.error("Errore controllo preventivo email:", checkErr);
+            }
+
             let userId = null;
             let jwtToken = null;
 
@@ -1636,10 +1664,10 @@
                         jwtToken = signInData.session?.access_token || null;
                         createdUserSession = { user: signInData.user, access_token: jwtToken };
                         
-                        // Controlliamo se esiste già una firma completata per evitare doppi inserimenti
+                        // Controlliamo se esiste già una firma completata o un ruolo protetto per evitare sovrascritture
                         const { data: profiloEsistente } = await supabaseClient
                             .from('utenti')
-                            .select('id, tipo_adesione')
+                            .select('id, tipo_adesione, ruolo')
                             .eq('id', userId)
                             .maybeSingle();
 
@@ -1649,8 +1677,15 @@
                             .eq('utente_id', userId)
                             .maybeSingle();
                         
-                        if (profiloEsistente && attoEsistente && attoEsistente.stato === 'firmato_validato') {
-                            throw new Error("Questa registrazione è già stata completata con successo in precedenza.");
+                        if (profiloEsistente) {
+                            const adminRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
+                            const hasAdminRole = adminRoles.includes(profiloEsistente.ruolo);
+                            const isFullyRegistered = profiloEsistente.tipo_adesione !== null;
+                            const isSigned = attoEsistente && attoEsistente.stato === 'firmato_validato';
+
+                            if (hasAdminRole || isFullyRegistered || isSigned) {
+                                throw new Error("Questa email è già associata ad un account attivo o amministrativo. Si prega di utilizzare la pagina di login.");
+                            }
                         }
                     } else {
                         throw authError;

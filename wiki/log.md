@@ -108,3 +108,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-06-02] update | Fix onConflict constraint in registration
 - Changed the upsert conflict target in `portal/registrazione.html` from `'id,codice_fiscale'` to `'id'`. Since `id` is the primary key (with a unique constraint `utenti_pkey`) and `codice_fiscale` is a separate unique constraint (`utenti_codice_fiscale_key`), targeting both in a single spec triggered a PostgreSQL syntax/definition error (42P10) because there is no single composite constraint matching both fields. Setting the conflict target to `'id'` resolves the profile save issue.
 
+## [2026-06-02] update | President Profile Restore & Registration Security
+- Restored the overwritten President profile (`Tito Fabio Paoletti` under `nexglg@gmail.com`) and cleared the erroneous "Alessandro Bianchi" entries that were written to the President's `utente_id` in `utenti`, `anagrafiche`, `atti_adesione`, etc.
+- Modified [registrazione.html](../portal/registrazione.html) to implement:
+  - A preventive database check searching for the input email prior to calling `auth.signUp` or `signInWithPassword`.
+  - A block prohibiting registration resumption/upserts if the logged-in user already has an administrative role or is fully registered.
+- Bumped application version to `1.00.16`.
