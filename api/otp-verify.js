@@ -218,13 +218,14 @@ export default async function handler(req, res) {
         let emailHtml = '';
         if (adesione === 'socio') {
             // Casistica 1: Solo Socio (Ammissione a Delibera) Land in registro_approvazioni
+            await supabase.from('registro_approvazioni').delete().eq('anagrafica_id', anagraficaId).eq('stato', 'IN_ATTESA');
             const { error: socioError } = await supabase
                 .from('registro_approvazioni')
-                .upsert({
+                .insert({
                     anagrafica_id: anagraficaId,
                     tipo: 'SOCIO',
                     stato: 'IN_ATTESA'
-                }, { onConflict: 'anagrafica_id, tipo' });
+                });
             if (socioError) throw socioError;
 
             emailSubject = 'Domanda di Ammissione Socio Ricevuta - Adrenalina Club';
@@ -238,14 +239,15 @@ export default async function handler(req, res) {
 
         } else if (adesione === 'socio_tesserato') {
             // Casistica 2: Socio + Tesserato
+            await supabase.from('registro_approvazioni').delete().eq('anagrafica_id', anagraficaId).eq('stato', 'IN_ATTESA');
             const { error: socioError } = await supabase
                 .from('registro_approvazioni')
-                .upsert({
+                .insert({
                     anagrafica_id: anagraficaId,
                     tipo: 'SOCIO_TESSERATO',
                     stato: 'IN_ATTESA',
                     livello_copertura: csenCoverage
-                }, { onConflict: 'anagrafica_id, tipo' });
+                });
             if (socioError) throw socioError;
 
             emailSubject = 'Domanda di Ammissione Socio + Tesserato Ricevuta - Adrenalina Club';
@@ -259,14 +261,15 @@ export default async function handler(req, res) {
 
         } else if (adesione === 'tesserato') {
             // Casistica 3: Solo Tesserato (No delibera - Iter Diretto)
+            await supabase.from('registro_approvazioni').delete().eq('anagrafica_id', anagraficaId).eq('stato', 'IN_ATTESA');
             const { error: tessError } = await supabase
                 .from('registro_approvazioni')
-                .upsert({
+                .insert({
                     anagrafica_id: anagraficaId,
                     tipo: 'TESSERATO',
                     stato: 'IN_ATTESA',
                     livello_copertura: csenCoverage
-                }, { onConflict: 'anagrafica_id, tipo' });
+                });
             if (tessError) throw tessError;
 
             const pagamentoLink = `https://adrenalinaclub.it/portal/pagamento.html?id=${utenteId}`;

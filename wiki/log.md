@@ -148,3 +148,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Dropped the redundant DB trigger `tr_sync_utente_to_normalized` on `utenti` table. The trigger was conflicting with the OTP registration flow which already handles the exact same inserts via `api/otp-verify.js`, resolving the `record "new" has no field "step_registrazione"` error.
 - Added frontend JS validation in `portal/registrazione.html` to prevent users from selecting a medical certificate issue date in the future.
 - Bumped application version to `1.00.23`.
+
+## [2026-06-02] fix | OTP Verify API Upsert Error (v1.00.24)
+- Fixed a 500 Internal Server Error in `api/otp-verify.js` caused by `supabase.upsert()` failing against a partial unique index (`anagrafica_id, tipo WHERE stato = 'IN_ATTESA'`) in `registro_approvazioni`. Replaced the unsupported `upsert` with a safe `delete` + `insert` pattern for all 3 registration cases (Socio, Tesserato, Socio+Tesserato).
+- Bumped application version to `1.00.24`.
+
