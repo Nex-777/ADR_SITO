@@ -119,7 +119,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.24</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.25</span>
                 <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
             </div>
             <div class="flex items-center gap-4">
@@ -367,6 +367,32 @@
                             <tbody id="approvazioni-tesserati-list" class="divide-y divide-white/5 uppercase font-mono">
                                 <tr>
                                     <td colspan="6" class="p-3 text-center text-gray-500">Nessuna richiesta di tesserato in attesa.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Registrazioni Incomplete / OTP Fallito -->
+                <div class="border border-red-500/30 p-6 bg-red-950/20 space-y-4">
+                    <h3 class="font-headline text-xs font-bold text-red-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">warning</span> REGISTRAZIONI INCOMPLETE (OTP SOSPESO/FALLITO)
+                    </h3>
+                    <p class="text-[10px] text-gray-400 font-mono">Utenti in stallo durante l'inserimento o convalida OTP. Senza anagrafica completa bloccano l'email.</p>
+                    <div class="overflow-x-auto border border-red-500/20 bg-black/40">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-red-900/20 text-gray-400 font-headline uppercase text-[9px] border-b border-red-500/20">
+                                <tr>
+                                    <th class="p-3">Nome / Cognome</th>
+                                    <th class="p-3">Email</th>
+                                    <th class="p-3 font-mono">Codice Fiscale</th>
+                                    <th class="p-3">Data Registrazione</th>
+                                    <th class="p-3 text-right">Azione</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvazioni-incomplete-list" class="divide-y divide-red-500/10 uppercase font-mono text-gray-400">
+                                <tr>
+                                    <td colspan="5" class="p-3 text-center text-gray-500">Nessuna registrazione incompleta.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1063,7 +1089,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "",
-                VERSION: "1.00.24"
+                VERSION: "1.00.25"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1869,6 +1895,32 @@
                     `)
                     .order('created_at', { ascending: false });
 
+                window.attivaTesseramentoApprovazioni = async (anagraficaId) => {
+            if (!confirm("Confermi l'attivazione immediata di questo Tesserato?")) return;
+            try {
+                const { error } = await supabaseClient.rpc('attiva_tesserato', { target_anagrafica_id: anagraficaId });
+                if (error) throw error;
+                alert("Tesserato attivato con successo! Il profilo è ora visibile nel Registro Tesserati.");
+                loadApprovazioni();
+            } catch (error) {
+                console.error("Errore durante l'attivazione:", error);
+                alert("Errore durante l'attivazione: " + error.message);
+            }
+        };
+
+        window.eliminaRegistrazioneIncompleta = async (utenteId) => {
+            if (!confirm("ATTENZIONE: Stai per eliminare definitivamente questa registrazione incompleta. Questo sbloccherà l'indirizzo email permettendo all'utente di registrarsi nuovamente. Confermi?")) return;
+            try {
+                const { error } = await supabaseClient.rpc('elimina_utente_fantasma', { p_utente_id: utenteId });
+                if (error) throw error;
+                alert("Registrazione incompleta eliminata. L'email è stata sbloccata.");
+                loadApprovazioni();
+            } catch (error) {
+                console.error("Errore eliminazione utente fantasma:", error);
+                alert("Errore durante l'eliminazione: " + error.message);
+            }
+        };
+
                 if (error) throw error;
                 approvazioniData = data || [];
                 renderApprovazioniTables();
@@ -1987,6 +2039,42 @@
                         });
                     }
                     tessBody.appendChild(row);
+                });
+            }
+
+            // Render Registrazioni Incomplete
+            const incompleteBody = document.getElementById('approvazioni-incomplete-list');
+            incompleteBody.innerHTML = '';
+            
+            const { data: ghosts, error: ghostError } = await supabaseClient
+                .from('vw_registrazioni_incomplete')
+                .select('*')
+                .order('data_creazione', { ascending: false });
+                
+            if (ghostError) {
+                console.error("Errore recupero registrazioni incomplete:", ghostError);
+            } else if (!ghosts || ghosts.length === 0) {
+                incompleteBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessuna registrazione incompleta.</td></tr>';
+            } else {
+                ghosts.forEach(ghost => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-red-500/5 hover:bg-red-900/10 transition-colors';
+                    
+                    let actionBtn = '';
+                    if (['presidente', 'vice_presidente'].includes(userRole)) {
+                        actionBtn = `<button onclick="eliminaRegistrazioneIncompleta('${ghost.utente_id}')" class="bg-red-600 text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-red-500 transition-all uppercase">ELIMINA SBLOCCA</button>`;
+                    } else {
+                        actionBtn = `<span class="text-[9px] text-gray-500" title="Solo il Presidente o Vice possono sbloccare">NON AUTORIZZATO</span>`;
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="p-3 font-bold text-red-400">${escapeHtml(ghost.nome)} ${escapeHtml(ghost.cognome)}</td>
+                        <td class="p-3 text-gray-300 lowercase font-sans">${escapeHtml(ghost.email)}</td>
+                        <td class="p-3 text-gray-400 font-mono">${escapeHtml(ghost.codice_fiscale)}</td>
+                        <td class="p-3 text-gray-500">${escapeHtml(ghost.data_creazione ? ghost.data_creazione.split('T')[0] : '')}</td>
+                        <td class="p-3 text-right">${actionBtn}</td>
+                    `;
+                    incompleteBody.appendChild(row);
                 });
             }
 
