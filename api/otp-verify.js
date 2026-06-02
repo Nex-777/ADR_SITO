@@ -179,27 +179,31 @@ export default async function handler(req, res) {
         }
         const anagraficaId = anagData.id;
 
-        // B. Insert (or update on retry) into public.indirizzi_residenza
+        // B. Insert into public.indirizzi_residenza
+        // anagrafica_id is the PK here so we delete first to handle retries safely
+        await supabase.from('indirizzi_residenza').delete().eq('anagrafica_id', anagraficaId);
         const { error: indError } = await supabase
             .from('indirizzi_residenza')
-            .upsert({
+            .insert({
                 anagrafica_id: anagraficaId,
                 via_piazza: streetName,
                 civico: streetNumber,
                 provincia: profile.provincia,
                 comune: profile.comune,
                 cap: profile.cap
-            }, { onConflict: 'anagrafica_id' });
+            });
         if (indError) console.error("Errore inserimento indirizzo:", indError);
 
-        // C. Insert (or update on retry) into public.contatti
+        // C. Insert into public.contatti
+        // Same pattern: anagrafica_id is the PK so delete first to handle retries
+        await supabase.from('contatti').delete().eq('anagrafica_id', anagraficaId);
         const { error: contError } = await supabase
             .from('contatti')
-            .upsert({
+            .insert({
                 anagrafica_id: anagraficaId,
                 telefono: profile.cellulare || 'N/D',
                 email: profile.email
-            }, { onConflict: 'anagrafica_id' });
+            });
         if (contError) console.error("Errore inserimento contatti:", contError);
 
         // D. Split Flow Decision Logic (Casistica 1, 2, 3)
@@ -217,10 +221,10 @@ export default async function handler(req, res) {
             // Casistica 1: Solo Socio (Ammissione a Delibera)
             const { error: socioError } = await supabase
                 .from('registro_soci')
-                .insert({
+                .upsert({
                     anagrafica_id: anagraficaId,
                     stato_socio: 'IN_ATTESA_DELIBERA'
-                });
+                }, { onConflict: 'anagrafica_id' });
             if (socioError) throw socioError;
 
             emailSubject = 'Domanda di Ammissione Socio Ricevuta - Adrenalina Club';
@@ -236,19 +240,19 @@ export default async function handler(req, res) {
             // Casistica 2: Socio + Tesserato
             const { error: socioError } = await supabase
                 .from('registro_soci')
-                .insert({
+                .upsert({
                     anagrafica_id: anagraficaId,
                     stato_socio: 'IN_ATTESA_DELIBERA'
-                });
+                }, { onConflict: 'anagrafica_id' });
             if (socioError) throw socioError;
 
             const { error: tessError } = await supabase
                 .from('registro_tesserati')
-                .insert({
+                .upsert({
                     anagrafica_id: anagraficaId,
                     stato_tesseramento: 'IN_ELABORAZIONE',
                     livello_copertura: csenCoverage
-                });
+                }, { onConflict: 'anagrafica_id' });
             if (tessError) throw tessError;
 
             emailSubject = 'Domanda di Ammissione Socio + Tesserato Ricevuta - Adrenalina Club';
@@ -264,11 +268,11 @@ export default async function handler(req, res) {
             // Casistica 3: Solo Tesserato (No delibera - Iter Diretto)
             const { error: tessError } = await supabase
                 .from('registro_tesserati')
-                .insert({
+                .upsert({
                     anagrafica_id: anagraficaId,
                     stato_tesseramento: 'IN_ELABORAZIONE',
                     livello_copertura: csenCoverage
-                });
+                }, { onConflict: 'anagrafica_id' });
             if (tessError) throw tessError;
 
             const pagamentoLink = `https://adrenalinaclub.it/portal/pagamento.html?id=${utenteId}`;
