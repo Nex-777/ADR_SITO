@@ -1695,7 +1695,7 @@
                         tutore_cognome: isMinor ? tutoreCognome : null,
                         tutore_codice_fiscale: isMinor ? tutoreCf : null,
                         tutore_email: isMinor ? tutoreEmail : null
-                    }, { onConflict: 'id,codice_fiscale' });
+                    }, { onConflict: 'id' });
 
                 if (insertError) throw insertError;
                 console.log("Inserimento/Upsert profilo utenti riuscito.");
