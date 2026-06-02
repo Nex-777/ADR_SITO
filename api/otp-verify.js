@@ -2,12 +2,21 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from './resend-mail.js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+let supabase;
 
 export default async function handler(req, res) {
+    try {
+        if (!supabase) {
+            const supabaseUrl = process.env.SUPABASE_URL;
+            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            if (!supabaseUrl || !supabaseServiceKey) {
+                throw new Error("Mancano le variabili d'ambiente di Supabase su Vercel.");
+            }
+            supabase = createClient(supabaseUrl, supabaseServiceKey);
+        }
+    } catch (envError) {
+        return res.status(500).json({ error: envError.message });
+    }
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     const allowedOrigins = [

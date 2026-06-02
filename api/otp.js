@@ -2,15 +2,31 @@ import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import crypto from 'crypto';
 
-// Setup environment keys
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const resendApiKey = process.env.RESEND_API_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-const resend = new Resend(resendApiKey);
+let supabase;
+let resend;
 
 export default async function handler(req, res) {
+    try {
+        if (!supabase) {
+            const supabaseUrl = process.env.SUPABASE_URL;
+            const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            if (!supabaseUrl || !supabaseServiceKey) {
+                throw new Error("Mancano le variabili d'ambiente di Supabase (SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY) su Vercel.");
+            }
+            supabase = createClient(supabaseUrl, supabaseServiceKey);
+        }
+        if (!resend) {
+            const resendApiKey = process.env.RESEND_API_KEY;
+            if (!resendApiKey) {
+                throw new Error("Manca la variabile d'ambiente RESEND_API_KEY su Vercel.");
+            }
+            resend = new Resend(resendApiKey);
+        }
+    } catch (envError) {
+        console.error('API Config Error:', envError);
+        return res.status(500).json({ error: envError.message });
+    }
+
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     const allowedOrigins = [
