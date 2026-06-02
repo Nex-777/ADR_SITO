@@ -1,12 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Get CORS headers dynamically based on origin
+function getCorsHeaders(req: Request) {
+  const allowedOrigins = ['https://adrenalinaclub.it', 'https://www.adrenalinaclub.it', 'http://localhost:3000'];
+  const origin = req.headers.get('origin') ?? "";
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : 'https://adrenalinaclub.it';
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin',
+  };
+}
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -41,7 +49,10 @@ serve(async (req) => {
     const email = user.email;
 
     // Generate OTP
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate OTP cryptographically securely
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    const otpCode = String(100000 + (array[0] % 900000));
 
     // Hash OTP using Web Crypto API
     const msgBuffer = new TextEncoder().encode(otpCode);
@@ -94,7 +105,7 @@ serve(async (req) => {
               <div style="background-color: #1a1a1a; border-bottom: 4px solid #df293e; display: inline-block; padding: 15px 30px; font-size: 36px; font-weight: bold; letter-spacing: 6px; color: #ffffff; margin-bottom: 30px; font-family: monospace;">
                   ${otpCode}
               </div>
-              <p style="font-size: 12px; color: #666666;">Questo codice scadrà tra 2 minuti. Se non hai richiesto questo codice, ignora questa email.</p>
+              <p style="font-size: 12px; color: #666666;">Questo codice scadrà tra 5 minuti. Se non hai richiesto questo codice, ignora questa email.</p>
           </div>
         `
       })

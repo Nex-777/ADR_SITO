@@ -13,8 +13,13 @@ const resend = new Resend(resendApiKey);
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    const allowedOrigins = ['https://adrenalinaclub.it', 'https://www.adrenalinaclub.it', 'http://localhost:3000'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS,POST');
     res.setHeader(
         'Access-Control-Allow-Headers',
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
@@ -48,7 +53,7 @@ export default async function handler(req, res) {
         const email = user.email;
         
         // 3. Generate 6-digit OTP
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpCode = crypto.randomInt(100000, 999999).toString();
         
         // 4. Hash OTP using SHA-256
         const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
@@ -90,7 +95,7 @@ export default async function handler(req, res) {
                     <div style="background-color: #1a1a1a; border-bottom: 4px solid #df293e; display: inline-block; padding: 15px 30px; font-size: 36px; font-weight: bold; letter-spacing: 6px; color: #ffffff; margin-bottom: 30px; font-family: monospace;">
                         ${otpCode}
                     </div>
-                    <p style="font-size: 12px; color: #666666;">Questo codice scadrà tra 2 minuti. Se non hai richiesto questo codice, ignora questa email.</p>
+                    <p style="font-size: 12px; color: #666666;">Questo codice scadrà tra 5 minuti. Se non hai richiesto questo codice, ignora questa email.</p>
                 </div>
             `
         });

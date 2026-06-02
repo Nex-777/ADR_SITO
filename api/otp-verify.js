@@ -10,8 +10,13 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 export default async function handler(req, res) {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+    const allowedOrigins = ['https://adrenalinaclub.it', 'https://www.adrenalinaclub.it', 'http://localhost:3000'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS,POST');
     res.setHeader(
         'Access-Control-Allow-Headers',
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
@@ -52,13 +57,15 @@ export default async function handler(req, res) {
         // 4. Hash submitted OTP
         const submittedHash = crypto.createHash('sha256').update(otp).digest('hex');
         
-        // 5. Query matching pending sign request in public.atti_adesione
+        // 5. Query matching pending sign request in public.atti_adesione (within 5 minutes)
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { data: atti, error: queryError } = await supabase
             .from('atti_adesione')
             .select('id, data_firma')
             .eq('utente_id', utenteId)
             .eq('otp_codice_hash', submittedHash)
             .eq('stato', 'in_attesa_otp')
+            .gte('created_at', fiveMinutesAgo)
             .maybeSingle();
             
         if (queryError) {
@@ -231,12 +238,16 @@ export default async function handler(req, res) {
         });
 
         // 7. Update pending sign document state
+        const updateData = {
+            stato: 'firmato_validato',
+            data_firma: new Date().toISOString()
+        };
+        if (req.body.url_pdf_generato) {
+            updateData.url_pdf_generato = req.body.url_pdf_generato;
+        }
         await supabase
             .from('atti_adesione')
-            .update({
-                stato: 'firmato_validato',
-                data_firma: new Date().toISOString()
-            })
+            .update(updateData)
             .eq('utente_id', utenteId);
 
         return res.status(200).json({ success: true, message: 'OTP verified and registration records created successfully' });

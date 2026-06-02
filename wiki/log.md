@@ -62,4 +62,19 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Resolved syntax error in `portal/dashboard.html` that caused script parsing to fail completely (`Uncaught SyntaxError: Unexpected end of input` / `Uncaught ReferenceError: switchTab is not defined`).
 - Restored missing closing braces in the legacy `submitApprovazione()` function catch block that was left incomplete during code cleanup.
 
+## [2026-06-02] ingest | SECURITY.md & Phase 0 Remediation
+- Copied SECURITY_RULES.md to workspace root as SECURITY.md.
+- Linked SECURITY.md in AGENTS.md for AI security enforcement.
+- Implemented Phase 0 Security Remediations:
+    - REM-01: Blocked user role escalation via SQL INSERT policies and custom trigger `public.proteggi_ruolo_utente` on table `public.utenti`.
+    - REM-02: Removed dev mode bypass logic (`?dev=true` and `isDevMode` fallback) from `portal/registrazione.html`.
+    - REM-03: Removed client-side mock OTP generation/fallback in registration page.
+    - REM-04: Moved the `atti_adesione` update logic out of registration client-side flow and fully server-side.
+    - REM-05: Added Authorization token Bearer checks to `/api/create-checkout-session` and updated `portal/pagamento.html`.
+    - REM-06: Configured DB trigger `public.calcola_quota_utente` to compute registration fees on insert, removing client-side calc from `portal/registrazione.html`.
+    - REM-07: Added restricted CORS whitelist to API endpoints (`api/otp.js`, `api/otp-verify.js`, `api/create-checkout-session.js`, and `supabase/functions/otp/index.ts`).
+    - REM-08: Configured OTP expiry checking (5 minutes) using `created_at` timestamp on table `public.atti_adesione`.
+    - REM-09: Switched to cryptographically secure random number generation (`crypto.randomInt` in Node.js, `crypto.getRandomValues` in Edge function).
+    - REM-10: Created missing private storage bucket `documenti_tutori` and RLS policies on Supabase.
+
 

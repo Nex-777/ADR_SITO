@@ -246,12 +246,21 @@
             payBtn.innerHTML = `ELABORAZIONE IN CORSO... <div class="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>`;
 
             try {
+                const { data: sessionData } = await supabaseClient.auth.getSession();
+                const session = sessionData?.session;
+                const token = session?.access_token;
+                
+                if (!token) {
+                    throw new Error("Sessione utente scaduta o non valida. Effettua nuovamente l'accesso.");
+                }
+
                 const response = await fetch('/api/create-checkout-session', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ utenteId: utenteId })
+                    body: JSON.stringify({})
                 });
 
                 const data = await response.json();

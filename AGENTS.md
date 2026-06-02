@@ -1,6 +1,6 @@
 # LLM Wiki Schema - AGENTS.md
 
-This workspace utilizes an **LLM Wiki** designed for persistent, compounding knowledge accumulation about the Adrenalina Club website and portal application. Any AI agent operating in this repository must adhere to the rules, structure, and workflows defined in this document.
+This workspace utilizes an **LLM Wiki** designed for persistent, compounding knowledge accumulation about the Adrenalina Club website and portal application. Any AI agent operating in this repository must adhere to the rules, structure, and workflows defined in this document, as well as the gold-standard security rules defined in [SECURITY.md](SECURITY.md).
 
 ---
 

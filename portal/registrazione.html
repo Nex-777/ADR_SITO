@@ -178,7 +178,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.07</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.08</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -662,11 +662,6 @@
                     </p>
                 </div>
             </div>
-            
-            <!-- Dev Mode Status Banner (Fixed Bottom or Top Corner) -->
-            <div id="dev-banner" class="absolute top-2 right-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[9px] font-mono px-2 py-0.5 z-50 rounded hidden">
-                DEV MOCK MODE ACTIVE
-            </div>
         </div>
     </main>
 
@@ -704,14 +699,7 @@
         const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
         // --- 2. Developer/Mock Mode Configuration ---
-        // Rileva dev mode se presente in query string '?dev=true'
-        const urlParams = new URLSearchParams(window.location.search);
-        const isDevMode = urlParams.get('dev') === 'true' || !supabaseClient;
-        
-        if (isDevMode) {
-            document.getElementById('dev-banner').classList.remove('hidden');
-            console.warn("[Portale Registrazione] Running in Developer/Mock Mode due to query string or lack of Supabase client.");
-        }
+        const isDevMode = false;
 
         // --- 3. Tariffe Configuration ---
         let tariffe = {
@@ -1487,7 +1475,6 @@
         const inputOtp = document.getElementById('otp_code');
 
         let createdUserSession = null;
-        let mockOtpCode = "123456"; // Default mock code for dev mode
         let timerInterval = null;
 
         function startOtpTimer() {
@@ -1600,126 +1587,130 @@
             let userId = null;
             let jwtToken = null;
 
-            if (isDevMode) {
-                console.log("[Dev Mode] Simulating auth.signUp for email:", email);
-                userId = crypto.randomUUID();
-                jwtToken = "mock_jwt_token_" + userId;
-                createdUserSession = { user: { id: userId, email: email }, access_token: jwtToken };
-            } else {
-                try {
-                    const chosenPassword = document.getElementById('password').value;
-                    if (!chosenPassword || chosenPassword.length < 6) {
-                        throw new Error("La password deve essere di almeno 6 caratteri.");
+            try {
+                const chosenPassword = document.getElementById('password').value;
+                if (!chosenPassword || chosenPassword.length < 6) {
+                    throw new Error("La password deve essere di almeno 6 caratteri.");
+                }
+                
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: chosenPassword
+                });
+
+                if (authError) {
+                    // Se l'utente è già registrato su Supabase Auth ma non ha completato la firma
+                    if (authError.message.includes("already registered") || authError.status === 400) {
+                        console.log("User already registered in auth, attempting sign in to verify password and resume...");
+                        const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+                            email: email,
+                            password: chosenPassword
+                        });
+                        
+                        if (signInError) {
+                            throw new Error("L'utente risulta già registrato. Se sei tu, assicurati di aver inserito la password corretta usata in precedenza.");
+                        }
+                        
+                        userId = signInData.user.id;
+                        jwtToken = signInData.session?.access_token || null;
+                        createdUserSession = { user: signInData.user, access_token: jwtToken };
+                        
+                        // Controlliamo se esiste già una firma completata per evitare doppi inserimenti
+                        const { data: profiloEsistente } = await supabaseClient
+                            .from('utenti')
+                            .select('id, tipo_adesione')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        const { data: attoEsistente } = await supabaseClient
+                            .from('atti_adesione')
+                            .select('stato')
+                            .eq('utente_id', userId)
+                            .maybeSingle();
+                        
+                        if (profiloEsistente && attoEsistente && attoEsistente.stato === 'firmato_validato') {
+                            throw new Error("Questa registrazione è già stata completata con successo in precedenza.");
+                        }
+                    } else {
+                        throw authError;
                     }
-                    
-                    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-                        email: email,
-                        password: chosenPassword
-                    });
-
-                    if (authError) throw authError;
-
+                } else {
                     userId = authData.user.id;
                     jwtToken = authData.session?.access_token || null;
                     createdUserSession = { user: authData.user, access_token: jwtToken };
-                    
-                    console.log("Supabase SignUp Success. User ID:", userId);
-                } catch (err) {
-                    console.error("SignUp error:", err);
-                    alert("Errore di registrazione auth: " + err.message);
-                    btnInviaOtp.disabled = false;
-                    btnInviaOtp.textContent = "INVIA CODICE OTP";
-                    return;
                 }
+                
+                console.log("Supabase Session Ready. User ID:", userId);
+            } catch (err) {
+                console.error("Auth process error:", err);
+                alert("Errore di registrazione auth: " + err.message);
+                btnInviaOtp.disabled = false;
+                btnInviaOtp.textContent = "INVIA CODICE OTP";
+                return;
             }
 
-            // Inserimento profilo utenti
-            if (isDevMode) {
-                console.log("[Dev Mode] Simulating insert into public.utenti:", {
-                    id: userId, nome, cognome, codice_fiscale: cf, data_nascita: dataNascita,
-                    ruolo: defaultRole, email, indirizzo, cellulare, provincia, comune, cap,
-                    luogo_nascita_provincia: provinciaNascita, luogo_nascita_comune: comuneNascita,
-                    tipo_adesione: selectedAdesione, tipo_tessera: selectedTessera || null, quota_totale: quotaVal,
-                    tutore_nome: tutoreNome, tutore_cognome: tutoreCognome, tutore_codice_fiscale: tutoreCf, tutore_email: tutoreEmail
-                });
-            } else {
-                try {
-                    const { error: insertError } = await supabaseClient
-                        .from('utenti')
-                        .insert({
-                            id: userId,
-                            nome: nome,
-                            cognome: cognome,
-                            codice_fiscale: cf,
-                            data_nascita: dataNascita,
-                            ruolo: defaultRole,
-                            email: email,
-                            indirizzo: indirizzo,
-                            cellulare: cellulare || null,
-                            provincia: provincia,
-                            comune: comune,
-                            cap: cap,
-                            luogo_nascita_provincia: provinciaNascita,
-                            luogo_nascita_comune: comuneNascita,
-                            tipo_adesione: selectedAdesione,
-                            tipo_tessera: selectedTessera || null,
-                            quota_totale: quotaVal,
-                            tutore_nome: isMinor ? tutoreNome : null,
-                            tutore_cognome: isMinor ? tutoreCognome : null,
-                            tutore_codice_fiscale: isMinor ? tutoreCf : null,
-                            tutore_email: isMinor ? tutoreEmail : null
-                        });
+            // Inserimento o aggiornamento profilo utenti (con upsert per riprendere la sessione pendente)
+            try {
+                const { error: insertError } = await supabaseClient
+                    .from('utenti')
+                    .upsert({
+                        id: userId,
+                        nome: nome,
+                        cognome: cognome,
+                        codice_fiscale: cf,
+                        data_nascita: dataNascita,
+                        ruolo: defaultRole,
+                        email: email,
+                        indirizzo: indirizzo,
+                        cellulare: cellulare || null,
+                        provincia: provincia,
+                        comune: comune,
+                        cap: cap,
+                        luogo_nascita_provincia: provinciaNascita,
+                        luogo_nascita_comune: comuneNascita,
+                        tipo_adesione: selectedAdesione,
+                        tipo_tessera: selectedTessera || null,
+                        tutore_nome: isMinor ? tutoreNome : null,
+                        tutore_cognome: isMinor ? tutoreCognome : null,
+                        tutore_codice_fiscale: isMinor ? tutoreCf : null,
+                        tutore_email: isMinor ? tutoreEmail : null
+                    }, { onConflict: 'id' });
 
-                    if (insertError) throw insertError;
-                    console.log("Inserimento profilo utenti riuscito.");
-                } catch (err) {
-                    console.error("Insert utenti error:", err);
-                    alert("Errore nel salvataggio del profilo: " + err.message);
-                    btnInviaOtp.disabled = false;
-                    btnInviaOtp.textContent = "INVIA CODICE OTP";
-                    return;
-                }
+                if (insertError) throw insertError;
+                console.log("Inserimento/Upsert profilo utenti riuscito.");
+            } catch (err) {
+                console.error("Insert utenti error:", err);
+                alert("Errore nel salvataggio del profilo: " + err.message);
+                btnInviaOtp.disabled = false;
+                btnInviaOtp.textContent = "INVIA CODICE OTP";
+                return;
             }
 
             // Invio OTP
-            if (isDevMode) {
-                mockOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
-                console.log(`[Dev Mode] Generated OTP: ${mockOtpCode}`);
-                alert(`[Dev Mode] Email simulata inviata! Il codice OTP per firmare è: ${mockOtpCode}`);
+            try {
+                const response = await fetch('/api/otp.js', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwtToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || "Errore chiamata API OTP");
+                }
+
+                console.log("API /api/otp.js chiamata con successo.");
                 
                 btnInviaOtpContainer.classList.add('hidden');
                 otpFlowSection.classList.remove('hidden');
                 startOtpTimer();
-            } else {
-                try {
-                    const response = await fetch('/api/otp.js', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${jwtToken}`
-                        }
-                    });
-
-                    if (!response.ok) {
-                        const errData = await response.json();
-                        throw new Error(errData.error || "Errore chiamata API OTP");
-                    }
-
-                    console.log("API /api/otp.js chiamata con successo.");
-                    
-                    btnInviaOtpContainer.classList.add('hidden');
-                    otpFlowSection.classList.remove('hidden');
-                    startOtpTimer();
-                } catch (err) {
-                    console.error("API OTP error:", err);
-                    console.warn("Falling back to local OTP generation for testing.");
-                    mockOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
-                    alert(`[Dev Fallback] Impossibile contattare /api/otp.js (${err.message}). Inserisci il codice di test locale per continuare: ${mockOtpCode}`);
-                    
-                    btnInviaOtpContainer.classList.add('hidden');
-                    otpFlowSection.classList.remove('hidden');
-                    startOtpTimer();
-                }
+            } catch (err) {
+                console.error("API OTP error:", err);
+                alert("Errore nell'invio del codice OTP: " + err.message);
+                btnInviaOtp.disabled = false;
+                btnInviaOtp.textContent = "INVIA CODICE OTP";
             }
         });
 
@@ -1733,36 +1724,6 @@
 
             btnValidaOtp.disabled = true;
             btnValidaOtp.textContent = "VERIFICA IN CORSO...";
-
-            let isValid = false;
-
-            if (isDevMode || mockOtpCode) {
-                isValid = (code === mockOtpCode);
-            } else {
-                try {
-                    const response = await fetch('/api/otp-verify.js', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${createdUserSession.access_token}`
-                        },
-                        body: JSON.stringify({ otp: code })
-                    });
-                    
-                    if (response.ok) {
-                        isValid = true;
-                    }
-                } catch (err) {
-                    console.error("Error verifying OTP via server:", err);
-                }
-            }
-
-            if (!isValid) {
-                alert("Codice OTP errato. Riprova.");
-                btnValidaOtp.disabled = false;
-                btnValidaOtp.textContent = "CONFERMA FIRMA";
-                return;
-            }
 
             clearInterval(timerInterval);
             btnValidaOtp.textContent = "GENERAZIONE PDF...";
@@ -1794,26 +1755,21 @@
                     const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
                     btnValidaOtp.textContent = "CARICAMENTO CERTIFICATO...";
                     
-                    if (isDevMode) {
-                        console.log("[Dev Mode] Simulating upload of medical certificate to bucket 'certificati_medici' as:", filePath);
-                        certificatoMedicoUrl = `${SUPABASE_URL}/storage/v1/object/sign/certificati_medici/${filePath}?mock=true`;
-                    } else {
-                        const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                            .from('certificati_medici')
-                            .upload(filePath, uploadedCertificatoFile, {
-                                contentType: uploadedCertificatoFile.type,
-                                upsert: true
-                            });
-                            
-                        if (uploadError) throw uploadError;
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('certificati_medici')
+                        .upload(filePath, uploadedCertificatoFile, {
+                            contentType: uploadedCertificatoFile.type,
+                            upsert: true
+                        });
                         
-                        const { data: urlData } = supabaseClient.storage
-                            .from('certificati_medici')
-                            .getPublicUrl(filePath);
-                            
-                        certificatoMedicoUrl = urlData.publicUrl;
-                        console.log("Certificato medico caricato con successo. URL:", certificatoMedicoUrl);
-                    }
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: urlData } = supabaseClient.storage
+                        .from('certificati_medici')
+                        .getPublicUrl(filePath);
+                        
+                    certificatoMedicoUrl = urlData.publicUrl;
+                    console.log("Certificato medico caricato con successo. URL:", certificatoMedicoUrl);
                 }
 
                 // 2. Generate PDF with jsPDF
@@ -1889,26 +1845,21 @@
                 const pdfPath = `${userId}/adesione.pdf`;
                 btnValidaOtp.textContent = "CARICAMENTO CONTRATTO...";
                 
-                if (isDevMode) {
-                    console.log("[Dev Mode] Simulating upload of PDF blob to storage bucket 'documenti_adesione' as:", pdfPath);
-                    pdfPublicUrl = `${SUPABASE_URL}/storage/v1/object/sign/documenti_adesione/${pdfPath}?mock=true`;
-                } else {
-                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                        .from('documenti_adesione')
-                        .upload(pdfPath, pdfBlob, {
-                            contentType: 'application/pdf',
-                            upsert: true
-                        });
-                        
-                    if (uploadError) throw uploadError;
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('documenti_adesione')
+                    .upload(pdfPath, pdfBlob, {
+                        contentType: 'application/pdf',
+                        upsert: true
+                    });
                     
-                    const { data: urlData } = supabaseClient.storage
-                        .from('documenti_adesione')
-                        .getPublicUrl(pdfPath);
-                        
-                    pdfPublicUrl = urlData.publicUrl;
-                    console.log("PDF caricato con successo. URL:", pdfPublicUrl);
-                }
+                if (uploadError) throw uploadError;
+                
+                const { data: urlData } = supabaseClient.storage
+                    .from('documenti_adesione')
+                    .getPublicUrl(pdfPath);
+                    
+                pdfPublicUrl = urlData.publicUrl;
+                console.log("PDF caricato con successo. URL:", pdfPublicUrl);
 
                 // 4. Update utenti with certificato_medico_url if uploaded, and tutore_documento_url if uploaded
                 let tutoreDocumentoUrl = "";
@@ -1917,26 +1868,21 @@
                     const filePath = `${userId}/documento_tutore_${Date.now()}.${fileExt}`;
                     btnValidaOtp.textContent = "CARICAMENTO DOCUMENTO TUTORE...";
 
-                    if (isDevMode) {
-                        console.log("[Dev Mode] Simulating upload of parent ID document to bucket 'documenti_tutori' as:", filePath);
-                        tutoreDocumentoUrl = `${SUPABASE_URL}/storage/v1/object/sign/documenti_tutori/${filePath}?mock=true`;
-                    } else {
-                        const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                            .from('documenti_tutori')
-                            .upload(filePath, uploadedTutoreDocumentoFile, {
-                                contentType: uploadedTutoreDocumentoFile.type,
-                                upsert: true
-                            });
+                    const { data: parentUploadData, error: parentUploadError } = await supabaseClient.storage
+                        .from('documenti_tutori')
+                        .upload(filePath, uploadedTutoreDocumentoFile, {
+                            contentType: uploadedTutoreDocumentoFile.type,
+                            upsert: true
+                        });
 
-                        if (uploadError) throw uploadError;
+                    if (parentUploadError) throw parentUploadError;
 
-                        const { data: urlData } = supabaseClient.storage
-                            .from('documenti_tutori')
-                            .getPublicUrl(filePath);
+                    const { data: parentUrlData } = supabaseClient.storage
+                        .from('documenti_tutori')
+                        .getPublicUrl(filePath);
 
-                        tutoreDocumentoUrl = urlData.publicUrl;
-                        console.log("Documento tutore caricato con successo. URL:", tutoreDocumentoUrl);
-                    }
+                    tutoreDocumentoUrl = parentUrlData.publicUrl;
+                    console.log("Documento tutore caricato con successo. URL:", tutoreDocumentoUrl);
                 }
 
                 if (certificatoMedicoUrl || tutoreDocumentoUrl) {
@@ -1949,35 +1895,31 @@
                     }
                     if (tutoreDocumentoUrl) updatePayload.tutore_documento_url = tutoreDocumentoUrl;
 
-                    if (isDevMode) {
-                        console.log("[Dev Mode] Simulating updating utenti with payload:", updatePayload);
-                    } else {
-                        const { error: utentiUpdateError } = await supabaseClient
-                            .from('utenti')
-                            .update(updatePayload)
-                            .eq('id', userId);
-                        if (utentiUpdateError) throw utentiUpdateError;
-                    }
+                    const { error: utentiUpdateError } = await supabaseClient
+                        .from('utenti')
+                        .update(updatePayload)
+                        .eq('id', userId);
+                    if (utentiUpdateError) throw utentiUpdateError;
                 }
 
-                // 5. Update public.atti_adesione table
+                // 5. Verify OTP and finalize sign document state server-side
                 btnValidaOtp.textContent = "REGISTRAZIONE FINALE...";
                 
-                if (isDevMode) {
-                    console.log("[Dev Mode] Simulating update of public.atti_adesione setting state to 'firmato_validato' and url:", pdfPublicUrl);
-                } else {
-                    const { error: updateError } = await supabaseClient
-                        .from('atti_adesione')
-                        .update({
-                            stato: 'firmato_validato',
-                            data_firma: new Date().toISOString(),
-                            url_pdf_generato: pdfPublicUrl
-                        })
-                        .eq('utente_id', userId);
-                        
-                    if (updateError) throw updateError;
-                    console.log("Tavola atti_adesione aggiornata con successo.");
+                const response = await fetch('/api/otp-verify.js', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${createdUserSession.access_token}`
+                    },
+                    body: JSON.stringify({ otp: code, url_pdf_generato: pdfPublicUrl })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || "Codice OTP non valido o scaduto");
                 }
+                
+                console.log("Registrazione completata e OTP verificato via server.");
 
                 btnValidaOtp.textContent = "COMPLETATO!";
                 if (selectedAdesione === 'tesserato') {
