@@ -203,20 +203,34 @@ BEGIN
     -- Step E: ATOMIC MEMBER BOOK INTEGRATION - APPROVALS
     IF p_soci_da_approvare IS NOT NULL AND array_length(p_soci_da_approvare, 1) > 0 THEN
         FOREACH v_socio_anagrafica_id IN ARRAY p_soci_da_approvare LOOP
-            UPDATE public.registro_soci
-            SET stato_socio = 'ATTIVO',
-                data_delibera_direttivo = p_data_riunione,
-                numero_verbale = p_numero_verbale,
-                motivo_rifiuto = NULL
-            WHERE anagrafica_id = v_socio_anagrafica_id;
+            -- Genera numero registro
+            DECLARE
+                v_num_reg VARCHAR(20) := next_registro_number('SOCIO', CAST(EXTRACT(YEAR FROM p_data_riunione) AS INTEGER));
+            BEGIN
+                -- Inserisci in registro_soci
+                INSERT INTO public.registro_soci (
+                    anagrafica_id, 
+                    stato_socio, 
+                    data_delibera_direttivo,
+                    numero_verbale,
+                    numero_registro
+                ) VALUES (
+                    v_socio_anagrafica_id,
+                    'ATTIVO',
+                    p_data_riunione,
+                    p_numero_verbale,
+                    v_num_reg
+                );
 
-            SELECT utente_id INTO v_socio_utente_id FROM public.anagrafiche WHERE id = v_socio_anagrafica_id;
-            
-            IF v_socio_utente_id IS NOT NULL THEN
-                UPDATE public.utenti
-                SET ruolo = 'socio_approvato'::public.ruolo_utente
-                WHERE id = v_socio_utente_id;
-            END IF;
+                -- Aggiorna registro_approvazioni
+                UPDATE public.registro_approvazioni
+                SET stato = 'APPROVATO',
+                    data_decisione = p_data_riunione,
+                    numero_verbale = p_numero_verbale,
+                    deciso_da = p_id_presidente
+                WHERE anagrafica_id = v_socio_anagrafica_id AND stato = 'IN_ATTESA' 
+                  AND (tipo = 'SOCIO' OR tipo = 'SOCIO_TESSERATO');
+            END;
         END LOOP;
     END IF;
 
@@ -225,19 +239,15 @@ BEGIN
         FOR v_rifiuto_record IN SELECT * FROM jsonb_array_elements(p_soci_da_respingere) LOOP
             v_socio_anagrafica_id := (v_rifiuto_record->>'anagrafica_id')::UUID;
             
-            UPDATE public.registro_soci
-            SET stato_socio = 'RESPINTO',
-                data_delibera_direttivo = p_data_riunione,
+            -- Aggiorna registro_approvazioni
+            UPDATE public.registro_approvazioni
+            SET stato = 'RESPINTO',
+                data_decisione = p_data_riunione,
                 numero_verbale = p_numero_verbale,
+                deciso_da = p_id_presidente,
                 motivo_rifiuto = v_rifiuto_record->>'motivo'
-            WHERE anagrafica_id = v_socio_anagrafica_id;
-            
-            SELECT utente_id INTO v_socio_utente_id FROM public.anagrafiche WHERE id = v_socio_anagrafica_id;
-            IF v_socio_utente_id IS NOT NULL THEN
-                UPDATE public.utenti
-                SET ruolo = 'socio_in_attesa'::public.ruolo_utente
-                WHERE id = v_socio_utente_id;
-            END IF;
+            WHERE anagrafica_id = v_socio_anagrafica_id AND stato = 'IN_ATTESA' 
+              AND (tipo = 'SOCIO' OR tipo = 'SOCIO_TESSERATO');
         END LOOP;
     END IF;
 

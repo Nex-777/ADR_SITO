@@ -90,9 +90,35 @@ Tracks votes for each agenda item.
 | `astenuti` | `integer` | Count of abstentions. |
 | `esito` | `varchar` | Result: `APPROVATO`, `RESPINTO`, `NON_DELIBERATO`. |
 
+### 7. `public.registro_approvazioni`
+Staging table for pending socio and tesserato applications.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Unique record ID. |
+| `anagrafica_id` | `uuid` (FK) | References `anagrafiche(id)`. |
+| `tipo` | `varchar` | Request type: `SOCIO`, `TESSERATO`, `SOCIO_TESSERATO`. |
+| `stato` | `varchar` | Status: `IN_ATTESA`, `APPROVATO`, `RESPINTO`. |
+| `livello_copertura` | `varchar` | CSEN level: `BASE`, `INTEGRATIVA_A`, `INTEGRATIVA_B`. |
+| `data_richiesta` | `date` | Date request was made. |
+| `data_decisione` | `date` | Date approved or rejected. |
+| `numero_verbale` | `varchar` | Associated meeting minute number. |
+| `motivo_rifiuto` | `text` | Reason for rejection (if status is `RESPINTO`). |
+| `deciso_da` | `uuid` (FK) | References `utenti(id)` for the decider. |
+
 ---
 
 ## 🔒 Row-Level Security (RLS) & API Access
 
 -   **Write Protections**: Standard clients are restricted from directly inserting/updating records in `atti_adesione` to prevent arbitrary state modification.
 -   **Service Role bypass**: Serverless/Edge API functions invoke database updates using the `SUPABASE_SERVICE_ROLE_KEY`, which overrides RLS. This permits secure inserts, updates, and deletes restricted exclusively to the validated `utente_id` context.
+-   **Registro Approvazioni**: Board members (President, VP, Secretary, Treasurer) are granted full read and write access, while individual users can read their own pending applications.
+
+---
+
+## 🔢 Progressive Registry Numbering
+
+The registry utilizes gapless progressive numbers for both Soci and Tesserati:
+-   **Soci**: Format `S-N/ANNO` (e.g. `S-1/2026`). Assigned upon council minute registration.
+-   **Tesserati**: Format `T-N/ANNO` (e.g. `T-1/2026`). Assigned upon president/vp activation in the dashboard.
+-   **Methodology**: Handled securely on the database layer via `next_registro_number(tipo, anno)` generator function called within the atomic transactions (`salva_verbale_relazionale` and `approva_tesserato`).

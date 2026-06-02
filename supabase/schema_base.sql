@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.contatti (
 CREATE TABLE IF NOT EXISTS public.registro_soci (
     id_socio SERIAL PRIMARY KEY,
     anagrafica_id UUID NOT NULL REFERENCES public.anagrafiche(id) ON DELETE CASCADE,
-    stato_socio VARCHAR(30) CHECK (stato_socio IN ('IN_ATTESA_DELIBERA', 'ATTIVO', 'DECADUTO', 'RESPINTO')),
+    stato_socio VARCHAR(30) CHECK (stato_socio IN ('ATTIVO', 'DECADUTO')),
     data_domanda DATE NOT NULL DEFAULT CURRENT_DATE,
     data_delibera_direttivo DATE,
     numero_verbale VARCHAR(50),
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.registro_tesserati (
     anagrafica_id UUID NOT NULL REFERENCES public.anagrafiche(id) ON DELETE CASCADE,
     numero_tessera_csen VARCHAR(50),
     data_richiesta_tesseramento DATE NOT NULL DEFAULT CURRENT_DATE,
-    stato_tesseramento VARCHAR(30) CHECK (stato_tesseramento IN ('IN_ELABORAZIONE', 'ATTIVO', 'SCADUTO', 'SOSPESO')),
+    stato_tesseramento VARCHAR(30) CHECK (stato_tesseramento IN ('ATTIVO', 'SCADUTO', 'SOSPESO')),
     livello_copertura VARCHAR(20) CHECK (livello_copertura IN ('BASE', 'INTEGRATIVA_A', 'INTEGRATIVA_B'))
 );
 
@@ -156,4 +156,4 @@ CREATE POLICY self_insert_indirizzo ON public.indirizzi_residenza FOR INSERT WIT
 CREATE POLICY self_insert_contatto ON public.contatti FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY self_insert_socio ON public.registro_soci FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY self_insert_tesserato ON public.registro_tesserati FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY self_insert_certificato ON public.certificati_medici FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY self_insert_certificato ON public.certificati_medici FOR INSERT WITH CHECK (anagrafica_id IN (SELECT id FROM public.anagrafiche WHERE utente_id = auth.uid()));

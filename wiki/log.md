@@ -125,3 +125,17 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Verified and confirmed `elimina_utente_completo()` stored function covers full cascade cleanup including `auth.users`, `utenti`, `atti_adesione`, `ricevute_pagamenti`, `anagrafiche` (+ its cascade children). Recreated with added robustness.
 - Manually cleaned all residual records for test user Alessandro Bianchi (`nexmny@gmail.com`) to allow fresh registration.
 - Bumped application version to `1.00.18`.
+
+## [2026-06-02] update | Registry Restructuring & Dashboard UI (v1.00.20)
+- Designed and created new database staging table `registro_approvazioni` to queue socio/tesserato applications.
+- Altered tables `registro_soci` and `registro_tesserati` to add progressives `numero_registro` for gapless numbering (`S-N/ANNO` and `T-N/ANNO`).
+- Built DB stored function `next_registro_number` to dynamically fetch the next gapless index.
+- Replaced database trigger `sync_utente_to_normalized_tables()` and stored procedure `salva_verbale_relazionale()` to write to `registro_approvazioni` and handle progressive numbering.
+- Defined RPC `approva_tesserato` to safely move approved tesserati into the official ledger once medical certificates are validated VERDE.
+- Patched API endpoint `api/otp-verify.js` to land pending signups into `registro_approvazioni` staging.
+- Redesigned `portal/dashboard.html` adding the **REGISTRO APPROVAZIONI** tab, separating pending Soci and Tesserati, displaying `numero_registro` instead of DB serial IDs, adding a dynamic pending count alert banner, and securing `openSignedFile` against URL injection vectors.
+- Bumped application version to `1.00.20`.
+
+## [2026-06-02] release | Gapless Registry & Dashboard Fixes (v1.00.21)
+- Finalized registry restructure, dashboard UI, and security fixes.
+- Bumped application version to `1.00.21`.

@@ -216,15 +216,15 @@ export default async function handler(req, res) {
 
         let emailSubject = '';
         let emailHtml = '';
-
         if (adesione === 'socio') {
-            // Casistica 1: Solo Socio (Ammissione a Delibera)
+            // Casistica 1: Solo Socio (Ammissione a Delibera) Land in registro_approvazioni
             const { error: socioError } = await supabase
-                .from('registro_soci')
+                .from('registro_approvazioni')
                 .upsert({
                     anagrafica_id: anagraficaId,
-                    stato_socio: 'IN_ATTESA_DELIBERA'
-                }, { onConflict: 'anagrafica_id' });
+                    tipo: 'SOCIO',
+                    stato: 'IN_ATTESA'
+                }, { onConflict: 'anagrafica_id, tipo' });
             if (socioError) throw socioError;
 
             emailSubject = 'Domanda di Ammissione Socio Ricevuta - Adrenalina Club';
@@ -239,21 +239,14 @@ export default async function handler(req, res) {
         } else if (adesione === 'socio_tesserato') {
             // Casistica 2: Socio + Tesserato
             const { error: socioError } = await supabase
-                .from('registro_soci')
+                .from('registro_approvazioni')
                 .upsert({
                     anagrafica_id: anagraficaId,
-                    stato_socio: 'IN_ATTESA_DELIBERA'
-                }, { onConflict: 'anagrafica_id' });
-            if (socioError) throw socioError;
-
-            const { error: tessError } = await supabase
-                .from('registro_tesserati')
-                .upsert({
-                    anagrafica_id: anagraficaId,
-                    stato_tesseramento: 'IN_ELABORAZIONE',
+                    tipo: 'SOCIO_TESSERATO',
+                    stato: 'IN_ATTESA',
                     livello_copertura: csenCoverage
-                }, { onConflict: 'anagrafica_id' });
-            if (tessError) throw tessError;
+                }, { onConflict: 'anagrafica_id, tipo' });
+            if (socioError) throw socioError;
 
             emailSubject = 'Domanda di Ammissione Socio + Tesserato Ricevuta - Adrenalina Club';
             emailHtml = `
@@ -267,12 +260,13 @@ export default async function handler(req, res) {
         } else if (adesione === 'tesserato') {
             // Casistica 3: Solo Tesserato (No delibera - Iter Diretto)
             const { error: tessError } = await supabase
-                .from('registro_tesserati')
+                .from('registro_approvazioni')
                 .upsert({
                     anagrafica_id: anagraficaId,
-                    stato_tesseramento: 'IN_ELABORAZIONE',
+                    tipo: 'TESSERATO',
+                    stato: 'IN_ATTESA',
                     livello_copertura: csenCoverage
-                }, { onConflict: 'anagrafica_id' });
+                }, { onConflict: 'anagrafica_id, tipo' });
             if (tessError) throw tessError;
 
             const pagamentoLink = `https://adrenalinaclub.it/portal/pagamento.html?id=${utenteId}`;
@@ -281,7 +275,7 @@ export default async function handler(req, res) {
                 <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
                     <h1 style="color: #df293e; font-size: 22px;">ADRENALINA CLUB</h1>
                     <p style="color: #ccc;">Ciao ${profile.nome}, il tuo tesseramento sportivo CSEN è stato registrato.</p>
-                    <p style="color: #aaa; font-size: 13px;">Prima di poter procedere al pagamento della quota, i nostri sistemi verificheranno la validità del certificato medico da te caricato (scansione AI). Potrai verificare lo stato della validazione ed effettuare il saldo cliccando sul link sottostante non appena il certificato risulterà approvato:</p>
+                    <p style="color: #aaa; font-size: 13px;">Prima di poter procedere al pagamento della quota, i nostri sistemi verificheranno la validità del certificato medico da te caricato (scansione AI). Potrai verificar lo stato della validazione ed effettuare il saldo cliccando sul link sottostante non appena il certificato risulterà approvato:</p>
                     <a href="${pagamentoLink}" style="background-color: #df293e; color: #fff; padding: 12px 24px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px;">PROSEGUI AL PORTALE PAGAMENTI</a>
                 </div>
             `;

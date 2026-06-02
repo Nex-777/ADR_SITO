@@ -119,7 +119,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.19</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.21</span>
                 <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
             </div>
             <div class="flex items-center gap-4">
@@ -145,6 +145,10 @@
                 <!-- Nav Links -->
                 <button onclick="switchTab('panoramica')" id="tab-btn-panoramica" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-primary/30 bg-primary/10 text-white flex items-center gap-3">
                     <span class="material-symbols-outlined text-sm">dashboard</span> PANORAMICA
+                </button>
+                
+                <button onclick="switchTab('approvazioni')" id="tab-btn-approvazioni" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-sm">rule</span> REGISTRO APPROVAZIONI
                 </button>
                 
                 <button onclick="switchTab('soci')" id="tab-btn-soci" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
@@ -202,10 +206,14 @@
                 </div>
 
                 <!-- Stats Grid (Board members only) -->
-                <div id="board-stats-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div id="board-stats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="border border-white/10 p-4 bg-black/20 cursor-pointer hover:border-primary/50 transition-all" onclick="switchTab('approvazioni')">
+                        <p class="text-[10px] text-gray-500 font-headline uppercase">IN ATTESA APPROVAZIONE</p>
+                        <p id="stat-approvazioni-attesa" class="text-2xl font-headline font-black text-primary mt-1">-</p>
+                    </div>
                     <div class="border border-white/10 p-4 bg-black/20">
                         <p class="text-[10px] text-gray-500 font-headline uppercase">SOCI IN ATTESA DELIBERA</p>
-                        <p id="stat-soci-attesa" class="text-2xl font-headline font-black text-primary mt-1">-</p>
+                        <p id="stat-soci-attesa" class="text-2xl font-headline font-black text-white mt-1">-</p>
                     </div>
                     <div class="border border-white/10 p-4 bg-black/20">
                         <p class="text-[10px] text-gray-500 font-headline uppercase">ISCRITTI ATTIVI</p>
@@ -227,6 +235,11 @@
                         <li>• Verifica Certificazione Medica obbligatoria per atleti tesserati attivi.</li>
                         <li>• Controllo indirizzo PEC dell'Associazione (deve essere PEC dell'ente, non del Presidente).</li>
                     </ul>
+                </div>
+
+                <!-- Dynamic approvals banner alert -->
+                <div id="board-alert-approvazioni-banner" class="hidden border border-primary/20 p-4 bg-primary/5 border-l-4 border-primary text-xs font-mono uppercase">
+                    <!-- Popolated dynamically by loadStats -->
                 </div>
 
                 <!-- User Profile / Pending Status Banner (Non-board members / pending) -->
@@ -298,6 +311,90 @@
                         <button onclick="vaiAlPagamento()" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-6 py-3 transition-all uppercase tracking-wider">
                             PAGA ORA CON STRIPE
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB REGISTRO APPROVAZIONI -->
+            <div id="panel-approvazioni" class="tab-panel space-y-6 hidden">
+                <div>
+                    <h2 class="font-headline text-lg font-bold uppercase">Registro Approvazioni</h2>
+                    <p class="text-xs text-gray-500 uppercase">Gestione e validazione delle candidature e dei tesserati pendenti</p>
+                </div>
+
+                <!-- Sezione Soci Pendenti -->
+                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                    <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">group_add</span> SOCI IN ATTESA DELIBERA (DELIBERA VIA VERBALE DIRETTO)
+                    </h3>
+                    <div class="overflow-x-auto border border-white/5 bg-black/20">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
+                                <tr>
+                                    <th class="p-3">Candidato</th>
+                                    <th class="p-3 font-mono">Codice Fiscale</th>
+                                    <th class="p-3">Data Richiesta</th>
+                                    <th class="p-3">Tipo Adesione</th>
+                                    <th class="p-3 text-right">Stato</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvazioni-soci-list" class="divide-y divide-white/5 uppercase font-mono">
+                                <tr>
+                                    <td colspan="5" class="p-3 text-center text-gray-500">Nessuna richiesta di socio in attesa.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sezione Tesserati Pendenti -->
+                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                    <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">sports_kabaddi</span> TESSERATI IN ATTESA DI ATTIVAZIONE
+                    </h3>
+                    <div class="overflow-x-auto border border-white/5 bg-black/20">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
+                                <tr>
+                                    <th class="p-3">Atleta</th>
+                                    <th class="p-3 font-mono">Codice Fiscale</th>
+                                    <th class="p-3">Copertura</th>
+                                    <th class="p-3 text-center">Certificato Medico</th>
+                                    <th class="p-3">Data Richiesta</th>
+                                    <th class="p-3 text-right">Azione</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvazioni-tesserati-list" class="divide-y divide-white/5 uppercase font-mono">
+                                <tr>
+                                    <td colspan="6" class="p-3 text-center text-gray-500">Nessuna richiesta di tesserato in attesa.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Storico Approvazioni Rifiutati/Approvati -->
+                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                    <h3 class="font-headline text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">history</span> CRONOLOGIA RECENTE DECISIONI
+                    </h3>
+                    <div class="overflow-x-auto border border-white/5 bg-black/20">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
+                                <tr>
+                                    <th class="p-3">Nominativo</th>
+                                    <th class="p-3">Tipo Adesione</th>
+                                    <th class="p-3">Data Decisione</th>
+                                    <th class="p-3">Esito</th>
+                                    <th class="p-3 text-right">Dettaglio / Note</th>
+                                </tr>
+                            </thead>
+                            <tbody id="approvazioni-storico-list" class="divide-y divide-white/5 uppercase font-mono text-gray-400">
+                                <tr>
+                                    <td colspan="5" class="p-3 text-center text-gray-500">Nessuna decisione recente.</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -966,7 +1063,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "",
-                VERSION: "1.00.19"
+                VERSION: "1.00.21"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -980,10 +1077,24 @@
             return div.innerHTML;
         }
 
+        function getCertInfo(anag) {
+            if (!anag) return null;
+            if (!anag.certificati_medici) return null;
+            if (Array.isArray(anag.certificati_medici)) {
+                return anag.certificati_medici.length > 0 ? anag.certificati_medici[0] : null;
+            }
+            return anag.certificati_medici;
+        }
+
         async function openSignedFile(bucket, filePath) {
             try {
                 if (!filePath) {
                     alert("Percorso file non valido.");
+                    return;
+                }
+                // Verify bucket is safe
+                if (bucket !== 'certificati_medici') {
+                    alert("Bucket non autorizzato.");
                     return;
                 }
                 let parsedPath = filePath;
@@ -1121,6 +1232,7 @@
                     { name: 'loadStats', fn: loadStats },
                     { name: 'loadSoci', fn: loadSoci },
                     { name: 'loadTesserati', fn: loadTesserati },
+                    { name: 'loadApprovazioni', fn: loadApprovazioni },
                     { name: 'loadQuote', fn: loadQuote },
                     { name: 'loadVerbali', fn: loadVerbali },
                     { name: 'loadDirettivo', fn: loadDirettivo },
@@ -1194,11 +1306,11 @@
                         
                         if (scaduto) {
                             box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                            msg.innerHTML = `⚠️ CERTIFICATO MEDICO SCADUTO IL ${cert.data_scadenza}.<br>Carica un certificato medico aggiornato per sbloccare il profilo.`;
+                            msg.innerHTML = `⚠️ CERTIFICATO MEDICO SCADUTO IL ${escapeHtml(cert.data_scadenza)}.<br>Carica un certificato medico aggiornato per sbloccare il profilo.`;
                             form.classList.remove('hidden');
                         } else if (status === 'ROSSO') {
                             box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                            msg.innerHTML = `❌ CERTIFICATO MEDICO RIFIUTATO.<br>Motivo: ${cert.note_ai || 'File non leggibile o non conforme'}.<br>Carica nuovamente un file corretto.`;
+                            msg.innerHTML = `❌ CERTIFICATO MEDICO RIFIUTATO.<br>Motivo: ${escapeHtml(cert.note_ai || 'File non leggibile o non conforme')}.<br>Carica nuovamente un file corretto.`;
                             form.classList.remove('hidden');
                         } else if (status === 'IN_ATTESA') {
                             box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
@@ -1208,7 +1320,7 @@
                             msg.innerHTML = "⏳ CERTIFICATO IN ATTESA DI APPROVAZIONE MANUALE.<br>La validazione richiede un controllo visivo da parte del Presidente. Potrai procedere al pagamento appena approvato.";
                         } else if (status === 'VERDE') {
                             box.className = "border p-6 space-y-4 bg-green-500/5 border-l-4 border-green-500";
-                            msg.innerHTML = `✓ CERTIFICATO MEDICO VALIDO.<br>Tipologia: ${cert.tipologia}<br>Scadenza: ${cert.data_scadenza} (In corso di validità)<br>Medico: ${cert.medico_rilascio || 'N/D'}`;
+                            msg.innerHTML = `✓ CERTIFICATO MEDICO VALIDO.<br>Tipologia: ${escapeHtml(cert.tipologia)}<br>Scadenza: ${escapeHtml(cert.data_scadenza)} (In corso di validità)<br>Medico: ${escapeHtml(cert.medico_rilascio || 'N/D')}`;
                             
                             // Sblocca pagamento se la quota è insoluta
                             if (quotaTotale > 0 && containerPagamento) {
@@ -1234,6 +1346,7 @@
                 document.getElementById('board-alert-board').classList.remove('hidden');
                 document.getElementById('user-status-container').classList.add('hidden');
                 
+                document.getElementById('tab-btn-approvazioni').classList.remove('hidden');
                 document.getElementById('tab-btn-soci').classList.remove('hidden');
                 document.getElementById('tab-btn-tesserati').classList.remove('hidden');
                 document.getElementById('tab-btn-quote').classList.remove('hidden');
@@ -1249,6 +1362,7 @@
                 document.getElementById('board-stats-grid').classList.add('hidden');
                 document.getElementById('board-alert-board').classList.add('hidden');
                 
+                document.getElementById('tab-btn-approvazioni').classList.add('hidden');
                 document.getElementById('tab-btn-soci').classList.add('hidden');
                 document.getElementById('tab-btn-tesserati').classList.add('hidden');
                 document.getElementById('tab-btn-quote').classList.add('hidden');
@@ -1301,11 +1415,30 @@
         // Caricamento Dati Panoramica
         async function loadStats() {
             try {
+                // Conteggio Richieste in Attesa Approvazione
+                const { count: approvazioniAttesa } = await supabaseClient
+                    .from('registro_approvazioni')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('stato', 'IN_ATTESA');
+                document.getElementById('stat-approvazioni-attesa').textContent = approvazioniAttesa !== null ? approvazioniAttesa : 0;
+
+                // Aggiorna il banner alert dinamico per il CD
+                const alertBanner = document.getElementById('board-alert-approvazioni-banner');
+                if (alertBanner) {
+                    if (approvazioniAttesa > 0) {
+                        alertBanner.innerHTML = `🔴 CI SONO ${approvazioniAttesa} RICHIESTE IN ATTESA DI APPROVAZIONE / ATTIVAZIONE. <a href="#" onclick="event.preventDefault(); switchTab('approvazioni')" class="underline font-bold">VAI AL REGISTRO APPROVAZIONI</a>`;
+                        alertBanner.classList.remove('hidden');
+                    } else {
+                        alertBanner.classList.add('hidden');
+                    }
+                }
+
                 // Conteggio Soci in Attesa
                 const { count: sociAttesa } = await supabaseClient
-                    .from('registro_soci')
+                    .from('registro_approvazioni')
                     .select('*', { count: 'exact', head: true })
-                    .eq('stato_socio', 'IN_ATTESA_DELIBERA');
+                    .eq('stato', 'IN_ATTESA')
+                    .or('tipo.eq.SOCIO,tipo.eq.SOCIO_TESSERATO');
                 
                 document.getElementById('stat-soci-attesa').textContent = sociAttesa !== null ? sociAttesa : 0;
 
@@ -1393,10 +1526,10 @@
                     valA = a.stato_tesseramento || '';
                     valB = b.stato_tesseramento || '';
                 } else if (field === 'certificato') {
-                    const certA = a.anagrafiche && a.anagrafiche.certificati_medici && a.anagrafiche.certificati_medici.length > 0 
-                        ? a.anagrafiche.certificati_medici[0].data_scadenza : '1970-01-01';
-                    const certB = b.anagrafiche && b.anagrafiche.certificati_medici && b.anagrafiche.certificati_medici.length > 0 
-                        ? b.anagrafiche.certificati_medici[0].data_scadenza : '1970-01-01';
+                    const cA = getCertInfo(a.anagrafiche);
+                    const cB = getCertInfo(b.anagrafiche);
+                    const certA = cA ? cA.data_scadenza : '1970-01-01';
+                    const certB = cB ? cB.data_scadenza : '1970-01-01';
                     valA = certA;
                     valB = certB;
                 } else if (field === 'tipo_adesione') {
@@ -1528,6 +1661,7 @@
                     .from('registro_soci')
                     .select(`
                         id_socio,
+                        numero_registro,
                         stato_socio,
                         data_domanda,
                         data_delibera_direttivo,
@@ -1598,7 +1732,7 @@
                 } else if (socio.stato_socio === 'ATTIVO') {
                     actionBtn = '<span class="text-[9px] text-green-500 font-bold uppercase tracking-wider bg-green-500/10 border border-green-500/20 px-2 py-1">Approvato</span>';
                 } else if (socio.stato_socio === 'RESPINTO') {
-                    actionBtn = `<span class="text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 px-2 py-1" title="${socio.motivo_rifiuto || ''}">Respinto</span>`;
+                    actionBtn = `<span class="text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 px-2 py-1" title="${escapeHtml(socio.motivo_rifiuto || '')}">Respinto</span>`;
                 } else {
                     actionBtn = '<span class="text-[9px] text-gray-500 uppercase">Gestito</span>';
                 }
@@ -1615,7 +1749,7 @@
                     : 'In attesa delibera';
 
                 row.innerHTML = `
-                    <td class="p-4 font-mono font-bold text-gray-500">#${escapeHtml(socio.id_socio)}</td>
+                    <td class="p-4 font-mono font-bold text-gray-500">${escapeHtml(socio.numero_registro || 'S-PND')}</td>
                     <td class="p-4 text-white">
                         <span class="font-bold">${nomeComp}</span>
                         <div class="text-[10px] text-gray-400 mt-0.5">Nascita: ${dataNascita} a ${comuneNascita}</div>
@@ -1643,6 +1777,7 @@
                     .from('registro_tesserati')
                     .select(`
                         id_tesserato,
+                        numero_registro,
                         numero_tessera_csen,
                         stato_tesseramento,
                         livello_copertura,
@@ -1696,6 +1831,217 @@
             }
         }
 
+        let approvazioniData = [];
+
+        async function loadApprovazioni() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('registro_approvazioni')
+                    .select(`
+                        id,
+                        anagrafica_id,
+                        tipo,
+                        stato,
+                        livello_copertura,
+                        data_richiesta,
+                        data_decisione,
+                        numero_verbale,
+                        motivo_rifiuto,
+                        anagrafiche (
+                            id,
+                            nome,
+                            cognome,
+                            codice_fiscale,
+                            data_nascita,
+                            comune_nascita,
+                            provincia_nascita,
+                            certificati_medici (
+                                id,
+                                tipologia,
+                                data_rilascio,
+                                data_scadenza,
+                                medico_rilascio,
+                                file_url,
+                                stato_validazione,
+                                note_ai
+                            )
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                approvazioniData = data || [];
+                renderApprovazioniTables();
+            } catch (err) {
+                console.error("Errore caricamento approvazioni:", err);
+            }
+        }
+
+        function renderApprovazioniTables() {
+            const sociBody = document.getElementById('approvazioni-soci-list');
+            const tessBody = document.getElementById('approvazioni-tesserati-list');
+            const storicoBody = document.getElementById('approvazioni-storico-list');
+
+            if (!sociBody || !tessBody || !storicoBody) return;
+
+            sociBody.innerHTML = '';
+            tessBody.innerHTML = '';
+            storicoBody.innerHTML = '';
+
+            const pendingSoci = approvazioniData.filter(x => x.stato === 'IN_ATTESA' && (x.tipo === 'SOCIO' || x.tipo === 'SOCIO_TESSERATO'));
+            const pendingTess = approvazioniData.filter(x => x.stato === 'IN_ATTESA' && (x.tipo === 'TESSERATO' || x.tipo === 'SOCIO_TESSERATO'));
+            const storico = approvazioniData.filter(x => x.stato !== 'IN_ATTESA');
+
+            // Render Pending Soci
+            if (pendingSoci.length === 0) {
+                sociBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessuna richiesta di socio in attesa.</td></tr>';
+            } else {
+                pendingSoci.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-white/5';
+                    const anag = item.anagrafiche || {};
+                    const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
+                    const cf = escapeHtml(anag.codice_fiscale || '');
+                    const dataN = escapeHtml(anag.data_nascita || '');
+                    row.innerHTML = `
+                        <td class="p-3 font-bold text-white">
+                            ${nome}<br>
+                            <span class="text-[9px] text-gray-500 font-light">Nascita: ${dataN} a ${escapeHtml(anag.comune_nascita || '')} (${escapeHtml(anag.provincia_nascita || '')})</span>
+                        </td>
+                        <td class="p-3 text-gray-400 font-mono">${cf}</td>
+                        <td class="p-3 text-gray-400">${escapeHtml(item.data_richiesta)}</td>
+                        <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
+                        <td class="p-3 text-right">
+                            <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase text-yellow-500 bg-yellow-500/10 border-yellow-500/30">IN ATTESA CD</span>
+                        </td>
+                    `;
+                    sociBody.appendChild(row);
+                });
+            }
+
+            // Render Pending Tesserati
+            if (pendingTess.length === 0) {
+                tessBody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-500">Nessuna richiesta di tesserato in attesa.</td></tr>';
+            } else {
+                pendingTess.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-white/5';
+                    const anag = item.anagrafiche || {};
+                    const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
+                    const cf = escapeHtml(anag.codice_fiscale || '');
+                    
+                    const certInfo = getCertInfo(anag);
+                    let certHtml = '<span class="text-primary font-bold">MANCANTE</span>';
+                    let isCertVerde = false;
+                    if (certInfo) {
+                        const scaduto = new Date(certInfo.data_scadenza) < new Date();
+                        isCertVerde = certInfo.stato_validazione === 'VERDE' && !scaduto;
+                        let color = scaduto ? 'text-primary' : 'text-green-500';
+                        let statusLabel = '';
+                        if (certInfo.stato_validazione === 'ROSSO') {
+                            color = 'text-primary';
+                            statusLabel = '<span class="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">RIFIUTATO</span>';
+                        } else if (certInfo.stato_validazione === 'GIALLO') {
+                            color = 'text-yellow-500';
+                            statusLabel = '<span class="text-[9px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">REVISIONE</span>';
+                        } else if (certInfo.stato_validazione === 'IN_ATTESA') {
+                            color = 'text-gray-400';
+                            statusLabel = '<span class="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold">ATTESA AI</span>';
+                        } else {
+                            statusLabel = '<span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">VALIDATO</span>';
+                        }
+                        certHtml = `
+                            <div class="flex flex-col items-center gap-1">
+                                <a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="approvazioni-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>
+                                ${statusLabel}
+                                <span class="text-[9px] text-gray-500 font-mono">Scad: ${escapeHtml(certInfo.data_scadenza)}</span>
+                            </div>
+                        `;
+                    }
+
+                    let actionBtn = '';
+                    if (['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
+                        if (isCertVerde) {
+                            actionBtn = `<button onclick="attivaTesseramentoApprovazioni('${item.anagrafica_id}')" class="bg-white text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
+                        } else {
+                            actionBtn = `<button disabled class="bg-gray-800 text-gray-500 font-headline text-[9px] font-bold px-3 py-1 cursor-not-allowed uppercase" title="Richiede Certificato Medico VERDE per l'attivazione">ATTIVA</button>`;
+                        }
+                    } else {
+                        actionBtn = '-';
+                    }
+
+                    row.innerHTML = `
+                        <td class="p-3 font-bold text-white">${nome}</td>
+                        <td class="p-3 text-gray-400 font-mono">${cf}</td>
+                        <td class="p-3 text-gray-400">${escapeHtml(item.livello_copertura || 'BASE')}</td>
+                        <td class="p-3 text-center">${certHtml}</td>
+                        <td class="p-3 text-gray-400">${escapeHtml(item.data_richiesta)}</td>
+                        <td class="p-3 text-right">${actionBtn}</td>
+                    `;
+                    const viewBtn = row.querySelector('.approvazioni-view-cert-btn');
+                    if (viewBtn) {
+                        viewBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const url = e.currentTarget.getAttribute('data-file-url');
+                            openSignedFile('certificati_medici', url);
+                        });
+                    }
+                    tessBody.appendChild(row);
+                });
+            }
+
+            // Render Storico
+            if (storico.length === 0) {
+                storicoBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessuna decisione recente.</td></tr>';
+            } else {
+                storico.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-white/5';
+                    const anag = item.anagrafiche || {};
+                    const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
+                    const badgeClass = item.stato === 'APPROVATO' 
+                        ? 'text-green-500 bg-green-500/10 border-green-500/30' 
+                        : 'text-primary bg-primary/10 border-primary/30';
+                    const details = item.stato === 'APPROVATO'
+                        ? (item.numero_verbale ? `Verbale: ${escapeHtml(item.numero_verbale)}` : 'Attivato con Certificato')
+                        : `Motivo: ${escapeHtml(item.motivo_rifiuto || 'Requisiti assenti')}`;
+
+                    row.innerHTML = `
+                        <td class="p-3 font-bold text-white">${nome}</td>
+                        <td class="p-3 uppercase text-xs">${escapeHtml(item.tipo)}</td>
+                        <td class="p-3">${escapeHtml(item.data_decisione || '')}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeClass}">${escapeHtml(item.stato)}</span>
+                        </td>
+                        <td class="p-3 text-right text-[10px] font-mono">${details}</td>
+                    `;
+                    storicoBody.appendChild(row);
+                });
+            }
+        }
+
+        async function attivaTesseramentoApprovazioni(anagraficaId) {
+            try {
+                if (!currentUser) return;
+                const { data, error } = await supabaseClient.rpc('approva_tesserato', {
+                    p_anagrafica_id: anagraficaId,
+                    p_deciso_da: currentUser.id
+                });
+                if (error) throw error;
+                alert("Tesseramento approvato ed inserito con successo nel Registro Ufficiale.");
+                
+                await scriviAuditLog('ATTIVAZIONE_TESSERAMENTO_REGISTRO_APPROVAZIONI', 'registro_tesserati', anagraficaId, {
+                    anagrafica_id: anagraficaId
+                });
+
+                loadApprovazioni();
+                loadTesserati();
+                loadStats();
+            } catch (err) {
+                alert("Errore durante l'attivazione: " + err.message);
+            }
+        }
+
         function renderGialloCertificati() {
             const container = document.getElementById('giallo-certificati-container');
             const body = document.getElementById('giallo-certificati-list');
@@ -1704,8 +2050,7 @@
 
             // Trova tutti i tesserati che hanno un certificato con stato_validazione = 'GIALLO'
             const gialloTesserati = tesseratiData.filter(tess => {
-                const cert = tess.anagrafiche && tess.anagrafiche.certificati_medici && tess.anagrafiche.certificati_medici.length > 0 
-                    ? tess.anagrafiche.certificati_medici[0] : null;
+                const cert = getCertInfo(tess.anagrafiche);
                 return cert && cert.stato_validazione === 'GIALLO';
             });
 
@@ -1717,7 +2062,7 @@
             container.classList.remove('hidden');
 
             gialloTesserati.forEach(tess => {
-                const cert = tess.anagrafiche.certificati_medici[0];
+                const cert = getCertInfo(tess.anagrafiche);
                 const nomeComp = escapeHtml(`${tess.anagrafiche.nome} ${tess.anagrafiche.cognome}`);
                 const cf = escapeHtml(tess.anagrafiche.codice_fiscale);
                 const row = document.createElement('tr');
@@ -1729,7 +2074,7 @@
                     <td class="p-3 text-yellow-500 font-bold">${escapeHtml(cert.tipologia)}</td>
                     <td class="p-3 text-gray-400">${escapeHtml(cert.data_rilascio || 'N/D')}</td>
                     <td class="p-3 text-center">
-                        <a href="#" onclick="event.preventDefault(); openSignedFile('certificati_medici', '${escapeHtml(cert.file_url)}')" class="bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[9px] px-2 py-1 hover:bg-yellow-500 hover:text-black font-bold uppercase transition-all flex items-center gap-1 justify-center max-w-[120px] mx-auto">
+                        <a href="#" data-file-url="${escapeHtml(cert.file_url)}" class="giallo-view-cert-btn bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[9px] px-2 py-1 hover:bg-yellow-500 hover:text-black font-bold uppercase transition-all flex items-center gap-1 justify-center max-w-[120px] mx-auto">
                             <span class="material-symbols-outlined text-[12px]">visibility</span> VEDI FILE
                         </a>
                     </td>
@@ -1740,6 +2085,12 @@
                         </div>
                     </td>
                 `;
+                // Add event listener to avoid inline onclick with quote escaping issues
+                row.querySelector('.giallo-view-cert-btn').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const url = e.currentTarget.getAttribute('data-file-url');
+                    openSignedFile('certificati_medici', url);
+                });
                 body.appendChild(row);
             });
         }
@@ -1771,6 +2122,7 @@
 
                 alert(`Certificato medico aggiornato a ${nuovoStato} con successo!`);
                 loadTesserati();
+                loadApprovazioni();
             } catch (err) {
                 alert("Errore aggiornamento certificato: " + err.message);
             }
@@ -1791,13 +2143,13 @@
                 const cf = tess.anagrafiche ? escapeHtml(tess.anagrafiche.codice_fiscale) : 'N/D';
                 const birthInfo = tess.anagrafiche ? escapeHtml(`${tess.anagrafiche.data_nascita} a ${tess.anagrafiche.comune_nascita} (${tess.anagrafiche.provincia_nascita})`) : 'N/D';
                 
-                const certInfo = tess.anagrafiche && tess.anagrafiche.certificati_medici && tess.anagrafiche.certificati_medici.length > 0 
-                    ? tess.anagrafiche.certificati_medici[0] 
-                    : null;
+                const certInfo = getCertInfo(tess.anagrafiche);
 
                 let certHtml = '<span class="text-primary font-bold">MANCANTE</span>';
+                let isCertVerde = false;
                 if (certInfo) {
                     const scaduto = new Date(certInfo.data_scadenza) < new Date();
+                    isCertVerde = certInfo.stato_validazione === 'VERDE' && !scaduto;
                     let color = scaduto ? 'text-primary' : 'text-green-500';
                     let statusLabel = '';
                     if (certInfo.stato_validazione === 'ROSSO') {
@@ -1812,7 +2164,7 @@
                     } else {
                         statusLabel = '<br><span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">VALIDATO</span>';
                     }
-                    certHtml = `<a href="#" onclick="event.preventDefault(); openSignedFile('certificati_medici', '${escapeHtml(certInfo.file_url)}')" class="underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}<br>
+                    certHtml = `<a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="tess-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}<br>
                                 <span class="text-[10px] text-gray-400">Scadenza: ${escapeHtml(certInfo.data_scadenza)}</span><br>
                                 <span class="text-[9px] text-gray-500">Med.: ${escapeHtml(certInfo.medico_rilascio || 'N/D')}</span>`;
                 }
@@ -1823,7 +2175,11 @@
 
                 let actionBtn = '';
                 if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && ['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
-                    actionBtn = `<button onclick="attivaTesseramento(${tess.id_tesserato})" class="bg-white text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
+                    if (isCertVerde) {
+                        actionBtn = `<button onclick="attivaTesseramento(${tess.id_tesserato})" class="bg-white text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
+                    } else {
+                        actionBtn = `<button disabled class="bg-gray-800 text-gray-500 font-headline text-[9px] font-bold px-2 py-0.5 cursor-not-allowed uppercase" title="Attivazione disabilitata: certificato medico non valido o in attesa di approvazione.">ATTIVA</button>`;
+                    }
                 } else {
                     actionBtn = '-';
                 }
@@ -1837,7 +2193,7 @@
                 }
 
                 row.innerHTML = `
-                    <td class="p-4 font-mono font-bold text-gray-500">#${escapeHtml(tess.id_tesserato)}</td>
+                    <td class="p-4 font-mono font-bold text-gray-500">${escapeHtml(tess.numero_registro || 'T-PND')}</td>
                     <td class="p-4 text-white">
                         <span class="font-bold">${nomeComp}</span>
                         <div class="text-[10px] text-gray-400 mt-0.5">CF: ${cf}</div>
@@ -1854,6 +2210,15 @@
                     </td>
                     <td class="p-4 text-right">${actionBtn}</td>
                 `;
+                // Add event listener to view certificate safely
+                const viewBtn = row.querySelector('.tess-view-cert-btn');
+                if (viewBtn) {
+                    viewBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const url = e.currentTarget.getAttribute('data-file-url');
+                        openSignedFile('certificati_medici', url);
+                    });
+                }
                 body.appendChild(row);
             });
         }
@@ -2166,25 +2531,29 @@
         // Attivazione Tesseramento
         async function attivaTesseramento(tessId) {
             try {
-                // Generazione di un numero tessera casuale per simulare la ricezione CSEN
-                const csenNum = `CSEN-${Math.floor(1000000 + Math.random() * 9000000)}`;
-                const { error } = await supabaseClient
+                if (!currentUser) return;
+                // Fetch the anagrafica_id for the given tessId
+                const { data: row, error: fetchErr } = await supabaseClient
                     .from('registro_tesserati')
-                    .update({
-                        stato_tesseramento: 'ATTIVO',
-                        numero_tessera_csen: csenNum
-                    })
-                    .eq('id_tesserato', tessId);
+                    .select('anagrafica_id')
+                    .eq('id_tesserato', tessId)
+                    .single();
+                if (fetchErr) throw fetchErr;
+
+                const { data, error } = await supabaseClient.rpc('approva_tesserato', {
+                    p_anagrafica_id: row.anagrafica_id,
+                    p_deciso_da: currentUser.id
+                });
 
                 if (error) throw error;
 
                 await scriviAuditLog('ATTIVAZIONE_TESSERAMENTO', 'registro_tesserati', tessId, {
-                    stato_tesseramento: 'ATTIVO',
-                    numero_tessera_csen: csenNum
+                    stato_tesseramento: 'ATTIVO'
                 });
 
-                alert(`Tesseramento attivato con successo. Numero Tessera CSEN generato: ${csenNum}`);
+                alert(`Tesseramento attivato con successo.`);
                 loadTesserati();
+                loadApprovazioni();
                 loadStats();
             } catch (err) {
                 alert("Errore durante l'attivazione: " + err.message);
@@ -2516,7 +2885,7 @@
 
                 // 6. Fetch pending members for Libro Soci integration
                 const { data: pendingSoci, error: errSoci } = await supabaseClient
-                    .from('registro_soci')
+                    .from('registro_approvazioni')
                     .select(`
                         anagrafica_id,
                         anagrafiche (
@@ -2528,7 +2897,8 @@
                             codice_fiscale
                         )
                     `)
-                    .eq('stato_socio', 'IN_ATTESA_DELIBERA');
+                    .eq('stato', 'IN_ATTESA')
+                    .or('tipo.eq.SOCIO,tipo.eq.SOCIO_TESSERATO');
 
                 if (errSoci) throw errSoci;
                 wizardPendingSoci = pendingSoci || [];
@@ -3063,6 +3433,7 @@
                 // Reload dashboard segments to reflect active statuses
                 loadVerbali();
                 loadSoci();
+                loadApprovazioni();
                 loadStats();
             } catch (err) {
                 alert("Errore salvataggio verbale: " + err.message);
@@ -3594,8 +3965,7 @@
 
             tesseratiData.forEach(tess => {
                 const anag = tess.anagrafiche || {};
-                const cert = anag.certificati_medici && anag.certificati_medici.length > 0 
-                    ? anag.certificati_medici[0] : null;
+                const cert = getCertInfo(anag);
                 
                 const ind = anag.indirizzi_residenza || {};
                 const cont = anag.contatti || {};
