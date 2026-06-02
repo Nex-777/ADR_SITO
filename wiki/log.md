@@ -167,4 +167,19 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Added `autocomplete="off"` to the email field and `autocomplete="new-password"` to the password field in `portal/registrazione.html` to prevent browsers from automatically injecting the President's saved credentials during new registrations.
 - Bumped application version to `1.00.27`.
 
+## [2026-06-02] feature | AI Certificate Validation & Missing Cert Bugfix (v1.00.28)
+- Fixed the "MANCANTE" certificate bug by migrating the certificate data from the old `utenti` schema to the new `certificati_medici` table during OTP verification in `api/otp-verify.js`.
+- Integrated Google Gemini 1.5 Flash Vision API (`@google/genai`) to automatically process and validate uploaded medical certificates.
+- Created `api/validate-cert.js` endpoint which downloads the certificate image from Supabase Storage and prompts Gemini to extract issue dates, expiry dates, and the certificate type (agonistico/non agonistico).
+- The system now automatically assigns a status (`VERDE`, `GIALLO`, `ROSSO`) to the certificate based on the AI's analysis and logs it in `certificati_medici`.
+- Added the `GEMINI_API_KEY` to the Vercel environment variables.
+- Bumped application version to `1.00.28`.
+
+## [2026-06-02] update | Ingest Portal Pages & Ghost User Management
+- Created documentation for `portal/dashboard.html` in [portal_dashboard.md](portal_dashboard.md).
+- Created documentation for `portal/login.html` and `portal/pagamento.html` in [auth_and_payments.md](auth_and_payments.md).
+- Updated [registration_flow.md](registration_flow.md) with browser autofill prevention and medical certificate validation details.
+- Updated [database_schema.md](database_schema.md) with details of the new `vw_registrazioni_incomplete` view, the `elimina_utente_fantasma` RPC, trigger cleanup, and the upsert fix.
+
+
 

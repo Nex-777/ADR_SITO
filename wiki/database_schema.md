@@ -116,6 +116,45 @@ Staging table for pending socio and tesserato applications.
 
 ---
 
+## 👻 Ghost Users (Incomplete Registrations) Management
+
+To prevent users from getting stuck when they create authentication credentials but abandon the registration flow prior to OTP completion, specialized views and functions are defined:
+
+### 1. Database View: `public.vw_registrazioni_incomplete`
+Identifies "ghost" users who have created records in `public.utenti` (with role `tesserato_esterno`) but lack:
+- Active approval requests in `public.registro_approvazioni`.
+- Active memberships in `public.registro_soci` or `public.registro_tesserati`.
+
+```sql
+CREATE OR REPLACE VIEW public.vw_registrazioni_incomplete AS
+SELECT u.id as utente_id, u.nome, u.cognome, u.codice_fiscale, u.email, u.data_creazione
+FROM public.utenti u
+LEFT JOIN public.anagrafiche a ON u.id = a.utente_id
+LEFT JOIN public.registro_approvazioni ra ON a.id = ra.anagrafica_id
+LEFT JOIN public.registro_soci rs ON a.id = rs.anagrafica_id
+LEFT JOIN public.registro_tesserati rt ON a.id = rt.anagrafica_id
+WHERE u.ruolo = 'tesserato_esterno'
+  AND ra.id IS NULL
+  AND rs.id_socio IS NULL
+  AND rt.id_tesserato IS NULL;
+```
+
+### 2. RPC Function: `public.elimina_utente_fantasma(p_utente_id)`
+A secure function executing with `SECURITY DEFINER` privileges allowing Authorized board members (President and Vice President) to cleanly delete a stuck user.
+-   Deletes partially created `public.anagrafiche` profiles (which cascades down to delete incomplete addresses, contacts, and certificates).
+-   Cleans up related table traces in `public.registro_audit_operazioni`, `public.ricevute_pagamenti`, and `public.atti_adesione`.
+-   Cascades deletion directly to the identity authentication profile in `auth.users` via triggers or direct deletion commands.
+
+---
+
+## ⚡ DB Trigger & API Modifications
+
+1. **Trigger sync deletion**: Removed redundant DB trigger `tr_sync_utente_to_normalized` on `public.utenti`. This trigger was conflicting with the API registration flow (which already performs the inserts manually in `/api/otp-verify.js`), causing errors like `record "new" has no field "step_registrazione"` during user signups.
+2. **OTP Verify API Upsert Fix**: Modified `api/otp-verify.js` to avoid calls to `.upsert()` on the staging table `registro_approvazioni`. Because of partial unique index constraints (`anagrafica_id, tipo WHERE stato = 'IN_ATTESA'`), `upsert` calls failed with 500 exceptions. The API now uses a safe, sequential `delete` + `insert` pattern for pending approvals.
+
+
+---
+
 ## 🔢 Progressive Registry Numbering
 
 The registry utilizes gapless progressive numbers for both Soci and Tesserati:

@@ -206,6 +206,39 @@ export default async function handler(req, res) {
             });
         if (contError) console.error("Errore inserimento contatti:", contError);
 
+        // C2. Insert into public.certificati_medici if present
+        if (profile.certificato_medico_url) {
+            await supabase.from('certificati_medici').delete().eq('anagrafica_id', anagraficaId);
+            const { error: certError } = await supabase
+                .from('certificati_medici')
+                .insert({
+                    anagrafica_id: anagraficaId,
+                    file_url: profile.certificato_medico_url,
+                    tipologia: profile.certificato_tipologia || 'NON_SPECIFICATO',
+                    data_rilascio: profile.certificato_data_emissione || null,
+                    stato_validazione: 'IN_ATTESA'
+                });
+            if (certError) {
+                console.error("Errore inserimento certificati medici:", certError);
+            } else {
+                // Call AI validation synchronously so it's ready immediately
+                try {
+                    const apiBase = req.headers.origin || `https://${req.headers.host}`;
+                    console.log(`Triggering AI Validation at ${apiBase}/api/validate-cert`);
+                    await fetch(`${apiBase}/api/validate-cert`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            anagrafica_id: anagraficaId,
+                            file_url: profile.certificato_medico_url
+                        })
+                    });
+                } catch (aiErr) {
+                    console.error("Failed to execute AI validation:", aiErr);
+                }
+            }
+        }
+
         // D. Split Flow Decision Logic (Casistica 1, 2, 3)
         const adesione = profile.tipo_adesione; // socio, tesserato, socio_tesserato
         const tType = profile.tipo_tessera; // tessera_base_silver, tessera_base_gold, tessera_integrativa_a, tessera_integrativa_b
