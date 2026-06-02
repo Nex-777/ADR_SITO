@@ -163,4 +163,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Fixed an `Uncaught SyntaxError` in `portal/dashboard.html` caused by using `await` inside the synchronous `renderApprovazioniTables` function. Converted the function to `async`.
 - Bumped application version to `1.00.26`.
 
+## [2026-06-02] fix | Registrazione Browser Autofill Bug (v1.00.27)
+- Added `autocomplete="off"` to the email field and `autocomplete="new-password"` to the password field in `portal/registrazione.html` to prevent browsers from automatically injecting the President's saved credentials during new registrations.
+- Bumped application version to `1.00.27`.
+
 
