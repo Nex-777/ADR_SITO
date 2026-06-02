@@ -17,10 +17,12 @@ export default async function handler(req, res) {
         'https://adrenalinaclub.it',
         'https://www.adrenalinaclub.it',
         'https://adr-sito.vercel.app',
-        'http://localhost:3000'
+        'http://localhost:3000',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080'
     ];
     const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
+    if (origin && allowedOrigins.some(o => origin.startsWith(o) || o.includes(origin))) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Vary', 'Origin');
