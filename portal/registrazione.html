@@ -12,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Syncopate:wght@400;700&family=Manrope:wght@200;400;600;800&family=Inter:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -178,7 +179,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.10</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.11</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -692,10 +693,8 @@
 
         // --- 1. Supabase Initialization ---
         // Utilizziamo le credenziali reali fornite dal database ADRENALINA_SERVICES
-        const SUPABASE_URL = "https://zpategmkelqmexetpaot.supabase.co";
-        // Utilizziamo la chiave pubblica anonima
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM";
-        // Rinominato per evitare conflitti con l'oggetto globale window.supabase
+        const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
+        const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
         // --- 2. Developer/Mock Mode Configuration ---
@@ -1589,8 +1588,17 @@
 
             try {
                 const chosenPassword = document.getElementById('password').value;
-                if (!chosenPassword || chosenPassword.length < 6) {
-                    throw new Error("La password deve essere di almeno 6 caratteri.");
+                const pwdErrors = [];
+                if (!chosenPassword) {
+                    pwdErrors.push("La password è obbligatoria.");
+                } else {
+                    if (chosenPassword.length < 8) pwdErrors.push("Almeno 8 caratteri");
+                    if (!/[A-Z]/.test(chosenPassword)) pwdErrors.push("Almeno una lettera maiuscola");
+                    if (!/[a-z]/.test(chosenPassword)) pwdErrors.push("Almeno una lettera minuscola");
+                    if (!/[0-9]/.test(chosenPassword)) pwdErrors.push("Almeno un numero");
+                }
+                if (pwdErrors.length > 0) {
+                    throw new Error("La password non rispetta i requisiti di sicurezza:\n- " + pwdErrors.join("\n- "));
                 }
                 
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
@@ -1688,7 +1696,8 @@
 
             // Invio OTP
             try {
-                const response = await fetch('/api/otp.js', {
+                const apiBase = APP_CONFIG.API_BASE_URL || "";
+                const response = await fetch(`${apiBase}/api/otp.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1917,7 +1926,8 @@
                 // 5. Verify OTP and finalize sign document state server-side
                 btnValidaOtp.textContent = "REGISTRAZIONE FINALE...";
                 
-                const response = await fetch('/api/otp-verify.js', {
+                const apiBase = APP_CONFIG.API_BASE_URL || "";
+                const response = await fetch(`${apiBase}/api/otp-verify.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
