@@ -4,6 +4,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-18] update | Member Portal Certificate Fixes & Segmented Events (v1.00.39)
+- Removed doctor name fields from standard user certificate uploads.
+- Fixed certificate table "VISUALIZZA" link to open signed document URLs via `openSignedFile()`.
+- Hided the green valid certificate status block on Home (Panoramica) to minimize UI clutter.
+- Segmented Corsi (courses) and Eventi (events) into separate, distinct visual grids in `portal/dashboard.html`.
+- Migrated database schema to add a `tipo` column to `public.eventi` and inserted new events: *Campo marzio 2026* and *Ludi piceni 2026*.
+- Bumped application version to `1.00.39`.
+
 ## [2026-06-18] update | Course Subscriptions UI & Version Bump (v1.00.38)
 - Added subscription selection dropdown controls for the catalog courses (*Strongman e Powerlifting*, *Ibrido*, *SCAB*) inside `portal/dashboard.html`.
 - Implemented visual dynamic price updating when choosing different subscription tiers (Mese, Trimestre, Semestre, Annuale).

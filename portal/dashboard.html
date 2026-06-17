@@ -119,7 +119,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.38</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.39</span>
                 <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
             </div>
             <div class="flex items-center gap-4">
@@ -968,10 +968,6 @@
                                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Data Rilascio / Emissione</label>
                                     <input type="date" id="user-new-cert-data" class="w-full brutalist-input text-xs">
                                 </div>
-                                <div>
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Medico Rilascio</label>
-                                    <input type="text" id="user-new-cert-medico" class="w-full brutalist-input text-xs" placeholder="E.g. Dott. Franco Bianchi">
-                                </div>
                                 <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" onclick="document.getElementById('user-new-cert-file').click()">
                                     <input type="file" id="user-new-cert-file" accept=".pdf,.png,.jpg,.jpeg" class="hidden" onchange="handleNewCertFileSelected()">
                                     <span class="material-symbols-outlined text-xl text-primary mb-1">upload_file</span>
@@ -1022,11 +1018,22 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left: available events showcase -->
-                    <div class="lg:col-span-2 space-y-4">
-                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">EVENTI DISPONIBILI</h3>
-                        <div id="user-eventi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Popolated dynamically -->
+                    <!-- Left: available courses & events showcase -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Corsi Attivi -->
+                        <div class="space-y-3">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">CORSI ATTIVI</h3>
+                            <div id="user-corsi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Popolated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Eventi in Programma -->
+                        <div class="space-y-3">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">EVENTI IN PROGRAMMA</h3>
+                            <div id="user-eventi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Popolated dynamically -->
+                            </div>
                         </div>
                     </div>
 
@@ -1464,7 +1471,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.38"
+                VERSION: "1.00.39"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1732,8 +1739,8 @@
                             box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
                             msg.innerHTML = "⏳ CERTIFICATO IN ATTESA DI APPROVAZIONE MANUALE.<br>La validazione richiede un controllo visivo da parte del Presidente. Potrai procedere al pagamento appena approvato.";
                         } else if (status === 'VERDE') {
-                            box.className = "border p-6 space-y-4 bg-green-500/5 border-l-4 border-green-500";
-                            msg.innerHTML = `✓ CERTIFICATO MEDICO VALIDO.<br>Tipologia: ${escapeHtml(cert.tipologia)}<br>Scadenza: ${escapeHtml(cert.data_scadenza)} (In corso di validità)<br>Medico: ${escapeHtml(cert.medico_rilascio || 'N/D')}`;
+                            // Nascondi la schermata verde di stato se è completamente valido per ridurre l'ingombro
+                            userCertContainer.classList.add('hidden');
                             
                             // Sblocca pagamento se la quota è insoluta
                             if (quotaTotale > 0 && containerPagamento) {
@@ -4923,7 +4930,7 @@
                             <td class="p-3 font-mono">${dataScad}</td>
                             <td class="p-3 font-bold ${badgeClass}">${c.stato_validazione}</td>
                             <td class="p-3 text-right">
-                                <button onclick="scaricaDocumentoStripe('${c.file_url}', 'certificati_medici')" class="text-primary hover:underline font-headline font-bold text-[10px]">VISUALIZZA</button>
+                                <button onclick="openSignedFile('certificati_medici', '${c.file_url}')" class="text-primary hover:underline font-headline font-bold text-[10px]">VISUALIZZA</button>
                             </td>
                         </tr>
                     `;
@@ -4962,11 +4969,11 @@
         async function uploadNewCertificate() {
             const tipologia = document.getElementById('user-new-cert-tipo').value;
             const emissionDate = document.getElementById('user-new-cert-data').value;
-            const medico = document.getElementById('user-new-cert-medico').value;
+            const medico = "N/D";
             const btn = document.getElementById('btn-user-upload-cert');
 
-            if (!tipologia || !emissionDate || !medico || !userUploadedCertFile) {
-                alert("Tutti i campi (tipo, emissione, medico e file) sono obbligatori.");
+            if (!tipologia || !emissionDate || !userUploadedCertFile) {
+                alert("Tutti i campi (tipo, emissione e file) sono obbligatori.");
                 return;
             }
 
@@ -5016,7 +5023,6 @@
 
                 alert("Nuovo certificato medico caricato con successo ed inviato per l'approvazione!");
                 document.getElementById('user-new-cert-file').value = "";
-                document.getElementById('user-new-cert-medico').value = "";
                 document.getElementById('user-new-cert-data').value = "";
                 userUploadedCertFile = null;
                 document.getElementById('user-new-cert-file-name').textContent = "SELEZIONA FILE CERTIFICATO";
@@ -5052,62 +5058,74 @@
                 const activeIscr = iscrizioni || [];
                 const eventiList = eventi || [];
 
-                const catalogo = document.getElementById('user-eventi-catalogo');
-                if (eventiList.length === 0) {
-                    catalogo.innerHTML = `<p class="text-xs text-gray-500 uppercase col-span-2">Nessun corso o evento in programma al momento.</p>`;
-                } else {
-                    catalogo.innerHTML = eventiList.map(ev => {
-                        const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
-                        const isIscritto = activeIscr.some(i => i.evento_id === ev.id);
-                        
-                        let prezzo = parseFloat(ev.prezzo) || 0;
-                        let selectHtml = '';
+                const corsiList = eventiList.filter(e => e.tipo === 'corso');
+                const eventiInProg = eventiList.filter(e => e.tipo === 'evento');
 
-                        if (ev.piani_abbonamento && Array.isArray(ev.piani_abbonamento) && ev.piani_abbonamento.length > 0) {
-                            const firstPiano = ev.piani_abbonamento[0];
-                            prezzo = parseFloat(firstPiano.prezzo) || 0;
+                const renderCard = (ev) => {
+                    const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                    const isIscritto = activeIscr.some(i => i.evento_id === ev.id);
+                    
+                    let prezzo = parseFloat(ev.prezzo) || 0;
+                    let selectHtml = '';
 
-                            selectHtml = `
-                                <div class="mt-2 flex flex-col space-y-1">
-                                    <label class="text-[8px] text-gray-500 font-mono uppercase tracking-wider">PIANO ABBONAMENTO</label>
-                                    <select id="plan-select-${ev.id}" onchange="aggiornaPrezzoCard('${ev.id}')" class="w-full bg-black text-white text-[11px] p-2 border border-white/20 font-mono uppercase focus:outline-none focus:border-primary rounded-none">
-                                        ${ev.piani_abbonamento.map(p => `<option value="${p.nome}" data-price="${p.prezzo}">${p.nome} - €${p.prezzo}</option>`).join('')}
-                                    </select>
-                                </div>
-                            `;
-                        }
+                    if (ev.piani_abbonamento && Array.isArray(ev.piani_abbonamento) && ev.piani_abbonamento.length > 0) {
+                        const firstPiano = ev.piani_abbonamento[0];
+                        prezzo = parseFloat(firstPiano.prezzo) || 0;
 
-                        const prezzoLabel = prezzo === 0 ? 'GRATUITO' : `€${prezzo.toFixed(2)}`;
-
-                        let actionBtn = '';
-                        if (isIscritto) {
-                            actionBtn = `<span class="bg-green-500/10 text-green-500 font-headline text-[10px] font-bold px-3 py-1.5 border border-green-500/30 uppercase">ISCRITTO</span>`;
-                        } else {
-                            actionBtn = `
-                                <button onclick="iscrivitiEvento('${ev.id}', ${prezzo})" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-[10px] font-bold px-3 py-1.5 transition-all uppercase">
-                                    ${prezzo === 0 ? 'REGISTRATI' : 'ISCRIVITI'}
-                                </button>
-                            `;
-                        }
-
-                        return `
-                            <div class="border border-white/10 p-5 bg-black/40 flex flex-col justify-between space-y-4">
-                                <div class="space-y-2">
-                                    <div class="flex justify-between items-start">
-                                        <span class="text-[9px] text-gray-500 font-mono">${dataFormat} ${ev.ora_evento ? ev.ora_evento.substring(0, 5) : ''}</span>
-                                        <span id="price-display-${ev.id}" class="text-[9px] font-headline font-bold text-primary">${prezzoLabel}</span>
-                                    </div>
-                                    <h4 class="font-headline text-xs font-bold text-white uppercase">${escapeHtml(ev.titolo)}</h4>
-                                    <p class="text-[11px] text-gray-400 uppercase leading-relaxed font-mono">${escapeHtml(ev.descrizione || '')}</p>
-                                    ${selectHtml}
-                                    <div class="text-[10px] text-gray-500 font-mono uppercase">LUOGO: ${escapeHtml(ev.luogo || 'Sede Club')}</div>
-                                </div>
-                                <div>
-                                    ${actionBtn}
-                                </div>
+                        selectHtml = `
+                            <div class="mt-2 flex flex-col space-y-1">
+                                <label class="text-[8px] text-gray-500 font-mono uppercase tracking-wider">PIANO ABBONAMENTO</label>
+                                <select id="plan-select-${ev.id}" onchange="aggiornaPrezzoCard('${ev.id}')" class="w-full bg-black text-white text-[11px] p-2 border border-white/20 font-mono uppercase focus:outline-none focus:border-primary rounded-none">
+                                    ${ev.piani_abbonamento.map(p => `<option value="${p.nome}" data-price="${p.prezzo}">${p.nome} - €${p.prezzo}</option>`).join('')}
+                                </select>
                             </div>
                         `;
-                    }).join('');
+                    }
+
+                    const prezzoLabel = prezzo === 0 ? 'GRATUITO' : `€${prezzo.toFixed(2)}`;
+
+                    let actionBtn = '';
+                    if (isIscritto) {
+                        actionBtn = `<span class="bg-green-500/10 text-green-500 font-headline text-[10px] font-bold px-3 py-1.5 border border-green-500/30 uppercase">ISCRITTO</span>`;
+                    } else {
+                        actionBtn = `
+                            <button onclick="iscrivitiEvento('${ev.id}', ${prezzo})" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-[10px] font-bold px-3 py-1.5 transition-all uppercase">
+                                ${prezzo === 0 ? 'REGISTRATI' : 'ISCRIVITI'}
+                            </button>
+                        `;
+                    }
+
+                    return `
+                        <div class="border border-white/10 p-5 bg-black/40 flex flex-col justify-between space-y-4">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-[9px] text-gray-500 font-mono">${dataFormat} ${ev.ora_evento ? ev.ora_evento.substring(0, 5) : ''}</span>
+                                    <span id="price-display-${ev.id}" class="text-[9px] font-headline font-bold text-primary">${prezzoLabel}</span>
+                                </div>
+                                <h4 class="font-headline text-xs font-bold text-white uppercase">${escapeHtml(ev.titolo)}</h4>
+                                <p class="text-[11px] text-gray-400 uppercase leading-relaxed font-mono">${escapeHtml(ev.descrizione || '')}</p>
+                                ${selectHtml}
+                                <div class="text-[10px] text-gray-500 font-mono uppercase">LUOGO: ${escapeHtml(ev.luogo || 'Sede Club')}</div>
+                            </div>
+                            <div>
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    `;
+                };
+
+                const catalogCorsi = document.getElementById('user-corsi-catalogo');
+                if (corsiList.length === 0) {
+                    catalogCorsi.innerHTML = `<p class="text-xs text-gray-500 uppercase col-span-2">Nessun corso in programma al momento.</p>`;
+                } else {
+                    catalogCorsi.innerHTML = corsiList.map(renderCard).join('');
+                }
+
+                const catalogEventi = document.getElementById('user-eventi-catalogo');
+                if (eventiInProg.length === 0) {
+                    catalogEventi.innerHTML = `<p class="text-xs text-gray-500 uppercase col-span-2">Nessun evento in programma al momento.</p>`;
+                } else {
+                    catalogEventi.innerHTML = eventiInProg.map(renderCard).join('');
                 }
 
                 const containerIscrizioni = document.getElementById('user-eventi-iscrizioni');
