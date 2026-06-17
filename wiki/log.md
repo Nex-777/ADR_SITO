@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-18] update | Animated OTP Loading Indicator & Version Bump (v1.00.36)
+- Implemented CSS animated spinners for the OTP confirmation button status updates in `portal/registrazione.html`.
+- Updated test user Alessandro Bianchi status to paid and inserted receipt in database.
+- Bumped application version to `1.00.36`.
+
 ## [2026-06-17] update | Admin Alert Banner Role Isolation (v1.00.35)
 - Restricted the dynamic pending approvals alert banner to Board Members only in `portal/dashboard.html`.
 - Filtered dashboard data loaders to prevent query overhead and console RLS warnings for non-board member profiles.

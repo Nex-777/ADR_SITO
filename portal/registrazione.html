@@ -179,7 +179,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.35</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.36</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -703,7 +703,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.35"
+                VERSION: "1.00.36"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1836,6 +1836,14 @@
             }
         });
 
+        function updateOtpButtonStatus(text, showSpinner = true) {
+            if (showSpinner) {
+                btnValidaOtp.innerHTML = `${text} <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block ml-2 align-middle"></div>`;
+            } else {
+                btnValidaOtp.textContent = text;
+            }
+        }
+
         // Validate OTP and generate PDF + Upload Files
         btnValidaOtp.addEventListener('click', async () => {
             const code = inputOtp.value.trim();
@@ -1845,10 +1853,10 @@
             }
 
             btnValidaOtp.disabled = true;
-            btnValidaOtp.textContent = "VERIFICA IN CORSO...";
+            updateOtpButtonStatus("VERIFICA IN CORSO...");
 
             clearInterval(timerInterval);
-            btnValidaOtp.textContent = "GENERAZIONE PDF...";
+            updateOtpButtonStatus("GENERAZIONE PDF...");
 
             try {
                 const nome = document.getElementById('nome').value.trim();
@@ -1875,7 +1883,7 @@
                 if (selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') {
                     const fileExt = uploadedCertificatoFile.name.split('.').pop();
                     const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
-                    btnValidaOtp.textContent = "CARICAMENTO CERTIFICATO...";
+                    updateOtpButtonStatus("CARICAMENTO CERTIFICATO...");
                     
                     const { data: uploadData, error: uploadError } = await supabaseClient.storage
                         .from('certificati_medici')
@@ -1895,7 +1903,7 @@
                 }
 
                 // 2. Generate PDF with jsPDF
-                btnValidaOtp.textContent = "GENERAZIONE CONTRATTO...";
+                updateOtpButtonStatus("GENERAZIONE CONTRATTO...");
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
                 
@@ -1965,7 +1973,7 @@
                 // 3. Upload signed PDF to storage bucket 'documenti_adesione'
                 let pdfPublicUrl = "";
                 const pdfPath = `${userId}/adesione.pdf`;
-                btnValidaOtp.textContent = "CARICAMENTO CONTRATTO...";
+                updateOtpButtonStatus("CARICAMENTO CONTRATTO...");
                 
                 const { data: uploadData, error: uploadError } = await supabaseClient.storage
                     .from('documenti_adesione')
@@ -1988,7 +1996,7 @@
                 if (isMinor && uploadedTutoreDocumentoFile) {
                     const fileExt = uploadedTutoreDocumentoFile.name.split('.').pop();
                     const filePath = `${userId}/documento_tutore_${Date.now()}.${fileExt}`;
-                    btnValidaOtp.textContent = "CARICAMENTO DOCUMENTO TUTORE...";
+                    updateOtpButtonStatus("CARICAMENTO DOCUMENTO TUTORE...");
 
                     const { data: parentUploadData, error: parentUploadError } = await supabaseClient.storage
                         .from('documenti_tutori')
@@ -2008,7 +2016,7 @@
                 }
 
                 if (certificatoMedicoUrl || tutoreDocumentoUrl) {
-                    btnValidaOtp.textContent = "AGGIORNAMENTO PROFILO...";
+                    updateOtpButtonStatus("AGGIORNAMENTO PROFILO...");
                     const updatePayload = {};
                     if (certificatoMedicoUrl) {
                         updatePayload.certificato_medico_url = certificatoMedicoUrl;
@@ -2025,7 +2033,7 @@
                 }
 
                 // 5. Verify OTP and finalize sign document state server-side
-                btnValidaOtp.textContent = "REGISTRAZIONE FINALE...";
+                updateOtpButtonStatus("REGISTRAZIONE FINALE...");
                 
                 const apiBase = APP_CONFIG.API_BASE_URL || "";
                 const response = await fetch(`${apiBase}/api/otp-verify.js`, {
@@ -2044,7 +2052,7 @@
                 
                 console.log("Registrazione completata e OTP verificato via server.");
 
-                btnValidaOtp.textContent = "COMPLETATO!";
+                updateOtpButtonStatus("COMPLETATO!", false);
                 if (selectedAdesione === 'tesserato') {
                     alert("REGISTRAZIONE RICEVUTA CON SUCCESSO!\n\nI nostri sistemi verificheranno la validità del certificato medico tramite scansione AI. Potrai procedere al pagamento non appena la verifica sarà completata con successo.");
                     window.location.href = "pagamento.html?id=" + userId;
@@ -2057,7 +2065,7 @@
                 console.error("Error during final files/database save:", err);
                 alert("Errore salvataggio finale: " + err.message);
                 btnValidaOtp.disabled = false;
-                btnValidaOtp.textContent = "CONFERMA FIRMA";
+                updateOtpButtonStatus("CONFERMA FIRMA", false);
             }
         });
     </script>
