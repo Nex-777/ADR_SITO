@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-17] update | Admin Alert Banner Role Isolation (v1.00.35)
+- Restricted the dynamic pending approvals alert banner to Board Members only in `portal/dashboard.html`.
+- Filtered dashboard data loaders to prevent query overhead and console RLS warnings for non-board member profiles.
+- Bumped application version to `1.00.35`.
+
 ## [2026-06-17] update | Subdomain Portal Migration, CORS & Stripe Hardening (v1.00.34)
 - Configured dynamic CORS whitelist across APIs (`api/otp.js`, `api/otp-verify.js`, `api/create-checkout-session.js`) to support `portal.adrenalinaclub.it` and temporary `nex-777.github.io` origins.
 - Resolved AI certificate validation loop bug by setting the API base url to use request headers host dynamically in `api/otp-verify.js`.
