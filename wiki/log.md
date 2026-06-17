@@ -194,5 +194,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Updated [registration_flow.md](registration_flow.md) with browser autofill prevention and medical certificate validation details.
 - Updated [database_schema.md](database_schema.md) with details of the new `vw_registrazioni_incomplete` view, the `elimina_utente_fantasma` RPC, trigger cleanup, and the upsert fix.
 
+## [2026-06-17] hotfix | Fix dashboard registration approvals list refresh after deletion (v1.00.32)
+- Added `loadApprovazioni()` call to `eliminaUtente` inside `portal/dashboard.html` to ensure that when an admin deletes a pending user, the "Registro Approvazioni" panel refreshes instantly.
+- Bumped application version to `1.00.32`.
+
 
 
