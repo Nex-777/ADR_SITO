@@ -32,6 +32,8 @@ export default async function handler(req, res) {
     const allowedOrigins = [
         'https://adrenalinaclub.it',
         'https://www.adrenalinaclub.it',
+        'https://portal.adrenalinaclub.it',
+        'https://nex-777.github.io',
         'https://adr-sito.vercel.app',
         'http://localhost:3000',
         'http://localhost:8080',

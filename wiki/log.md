@@ -4,6 +4,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-17] update | Subdomain Portal Migration, CORS & Stripe Hardening (v1.00.34)
+- Configured dynamic CORS whitelist across APIs (`api/otp.js`, `api/otp-verify.js`, `api/create-checkout-session.js`) to support `portal.adrenalinaclub.it` and temporary `nex-777.github.io` origins.
+- Resolved AI certificate validation loop bug by setting the API base url to use request headers host dynamically in `api/otp-verify.js`.
+- Implemented Stripe webhook idempotency check on `codice_transazione` in `api/stripe-webhook.js`.
+- Replaced hardcoded relative checkout redirect path in `portal/pagamento.html` with dynamic configured `API_BASE_URL`.
+- Centralized fallback configuration values pointing to `https://portal.adrenalinaclub.it` across all frontend portal pages.
+- Bumped application version to `1.00.34`.
+
 ## [2026-06-17] update | Fixed GitHub Pages config loading & Vercel API Base URL
 - Removed `portal/config.js` and `config.js` from `.gitignore` to ensure configurations are pushed to GitHub Pages.
 - Updated `portal/config.js` to set `API_BASE_URL` to the production Vercel deployment (`https://adr-sito.vercel.app`) instead of empty/relative paths.

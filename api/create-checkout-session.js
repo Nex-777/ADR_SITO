@@ -7,6 +7,8 @@ export default async function handler(req, res) {
     const allowedOrigins = [
         'https://adrenalinaclub.it',
         'https://www.adrenalinaclub.it',
+        'https://portal.adrenalinaclub.it',
+        'https://nex-777.github.io',
         'https://adr-sito.vercel.app',
         'http://localhost:3000'
     ];
@@ -97,7 +99,7 @@ export default async function handler(req, res) {
         const description = `Quota annuale 2026 - ${tipoAdesioneLabel} per ${profile.nome} ${profile.cognome}`;
 
         // 2. Crea la Sessione di Stripe Checkout
-        const origin = req.headers.origin || 'https://adrenalinaclub.it';
+        const origin = req.headers.origin || 'https://portal.adrenalinaclub.it';
         
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],

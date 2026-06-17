@@ -68,6 +68,20 @@ export default async function handler(req, res) {
             console.log(`Elaborazione saldo per utente: ${utenteId}, importo: €${importoStr}`);
             const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+            // Idempotency check: check if receipt with same stripePaymentId already exists
+            if (stripePaymentId) {
+                const { data: existingReceipt, error: searchError } = await supabase
+                    .from('ricevute_pagamenti')
+                    .select('id, numero_ricevuta, anno_fiscale')
+                    .eq('codice_transazione', stripePaymentId)
+                    .maybeSingle();
+
+                if (existingReceipt) {
+                    console.log(`⚠️ Ricevuta già presente per codice_transazione (stripePaymentId): ${stripePaymentId}. (Ricevuta n. ${existingReceipt.numero_ricevuta}/${existingReceipt.anno_fiscale})`);
+                    return res.status(200).json({ received: true, message: 'Payment already processed.' });
+                }
+            }
+
             // 1. Recupera dati utente per conferma causale
             const { data: userProfile, error: userError } = await supabase
                 .from('utenti')
@@ -99,7 +113,8 @@ export default async function handler(req, res) {
                     utente_id: utenteId,
                     importo: importo,
                     causale: causale,
-                    metodo_pagamento: 'STRIPE'
+                    metodo_pagamento: 'STRIPE',
+                    codice_transazione: stripePaymentId
                 })
                 .select()
                 .single();

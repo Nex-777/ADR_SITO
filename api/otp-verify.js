@@ -22,6 +22,8 @@ export default async function handler(req, res) {
     const allowedOrigins = [
         'https://adrenalinaclub.it',
         'https://www.adrenalinaclub.it',
+        'https://portal.adrenalinaclub.it',
+        'https://nex-777.github.io',
         'https://adr-sito.vercel.app',
         'http://localhost:3000',
         'http://localhost:8080',
@@ -235,7 +237,7 @@ export default async function handler(req, res) {
             } else {
                 // Call AI validation synchronously so it's ready immediately
                 try {
-                    const apiBase = req.headers.origin || `https://${req.headers.host}`;
+                    const apiBase = `https://${req.headers.host}`;
                     console.log(`Triggering AI Validation at ${apiBase}/api/validate-cert`);
                     await fetch(`${apiBase}/api/validate-cert`, {
                         method: 'POST',
@@ -317,7 +319,7 @@ export default async function handler(req, res) {
                 });
             if (tessError) throw tessError;
 
-            const pagamentoLink = `https://adrenalinaclub.it/portal/pagamento.html?id=${utenteId}`;
+            const pagamentoLink = `https://portal.adrenalinaclub.it/portal/pagamento.html?id=${utenteId}`;
             emailSubject = 'Tesseramento Sportivo Registrato - Verifica Certificato in corso';
             emailHtml = `
                 <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
