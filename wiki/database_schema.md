@@ -103,8 +103,46 @@ Staging table for pending socio and tesserato applications.
 | `data_richiesta` | `date` | Date request was made. |
 | `data_decisione` | `date` | Date approved or rejected. |
 | `numero_verbale` | `varchar` | Associated meeting minute number. |
-| `motivo_rifiuto` | `text` | Reason for rejection (if status is `RESPINTO`). |
 | `deciso_da` | `uuid` (FK) | References `utenti(id)` for the decider. |
+
+### 8. `public.eventi`
+Stores courses and events information.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Unique ID of the event. |
+| `titolo` | `varchar` | Title of the course/event. |
+| `descrizione` | `text` | Extended description of details. |
+| `data_evento` | `date` | Scheduled date. |
+| `ora_evento` | `time` | Scheduled start time. |
+| `luogo` | `text` | Venue description. |
+| `prezzo` | `numeric` | Booking fee (0.00 for free). |
+| `stripe_price_id` | `text` | Optional Stripe pricing token. |
+| `max_partecipanti` | `integer` | Attendance cap. |
+
+### 9. `public.iscrizioni_eventi`
+Tracks athlete bookings to courses and events.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Unique booking record ID. |
+| `evento_id` | `uuid` (FK) | References `eventi(id)`. |
+| `utente_id` | `uuid` (FK) | References `utenti(id)`. |
+| `data_iscrizione` | `timestamp` | Time the registration occurred. |
+| `stato_pagamento` | `varchar` | State of payment (`DA_PAGARE`, `PAGATO`, `GRATUITO`). |
+| `codice_transazione` | `text` | Stripe payment intent code (if paid). |
+
+### 10. `public.comunicazioni`
+Stores noticeboard announcements.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Unique notice ID. |
+| `titolo` | `varchar` | Header of the notice. |
+| `testo` | `text` | Content body. |
+| `data_creazione` | `timestamp` | Date posted. |
+| `tipo` | `varchar` | Notice tag (`GENERALE`, `AVVISO`, `URGENTE`). |
+| `creato_da` | `uuid` (FK) | References the author in `utenti(id)`. |
 
 ---
 

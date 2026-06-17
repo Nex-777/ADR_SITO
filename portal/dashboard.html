@@ -119,7 +119,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.36</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.37</span>
                 <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
             </div>
             <div class="flex items-center gap-4">
@@ -145,6 +145,23 @@
                 <!-- Nav Links -->
                 <button onclick="switchTab('panoramica')" id="tab-btn-panoramica" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-primary/30 bg-primary/10 text-white flex items-center gap-3">
                     <span class="material-symbols-outlined text-sm">dashboard</span> PANORAMICA
+                </button>
+
+                <!-- User Dashboard Navigation (Non-board Members) -->
+                <button onclick="switchTab('user_profilo')" id="tab-btn-user_profilo" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">person</span> IL MIO PROFILO
+                </button>
+                
+                <button onclick="switchTab('user_certificato')" id="tab-btn-user_certificato" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">medical_services</span> CERTIFICATO MEDICO
+                </button>
+                
+                <button onclick="switchTab('user_eventi')" id="tab-btn-user_eventi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">event</span> CORSI ED EVENTI
+                </button>
+                
+                <button onclick="switchTab('user_pagamenti')" id="tab-btn-user_pagamenti" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">receipt_long</span> PAGAMENTI E RICEVUTE
                 </button>
                 
                 <button onclick="switchTab('approvazioni')" id="tab-btn-approvazioni" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
@@ -311,6 +328,81 @@
                         <button onclick="vaiAlPagamento()" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-6 py-3 transition-all uppercase tracking-wider">
                             PAGA ORA CON STRIPE
                         </button>
+                    </div>
+                </div>
+
+                <!-- User Summary Widget (Visible to members only) -->
+                <div id="user-panoramica-widgets" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Card Stato e Dati Principali -->
+                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm">badge</span> STATO REGISTRO SPORTIVO
+                            </h3>
+                            <div class="space-y-2 text-xs font-mono uppercase">
+                                <div class="flex justify-between border-b border-white/5 pb-2">
+                                    <span class="text-gray-400">Data Iscrizione:</span>
+                                    <span id="user-info-data-approvazione" class="text-white">-</span>
+                                </div>
+                                <div class="flex justify-between border-b border-white/5 pb-2">
+                                    <span class="text-gray-400">Scadenza Associazione:</span>
+                                    <div class="flex items-center gap-2">
+                                        <span id="user-info-scadenza-iscrizione" class="text-white">-</span>
+                                        <span id="user-info-scadenza-status" class="px-1.5 py-0.5 text-[8px] font-headline font-bold rounded"></span>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between border-b border-white/5 pb-2">
+                                    <span class="text-gray-400">Scadenza Certificato:</span>
+                                    <span id="user-info-scadenza-certificato" class="text-white">-</span>
+                                </div>
+                                <div class="flex justify-between border-b border-white/5 pb-2">
+                                    <span class="text-gray-400">Livello / Qualifica:</span>
+                                    <span id="user-info-livello" class="text-primary font-bold">-</span>
+                                </div>
+                                <div class="flex justify-between pb-2">
+                                    <span class="text-gray-400">Contatto Emergenza:</span>
+                                    <span id="user-info-contatto-emergenza" class="text-white">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Download Documenti Utili -->
+                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm">download</span> AREA DOWNLOAD
+                            </h3>
+                            <p class="text-[10px] text-gray-500 uppercase">Scarica la documentazione ufficiale del Club</p>
+                            <ul class="text-xs uppercase space-y-2 font-mono">
+                                <li class="flex items-center justify-between border-b border-white/5 pb-2">
+                                    <span>Statuto Associazione (ETS)</span>
+                                    <a href="#" onclick="alert('File Statuto in corso di caricamento sul server.')" class="text-primary hover:underline flex items-center gap-1 font-bold">
+                                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
+                                    </a>
+                                </li>
+                                <li class="flex items-center justify-between border-b border-white/5 pb-2">
+                                    <span>Regolamento Interno del Club</span>
+                                    <a href="#" onclick="alert('File Regolamento in corso di caricamento sul server.')" class="text-primary hover:underline flex items-center gap-1 font-bold">
+                                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
+                                    </a>
+                                </li>
+                                <li class="flex items-center justify-between pb-2">
+                                    <span>Scarico Responsabilità Allenamenti</span>
+                                    <a href="#" onclick="alert('File Scarico Responsabilità in corso di caricamento sul server.')" class="text-primary hover:underline flex items-center gap-1 font-bold">
+                                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Bacheca Notizie -->
+                    <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">campaign</span> BACHECA COMUNICAZIONI CLUB
+                        </h3>
+                        <div id="user-bacheca-notizie" class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                            <p class="text-xs text-gray-500 uppercase font-mono">Nessuna comunicazione recente in bacheca.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -695,6 +787,289 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- TAB 10: USER PROFILE (IL MIO PROFILO) -->
+            <div id="panel-user_profilo" class="tab-panel space-y-6 hidden">
+                <div>
+                    <h2 class="font-headline text-lg font-bold uppercase">Il Mio Profilo</h2>
+                    <p class="text-xs text-gray-500 uppercase">Gestisci i tuoi dati anagrafici, i contatti e le autorizzazioni privacy</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left column: Avatar upload and password change -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="border border-white/10 p-6 bg-black/40 text-center space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">FOTO PROFILO</h3>
+                            <div class="flex flex-col items-center space-y-2">
+                                <div class="w-32 h-32 border border-white/20 bg-black flex items-center justify-center relative overflow-hidden">
+                                    <img id="user-avatar-preview" src="" alt="Avatar" class="w-full h-full object-cover hidden">
+                                    <span id="user-avatar-placeholder" class="material-symbols-outlined text-4xl text-gray-500">account_circle</span>
+                                </div>
+                                <input type="file" id="user-avatar-file" accept="image/*" class="hidden" onchange="previewAndUploadAvatar()">
+                                <button onclick="document.getElementById('user-avatar-file').click()" class="bg-white/10 text-white border border-white/20 hover:bg-white hover:text-black font-headline text-[10px] font-bold px-3 py-1.5 transition-all uppercase">
+                                    CARICA IMMAGINE
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">CAMBIA PASSWORD</h3>
+                            <form id="form-user-password" onsubmit="updateUserPassword(event)" class="space-y-3">
+                                <div>
+                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Nuova Password</label>
+                                    <input type="password" id="user-new-password" class="w-full brutalist-input text-xs" required minlength="6">
+                                </div>
+                                <div>
+                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Conferma Password</label>
+                                    <input type="password" id="user-confirm-password" class="w-full brutalist-input text-xs" required minlength="6">
+                                </div>
+                                <button type="submit" class="w-full bg-white text-black hover:bg-primary hover:text-white font-headline text-[10px] font-bold py-2 transition-all uppercase">
+                                    AGGIORNA PASSWORD
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right column: Personal details form -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="border border-white/10 p-6 bg-black/40 space-y-6">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">DATI PERSONALI</h3>
+                            
+                            <form id="form-user-profilo" onsubmit="saveUserProfilo(event)" class="space-y-4">
+                                <!-- Technical data (read-only) -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Nome</label>
+                                        <input type="text" id="user-profilo-nome" class="w-full brutalist-input text-xs opacity-50" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Cognome</label>
+                                        <input type="text" id="user-profilo-cognome" class="w-full brutalist-input text-xs opacity-50" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Codice Fiscale</label>
+                                        <input type="text" id="user-profilo-cf" class="w-full brutalist-input text-xs opacity-50 font-mono" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Data Nascita</label>
+                                        <input type="date" id="user-profilo-data-nascita" class="w-full brutalist-input text-xs opacity-50" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="border-t border-white/5 pt-4 space-y-4">
+                                    <h4 class="font-headline text-[10px] font-bold text-primary uppercase">Contatti e Residenza (Modificabili)</h4>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Email</label>
+                                            <input type="email" id="user-profilo-email" class="w-full brutalist-input text-xs" required>
+                                        </div>
+                                        <div>
+                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Cellulare / Telefono</label>
+                                            <input type="text" id="user-profilo-cellulare" class="w-full brutalist-input text-xs" required>
+                                        </div>
+                                        <div class="md:col-span-2">
+                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Indirizzo Residenza</label>
+                                            <input type="text" id="user-profilo-indirizzo" class="w-full brutalist-input text-xs" required>
+                                        </div>
+                                        <div>
+                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Comune</label>
+                                            <input type="text" id="user-profilo-comune" class="w-full brutalist-input text-xs" required>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Provincia</label>
+                                                <input type="text" id="user-profilo-provincia" class="w-full brutalist-input text-xs" required maxlength="2">
+                                            </div>
+                                            <div>
+                                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">CAP</label>
+                                                <input type="text" id="user-profilo-cap" class="w-full brutalist-input text-xs" required maxlength="5">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border-t border-white/5 pt-4 space-y-4">
+                                    <h4 class="font-headline text-[10px] font-bold text-primary uppercase">Contatto di Emergenza</h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Nominativo Contatto</label>
+                                            <input type="text" id="user-profilo-emergenza-nome" class="w-full brutalist-input text-xs" placeholder="E.g. Mario Rossi (Padre)">
+                                        </div>
+                                        <div>
+                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Telefono Contatto</label>
+                                            <input type="text" id="user-profilo-emergenza-telefono" class="w-full brutalist-input text-xs" placeholder="E.g. +39 333 1234567">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="border-t border-white/5 pt-4 space-y-4">
+                                    <h4 class="font-headline text-[10px] font-bold text-primary uppercase">Consensi Privacy (GDPR)</h4>
+                                    <div class="space-y-3 text-xs uppercase font-mono">
+                                        <div class="flex items-start gap-3">
+                                            <input type="checkbox" id="user-consenso-marketing" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none">
+                                            <label for="user-consenso-marketing" class="text-gray-300 font-bold select-none cursor-pointer">
+                                                Acconsento alla ricezione di comunicazioni di marketing, newsletter ed offerte dagli sponsor del Club.
+                                            </label>
+                                        </div>
+                                        <div class="flex items-start gap-3">
+                                            <input type="checkbox" id="user-consenso-audiovisivi" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none">
+                                            <label for="user-consenso-audiovisivi" class="text-gray-300 font-bold select-none cursor-pointer">
+                                                Acconsento al trattamento di riprese audio/video e foto per finalità promozionali, social e istituzionali.
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-6 py-2.5 transition-all uppercase tracking-wider">
+                                    SALVA MODIFICHE PROFILO
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 11: USER CERTIFICATO DETTAGLI -->
+            <div id="panel-user_certificato" class="tab-panel space-y-6 hidden">
+                <div>
+                    <h2 class="font-headline text-lg font-bold uppercase">Stato Certificato Medico</h2>
+                    <p class="text-xs text-gray-500 uppercase">Verifica la validità ed effettua il caricamento del tuo certificato medico d'idoneità</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: Current state and upload -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div id="user-cert-status-card" class="border p-6 space-y-4 bg-black/40">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">STATO ATTUALE</h3>
+                            <div id="user-cert-badge-box" class="p-3 border-l-4 font-mono text-xs uppercase">
+                                <span id="user-cert-badge-text">Rilevamento in corso...</span>
+                            </div>
+                            <div class="text-xs font-mono space-y-1 uppercase text-gray-400">
+                                <div>TIPOLOGIA: <span id="user-cert-info-tipo" class="text-white">-</span></div>
+                                <div>SCADENZA: <span id="user-cert-info-scadenza" class="text-white">-</span></div>
+                                <div>MEDICO: <span id="user-cert-info-medico" class="text-white">-</span></div>
+                            </div>
+                        </div>
+
+                        <div class="border p-6 bg-black/40 space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">CARICA NUOVO CERTIFICATO</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Tipologia Certificato</label>
+                                    <select id="user-new-cert-tipo" class="w-full brutalist-input text-xs">
+                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
+                                        <option value="AGONISTICO">AGONISTICO</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Data Rilascio / Emissione</label>
+                                    <input type="date" id="user-new-cert-data" class="w-full brutalist-input text-xs">
+                                </div>
+                                <div>
+                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Medico Rilascio</label>
+                                    <input type="text" id="user-new-cert-medico" class="w-full brutalist-input text-xs" placeholder="E.g. Dott. Franco Bianchi">
+                                </div>
+                                <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" onclick="document.getElementById('user-new-cert-file').click()">
+                                    <input type="file" id="user-new-cert-file" accept=".pdf,.png,.jpg,.jpeg" class="hidden" onchange="handleNewCertFileSelected()">
+                                    <span class="material-symbols-outlined text-xl text-primary mb-1">upload_file</span>
+                                    <p class="text-[10px] text-white uppercase font-bold" id="user-new-cert-file-name">SELEZIONA FILE CERTIFICATO</p>
+                                    <p class="text-[8px] text-gray-400 mt-1 uppercase" id="user-new-cert-file-status">Nessun file (PDF, PNG, JPG)</p>
+                                </div>
+                                <button onclick="uploadNewCertificate()" id="btn-user-upload-cert" class="w-full bg-white text-black hover:bg-primary hover:text-white font-headline text-[10px] font-bold py-2 transition-all uppercase tracking-wider">
+                                    INVIA PER APPROVAZIONE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: History log -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">CRONOLOGIA CERTIFICATI MEDICI</h3>
+                            <div class="overflow-x-auto border border-white/5 bg-black/20">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
+                                        <tr>
+                                            <th class="p-3">Data Caricamento</th>
+                                            <th class="p-3">Tipologia</th>
+                                            <th class="p-3">Data Scadenza</th>
+                                            <th class="p-3">Stato</th>
+                                            <th class="p-3 text-right">Documento</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="user-cert-history-body" class="divide-y divide-white/5 uppercase font-mono">
+                                        <tr>
+                                            <td colspan="5" class="p-3 text-center text-gray-500">Nessun certificato in archivio.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 12: CORSI ED EVENTI -->
+            <div id="panel-user_eventi" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Corsi ed Eventi</h2>
+                        <p class="text-xs text-gray-500 uppercase">Visualizza le attività, iscriviti ai corsi e verifica le tue prenotazioni</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: available events showcase -->
+                    <div class="lg:col-span-2 space-y-4">
+                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">EVENTI DISPONIBILI</h3>
+                        <div id="user-eventi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Popolated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Right: user's reservations -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">I MIEI CORSI ED EVENTI</h3>
+                            <div id="user-eventi-iscrizioni" class="space-y-4">
+                                <p class="text-xs text-gray-500 uppercase font-mono">Caricamento iscrizioni...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 13: PAGAMENTI E RICEVUTE -->
+            <div id="panel-user_pagamenti" class="tab-panel space-y-6 hidden">
+                <div>
+                    <h2 class="font-headline text-lg font-bold uppercase">Storico Pagamenti e Ricevute</h2>
+                    <p class="text-xs text-gray-500 uppercase">Controlla lo stato delle tue quote associative ed eventi e scarica i documenti di pagamento in PDF</p>
+                </div>
+
+                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                    <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">REGISTRO TRANSAZIONI PERSONALE</h3>
+                    <div class="overflow-x-auto border border-white/5 bg-black/20">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
+                                <tr>
+                                    <th class="p-4">Numero Ricevuta</th>
+                                    <th class="p-4">Data Pagamento</th>
+                                    <th class="p-4">Importo</th>
+                                    <th class="p-4">Metodo</th>
+                                    <th class="p-4">Causale</th>
+                                    <th class="p-4 text-right">Azione</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-pagamenti-body" class="divide-y divide-white/5 uppercase font-mono">
+                                <tr>
+                                    <td colspan="6" class="p-4 text-center text-gray-500">Nessuna transazione registrata.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -1089,7 +1464,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.36"
+                VERSION: "1.00.37"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1276,6 +1651,9 @@
                     loaders.push({ name: 'loadVerbaliAssemblea', fn: loadVerbaliAssemblea });
                 }
 
+                // Carica sempre la dashboard utente (profilo, certificati, pagamenti)
+                loaders.push({ name: 'loadUserDashboard', fn: loadUserDashboard });
+
                 for (const loader of loaders) {
                     try {
                         await loader.fn();
@@ -1390,6 +1768,12 @@
                 document.getElementById('tab-btn-verbali').classList.remove('hidden');
                 document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
                 document.getElementById('tab-btn-bilanci').classList.remove('hidden');
+
+                // Nascondi pulsanti atleti
+                document.getElementById('tab-btn-user_profilo').classList.add('hidden');
+                document.getElementById('tab-btn-user_certificato').classList.add('hidden');
+                document.getElementById('tab-btn-user_eventi').classList.add('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.add('hidden');
             } else {
                 // Utente Generico / Socio in attesa / Tesserato: nasconde funzionalità amministrative
                 document.getElementById('welcome-title').textContent = "Benvenuto in Adrenalina Club";
@@ -1404,6 +1788,12 @@
                 document.getElementById('tab-btn-contabilita').classList.add('hidden');
                 document.getElementById('tab-btn-direttivo').classList.add('hidden');
                 document.getElementById('tab-btn-verbali').classList.add('hidden');
+
+                // Mostra pulsanti atleti
+                document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
+                document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
 
                 if (isApprovedSocio) {
                     document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
@@ -4123,6 +4513,808 @@
             link.click();
             document.body.removeChild(link);
         }
+
+        // =========================================================================
+        // USER DASHBOARD LOGIC (TESSERATI ED ATLETI)
+        // =========================================================================
+        
+        let userUploadedCertFile = null;
+
+        async function loadUserDashboard() {
+            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
+            if (!isBoardMember) {
+                document.getElementById('user-panoramica-widgets').classList.remove('hidden');
+                await populateUserPanoramicaSummary();
+                await loadUserBacheca();
+            }
+            
+            await loadUserProfilo();
+            await loadUserCertificato();
+            await loadUserEventi();
+            await loadUserPagamenti();
+        }
+
+        async function populateUserPanoramicaSummary() {
+            try {
+                if (!currentUserProfile) return;
+                
+                const dataAppr = currentUserProfile.data_creazione 
+                    ? new Date(currentUserProfile.data_creazione).toLocaleDateString('it-IT')
+                    : 'N/D';
+                document.getElementById('user-info-data-approvazione').textContent = dataAppr;
+                
+                let dataScadenzaStr = 'N/D';
+                let scaduto = false;
+
+                const anagId = currentUserProfile.anagrafiche?.[0]?.id || currentUserProfile.anagrafiche?.id;
+
+                if (anagId) {
+                    const { data: socioReg } = await supabaseClient
+                        .from('registro_soci')
+                        .select('quota_scadenza')
+                        .eq('anagrafica_id', anagId)
+                        .maybeSingle();
+
+                    if (socioReg && socioReg.quota_scadenza) {
+                        dataScadenzaStr = new Date(socioReg.quota_scadenza).toLocaleDateString('it-IT');
+                        scaduto = new Date(socioReg.quota_scadenza) < new Date();
+                    } else if (currentUserProfile.tipo_adesione) {
+                        dataScadenzaStr = '31/12/2026';
+                    }
+                } else if (currentUserProfile.tipo_adesione) {
+                    dataScadenzaStr = '31/12/2026';
+                }
+
+                const badge = document.getElementById('user-info-scadenza-status');
+                document.getElementById('user-info-scadenza-iscrizione').textContent = dataScadenzaStr;
+                
+                if (dataScadenzaStr !== 'N/D') {
+                    badge.classList.remove('hidden');
+                    if (scaduto) {
+                        badge.textContent = 'SCADUTO';
+                        badge.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-primary text-white';
+                    } else {
+                        badge.textContent = 'ATTIVO';
+                        badge.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-green-500 text-white';
+                    }
+                } else {
+                    badge.classList.add('hidden');
+                }
+
+                const anag = Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche;
+                const cert = anag && anag.certificati_medici ? (Array.isArray(anag.certificati_medici) ? anag.certificati_medici[0] : anag.certificati_medici) : null;
+                
+                if (cert && cert.data_scadenza) {
+                    document.getElementById('user-info-scadenza-certificato').textContent = new Date(cert.data_scadenza).toLocaleDateString('it-IT');
+                } else {
+                    document.getElementById('user-info-scadenza-certificato').textContent = 'NON DISPONIBILE';
+                }
+
+                let livello = 'TESSERATO BASE';
+                if (anagId) {
+                    const { data: tessReg } = await supabaseClient
+                        .from('registro_tesserati')
+                        .select('livello_copertura')
+                        .eq('anagrafica_id', anagId)
+                        .maybeSingle();
+
+                    if (tessReg && tessReg.livello_copertura) {
+                        livello = `TESSERATO - ${tessReg.livello_copertura}`;
+                    } else if (currentUserProfile.tipo_tessera) {
+                        livello = `TESSERATO - ${currentUserProfile.tipo_tessera.replace(/_/g, ' ')}`;
+                    } else if (userRole === 'socio_approvato') {
+                        livello = 'SOCIO ATTIVO';
+                    }
+                } else if (currentUserProfile.tipo_tessera) {
+                    livello = `TESSERATO - ${currentUserProfile.tipo_tessera.replace(/_/g, ' ')}`;
+                } else if (userRole === 'socio_approvato') {
+                    livello = 'SOCIO ATTIVO';
+                }
+                document.getElementById('user-info-livello').textContent = livello.toUpperCase();
+
+                const emergenzaNome = currentUserProfile.emergenza_nome || '-';
+                const emergenzaTel = currentUserProfile.emergenza_telefono || '';
+                document.getElementById('user-info-contatto-emergenza').textContent = emergenzaTel 
+                    ? `${emergenzaNome} (${emergenzaTel})`
+                    : emergenzaNome;
+
+            } catch (err) {
+                console.error("Errore popolamento summary utente:", err);
+            }
+        }
+
+        async function loadUserBacheca() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('comunicazioni')
+                    .select('*')
+                    .order('data_creazione', { ascending: false })
+                    .limit(5);
+
+                const container = document.getElementById('user-bacheca-notizie');
+                if (!container) return;
+                
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    container.innerHTML = `<p class="text-xs text-gray-500 uppercase font-mono">Nessun avviso in bacheca.</p>`;
+                    return;
+                }
+
+                container.innerHTML = data.map(notizia => {
+                    const dataFormat = new Date(notizia.data_creazione).toLocaleDateString('it-IT', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    let badgeColor = 'bg-white/10 text-white';
+                    if (notizia.tipo === 'URGENTE') badgeColor = 'bg-primary text-white';
+                    if (notizia.tipo === 'AVVISO') badgeColor = 'bg-yellow-500 text-black';
+
+                    return `
+                        <div class="border border-white/5 p-4 bg-white/5 space-y-2">
+                            <div class="flex justify-between items-center flex-wrap gap-2">
+                                <h4 class="font-headline text-xs font-bold text-white uppercase">${escapeHtml(notizia.titolo)}</h4>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-1.5 py-0.5 text-[8px] font-headline font-bold rounded ${badgeColor}">${notizia.tipo}</span>
+                                    <span class="text-[9px] text-gray-500 font-mono">${dataFormat}</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-300 uppercase leading-relaxed font-mono whitespace-pre-wrap">${escapeHtml(notizia.testo)}</p>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Errore caricamento bacheca:", err);
+            }
+        }
+
+        async function loadUserProfilo() {
+            try {
+                if (!currentUserProfile) return;
+                
+                document.getElementById('user-profilo-nome').value = currentUserProfile.nome || '';
+                document.getElementById('user-profilo-cognome').value = currentUserProfile.cognome || '';
+                document.getElementById('user-profilo-cf').value = currentUserProfile.codice_fiscale || '';
+                document.getElementById('user-profilo-data-nascita').value = currentUserProfile.data_nascita || '';
+
+                document.getElementById('user-profilo-email').value = currentUserProfile.email || '';
+                document.getElementById('user-profilo-cellulare').value = currentUserProfile.cellulare || '';
+                document.getElementById('user-profilo-indirizzo').value = currentUserProfile.indirizzo || '';
+                document.getElementById('user-profilo-comune').value = currentUserProfile.comune || '';
+                document.getElementById('user-profilo-provincia').value = currentUserProfile.provincia || '';
+                document.getElementById('user-profilo-cap').value = currentUserProfile.cap || '';
+
+                document.getElementById('user-profilo-emergenza-nome').value = currentUserProfile.emergenza_nome || '';
+                document.getElementById('user-profilo-emergenza-telefono').value = currentUserProfile.emergenza_telefono || '';
+
+                document.getElementById('user-consenso-marketing').checked = !!currentUserProfile.consenso_marketing;
+                document.getElementById('user-consenso-audiovisivi').checked = !!currentUserProfile.consenso_audiovisivi;
+
+                const img = document.getElementById('user-avatar-preview');
+                const placeholder = document.getElementById('user-avatar-placeholder');
+                
+                if (currentUserProfile.avatar_url) {
+                    img.src = currentUserProfile.avatar_url;
+                    img.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                } else {
+                    img.src = "";
+                    img.classList.add('hidden');
+                    placeholder.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Errore caricamento dati profilo:", err);
+            }
+        }
+
+        async function saveUserProfilo(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = "SALVATAGGIO...";
+
+            try {
+                const email = document.getElementById('user-profilo-email').value;
+                const cellulare = document.getElementById('user-profilo-cellulare').value;
+                const indirizzo = document.getElementById('user-profilo-indirizzo').value;
+                const comune = document.getElementById('user-profilo-comune').value;
+                const provincia = document.getElementById('user-profilo-provincia').value;
+                const cap = document.getElementById('user-profilo-cap').value;
+                const emergenzaNome = document.getElementById('user-profilo-emergenza-nome').value;
+                const emergenzaTelefono = document.getElementById('user-profilo-emergenza-telefono').value;
+                const consensoMarketing = document.getElementById('user-consenso-marketing').checked;
+                const consensoAudiovisivi = document.getElementById('user-consenso-audiovisivi').checked;
+
+                const { error } = await supabaseClient
+                    .from('utenti')
+                    .update({
+                        email: email,
+                        cellulare: cellulare,
+                        indirizzo: indirizzo,
+                        comune: comune,
+                        provincia: provincia,
+                        cap: cap,
+                        emergenza_nome: emergenzaNome,
+                        emergenza_telefono: emergenzaTelefono,
+                        consenso_marketing: consensoMarketing,
+                        consenso_audiovisivi: consensoAudiovisivi
+                    })
+                    .eq('id', currentUser.id);
+
+                if (error) throw error;
+
+                await scriviAuditLog('AGGIORNAMENTO_PROFILO', 'utenti', currentUser.id, {
+                    campi_modificati: ['email', 'cellulare', 'indirizzo', 'comune', 'provincia', 'cap', 'emergenza']
+                });
+
+                currentUserProfile.email = email;
+                currentUserProfile.cellulare = cellulare;
+                currentUserProfile.indirizzo = indirizzo;
+                currentUserProfile.comune = comune;
+                currentUserProfile.provincia = provincia;
+                currentUserProfile.cap = cap;
+                currentUserProfile.emergenza_nome = emergenzaNome;
+                currentUserProfile.emergenza_telefono = emergenzaTelefono;
+                currentUserProfile.consenso_marketing = consensoMarketing;
+                currentUserProfile.consenso_audiovisivi = consensoAudiovisivi;
+
+                alert("Dati personali salvati con successo!");
+                await populateUserPanoramicaSummary();
+            } catch (err) {
+                console.error("Errore salvataggio profilo:", err);
+                alert("Errore durante il salvataggio dei dati: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "SALVA MODIFICHE PROFILO";
+            }
+        }
+
+        async function previewAndUploadAvatar() {
+            const fileInput = document.getElementById('user-avatar-file');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                alert("L'immagine del profilo supera il limite di 2MB consentito.");
+                fileInput.value = "";
+                return;
+            }
+
+            try {
+                const userId = currentUser.id;
+                const fileExt = file.name.split('.').pop();
+                const filePath = `avatars/${userId}/avatar_${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('certificati_medici')
+                    .upload(filePath, file, {
+                        contentType: file.type,
+                        upsert: true
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { data: urlData, error: signedUrlError } = await supabaseClient.storage
+                    .from('certificati_medici')
+                    .createSignedUrl(filePath, 31536000 * 5); // 5 anni
+                if (signedUrlError) throw signedUrlError;
+
+                const publicUrl = urlData.signedUrl;
+
+                const { error: updateError } = await supabaseClient
+                    .from('utenti')
+                    .update({
+                        avatar_url: publicUrl
+                    })
+                    .eq('id', userId);
+
+                if (updateError) throw updateError;
+
+                currentUserProfile.avatar_url = publicUrl;
+
+                const img = document.getElementById('user-avatar-preview');
+                const placeholder = document.getElementById('user-avatar-placeholder');
+                img.src = publicUrl;
+                img.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+
+                alert("Immagine profilo aggiornata!");
+            } catch (err) {
+                console.error("Errore upload avatar:", err);
+                alert("Impossibile caricare l'immagine: " + err.message);
+            }
+        }
+
+        async function updateUserPassword(e) {
+            e.preventDefault();
+            const newPwd = document.getElementById('user-new-password').value;
+            const confPwd = document.getElementById('user-confirm-password').value;
+
+            if (newPwd !== confPwd) {
+                alert("Le password non coincidono.");
+                return;
+            }
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = "AGGIORNAMENTO...";
+
+            try {
+                const { error } = await supabaseClient.auth.updateUser({ password: newPwd });
+                if (error) throw error;
+
+                alert("Password aggiornata correttamente!");
+                document.getElementById('form-user-password').reset();
+            } catch (err) {
+                console.error("Errore aggiornamento password:", err);
+                alert("Errore nell'aggiornamento password: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "AGGIORNA PASSWORD";
+            }
+        }
+
+        async function loadUserCertificato() {
+            try {
+                if (!currentUserProfile) return;
+                
+                const anag = Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche;
+                if (!anag) return;
+
+                const { data: certs, error } = await supabaseClient
+                    .from('certificati_medici')
+                    .select('*')
+                    .eq('anagrafica_id', anag.id)
+                    .order('data_rilascio', { ascending: false });
+
+                if (error) throw error;
+
+                const currentCert = certs?.[0] || null;
+                const badgeBox = document.getElementById('user-cert-badge-box');
+                const badgeText = document.getElementById('user-cert-badge-text');
+                
+                if (!currentCert) {
+                    badgeBox.className = "p-3 border-l-4 border-primary bg-primary/5 text-primary font-mono text-xs uppercase";
+                    badgeText.textContent = "Mancante o non inserito";
+                    document.getElementById('user-cert-info-tipo').textContent = '-';
+                    document.getElementById('user-cert-info-scadenza').textContent = '-';
+                    document.getElementById('user-cert-info-medico').textContent = '-';
+                } else {
+                    const status = currentCert.stato_validazione;
+                    const scaduto = new Date(currentCert.data_scadenza) < new Date();
+                    
+                    document.getElementById('user-cert-info-tipo').textContent = currentCert.tipologia;
+                    document.getElementById('user-cert-info-scadenza').textContent = new Date(currentCert.data_scadenza).toLocaleDateString('it-IT');
+                    document.getElementById('user-cert-info-medico').textContent = currentCert.medico_rilascio;
+
+                    if (scaduto) {
+                        badgeBox.className = "p-3 border-l-4 border-primary bg-primary/5 text-primary font-mono text-xs uppercase";
+                        badgeText.textContent = "Scaduto il " + new Date(currentCert.data_scadenza).toLocaleDateString('it-IT');
+                    } else if (status === 'IN_ATTESA') {
+                        badgeBox.className = "p-3 border-l-4 border-yellow-500 bg-yellow-500/5 text-yellow-500 font-mono text-xs uppercase";
+                        badgeText.textContent = "Elaborazione / Verifica in corso...";
+                    } else if (status === 'GIALLO') {
+                        badgeBox.className = "p-3 border-l-4 border-yellow-500 bg-yellow-500/5 text-yellow-500 font-mono text-xs uppercase";
+                        badgeText.textContent = "In attesa di convalida manuale";
+                    } else if (status === 'ROSSO') {
+                        badgeBox.className = "p-3 border-l-4 border-primary bg-primary/5 text-primary font-mono text-xs uppercase";
+                        badgeText.textContent = "Rifiutato: " + (currentCert.note_ai || 'Documento non valido');
+                    } else if (status === 'VERDE') {
+                        badgeBox.className = "p-3 border-l-4 border-green-500 bg-green-500/5 text-green-500 font-mono text-xs uppercase";
+                        badgeText.textContent = "Valido e conforme";
+                    }
+                }
+
+                const historyBody = document.getElementById('user-cert-history-body');
+                if (!certs || certs.length === 0) {
+                    historyBody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessun certificato in archivio.</td></tr>`;
+                    return;
+                }
+
+                historyBody.innerHTML = certs.map(c => {
+                    const dataRel = new Date(c.data_rilascio).toLocaleDateString('it-IT');
+                    const dataScad = new Date(c.data_scadenza).toLocaleDateString('it-IT');
+                    let badgeClass = 'text-yellow-500';
+                    if (c.stato_validazione === 'VERDE') badgeClass = 'text-green-500';
+                    if (c.stato_validazione === 'ROSSO') badgeClass = 'text-primary';
+
+                    return `
+                        <tr>
+                            <td class="p-3 font-mono">${dataRel}</td>
+                            <td class="p-3">${c.tipologia}</td>
+                            <td class="p-3 font-mono">${dataScad}</td>
+                            <td class="p-3 font-bold ${badgeClass}">${c.stato_validazione}</td>
+                            <td class="p-3 text-right">
+                                <button onclick="scaricaDocumentoStripe('${c.file_url}', 'certificati_medici')" class="text-primary hover:underline font-headline font-bold text-[10px]">VISUALIZZA</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error("Errore caricamento storico certificati:", err);
+            }
+        }
+
+        function handleNewCertFileSelected() {
+            const input = document.getElementById('user-new-cert-file');
+            const file = input.files[0];
+            const nameLabel = document.getElementById('user-new-cert-file-name');
+            const statusLabel = document.getElementById('user-new-cert-file-status');
+
+            if (!file) {
+                userUploadedCertFile = null;
+                nameLabel.textContent = "SELEZIONA FILE CERTIFICATO";
+                statusLabel.textContent = "Nessun file (PDF, PNG, JPG)";
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Il certificato supera la dimensione consentita di 5MB.");
+                input.value = "";
+                userUploadedCertFile = null;
+                return;
+            }
+
+            userUploadedCertFile = file;
+            nameLabel.textContent = file.name.toUpperCase();
+            statusLabel.textContent = `✓ SELEZIONATO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+        }
+
+        async function uploadNewCertificate() {
+            const tipologia = document.getElementById('user-new-cert-tipo').value;
+            const emissionDate = document.getElementById('user-new-cert-data').value;
+            const medico = document.getElementById('user-new-cert-medico').value;
+            const btn = document.getElementById('btn-user-upload-cert');
+
+            if (!tipologia || !emissionDate || !medico || !userUploadedCertFile) {
+                alert("Tutti i campi (tipo, emissione, medico e file) sono obbligatori.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "CARICAMENTO...";
+
+            try {
+                const userId = currentUser.id;
+                const fileExt = userUploadedCertFile.name.split('.').pop();
+                const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabaseClient.storage
+                    .from('certificati_medici')
+                    .upload(filePath, userUploadedCertFile, {
+                        contentType: userUploadedCertFile.type,
+                        upsert: true
+                    });
+                if (uploadError) throw uploadError;
+
+                const { data: urlData, error: signedUrlError } = await supabaseClient.storage
+                    .from('certificati_medici')
+                    .createSignedUrl(filePath, 31536000 * 5); // 5 anni
+                if (signedUrlError) throw signedUrlError;
+
+                const publicUrl = urlData.signedUrl;
+                const anagId = currentUserProfile.anagrafiche?.[0]?.id || currentUserProfile.anagrafiche?.id;
+
+                const { error: insertError } = await supabaseClient
+                    .from('certificati_medici')
+                    .insert({
+                        anagrafica_id: anagId,
+                        tipologia: tipologia,
+                        medico_rilascio: medico,
+                        data_rilascio: emissionDate,
+                        data_scadenza: new Date(new Date(emissionDate).setFullYear(new Date(emissionDate).getFullYear() + 1)).toISOString().split('T')[0],
+                        file_url: publicUrl,
+                        stato_validazione: 'IN_ATTESA',
+                        note_ai: 'Nuovo certificato caricato. In attesa di elaborazione.'
+                    });
+
+                if (insertError) throw insertError;
+
+                await scriviAuditLog('CARICAMENTO_CERTIFICATO', 'certificati_medici', anagId, {
+                    tipologia: tipologia,
+                    data_rilascio: emissionDate
+                });
+
+                alert("Nuovo certificato medico caricato con successo ed inviato per l'approvazione!");
+                document.getElementById('user-new-cert-file').value = "";
+                document.getElementById('user-new-cert-medico').value = "";
+                document.getElementById('user-new-cert-data').value = "";
+                userUploadedCertFile = null;
+                document.getElementById('user-new-cert-file-name').textContent = "SELEZIONA FILE CERTIFICATO";
+                document.getElementById('user-new-cert-file-status').textContent = "Nessun file (PDF, PNG, JPG)";
+
+                await loadUserCertificato();
+                await populateUserPanoramicaSummary();
+            } catch (err) {
+                console.error("Errore caricamento certificato:", err);
+                alert("Si è verificato un errore durante l'invio: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "INVIA PER APPROVAZIONE";
+            }
+        }
+
+        async function loadUserEventi() {
+            try {
+                const { data: eventi, error: eventiError } = await supabaseClient
+                    .from('eventi')
+                    .select('*')
+                    .order('data_evento', { ascending: true });
+
+                if (eventiError) throw eventiError;
+
+                const { data: iscrizioni, error: iscrError } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .select('*, eventi(*)')
+                    .eq('utente_id', currentUser.id);
+
+                if (iscrError) throw iscrError;
+
+                const activeIscr = iscrizioni || [];
+                const eventiList = eventi || [];
+
+                const catalogo = document.getElementById('user-eventi-catalogo');
+                if (eventiList.length === 0) {
+                    catalogo.innerHTML = `<p class="text-xs text-gray-500 uppercase col-span-2">Nessun corso o evento in programma al momento.</p>`;
+                } else {
+                    catalogo.innerHTML = eventiList.map(ev => {
+                        const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                        const isIscritto = activeIscr.some(i => i.evento_id === ev.id);
+                        const prezzo = parseFloat(ev.prezzo) || 0;
+                        const prezzoLabel = prezzo === 0 ? 'GRATUITO' : `€${prezzo.toFixed(2)}`;
+
+                        let actionBtn = '';
+                        if (isIscritto) {
+                            actionBtn = `<span class="bg-green-500/10 text-green-500 font-headline text-[10px] font-bold px-3 py-1.5 border border-green-500/30 uppercase">ISCRITTO</span>`;
+                        } else {
+                            actionBtn = `
+                                <button onclick="iscrivitiEvento('${ev.id}', ${prezzo})" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-[10px] font-bold px-3 py-1.5 transition-all uppercase">
+                                    ${prezzo === 0 ? 'REGISTRATI' : 'ISCRIVITI'}
+                                </button>
+                            `;
+                        }
+
+                        return `
+                            <div class="border border-white/10 p-5 bg-black/40 flex flex-col justify-between space-y-4">
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-start">
+                                        <span class="text-[9px] text-gray-500 font-mono">${dataFormat} ${ev.ora_evento ? ev.ora_evento.substring(0, 5) : ''}</span>
+                                        <span class="text-[9px] font-headline font-bold text-primary">${prezzoLabel}</span>
+                                    </div>
+                                    <h4 class="font-headline text-xs font-bold text-white uppercase">${escapeHtml(ev.titolo)}</h4>
+                                    <p class="text-[11px] text-gray-400 uppercase leading-relaxed font-mono">${escapeHtml(ev.descrizione || '')}</p>
+                                    <div class="text-[10px] text-gray-500 font-mono uppercase">LUOGO: ${escapeHtml(ev.luogo || 'Sede Club')}</div>
+                                </div>
+                                <div>
+                                    ${actionBtn}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                const containerIscrizioni = document.getElementById('user-eventi-iscrizioni');
+                if (activeIscr.length === 0) {
+                    containerIscrizioni.innerHTML = `<p class="text-xs text-gray-500 uppercase font-mono">Non sei iscritto a nessun evento.</p>`;
+                } else {
+                    containerIscrizioni.innerHTML = activeIscr.map(iscr => {
+                        const ev = iscr.eventi;
+                        if (!ev) return '';
+                        const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                        return `
+                            <div class="border-l-4 border-green-500 bg-white/5 p-4 space-y-2 uppercase font-mono">
+                                <div class="flex justify-between items-center text-[10px]">
+                                    <span class="text-gray-400 font-bold">${dataFormat}</span>
+                                    <span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>
+                                </div>
+                                <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>
+                                <p class="text-[9px] text-gray-500">Luogo: ${escapeHtml(ev.luogo || 'Sede Club')}</p>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+            } catch (err) {
+                console.error("Errore caricamento eventi:", err);
+            }
+        }
+
+        async function iscrivitiEvento(eventoId, prezzo) {
+            try {
+                if (prezzo === 0) {
+                    if (!confirm("Confermi l'iscrizione a questo corso/evento gratuito?")) return;
+                }
+
+                const token = (await supabaseClient.auth.getSession()).data.session?.access_token;
+                if (!token) {
+                    alert("Sessione non valida. Effettua nuovamente il login.");
+                    return;
+                }
+
+                const res = await fetch(`${APP_CONFIG.API_BASE_URL || ""}/api/create-event-checkout-session`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ eventId: eventoId })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Errore di rete nell\'avviare il pagamento.');
+                }
+
+                if (data.free) {
+                    alert("Ti sei registrato correttamente all'evento gratuito!");
+                    await loadUserEventi();
+                    await loadUserPagamenti();
+                } else if (data.url) {
+                    window.location.href = data.url;
+                }
+            } catch (err) {
+                console.error("Errore iscrizione evento:", err);
+                alert("Errore iscrizione: " + err.message);
+            }
+        }
+
+        async function loadUserPagamenti() {
+            try {
+                const { data: receipts, error } = await supabaseClient
+                    .from('ricevute_pagamenti')
+                    .select('*')
+                    .eq('utente_id', currentUser.id)
+                    .order('numero_ricevuta', { ascending: false });
+
+                if (error) throw error;
+
+                const body = document.getElementById('user-pagamenti-body');
+                if (!receipts || receipts.length === 0) {
+                    body.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nessun pagamento registrato.</td></tr>`;
+                    return;
+                }
+
+                body.innerHTML = receipts.map(r => {
+                    const dataFormat = r.data_pagamento 
+                        ? new Date(r.data_pagamento).toLocaleDateString('it-IT')
+                        : new Date().toLocaleDateString('it-IT');
+
+                    return `
+                        <tr>
+                            <td class="p-4 font-mono font-bold text-white">${r.numero_ricevuta}/${r.anno_fiscale}</td>
+                            <td class="p-4 font-mono">${dataFormat}</td>
+                            <td class="p-4 font-mono text-primary font-bold">€${parseFloat(r.importo).toFixed(2)}</td>
+                            <td class="p-4">${r.metodo_pagamento}</td>
+                            <td class="p-4 text-gray-300 uppercase">${escapeHtml(r.causale || 'Quota sociale')}</td>
+                            <td class="p-4 text-right">
+                                <button onclick="printUserReceipt('${r.id}')" class="text-white hover:text-primary hover:underline font-headline font-bold text-[10px] flex items-center gap-1 ml-auto">
+                                    <span class="material-symbols-outlined text-sm">print</span> STAMPA RICEVUTA
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error("Errore caricamento pagamenti utente:", err);
+            }
+        }
+
+        window.printUserReceipt = async function(receiptId) {
+            try {
+                const { data: receipt, error } = await supabaseClient
+                    .from('ricevute_pagamenti')
+                    .select('*, utenti(*)')
+                    .eq('id', receiptId)
+                    .maybeSingle();
+
+                if (error || !receipt) {
+                    alert("Impossibile caricare i dati della ricevuta.");
+                    return;
+                }
+
+                const user = receipt.utenti;
+                const dataFormat = receipt.data_pagamento
+                    ? new Date(receipt.data_pagamento).toLocaleDateString('it-IT')
+                    : new Date().toLocaleDateString('it-IT');
+
+                const printWindow = window.open('', '_blank');
+                if (printWindow) {
+                    const html = `
+                        <html>
+                        <head>
+                            <title>Ricevuta n. ${receipt.numero_ricevuta}/${receipt.anno_fiscale}</title>
+                            <style>
+                                body {
+                                    font-family: monospace;
+                                    color: #000;
+                                    background: #fff;
+                                    padding: 40px;
+                                    font-size: 12px;
+                                    line-height: 1.5;
+                                }
+                                .header {
+                                    text-align: center;
+                                    margin-bottom: 30px;
+                                    border-bottom: 2px solid #000;
+                                    padding-bottom: 10px;
+                                }
+                                .receipt-title {
+                                    font-size: 16px;
+                                    font-weight: bold;
+                                    margin-top: 10px;
+                                }
+                                .details-table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin: 30px 0;
+                                }
+                                .details-table td {
+                                    padding: 8px 0;
+                                }
+                                .footer {
+                                    margin-top: 55px;
+                                    border-top: 1px dashed #000;
+                                    padding-top: 20px;
+                                    text-align: center;
+                                    font-size: 10px;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h3>ADRENALINA CLUB A.S.D.</h3>
+                                <p>Sede Legale: Via dello Sport, 12 - Roma | P.IVA / CF: 97812345678</p>
+                                <div class="receipt-title">RICEVUTA DI PAGAMENTO N. ${receipt.numero_ricevuta}/${receipt.anno_fiscale}</div>
+                            </div>
+                            
+                            <table class="details-table">
+                                <tr>
+                                    <td><strong>Data Ricevuta:</strong></td>
+                                    <td>${dataFormat}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Soggetto:</strong></td>
+                                    <td>${user.nome.toUpperCase()} ${user.cognome.toUpperCase()} (C.F. ${user.codice_fiscale.toUpperCase()})</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Importo Versato:</strong></td>
+                                    <td><strong>€${parseFloat(receipt.importo).toFixed(2)}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Metodo Pagamento:</strong></td>
+                                    <td>${receipt.metodo_pagamento}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Causale:</strong></td>
+                                    <td>${receipt.causale.toUpperCase()}</td>
+                                </tr>
+                                ${receipt.codice_transazione ? `
+                                <tr>
+                                    <td><strong>Codice Transazione:</strong></td>
+                                    <td>${receipt.codice_transazione}</td>
+                                </tr>` : ''}
+                            </table>
+                            
+                            <div class="footer">
+                                <p>La quota istituzionale versata all'Associazione non è soggetta ad IVA ai sensi dell'Art. 148 del TUIR.</p>
+                                <p>ASD Adrenalina Club - Registro Nazionale Attività Sportive Dilettantistiche n. 128472</p>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+                    printWindow.document.write(html);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                    }, 250);
+                }
+            } catch (err) {
+                console.error("Errore stampa ricevuta:", err);
+                alert("Errore stampa: " + err.message);
+            }
+        };
 
         // Logout
         async function handleLogout() {

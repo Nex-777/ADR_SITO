@@ -55,6 +55,7 @@ export default async function handler(req, res) {
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         const utenteId = session.metadata?.utenteId;
+        const eventId = session.metadata?.eventId;
         const importoStr = session.metadata?.importo;
         const causale = session.metadata?.causale || 'Quota associativa annuale';
         const stripePaymentId = session.payment_intent;
@@ -65,7 +66,7 @@ export default async function handler(req, res) {
         }
 
         try {
-            console.log(`Elaborazione saldo per utente: ${utenteId}, importo: €${importoStr}`);
+            console.log(`Elaborazione saldo per utente: ${utenteId}, importo: €${importoStr}, eventId: ${eventId || 'nessuno'}`);
             const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
             // Idempotency check: check if receipt with same stripePaymentId already exists
@@ -82,21 +83,10 @@ export default async function handler(req, res) {
                 }
             }
 
-            // 1. Recupera dati utente per conferma causale
-            const { data: userProfile, error: userError } = await supabase
-                .from('utenti')
-                .select('nome, cognome, quota_totale, tipo_adesione')
-                .eq('id', utenteId)
-                .maybeSingle();
-
-            if (userError || !userProfile) {
-                throw new Error(userError?.message || "Profilo utente non trovato su database.");
-            }
-
-            const importo = parseFloat(importoStr || userProfile.quota_totale || 0);
+            const importo = parseFloat(importoStr || 0);
             const annoFiscale = new Date().getFullYear();
 
-            // 2. Calcola il numero progressivo di ricevuta per l'anno corrente (tramite stored procedure con FOR UPDATE)
+            // 1. Calcola il numero progressivo di ricevuta per l'anno corrente (tramite stored procedure)
             const { data: nextNumData, error: nextNumError } = await supabase
                 .rpc('prossimo_numero_ricevuta', { p_anno: annoFiscale });
             if (nextNumError) {
@@ -104,7 +94,7 @@ export default async function handler(req, res) {
             }
             const nextNum = nextNumData;
 
-            // 3. Inserisci la ricevuta nel database
+            // 2. Inserisci la ricevuta nel database
             const { data: recData, error: recError } = await supabase
                 .from('ricevute_pagamenti')
                 .insert({
@@ -123,24 +113,42 @@ export default async function handler(req, res) {
                 throw new Error("Errore inserimento ricevuta: " + recError.message);
             }
 
-            // 4. Salda la quota impostando a 0.00
-            const { error: updateError } = await supabase
-                .from('utenti')
-                .update({
-                    quota_totale: 0.00
-                })
-                .eq('id', utenteId);
+            // 3. Gestisci logica specifica in base all'oggetto del pagamento
+            if (eventId) {
+                // Iscrizione Corso/Evento: inserisci l'iscrizione
+                const { error: eventRegError } = await supabase
+                    .from('iscrizioni_eventi')
+                    .insert({
+                        evento_id: eventId,
+                        utente_id: utenteId,
+                        stato_pagamento: 'PAGATO',
+                        codice_transazione: stripePaymentId
+                    });
+                
+                if (eventRegError) {
+                    throw new Error("Errore inserimento iscrizione evento: " + eventRegError.message);
+                }
+                console.log(`Iscritto utente ${utenteId} all'evento ${eventId}`);
+            } else {
+                // Quota Associativa: Salda la quota impostando a 0.00
+                const { error: updateError } = await supabase
+                    .from('utenti')
+                    .update({
+                        quota_totale: 0.00
+                    })
+                    .eq('id', utenteId);
 
-            if (updateError) {
-                throw new Error("Errore azzeramento quota utente: " + updateError.message);
+                if (updateError) {
+                    throw new Error("Errore azzeramento quota utente: " + updateError.message);
+                }
             }
 
-            // 5. Scrivi l'audit log
+            // 4. Scrivi l'audit log
             const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Stripe Webhook';
             await supabase
                 .from('registro_audit_operazioni')
                 .insert({
-                    operatore_id: utenteId, // L'utente stesso ha effettuato l'azione pagando
+                    operatore_id: utenteId,
                     azione: 'EMISSIONE_RICEVUTA_PAGAMENTO',
                     tabella_target: 'ricevute_pagamenti',
                     record_target_id: String(recData.id),
@@ -149,7 +157,8 @@ export default async function handler(req, res) {
                         anno_fiscale: annoFiscale,
                         utente_id: utenteId,
                         importo: importo,
-                        stripe_payment_id: stripePaymentId
+                        stripe_payment_id: stripePaymentId,
+                        evento_id: eventId || null
                     },
                     ip_address: typeof ip === 'string' ? ip.split(',')[0].trim() : 'Stripe Webhook'
                 });

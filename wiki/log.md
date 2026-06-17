@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-18] update | Member Dashboard Implementation (v1.00.37)
+- Implemented the complete user dashboard for standard members in `portal/dashboard.html`.
+- Extended the database schema with new tables `public.eventi`, `public.iscrizioni_eventi`, `public.comunicazioni`, and profile-related columns in `public.utenti`.
+- Created `api/create-event-checkout-session.js` and updated `api/stripe-webhook.js` to automate event booking and payments.
+- Bumped application version to `1.00.37`.
+
 ## [2026-06-18] update | Animated OTP Loading Indicator & Version Bump (v1.00.36)
 - Implemented CSS animated spinners for the OTP confirmation button status updates in `portal/registrazione.html`.
 - Updated test user Alessandro Bianchi status to paid and inserted receipt in database.
