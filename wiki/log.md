@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-18] update | Course Subscriptions UI & Version Bump (v1.00.38)
+- Added subscription selection dropdown controls for the catalog courses (*Strongman e Powerlifting*, *Ibrido*, *SCAB*) inside `portal/dashboard.html`.
+- Implemented visual dynamic price updating when choosing different subscription tiers (Mese, Trimestre, Semestre, Annuale).
+- Linked selected plan values to the checkout API call (`/api/create-event-checkout-session`).
+- Bumped application version to `1.00.38`.
+
 ## [2026-06-18] update | Member Dashboard Implementation (v1.00.37)
 - Implemented the complete user dashboard for standard members in `portal/dashboard.html`.
 - Extended the database schema with new tables `public.eventi`, `public.iscrizioni_eventi`, `public.comunicazioni`, and profile-related columns in `public.utenti`.

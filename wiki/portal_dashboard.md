@@ -55,8 +55,10 @@ Standard athletes and members (`!isBoardMember` such as `tesserato_esterno` or `
 -   History log table showing all past uploads.
 
 ### 4. Corsi ed Eventi (Courses & Events)
--   **Catalogo**: A grid showing all active activities. Free events can be registered directly; paid events are routed through Stripe.
+-   **Catalogo**: A grid showing all active activities. Supports multi-tier subscription plans (e.g. Mensile, Trimestrale, Semestrale, Annuale) rendered as a brutalist select dropdown that dynamically updates the price tag on option changes.
 -   **Reservations**: Display of active bookings.
+-   **Payment Redirection**: Redirects to a dynamic Stripe session specifying the exact plan selected (or registers directly for free events).
+-   *Updated in version **1.00.38** to support dynamic course checkout based on chosen plans (e.g. Strongman e Powerlifting, Ibrido, SCAB).*
 
 ### 5. Pagamenti e Ricevute (Payments & Receipts)
 -   Lists all user payments (memberships, donations, and events).

@@ -54,7 +54,7 @@ export default async function handler(req, res) {
  
     try {
         const utenteId = user.id;
-        const { eventId } = req.body;
+        const { eventId, nomePiano } = req.body;
 
         if (!eventId) {
             return res.status(400).json({ error: 'Identificativo evento mancante.' });
@@ -100,7 +100,23 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Sei già iscritto a questo evento.' });
         }
 
-        const prezzo = parseFloat(evento.prezzo);
+        let prezzo = parseFloat(evento.prezzo);
+        let causaleDettaglio = '';
+
+        if (evento.piani_abbonamento && Array.isArray(evento.piani_abbonamento) && evento.piani_abbonamento.length > 0) {
+            let piano = null;
+            if (nomePiano) {
+                piano = evento.piani_abbonamento.find(p => p.nome.toLowerCase() === nomePiano.toLowerCase());
+                if (!piano) {
+                    return res.status(400).json({ error: 'Piano di abbonamento selezionato non valido.' });
+                }
+            } else {
+                piano = evento.piani_abbonamento[0]; // fallback
+            }
+            prezzo = parseFloat(piano.prezzo);
+            causaleDettaglio = ` - Abbonamento ${piano.nome}`;
+        }
+
         if (isNaN(prezzo) || prezzo < 0) {
             return res.status(400).json({ error: 'Prezzo dell\'evento non valido.' });
         }
@@ -131,7 +147,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ free: true });
         }
 
-        const description = `Iscrizione Corso/Evento: ${evento.titolo} per ${profile?.nome || ''} ${profile?.cognome || ''}`;
+        const description = `Iscrizione Corso: ${evento.titolo}${causaleDettaglio} per ${profile?.nome || ''} ${profile?.cognome || ''}`;
  
         // 3. Crea la Sessione di Stripe Checkout
         const reqOrigin = req.headers.origin || 'https://portal.adrenalinaclub.it';
