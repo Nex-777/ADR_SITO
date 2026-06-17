@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-17] update | Fixed GitHub Pages config loading & Vercel API Base URL
+- Removed `portal/config.js` and `config.js` from `.gitignore` to ensure configurations are pushed to GitHub Pages.
+- Updated `portal/config.js` to set `API_BASE_URL` to the production Vercel deployment (`https://adr-sito.vercel.app`) instead of empty/relative paths.
+- Bumped application version to `1.00.33` across all pages and configurations.
+
 ## [2026-05-31] bootstrap | Initial Wiki Setup
 - Established the LLM Wiki schema in `AGENTS.md`.
 - Created central directory structure in `wiki/`.

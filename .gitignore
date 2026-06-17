@@ -5,5 +5,4 @@ node_modules/
 .vscode/
 .idea/
 
-portal/config.js
-config.js
+
