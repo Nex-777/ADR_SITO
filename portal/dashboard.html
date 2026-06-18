@@ -119,7 +119,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.39</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.40</span>
                 <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
             </div>
             <div class="flex items-center gap-4">
@@ -156,8 +156,12 @@
                     <span class="material-symbols-outlined text-sm">medical_services</span> CERTIFICATO MEDICO
                 </button>
                 
+                <button onclick="switchTab('user_corsi')" id="tab-btn-user_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">fitness_center</span> CORSI
+                </button>
+                
                 <button onclick="switchTab('user_eventi')" id="tab-btn-user_eventi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">event</span> CORSI ED EVENTI
+                    <span class="material-symbols-outlined text-sm">event</span> EVENTI
                 </button>
                 
                 <button onclick="switchTab('user_pagamenti')" id="tab-btn-user_pagamenti" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
@@ -1008,41 +1012,64 @@
                 </div>
             </div>
 
-            <!-- TAB 12: CORSI ED EVENTI -->
-            <div id="panel-user_eventi" class="tab-panel space-y-6 hidden">
+            <!-- TAB 12: CORSI -->
+            <div id="panel-user_corsi" class="tab-panel space-y-6 hidden">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Corsi ed Eventi</h2>
-                        <p class="text-xs text-gray-500 uppercase">Visualizza le attività, iscriviti ai corsi e verifica le tue prenotazioni</p>
+                        <h2 class="font-headline text-lg font-bold uppercase">Corsi Attivi</h2>
+                        <p class="text-xs text-gray-500 uppercase">Visualizza e iscriviti ai corsi del club</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left: available courses & events showcase -->
+                    <!-- Left: available courses showcase -->
                     <div class="lg:col-span-2 space-y-6">
-                        <!-- Corsi Attivi -->
                         <div class="space-y-3">
                             <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">CORSI ATTIVI</h3>
                             <div id="user-corsi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Popolated dynamically -->
-                            </div>
-                        </div>
-
-                        <!-- Eventi in Programma -->
-                        <div class="space-y-3">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">EVENTI IN PROGRAMMA</h3>
-                            <div id="user-eventi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Popolated dynamically -->
+                                <!-- Populated dynamically -->
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right: user's reservations -->
+                    <!-- Right: user's reservations for courses -->
                     <div class="lg:col-span-1 space-y-6">
                         <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">I MIEI CORSI ED EVENTI</h3>
-                            <div id="user-eventi-iscrizioni" class="space-y-4">
-                                <p class="text-xs text-gray-500 uppercase font-mono">Caricamento iscrizioni...</p>
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">I MIEI CORSI</h3>
+                            <div id="user-corsi-iscrizioni" class="space-y-4 font-mono text-xs uppercase">
+                                <p class="text-xs text-gray-500 uppercase font-mono">Caricamento...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 14: EVENTI -->
+            <div id="panel-user_eventi" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Eventi in Programma</h2>
+                        <p class="text-xs text-gray-500 uppercase">Visualizza e prenota la tua partecipazione agli eventi del club</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left: available events showcase -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="space-y-3">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">EVENTI IN PROGRAMMA</h3>
+                            <div id="user-eventi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: user's reservations for events -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">I MIEI EVENTI</h3>
+                            <div id="user-eventi-iscrizioni" class="space-y-4 font-mono text-xs uppercase">
+                                <p class="text-xs text-gray-500 uppercase font-mono">Caricamento...</p>
                             </div>
                         </div>
                     </div>
@@ -1471,7 +1498,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.39"
+                VERSION: "1.00.40"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1779,6 +1806,7 @@
                 // Nascondi pulsanti atleti
                 document.getElementById('tab-btn-user_profilo').classList.add('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.add('hidden');
+                document.getElementById('tab-btn-user_corsi').classList.add('hidden');
                 document.getElementById('tab-btn-user_eventi').classList.add('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.add('hidden');
             } else {
@@ -1799,6 +1827,7 @@
                 // Mostra pulsanti atleti
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
                 document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
 
@@ -5128,25 +5157,53 @@
                     catalogEventi.innerHTML = eventiInProg.map(renderCard).join('');
                 }
 
-                const containerIscrizioni = document.getElementById('user-eventi-iscrizioni');
-                if (activeIscr.length === 0) {
-                    containerIscrizioni.innerHTML = `<p class="text-xs text-gray-500 uppercase font-mono">Non sei iscritto a nessun evento.</p>`;
-                } else {
-                    containerIscrizioni.innerHTML = activeIscr.map(iscr => {
-                        const ev = iscr.eventi;
-                        if (!ev) return '';
-                        const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
-                        return `
-                            <div class="border-l-4 border-green-500 bg-white/5 p-4 space-y-2 uppercase font-mono">
-                                <div class="flex justify-between items-center text-[10px]">
-                                    <span class="text-gray-400 font-bold">${dataFormat}</span>
-                                    <span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>
+                const activeCorsiIscr = activeIscr.filter(i => i.eventi && i.eventi.tipo === 'corso');
+                const activeEventiIscr = activeIscr.filter(i => i.eventi && i.eventi.tipo === 'evento');
+
+                const containerCorsiIscr = document.getElementById('user-corsi-iscrizioni');
+                if (containerCorsiIscr) {
+                    if (activeCorsiIscr.length === 0) {
+                        containerCorsiIscr.innerHTML = `<p class="text-xs text-gray-500 uppercase font-mono">Non sei iscritto a nessun corso.</p>`;
+                    } else {
+                        containerCorsiIscr.innerHTML = activeCorsiIscr.map(iscr => {
+                            const ev = iscr.eventi;
+                            if (!ev) return '';
+                            const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                            return `
+                                <div class="border-l-4 border-green-500 bg-white/5 p-4 space-y-2 uppercase font-mono">
+                                    <div class="flex justify-between items-center text-[10px]">
+                                        <span class="text-gray-400 font-bold">${dataFormat}</span>
+                                        <span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>
+                                    </div>
+                                    <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>
+                                    <p class="text-[9px] text-gray-500">Luogo: ${escapeHtml(ev.luogo || 'Sede Club')}</p>
                                 </div>
-                                <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>
-                                <p class="text-[9px] text-gray-500">Luogo: ${escapeHtml(ev.luogo || 'Sede Club')}</p>
-                            </div>
-                        `;
-                    }).join('');
+                            `;
+                        }).join('');
+                    }
+                }
+
+                const containerEventiIscr = document.getElementById('user-eventi-iscrizioni');
+                if (containerEventiIscr) {
+                    if (activeEventiIscr.length === 0) {
+                        containerEventiIscr.innerHTML = `<p class="text-xs text-gray-500 uppercase font-mono">Non sei iscritto a nessun evento.</p>`;
+                    } else {
+                        containerEventiIscr.innerHTML = activeEventiIscr.map(iscr => {
+                            const ev = iscr.eventi;
+                            if (!ev) return '';
+                            const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                            return `
+                                <div class="border-l-4 border-green-500 bg-white/5 p-4 space-y-2 uppercase font-mono">
+                                    <div class="flex justify-between items-center text-[10px]">
+                                        <span class="text-gray-400 font-bold">${dataFormat}</span>
+                                        <span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>
+                                    </div>
+                                    <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>
+                                    <p class="text-[9px] text-gray-500">Luogo: ${escapeHtml(ev.luogo || 'Sede Club')}</p>
+                                </div>
+                            `;
+                        }).join('');
+                    }
                 }
 
             } catch (err) {

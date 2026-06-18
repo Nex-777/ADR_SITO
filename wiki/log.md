@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-18] update | Separate Corsi & Eventi Dashboard Tabs (v1.00.40)
+- Split "CORSI ED EVENTI" sidebar link in `portal/dashboard.html` into two separate links: "CORSI" and "EVENTI".
+- Separated HTML tab panels into `panel-user_corsi` and `panel-user_eventi` to isolate course listings and event listings.
+- Segmented user's active bookings into "I miei corsi" (`#user-corsi-iscrizioni`) and "I miei eventi" (`#user-eventi-iscrizioni`).
+- Bumped application version to `1.00.40`.
+
 ## [2026-06-18] update | Member Portal Certificate Fixes & Segmented Events (v1.00.39)
 - Removed doctor name fields from standard user certificate uploads.
 - Fixed certificate table "VISUALIZZA" link to open signed document URLs via `openSignedFile()`.
