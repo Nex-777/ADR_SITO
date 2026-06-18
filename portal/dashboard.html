@@ -136,10 +136,12 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.42</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.43</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">BOARD DASHBOARD</option>
                     <option value="athlete">AREA TESSERATO</option>
+                    <option value="instructor">AREA ISTRUTTORE</option>
+                    <option value="volunteer">AREA VOLONTARIO</option>
                 </select>
                 <span id="static-context-badge" class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider hidden">AREA TESSERATO</span>
             </div>
@@ -183,6 +185,16 @@
                 
                 <button onclick="switchTab('user_eventi')" id="tab-btn-user_eventi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
                     <span class="material-symbols-outlined text-sm">event</span> EVENTI
+                </button>
+
+                <!-- Instructor Dashboard Navigation -->
+                <button onclick="switchTab('instructor_corsi')" id="tab-btn-instructor_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">school</span> CORSI SEGUITI
+                </button>
+
+                <!-- Volunteer Dashboard Navigation -->
+                <button onclick="switchTab('volunteer_eventi')" id="tab-btn-volunteer_eventi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">event_available</span> GESTIONE EVENTI
                 </button>
                 
                 <button onclick="switchTab('user_pagamenti')" id="tab-btn-user_pagamenti" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
@@ -1034,6 +1046,36 @@
             </div>
 
             <!-- TAB 12: CORSI -->
+            <!-- DUMMY PANEL: INSTRUCTOR CORSI -->
+            <div id="panel-instructor_corsi" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">I Tuoi Corsi (Istruttore)</h2>
+                        <p class="text-xs text-gray-500 uppercase">Gestisci i corsi che insegni e le presenze</p>
+                    </div>
+                </div>
+                <div class="border border-white/10 bg-black/40 p-12 text-center text-gray-400">
+                    <span class="material-symbols-outlined text-4xl mb-4 text-primary">school</span>
+                    <p class="font-headline font-bold uppercase tracking-wider text-sm">Dashboard Corsi in Costruzione</p>
+                    <p class="text-xs mt-2">Questa è un'anteprima visiva. L'area istruttore sarà sviluppata nei prossimi task.</p>
+                </div>
+            </div>
+
+            <!-- DUMMY PANEL: VOLUNTEER EVENTI -->
+            <div id="panel-volunteer_eventi" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Gestione Eventi (Volontari)</h2>
+                        <p class="text-xs text-gray-500 uppercase">Organizza e supervisiona gli eventi del club</p>
+                    </div>
+                </div>
+                <div class="border border-white/10 bg-black/40 p-12 text-center text-gray-400">
+                    <span class="material-symbols-outlined text-4xl mb-4 text-primary">event_available</span>
+                    <p class="font-headline font-bold uppercase tracking-wider text-sm">Dashboard Eventi in Costruzione</p>
+                    <p class="text-xs mt-2">Questa è un'anteprima visiva. L'area volontari sarà sviluppata nei prossimi task.</p>
+                </div>
+            </div>
+
             <div id="panel-user_corsi" class="tab-panel space-y-6 hidden">
                 <div class="flex justify-between items-center">
                     <div>
@@ -1519,7 +1561,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.42"
+                VERSION: "1.00.43"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1735,6 +1777,21 @@
 
             document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario');
 
+            // Funzione di utilità per nascondere tutti i bottoni tab amministrativi e atleti
+            function hideAllTabs() {
+                const tabs = [
+                    'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
+                    'instructor_corsi', 'volunteer_eventi',
+                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci'
+                ];
+                tabs.forEach(tab => {
+                    const el = document.getElementById(`tab-btn-${tab}`);
+                    if (el) el.classList.add('hidden');
+                });
+            }
+
+            hideAllTabs();
+
             if (currentViewContext === 'athlete') {
                 if (userRole === 'istruttore') document.body.classList.add('theme-istruttore');
                 else if (userRole === 'volontario') document.body.classList.add('theme-volontario');
@@ -1745,14 +1802,7 @@
                 document.getElementById('board-stats-grid').classList.add('hidden');
                 document.getElementById('board-alert-board').classList.add('hidden');
                 
-                document.getElementById('tab-btn-approvazioni').classList.add('hidden');
-                document.getElementById('tab-btn-soci').classList.add('hidden');
-                document.getElementById('tab-btn-tesserati').classList.add('hidden');
-                document.getElementById('tab-btn-quote').classList.add('hidden');
-                document.getElementById('tab-btn-contabilita').classList.add('hidden');
-                document.getElementById('tab-btn-direttivo').classList.add('hidden');
-                document.getElementById('tab-btn-verbali').classList.add('hidden');
-
+                // Mostra pulsanti atleti base
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
                 document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
@@ -1762,16 +1812,39 @@
                 if (isApprovedSocio || isBoardMember) {
                     document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
                     document.getElementById('tab-btn-bilanci').classList.remove('hidden');
-                } else {
-                    document.getElementById('tab-btn-verbali_assemblea').classList.add('hidden');
-                    document.getElementById('tab-btn-bilanci').classList.add('hidden');
                 }
 
-                if (userRole === 'socio_in_attesa') {
-                    document.getElementById('user-status-container').classList.remove('hidden');
-                } else {
-                    document.getElementById('user-status-container').classList.add('hidden');
-                }
+                if (userRole === 'socio_in_attesa') document.getElementById('user-status-container').classList.remove('hidden');
+                else document.getElementById('user-status-container').classList.add('hidden');
+
+                switchTab('user_profilo');
+            } else if (currentViewContext === 'instructor') {
+                document.body.classList.add('theme-istruttore');
+                document.getElementById('welcome-title').textContent = "Pannello Istruttori";
+                document.getElementById('welcome-subtitle').textContent = "Gestione Corsi e Presenze";
+                document.getElementById('board-stats-grid').classList.add('hidden');
+                document.getElementById('board-alert-board').classList.add('hidden');
+                document.getElementById('user-status-container').classList.add('hidden');
+                
+                // Mostra pulsanti base e pulsanti istruttore
+                document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
+                document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
+                document.getElementById('tab-btn-instructor_corsi').classList.remove('hidden');
+
+                switchTab('user_profilo');
+            } else if (currentViewContext === 'volunteer') {
+                document.body.classList.add('theme-volontario');
+                document.getElementById('welcome-title').textContent = "Pannello Volontari";
+                document.getElementById('welcome-subtitle').textContent = "Organizzazione Eventi";
+                document.getElementById('board-stats-grid').classList.add('hidden');
+                document.getElementById('board-alert-board').classList.add('hidden');
+                document.getElementById('user-status-container').classList.add('hidden');
+                
+                // Mostra pulsanti base e pulsanti volontario
+                document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
+                document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                document.getElementById('tab-btn-volunteer_eventi').classList.remove('hidden');
 
                 switchTab('user_profilo');
             } else if (currentViewContext === 'board') {
@@ -1792,12 +1865,6 @@
                 document.getElementById('tab-btn-verbali').classList.remove('hidden');
                 document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
                 document.getElementById('tab-btn-bilanci').classList.remove('hidden');
-
-                document.getElementById('tab-btn-user_profilo').classList.add('hidden');
-                document.getElementById('tab-btn-user_certificato').classList.add('hidden');
-                document.getElementById('tab-btn-user_corsi').classList.add('hidden');
-                document.getElementById('tab-btn-user_eventi').classList.add('hidden');
-                document.getElementById('tab-btn-user_pagamenti').classList.add('hidden');
 
                 switchTab('panoramica');
             }
