@@ -21,8 +21,8 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#df293e",
-                        "primary-dim": "#b91c1c",
+                        "primary": "var(--color-primary)",
+                        "primary-dim": "var(--color-primary-dim)",
                         "background": "#0e0e0e",
                         "surface": "#0e0e0e",
                         "surface-container": "#1a1a1a",
@@ -42,6 +42,23 @@
     </script>
     
     <style>
+        :root, body.theme-tesserato {
+            --color-primary: #df293e;
+            --color-primary-dim: #b91c1c;
+        }
+        body.theme-direttivo {
+            --color-primary: #d97706; /* Amber-600 */
+            --color-primary-dim: #b45309; /* Amber-700 */
+        }
+        body.theme-istruttore {
+            --color-primary: #2563eb; /* Blue-600 */
+            --color-primary-dim: #1d4ed8; /* Blue-700 */
+        }
+        body.theme-volontario {
+            --color-primary: #059669; /* Emerald-600 */
+            --color-primary-dim: #047857; /* Emerald-700 */
+        }
+        
         body {
             font-family: 'Manrope', sans-serif;
             background-color: #0e0e0e;
@@ -119,7 +136,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.40</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.41</span>
                 <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
             </div>
             <div class="flex items-center gap-4">
@@ -1498,7 +1515,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.40"
+                VERSION: "1.00.41"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1702,6 +1719,18 @@
 
         // Configurazione delle Viste e dei Pulsanti a seconda del Ruolo
         function applyRolePermissions(profile) {
+            // Applica la classe del tema basata sul ruolo
+            document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario');
+            if (['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole)) {
+                document.body.classList.add('theme-direttivo');
+            } else if (userRole === 'istruttore') {
+                document.body.classList.add('theme-istruttore');
+            } else if (userRole === 'volontario') {
+                document.body.classList.add('theme-volontario');
+            } else {
+                document.body.classList.add('theme-tesserato');
+            }
+
             const descEl = document.getElementById('auth-description');
             
             // Definisce la descrizione permessi basata sulla logica a cascata
