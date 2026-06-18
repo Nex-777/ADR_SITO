@@ -136,9 +136,9 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.46</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.47</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
-                    <option value="board">BOARD DASHBOARD</option>
+                    <option value="board">AREA DIRETTIVO</option>
                     <option value="athlete">AREA TESSERATO</option>
                     <option value="instructor">AREA ISTRUTTORE</option>
                     <option value="volunteer">AREA VOLONTARIO</option>
@@ -1565,7 +1565,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.46"
+                VERSION: "1.00.47"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1860,7 +1860,10 @@
             } else if (currentViewContext === 'board') {
                 document.body.classList.add('theme-direttivo');
                 
-                document.getElementById('welcome-title').textContent = "Benvenuto nel Consiglio Direttivo";
+                const boardRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
+                const activeBoardRole = userRoles.find(r => boardRoles.includes(r));
+                const formattedRole = activeBoardRole ? activeBoardRole.replace(/_/g, ' ').toUpperCase() : '';
+                document.getElementById('welcome-title').textContent = formattedRole ? `AREA DIRETTIVO | INCARICO: ${formattedRole}` : "AREA DIRETTIVO";
                 document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Amministrativo Riforma 2026";
                 document.getElementById('board-stats-grid').classList.remove('hidden');
                 document.getElementById('board-alert-board').classList.remove('hidden');
@@ -1892,7 +1895,7 @@
                 const isVolunteer = userRoles.includes('volontario');
 
                 let optionsHTML = '';
-                if (isBoardMember) optionsHTML += '<option value="board">BOARD DASHBOARD</option>';
+                if (isBoardMember) optionsHTML += '<option value="board">AREA DIRETTIVO</option>';
                 if (isAthlete) optionsHTML += '<option value="athlete">AREA TESSERATO</option>';
                 if (isInstructor) optionsHTML += '<option value="instructor">AREA ISTRUTTORE</option>';
                 if (isVolunteer) optionsHTML += '<option value="volunteer">AREA VOLONTARIO</option>';
@@ -3434,6 +3437,21 @@
                     }
                 });
             }
+
+            // Exclusivity rule for board roles (Presidente, Vice Presidente, Segretario, Tesoriere, Consigliere)
+            const boardRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
+            const checkboxes = document.querySelectorAll('#nomina-ruolo-select input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    if (boardRoles.includes(e.target.value) && e.target.checked) {
+                        checkboxes.forEach(otherCb => {
+                            if (otherCb !== e.target && boardRoles.includes(otherCb.value)) {
+                                otherCb.checked = false;
+                            }
+                        });
+                    }
+                });
+            });
         });
 
         // Handle attendance changes to dynamically enable/disable and populate proxy targets
@@ -4282,6 +4300,12 @@
 
             if (!userId || ruolo.length === 0) {
                 alert("Seleziona un socio e almeno un ruolo da assegnare.");
+                return;
+            }
+
+            const boardRolesSelected = ruolo.filter(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+            if (boardRolesSelected.length > 1) {
+                alert("Non è possibile assegnare più cariche nel direttivo contemporaneamente.");
                 return;
             }
 

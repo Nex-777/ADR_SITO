@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-18] fix | Rename dashboard area and enforce single board role (v1.00.47)
+- Renamed "Board Dashboard" option in context switcher to "Area Direttivo".
+- Updated dashboard welcome title dynamically: shows "AREA DIRETTIVO | INCARICO: [RUOLO]" instead of static welcome string.
+- Enforced single board role (exclusivity) in the nomination/role modification modal, unchecking other board roles automatically upon check, and validated on submit.
+- Bumped application version to `1.00.47`.
+
 ## [2026-06-18] fix | Exclude board and staff from incomplete registrations (v1.00.46)
 - Updated the SQL view `public.vw_registrazioni_incomplete` to explicitly exclude users who have any administrative/board roles (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`) or staff roles (`istruttore`, `volontario`). This prevents manually setup or seeded administrators (like `nexglg@gmail.com`) who don't have records in `registro_approvazioni`, `registro_soci`, or `registro_tesserati` from incorrectly appearing as incomplete ghost registrations.
 - Bumped application version to `1.00.46`.
