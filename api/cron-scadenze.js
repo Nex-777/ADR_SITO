@@ -140,7 +140,7 @@ export default async function handler(req, res) {
                     const { data: boardAdmins } = await supabase
                         .from('utenti')
                         .select('email')
-                        .in('ruolo', ['presidente', 'vice_presidente']);
+                        .overlaps('ruolo', ['presidente', 'vice_presidente']);
 
                     if (boardAdmins) {
                         for (const admin of boardAdmins) {
@@ -199,7 +199,7 @@ export default async function handler(req, res) {
             const { data: admins } = await supabase
                 .from('utenti')
                 .select('email')
-                .in('ruolo', ['presidente', 'vice_presidente', 'segretario', 'tesoriere']);
+                .overlaps('ruolo', ['presidente', 'vice_presidente', 'segretario', 'tesoriere']);
 
             if (admins) {
                 for (const adm of admins) {
@@ -221,7 +221,7 @@ export default async function handler(req, res) {
             const { data: admins } = await supabase
                 .from('utenti')
                 .select('email')
-                .in('ruolo', ['presidente', 'vice_presidente', 'segretario']);
+                .overlaps('ruolo', ['presidente', 'vice_presidente', 'segretario']);
 
             if (admins) {
                 for (const adm of admins) {

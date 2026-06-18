@@ -136,7 +136,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.43</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.44</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">BOARD DASHBOARD</option>
                     <option value="athlete">AREA TESSERATO</option>
@@ -1486,12 +1486,16 @@
                 </div>
                 <div class="group">
                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">RUOLO DA ASSEGNARE *</label>
-                    <select id="nomina-ruolo-select" class="w-full brutalist-input bg-black text-white">
-                        <option value="consigliere">Consigliere</option>
-                        <option value="segretario">Segretario</option>
-                        <option value="tesoriere">Tesoriere</option>
-                        <option value="vice_presidente">Vice Presidente</option>
-                    </select>
+                    <div id="nomina-ruolo-select" class="flex flex-col gap-2 p-2 bg-black border border-white/20">
+                            <label class="flex items-center gap-2"><input type="checkbox" value="presidente" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Presidente</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="vice_presidente" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Vice Presidente</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="segretario" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Segretario</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="tesoriere" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Tesoriere</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="consigliere" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Consigliere</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="socio_approvato" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Socio Approvato</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="istruttore" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Istruttore</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" value="volontario" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Volontario</label>
+                        </div>
                 </div>
             </div>
             <div class="flex gap-4 pt-2">
@@ -1561,7 +1565,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.43"
+                VERSION: "1.00.44"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1613,7 +1617,7 @@
 
         let currentUser = null;
         let currentUserProfile = null;
-        let userRole = null; // presidente, vice_presidente, segretario, tesoriere, consigliere, etc.
+        let userRoles = []; // array of roles
         
         let sociData = [];
         let tesseratiData = [];
@@ -1713,12 +1717,20 @@
                 }
 
                 currentUserProfile = profile;
-                userRole = profile.ruolo || '';
+                let rawRoles = profile.ruolo || [];
+                if (!Array.isArray(rawRoles)) {
+                    if (typeof rawRoles === 'string') {
+                        rawRoles = rawRoles.replace(/[{}]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+                    } else {
+                        rawRoles = [];
+                    }
+                }
+                userRoles = rawRoles;
                 const nome = profile.nome || 'N/D';
                 const cognome = profile.cognome || 'N/D';
                 
                 document.getElementById('user-display-name').textContent = `${nome} ${cognome}`;
-                document.getElementById('user-display-role').textContent = `Ruolo: ${userRole ? userRole.replace(/_/g, ' ') : 'N/D'}`;
+                document.getElementById('user-display-role').textContent = `Ruoli: ${userRoles.length > 0 ? userRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'N/D'}`;
 
                 try {
                     applyRolePermissions(profile);
@@ -1726,8 +1738,8 @@
                     console.error("Errore in applyRolePermissions:", e);
                 }
 
-                const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
-                const isApprovedSocio = userRole === 'socio_approvato';
+                const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+                const isApprovedSocio = userRoles.includes('socio_approvato');
 
                 const loaders = [];
                 if (isBoardMember) {
@@ -1772,8 +1784,8 @@
         }
 
         function renderContextUI() {
-            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
-            const isApprovedSocio = userRole === 'socio_approvato';
+            const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+            const isApprovedSocio = userRoles.includes('socio_approvato');
 
             document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario');
 
@@ -1793,8 +1805,8 @@
             hideAllTabs();
 
             if (currentViewContext === 'athlete') {
-                if (userRole === 'istruttore') document.body.classList.add('theme-istruttore');
-                else if (userRole === 'volontario') document.body.classList.add('theme-volontario');
+                if (userRoles.includes('istruttore')) document.body.classList.add('theme-istruttore');
+                else if (userRoles.includes('volontario')) document.body.classList.add('theme-volontario');
                 else document.body.classList.add('theme-tesserato');
                 
                 document.getElementById('welcome-title').textContent = "Benvenuto in Adrenalina Club";
@@ -1814,7 +1826,7 @@
                     document.getElementById('tab-btn-bilanci').classList.remove('hidden');
                 }
 
-                if (userRole === 'socio_in_attesa') document.getElementById('user-status-container').classList.remove('hidden');
+                if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
 
                 switchTab('user_profilo');
@@ -1871,20 +1883,44 @@
         }
 
         function applyRolePermissions(profile) {
-            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
             const switcher = document.getElementById('context-switcher');
             const staticBadge = document.getElementById('static-context-badge');
             
-            if (isBoardMember) {
-                currentViewContext = 'board';
-                switcher.classList.remove('hidden');
-                switcher.value = 'board';
-                staticBadge.classList.add('hidden');
-            } else {
-                currentViewContext = 'athlete';
-                switcher.classList.add('hidden');
-                staticBadge.classList.remove('hidden');
+            // Context Switcher setup
+            if (userRoles.length > 0) {
+                const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+                const isAthlete = userRoles.some(r => ['socio_approvato', 'tesserato_esterno', 'socio_in_attesa', 'minore'].includes(r));
+                const isInstructor = userRoles.includes('istruttore');
+                const isVolunteer = userRoles.includes('volontario');
+
+                let optionsHTML = '';
+                if (isBoardMember) optionsHTML += '<option value="board">BOARD DASHBOARD</option>';
+                if (isAthlete) optionsHTML += '<option value="athlete">AREA TESSERATO</option>';
+                if (isInstructor) optionsHTML += '<option value="instructor">AREA ISTRUTTORE</option>';
+                if (isVolunteer) optionsHTML += '<option value="volunteer">AREA VOLONTARIO</option>';
+
+                switcher.innerHTML = optionsHTML;
+                
+                if (switcher.options.length > 1) {
+                    switcher.classList.remove('hidden');
+                    staticBadge.classList.add('hidden');
+                } else {
+                    switcher.classList.add('hidden');
+                    staticBadge.classList.remove('hidden');
+                    staticBadge.textContent = switcher.options.length > 0 ? switcher.options[0].text : 'AREA TESSERATO';
+                }
+
+                // Initial selection
+                if (!currentViewContext || !Array.from(switcher.options).find(o => o.value === currentViewContext)) {
+                    if (isBoardMember) currentViewContext = 'board';
+                    else if (isAthlete) currentViewContext = 'athlete';
+                    else if (isInstructor) currentViewContext = 'instructor';
+                    else if (isVolunteer) currentViewContext = 'volunteer';
+                    else currentViewContext = 'athlete';
+                }
+                switcher.value = currentViewContext;
             }
+
 
             renderContextUI();
 
@@ -1902,10 +1938,10 @@
                 'tesserato_esterno': 'Atleta tesserato attivo. Visualizzazione del tuo profilo sportivo.'
             };
 
-            descEl.textContent = descrizioni[userRole] || 'Profilo atleta registrato.';
+            descEl.textContent = userRoles.map(r => descrizioni[r]).filter(Boolean).join(' | ') || 'Profilo atleta registrato.';
 
-            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
-            const isApprovedSocio = userRole === 'socio_approvato';
+            const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+            const isApprovedSocio = userRoles.includes('socio_approvato');
             
             // Mostra/Nascondi banner pagamento e certificati a seconda dello stato
             const quotaTotale = profile ? (parseFloat(profile.quota_totale) || 0) : 0;
@@ -1974,18 +2010,18 @@
             // (La logica di visibilità UI è stata mossa in renderContextUI)
 
             // Mostra/Nascondi pulsanti operativi a seconda del ruolo
-            if (['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
+            if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                 document.getElementById('btn-crea-verbale-toggle').classList.remove('hidden');
                 document.getElementById('btn-crea-verbale-assemblea-toggle').classList.remove('hidden');
             }
-            if (['presidente', 'vice_presidente', 'tesoriere'].includes(userRole)) {
+            if (userRoles.some(r => ['presidente', 'vice_presidente', 'tesoriere'].includes(r))) {
                 document.getElementById('btn-nuovo-bilancio-toggle').classList.remove('hidden');
                 document.getElementById('btn-nuova-spesa-toggle').classList.remove('hidden');
             } else {
                 const btnSpesa = document.getElementById('btn-nuova-spesa-toggle');
                 if (btnSpesa) btnSpesa.classList.add('hidden');
             }
-            if (['presidente', 'vice_presidente'].includes(userRole)) {
+            if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
                 document.getElementById('btn-nomina-direttivo-toggle').classList.remove('hidden');
             } else {
                 const btnNomina = document.getElementById('btn-nomina-direttivo-toggle');
@@ -2002,7 +2038,7 @@
 
         // Caricamento Dati Panoramica
         async function loadStats() {
-            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
+            const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
             if (!isBoardMember) {
                 const alertBanner = document.getElementById('board-alert-approvazioni-banner');
                 if (alertBanner) alertBanner.classList.add('hidden');
@@ -2136,8 +2172,8 @@
                     valA = a.email || '';
                     valB = b.email || '';
                 } else if (field === 'ruolo') {
-                    valA = a.ruolo || '';
-                    valB = b.ruolo || '';
+                    valA = a.ruolo ? a.ruolo.join(',') : '';
+                    valB = b.ruolo ? b.ruolo.join(',') : '';
                 } else if (field === 'titolo') {
                     valA = a.titolo || '';
                     valB = b.titolo || '';
@@ -2331,7 +2367,7 @@
                     actionBtn = '<span class="text-[9px] text-gray-500 uppercase">Gestito</span>';
                 }
 
-                if (['presidente', 'vice_presidente'].includes(userRole) && socio.anagrafiche) {
+                if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r)) && socio.anagrafiche) {
                     actionBtn = `<div class="flex items-center justify-end gap-2">
                         ${actionBtn}
                         <button onclick="eliminaUtente('${socio.anagrafiche.id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[10px] font-bold px-3 py-1 transition-all uppercase">ELIMINA</button>
@@ -2580,7 +2616,7 @@
                     }
 
                     let actionBtn = '';
-                    if (['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
+                    if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                         let mainBtn = '';
                         if (isCertVerde) {
                             mainBtn = `<button onclick="attivaTesseramentoApprovazioni('${item.anagrafica_id}')" class="bg-white text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
@@ -2591,7 +2627,7 @@
                         }
                         
                         let eliminaBtn = '';
-                        if (['presidente', 'vice_presidente'].includes(userRole)) {
+                        if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
                             eliminaBtn = `<button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-1 transition-all uppercase">ELIMINA</button>`;
                         }
                         
@@ -2639,7 +2675,7 @@
                     row.className = 'border-b border-red-500/5 hover:bg-red-900/10 transition-colors';
                     
                     let actionBtn = '';
-                    if (['presidente', 'vice_presidente'].includes(userRole)) {
+                    if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
                         actionBtn = `<button onclick="eliminaRegistrazioneIncompleta('${ghost.utente_id}')" class="bg-red-600 text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-red-500 transition-all uppercase">ELIMINA SBLOCCA</button>`;
                     } else {
                         actionBtn = `<span class="text-[9px] text-gray-500" title="Solo il Presidente o Vice possono sbloccare">NON AUTORIZZATO</span>`;
@@ -2840,7 +2876,7 @@
                 if (tess.stato_tesseramento === 'SOSPESO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
 
                 let actionBtn = '';
-                if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && ['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
+                if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                     if (isCertVerde) {
                         actionBtn = `<button onclick="attivaTesseramento(${tess.id_tesserato})" class="bg-white text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
                     } else if (certInfo && certInfo.stato_validazione === 'GIALLO') {
@@ -2852,7 +2888,7 @@
                     actionBtn = '-';
                 }
 
-                if (['presidente', 'vice_presidente'].includes(userRole) && tess.anagrafiche) {
+                if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r)) && tess.anagrafiche) {
                     const actionContent = actionBtn === '-' ? '' : actionBtn;
                     actionBtn = `<div class="flex items-center justify-end gap-2">
                         ${actionContent}
@@ -2975,7 +3011,7 @@
                             </div>
                         `;
                     }
-                } else if (['presidente', 'vice_presidente', 'tesoriere'].includes(userRole)) {
+                } else if (userRoles.some(r => ['presidente', 'vice_presidente', 'tesoriere'].includes(r))) {
                     actionHtml = `<button onclick="registraPagamento('${escapeHtml(item.id)}')" class="bg-white text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-primary hover:text-white transition-all uppercase">SALDA</button>`;
                 } else {
                     actionHtml = '<span class="text-[9px] text-gray-500 uppercase">Sola lettura</span>';
@@ -4115,7 +4151,7 @@
                 const { data, error } = await supabaseClient
                     .from('utenti')
                     .select('id, nome, cognome, codice_fiscale, email, ruolo')
-                    .in('ruolo', ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'])
+                    .overlaps('ruolo', ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'])
                     .order('cognome', { ascending: true });
 
                 if (error) throw error;
@@ -4132,7 +4168,7 @@
                     nomeComp: escapeHtml(`${member.nome} ${member.cognome}`),
                     codice_fiscale: escapeHtml(member.codice_fiscale || 'N/D'),
                     email: escapeHtml(member.email || 'N/D'),
-                    ruolo: escapeHtml(member.ruolo || '')
+                    ruolo: Array.isArray(member.ruolo) ? member.ruolo : []
                 }));
 
                 sortArray(direttivoData, direttivoSort.field, direttivoSort.direction);
@@ -4164,17 +4200,10 @@
                 ];
 
                 let actionHtml = '';
-                if (['presidente', 'vice_presidente'].includes(userRole)) {
-                    let optionsHtml = ruoliDisponibili.map(r => 
-                        `<option value="${r.val}" ${member.ruolo === r.val ? 'selected' : ''}>${r.label}</option>`
-                    ).join('');
-
+                if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
                     actionHtml = `
                         <div class="flex items-center justify-end gap-2">
-                            <select onchange="cambiaRuoloDirettivo('${member.id}', this.value)" class="bg-black text-white text-[10px] border border-white/20 px-2 py-1 font-mono focus:ring-0">
-                                ${optionsHtml}
-                            </select>
-                            <button onclick="cambiaRuoloDirettivo('${member.id}', 'socio_approvato')" class="bg-primary/20 text-primary border border-primary/30 text-[9px] px-2 py-1 hover:bg-primary hover:text-white font-bold uppercase transition-all">REVOCA</button>
+                            <button onclick="apriModificaRuoli('${member.id}', '${member.ruolo.join(',')}')" class="bg-primary/20 text-primary border border-primary/30 text-[9px] px-2 py-1 hover:bg-primary hover:text-white font-bold uppercase transition-all">MODIFICA RUOLI</button>
                         </div>
                     `;
                 } else {
@@ -4186,32 +4215,12 @@
                     <td class="p-4 text-gray-400 font-mono">${member.codice_fiscale}</td>
                     <td class="p-4 text-gray-400 lowercase font-mono">${member.email}</td>
                     <td class="p-4">
-                        <span class="px-2 py-0.5 border border-primary/30 text-[9px] font-bold rounded uppercase text-primary bg-primary/10">${member.ruolo.replace(/_/g, ' ')}</span>
+                        <span class="px-2 py-0.5 border border-primary/30 text-[9px] font-bold rounded uppercase text-primary bg-primary/10">${member.ruolo.join(', ').replace(/_/g, ' ')}</span>
                     </td>
                     <td class="p-4 text-right">${actionHtml}</td>
                 `;
                 body.appendChild(row);
             });
-        }
-
-        async function cambiaRuoloDirettivo(userId, nuovoRuolo) {
-            try {
-                const { error } = await supabaseClient
-                    .from('utenti')
-                    .update({ ruolo: nuovoRuolo })
-                    .eq('id', userId);
-
-                if (error) throw error;
-
-                await scriviAuditLog('VARIAZIONE_RUOLO_DIRETTIVO', 'utenti', userId, {
-                    nuovo_ruolo: nuovoRuolo
-                });
-
-                alert("Ruolo aggiornato correttamente!");
-                loadDirettivo();
-            } catch (err) {
-                alert("Errore aggiornamento ruolo: " + err.message);
-            }
         }
 
         async function showNominaDirettivoModal() {
@@ -4224,7 +4233,7 @@
                 const { data, error } = await supabaseClient
                     .from('utenti')
                     .select('id, nome, cognome, codice_fiscale')
-                    .eq('ruolo', 'socio_approvato')
+                    .contains('ruolo', ['socio_approvato'])
                     .order('cognome', { ascending: true });
 
                 if (error) throw error;
@@ -4247,16 +4256,34 @@
             }
         }
 
+        
+        function apriModificaRuoli(userId, ruoliAttualiStr) {
+            const ruoliAttuali = ruoliAttualiStr.split(',');
+            // We can reuse the nomina-direttivo modal for this
+            document.getElementById('modal-nomina-direttivo').classList.remove('hidden');
+            
+            // Popoliamo la select utente con un finto se non presente oppure la teniamo disabilitata
+            const selectEl = document.getElementById('nomina-socio-select');
+            selectEl.innerHTML = `<option value="${userId}" selected>Modifica ruoli utente corrente</option>`;
+            
+            // Imposta checkboxes
+            const checkboxes = document.querySelectorAll('#nomina-ruolo-select input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = ruoliAttuali.includes(cb.value);
+            });
+        }
+
         function closeModalNominaDirettivo() {
             document.getElementById('modal-nomina-direttivo').classList.add('hidden');
         }
 
         async function submitNominaDirettivo() {
             const userId = document.getElementById('nomina-socio-select').value;
-            const ruolo = document.getElementById('nomina-ruolo-select').value;
+            const checkboxes = document.querySelectorAll('#nomina-ruolo-select input[type="checkbox"]:checked');
+            const ruolo = Array.from(checkboxes).map(cb => cb.value);
 
-            if (!userId || !ruolo) {
-                alert("Seleziona un socio e un ruolo da assegnare.");
+            if (!userId || ruolo.length === 0) {
+                alert("Seleziona un socio e almeno un ruolo da assegnare.");
                 return;
             }
 
@@ -4398,7 +4425,7 @@
                 if (bil.stato === 'APPROVATO_CONSIGLIO') statusColor = 'text-blue-500 bg-blue-500/10 border-blue-500/30';
 
                 let actionHtml = '-';
-                if (['presidente', 'vice_presidente', 'tesoriere'].includes(userRole) && bil.stato !== 'APPROVATO_ASSEMBLEA') {
+                if (userRoles.some(r => ['presidente', 'vice_presidente', 'tesoriere'].includes(r)) && bil.stato !== 'APPROVATO_ASSEMBLEA') {
                     actionHtml = `
                         <select onchange="aggiornaStatoBilancio('${bil.id}', this.value)" class="bg-black text-white text-[10px] border border-white/20 px-1 py-0.5 font-mono focus:ring-0">
                             <option value="IN_REDAZIONE" ${bil.stato === 'IN_REDAZIONE' ? 'selected' : ''}>REDIGI</option>
@@ -4684,7 +4711,7 @@
         let userUploadedCertFile = null;
 
         async function loadUserDashboard() {
-            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
+            const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
             if (!isBoardMember) {
                 document.getElementById('user-panoramica-widgets').classList.remove('hidden');
                 await populateUserPanoramicaSummary();
@@ -4765,12 +4792,12 @@
                         livello = `TESSERATO - ${tessReg.livello_copertura}`;
                     } else if (currentUserProfile.tipo_tessera) {
                         livello = `TESSERATO - ${currentUserProfile.tipo_tessera.replace(/_/g, ' ')}`;
-                    } else if (userRole === 'socio_approvato') {
+                    } else if (userRoles.includes('socio_approvato')) {
                         livello = 'SOCIO ATTIVO';
                     }
                 } else if (currentUserProfile.tipo_tessera) {
                     livello = `TESSERATO - ${currentUserProfile.tipo_tessera.replace(/_/g, ' ')}`;
-                } else if (userRole === 'socio_approvato') {
+                } else if (userRoles.includes('socio_approvato')) {
                     livello = 'SOCIO ATTIVO';
                 }
                 document.getElementById('user-info-livello').textContent = livello.toUpperCase();

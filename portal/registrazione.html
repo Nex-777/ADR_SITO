@@ -1663,7 +1663,7 @@
 
                 if (dbUser) {
                     const adminRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
-                    const hasAdminRole = adminRoles.includes(dbUser.ruolo);
+                    const hasAdminRole = Array.isArray(dbUser.ruolo) ? dbUser.ruolo.some(r => adminRoles.includes(r)) : false;
                     const isFullyRegistered = dbUser.tipo_adesione !== null;
 
                     if (hasAdminRole || isFullyRegistered) {
@@ -1732,7 +1732,7 @@
                         
                         if (profiloEsistente) {
                             const adminRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
-                            const hasAdminRole = adminRoles.includes(profiloEsistente.ruolo);
+                            const hasAdminRole = Array.isArray(profiloEsistente.ruolo) ? profiloEsistente.ruolo.some(r => adminRoles.includes(r)) : false;
                             const isFullyRegistered = profiloEsistente.tipo_adesione !== null;
                             const isSigned = attoEsistente && attoEsistente.stato === 'firmato_validato';
 
@@ -1768,7 +1768,7 @@
                         cognome: cognome,
                         codice_fiscale: cf,
                         data_nascita: dataNascita,
-                        ruolo: defaultRole,
+                        ruolo: [defaultRole],
                         email: email,
                         indirizzo: indirizzo,
                         cellulare: cellulare || null,
