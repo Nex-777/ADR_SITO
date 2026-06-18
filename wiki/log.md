@@ -252,4 +252,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Defined `.theme-tesserato`, `.theme-direttivo`, `.theme-istruttore`, and `.theme-volontario` classes injected dynamically into the `<body>` element based on `userRole` within `applyRolePermissions()`.
 - Bumped application version to `1.00.41`.
 
+## [2026-06-18] edit | Context Switcher (v1.00.42)
+- Added a `context-switcher` dropdown in `portal/dashboard.html` for Board members to toggle between "BOARD DASHBOARD" (Admin view) and "AREA TESSERATO" (Athlete view).
+- Extracted UI rendering logic into `renderContextUI()` and `switchContext(view)`, allowing dynamic toggling of both the CSS theme and the sidebar menus without reloading the page.
+- Bumped application version to `1.00.42`.
+
+
 

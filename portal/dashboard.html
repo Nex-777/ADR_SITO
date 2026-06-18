@@ -136,8 +136,12 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.41</span>
-                <span class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider">BOARD DASHBOARD</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.42</span>
+                <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
+                    <option value="board">BOARD DASHBOARD</option>
+                    <option value="athlete">AREA TESSERATO</option>
+                </select>
+                <span id="static-context-badge" class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider hidden">AREA TESSERATO</span>
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-right">
@@ -1515,7 +1519,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.41"
+                VERSION: "1.00.42"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1718,18 +1722,104 @@
         }
 
         // Configurazione delle Viste e dei Pulsanti a seconda del Ruolo
-        function applyRolePermissions(profile) {
-            // Applica la classe del tema basata sul ruolo
+        let currentViewContext = 'athlete';
+        
+        function switchContext(view) {
+            currentViewContext = view;
+            renderContextUI();
+        }
+
+        function renderContextUI() {
+            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
+            const isApprovedSocio = userRole === 'socio_approvato';
+
             document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario');
-            if (['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole)) {
+
+            if (currentViewContext === 'athlete') {
+                if (userRole === 'istruttore') document.body.classList.add('theme-istruttore');
+                else if (userRole === 'volontario') document.body.classList.add('theme-volontario');
+                else document.body.classList.add('theme-tesserato');
+                
+                document.getElementById('welcome-title').textContent = "Benvenuto in Adrenalina Club";
+                document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Atleti Ufficiale";
+                document.getElementById('board-stats-grid').classList.add('hidden');
+                document.getElementById('board-alert-board').classList.add('hidden');
+                
+                document.getElementById('tab-btn-approvazioni').classList.add('hidden');
+                document.getElementById('tab-btn-soci').classList.add('hidden');
+                document.getElementById('tab-btn-tesserati').classList.add('hidden');
+                document.getElementById('tab-btn-quote').classList.add('hidden');
+                document.getElementById('tab-btn-contabilita').classList.add('hidden');
+                document.getElementById('tab-btn-direttivo').classList.add('hidden');
+                document.getElementById('tab-btn-verbali').classList.add('hidden');
+
+                document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
+                document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
+                document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
+
+                if (isApprovedSocio || isBoardMember) {
+                    document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
+                    document.getElementById('tab-btn-bilanci').classList.remove('hidden');
+                } else {
+                    document.getElementById('tab-btn-verbali_assemblea').classList.add('hidden');
+                    document.getElementById('tab-btn-bilanci').classList.add('hidden');
+                }
+
+                if (userRole === 'socio_in_attesa') {
+                    document.getElementById('user-status-container').classList.remove('hidden');
+                } else {
+                    document.getElementById('user-status-container').classList.add('hidden');
+                }
+
+                switchTab('user_profilo');
+            } else if (currentViewContext === 'board') {
                 document.body.classList.add('theme-direttivo');
-            } else if (userRole === 'istruttore') {
-                document.body.classList.add('theme-istruttore');
-            } else if (userRole === 'volontario') {
-                document.body.classList.add('theme-volontario');
-            } else {
-                document.body.classList.add('theme-tesserato');
+                
+                document.getElementById('welcome-title').textContent = "Benvenuto nel Consiglio Direttivo";
+                document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Amministrativo Riforma 2026";
+                document.getElementById('board-stats-grid').classList.remove('hidden');
+                document.getElementById('board-alert-board').classList.remove('hidden');
+                document.getElementById('user-status-container').classList.add('hidden');
+                
+                document.getElementById('tab-btn-approvazioni').classList.remove('hidden');
+                document.getElementById('tab-btn-soci').classList.remove('hidden');
+                document.getElementById('tab-btn-tesserati').classList.remove('hidden');
+                document.getElementById('tab-btn-quote').classList.remove('hidden');
+                document.getElementById('tab-btn-contabilita').classList.remove('hidden');
+                document.getElementById('tab-btn-direttivo').classList.remove('hidden');
+                document.getElementById('tab-btn-verbali').classList.remove('hidden');
+                document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
+                document.getElementById('tab-btn-bilanci').classList.remove('hidden');
+
+                document.getElementById('tab-btn-user_profilo').classList.add('hidden');
+                document.getElementById('tab-btn-user_certificato').classList.add('hidden');
+                document.getElementById('tab-btn-user_corsi').classList.add('hidden');
+                document.getElementById('tab-btn-user_eventi').classList.add('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.add('hidden');
+
+                switchTab('panoramica');
             }
+        }
+
+        function applyRolePermissions(profile) {
+            const isBoardMember = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(userRole);
+            const switcher = document.getElementById('context-switcher');
+            const staticBadge = document.getElementById('static-context-badge');
+            
+            if (isBoardMember) {
+                currentViewContext = 'board';
+                switcher.classList.remove('hidden');
+                switcher.value = 'board';
+                staticBadge.classList.add('hidden');
+            } else {
+                currentViewContext = 'athlete';
+                switcher.classList.add('hidden');
+                staticBadge.classList.remove('hidden');
+            }
+
+            renderContextUI();
 
             const descEl = document.getElementById('auth-description');
             
@@ -1814,66 +1904,7 @@
                 }
             }
             
-            if (isBoardMember) {
-                // Consiglio Direttivo: mostra pannelli amministrativi
-                document.getElementById('welcome-title').textContent = "Benvenuto nel Consiglio Direttivo";
-                document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Amministrativo Riforma 2026";
-                document.getElementById('board-stats-grid').classList.remove('hidden');
-                document.getElementById('board-alert-board').classList.remove('hidden');
-                document.getElementById('user-status-container').classList.add('hidden');
-                
-                document.getElementById('tab-btn-approvazioni').classList.remove('hidden');
-                document.getElementById('tab-btn-soci').classList.remove('hidden');
-                document.getElementById('tab-btn-tesserati').classList.remove('hidden');
-                document.getElementById('tab-btn-quote').classList.remove('hidden');
-                document.getElementById('tab-btn-contabilita').classList.remove('hidden');
-                document.getElementById('tab-btn-direttivo').classList.remove('hidden');
-                document.getElementById('tab-btn-verbali').classList.remove('hidden');
-                document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
-                document.getElementById('tab-btn-bilanci').classList.remove('hidden');
-
-                // Nascondi pulsanti atleti
-                document.getElementById('tab-btn-user_profilo').classList.add('hidden');
-                document.getElementById('tab-btn-user_certificato').classList.add('hidden');
-                document.getElementById('tab-btn-user_corsi').classList.add('hidden');
-                document.getElementById('tab-btn-user_eventi').classList.add('hidden');
-                document.getElementById('tab-btn-user_pagamenti').classList.add('hidden');
-            } else {
-                // Utente Generico / Socio in attesa / Tesserato: nasconde funzionalità amministrative
-                document.getElementById('welcome-title').textContent = "Benvenuto in Adrenalina Club";
-                document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Atleti Ufficiale";
-                document.getElementById('board-stats-grid').classList.add('hidden');
-                document.getElementById('board-alert-board').classList.add('hidden');
-                
-                document.getElementById('tab-btn-approvazioni').classList.add('hidden');
-                document.getElementById('tab-btn-soci').classList.add('hidden');
-                document.getElementById('tab-btn-tesserati').classList.add('hidden');
-                document.getElementById('tab-btn-quote').classList.add('hidden');
-                document.getElementById('tab-btn-contabilita').classList.add('hidden');
-                document.getElementById('tab-btn-direttivo').classList.add('hidden');
-                document.getElementById('tab-btn-verbali').classList.add('hidden');
-
-                // Mostra pulsanti atleti
-                document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
-                document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
-                document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
-                document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
-                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
-
-                if (isApprovedSocio) {
-                    document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
-                    document.getElementById('tab-btn-bilanci').classList.remove('hidden');
-                } else {
-                    document.getElementById('tab-btn-verbali_assemblea').classList.add('hidden');
-                    document.getElementById('tab-btn-bilanci').classList.add('hidden');
-                }
-
-                if (userRole === 'socio_in_attesa') {
-                    document.getElementById('user-status-container').classList.remove('hidden');
-                } else {
-                    document.getElementById('user-status-container').classList.add('hidden');
-                }
-            }
+            // (La logica di visibilità UI è stata mossa in renderContextUI)
 
             // Mostra/Nascondi pulsanti operativi a seconda del ruolo
             if (['presidente', 'vice_presidente', 'segretario'].includes(userRole)) {
