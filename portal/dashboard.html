@@ -136,7 +136,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.44</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.45</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">BOARD DASHBOARD</option>
                     <option value="athlete">AREA TESSERATO</option>
@@ -1565,7 +1565,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.44"
+                VERSION: "1.00.45"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1805,9 +1805,7 @@
             hideAllTabs();
 
             if (currentViewContext === 'athlete') {
-                if (userRoles.includes('istruttore')) document.body.classList.add('theme-istruttore');
-                else if (userRoles.includes('volontario')) document.body.classList.add('theme-volontario');
-                else document.body.classList.add('theme-tesserato');
+                document.body.classList.add('theme-tesserato');
                 
                 document.getElementById('welcome-title').textContent = "Benvenuto in Adrenalina Club";
                 document.getElementById('welcome-subtitle').textContent = "Adrenalina Club - Portale Atleti Ufficiale";

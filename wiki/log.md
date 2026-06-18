@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-18] fix | Athlete Context Theme Override (v1.00.45)
+- Fixed theme color matching for the Athlete dashboard context. Previously, having the "istruttore" or "volontario" role would override the athlete theme to blue or green, even when switching specifically to the athlete dashboard. It is now correctly forced to the athlete theme (red).
+- Bumped application version to `1.00.45`.
+
 ## [2026-06-18] ingest | Multi-role implementation & Dashboard Fixes (v1.00.44)
 - Migrated database `utenti.ruolo` column from text to `ruolo_utente[]` array type.
 - Updated `dashboard.html` and `registrazione.html` to support array-based role checking (using `.includes()` and `.some()`).
