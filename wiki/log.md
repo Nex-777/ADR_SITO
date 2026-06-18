@@ -247,5 +247,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Added `loadApprovazioni()` call to `eliminaUtente` inside `portal/dashboard.html` to ensure that when an admin deletes a pending user, the "Registro Approvazioni" panel refreshes instantly.
 - Bumped application version to `1.00.32`.
 
+## [2026-06-18] edit | Role-based CSS Theme (v1.00.41)
+- Implemented role-based color theming in `portal/dashboard.html` using CSS Custom Properties (Variables).
+- Defined `.theme-tesserato`, `.theme-direttivo`, `.theme-istruttore`, and `.theme-volontario` classes injected dynamically into the `<body>` element based on `userRole` within `applyRolePermissions()`.
+- Bumped application version to `1.00.41`.
 
 
