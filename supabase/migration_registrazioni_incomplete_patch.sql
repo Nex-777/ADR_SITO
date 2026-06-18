@@ -9,7 +9,8 @@ LEFT JOIN public.anagrafiche a ON u.id = a.utente_id
 LEFT JOIN public.registro_approvazioni ra ON a.id = ra.anagrafica_id
 LEFT JOIN public.registro_soci rs ON a.id = rs.anagrafica_id
 LEFT JOIN public.registro_tesserati rt ON a.id = rt.anagrafica_id
-WHERE u.ruolo = 'tesserato_esterno'
+WHERE u.ruolo && ARRAY['tesserato_esterno'::ruolo_utente]
+  AND NOT (u.ruolo && ARRAY['presidente'::ruolo_utente, 'vice_presidente'::ruolo_utente, 'segretario'::ruolo_utente, 'tesoriere'::ruolo_utente, 'consigliere'::ruolo_utente, 'istruttore'::ruolo_utente, 'volontario'::ruolo_utente])
   AND ra.id IS NULL
   AND rs.id_socio IS NULL
   AND rt.id_tesserato IS NULL;
