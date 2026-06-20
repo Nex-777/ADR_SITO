@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-20] fix | Fix Dashboard Tesserati Activation RPC & Align Versions (v1.00.48)
+- Fixed error in `portal/dashboard.html` when activating tesserati; corrected RPC function call from `attiva_tesserato` to database-level `approva_tesserato` and populated the missing `p_deciso_da` administrator field.
+- Unified application versioning settings across all config, landing, and dashboard files to version `1.00.48`.
+- Bumped application version to `1.00.48`.
+
 ## [2026-06-18] fix | Rename dashboard area and enforce single board role (v1.00.47)
 - Renamed "Board Dashboard" option in context switcher to "Area Direttivo".
 - Updated dashboard welcome title dynamically: shows "AREA DIRETTIVO | INCARICO: [RUOLO]" instead of static welcome string.

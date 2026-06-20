@@ -11,16 +11,15 @@ const files = [
     'portal/registrazione.html'
 ];
 
-const oldVersion = '1.00.35';
-const newVersion = '1.00.36';
+const newVersion = '1.00.48';
 
 files.forEach(file => {
     const fullPath = path.resolve(file);
     if (fs.existsSync(fullPath)) {
         let content = fs.readFileSync(fullPath, 'utf8');
-        const updatedContent = content.replace(new RegExp(oldVersion, 'g'), newVersion);
+        const updatedContent = content.replace(/1\.00\.\d+/g, newVersion);
         fs.writeFileSync(fullPath, updatedContent, 'utf8');
-        console.log(`Updated ${file}`);
+        console.log(`Updated ${file} to ${newVersion}`);
     } else {
         console.warn(`File not found: ${file}`);
     }
