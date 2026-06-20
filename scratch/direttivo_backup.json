@@ -1,0 +1,480 @@
+[
+  {
+    "auth": {
+      "id": "30870fbc-ad7c-4682-9fde-19ed33436faf",
+      "email": "valmannocchi@yahoo.it"
+    },
+    "utente": {
+      "id": "30870fbc-ad7c-4682-9fde-19ed33436faf",
+      "nome": "VALERIO",
+      "cognome": "MANNOCCHI",
+      "codice_fiscale": "MNNVLR94T31A462Z",
+      "data_nascita": "1973-10-15",
+      "ruolo": [
+        "tesserato_esterno",
+        "socio_approvato",
+        "consigliere",
+        "istruttore"
+      ],
+      "email": "valmannocchi@yahoo.it",
+      "data_creazione": "2026-05-31T15:35:02.334518+00:00",
+      "indirizzo": "VAI X6",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100",
+      "tutore_nome": null,
+      "tutore_cognome": null,
+      "tutore_codice_fiscale": null,
+      "tutore_email": null,
+      "tipo_adesione": "socio_tesserato",
+      "tipo_tessera": "tessera_integrativa_a",
+      "certificato_medico_url": "https://zpategmkelqmexetpaot.supabase.co/storage/v1/object/public/certificati_medici/30870fbc-ad7c-4682-9fde-19ed33436faf/certificato_1780241714761.pdf",
+      "quota_totale": 45,
+      "luogo_nascita_provincia": "AP",
+      "luogo_nascita_comune": "Ascoli Piceno",
+      "cellulare": null,
+      "certificato_tipologia": null,
+      "certificato_data_emissione": null,
+      "avatar_url": null,
+      "emergenza_nome": null,
+      "emergenza_telefono": null,
+      "consenso_marketing": false,
+      "consenso_audiovisivi": false
+    },
+    "anagrafica": {
+      "id": "418e320a-a98c-4b61-8b2e-f4c4ea92e7e7",
+      "utente_id": "30870fbc-ad7c-4682-9fde-19ed33436faf",
+      "cognome": "MANNOCCHI",
+      "nome": "VALERIO",
+      "codice_fiscale": "MNNVLR94T31A462Z",
+      "sesso": "M",
+      "data_nascita": "1973-10-15",
+      "stato_nascita": "Italia",
+      "provincia_nascita": "AP",
+      "comune_nascita": "Ascoli Piceno",
+      "created_at": "2026-05-31T17:03:47.893961+00:00"
+    },
+    "indirizzo": {
+      "anagrafica_id": "418e320a-a98c-4b61-8b2e-f4c4ea92e7e7",
+      "via_piazza": "VAI X6",
+      "civico": "1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100"
+    },
+    "contatto": {
+      "anagrafica_id": "418e320a-a98c-4b61-8b2e-f4c4ea92e7e7",
+      "telefono": "3330000000",
+      "email": "valmannocchi@yahoo.it"
+    }
+  },
+  {
+    "auth": {
+      "id": "17067277-8f62-4b82-988d-8d75e477cecb",
+      "email": "valeciara1@gmail.com"
+    },
+    "utente": {
+      "id": "17067277-8f62-4b82-988d-8d75e477cecb",
+      "nome": "VALERIO MASSIMO",
+      "cognome": "CIARALLI",
+      "codice_fiscale": "CRLVRM85T14H769K",
+      "data_nascita": "1985-12-14",
+      "ruolo": [
+        "tesserato_esterno",
+        "socio_approvato",
+        "istruttore",
+        "consigliere"
+      ],
+      "email": "valeciara1@gmail.com",
+      "data_creazione": "2026-05-31T15:27:20.84362+00:00",
+      "indirizzo": "VAI X5",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100",
+      "tutore_nome": null,
+      "tutore_cognome": null,
+      "tutore_codice_fiscale": null,
+      "tutore_email": null,
+      "tipo_adesione": "socio_tesserato",
+      "tipo_tessera": "tessera_base_silver",
+      "certificato_medico_url": "https://zpategmkelqmexetpaot.supabase.co/storage/v1/object/public/certificati_medici/17067277-8f62-4b82-988d-8d75e477cecb/certificato_1780241255308.pdf",
+      "quota_totale": 35,
+      "luogo_nascita_provincia": "AP",
+      "luogo_nascita_comune": "San Benedetto del Tronto",
+      "cellulare": null,
+      "certificato_tipologia": null,
+      "certificato_data_emissione": null,
+      "avatar_url": null,
+      "emergenza_nome": null,
+      "emergenza_telefono": null,
+      "consenso_marketing": false,
+      "consenso_audiovisivi": false
+    },
+    "anagrafica": {
+      "id": "e3091a10-3c5e-4b7f-8b40-17104432e514",
+      "utente_id": "17067277-8f62-4b82-988d-8d75e477cecb",
+      "cognome": "CIARALLI",
+      "nome": "VALERIO MASSIMO",
+      "codice_fiscale": "CRLVRM85T14H769K",
+      "sesso": "M",
+      "data_nascita": "1985-12-14",
+      "stato_nascita": "Italia",
+      "provincia_nascita": "AP",
+      "comune_nascita": "San Benedetto del Tronto",
+      "created_at": "2026-05-31T17:03:47.893961+00:00"
+    },
+    "indirizzo": {
+      "anagrafica_id": "e3091a10-3c5e-4b7f-8b40-17104432e514",
+      "via_piazza": "VAI X5",
+      "civico": "1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100"
+    },
+    "contatto": {
+      "anagrafica_id": "e3091a10-3c5e-4b7f-8b40-17104432e514",
+      "telefono": "3330000000",
+      "email": "valeciara1@gmail.com"
+    }
+  },
+  {
+    "auth": {
+      "id": "75e508c7-6bcb-43be-9ea3-70d80b242a05",
+      "email": "alessiafarina2016@gmail.com"
+    },
+    "utente": {
+      "id": "75e508c7-6bcb-43be-9ea3-70d80b242a05",
+      "nome": "ALESSIA",
+      "cognome": "FARINA",
+      "codice_fiscale": "FRNLSS85H66A462R",
+      "data_nascita": "1985-06-26",
+      "ruolo": [
+        "socio_approvato",
+        "consigliere"
+      ],
+      "email": "ALESSIAFARINA2016@GMAIL.COM",
+      "data_creazione": "2026-05-31T15:25:39.019635+00:00",
+      "indirizzo": "VIA X4",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100",
+      "tutore_nome": null,
+      "tutore_cognome": null,
+      "tutore_codice_fiscale": null,
+      "tutore_email": null,
+      "tipo_adesione": "socio",
+      "tipo_tessera": null,
+      "certificato_medico_url": null,
+      "quota_totale": 25,
+      "luogo_nascita_provincia": "AP",
+      "luogo_nascita_comune": "Ascoli Piceno",
+      "cellulare": null,
+      "certificato_tipologia": null,
+      "certificato_data_emissione": null,
+      "avatar_url": null,
+      "emergenza_nome": null,
+      "emergenza_telefono": null,
+      "consenso_marketing": false,
+      "consenso_audiovisivi": false
+    },
+    "anagrafica": {
+      "id": "ea4e7f4b-22a1-4558-a603-ae43decc61c4",
+      "utente_id": "75e508c7-6bcb-43be-9ea3-70d80b242a05",
+      "cognome": "FARINA",
+      "nome": "ALESSIA",
+      "codice_fiscale": "FRNLSS85H66A462R",
+      "sesso": "M",
+      "data_nascita": "1985-06-26",
+      "stato_nascita": "Italia",
+      "provincia_nascita": "AP",
+      "comune_nascita": "Ascoli Piceno",
+      "created_at": "2026-05-31T17:03:47.893961+00:00"
+    },
+    "indirizzo": {
+      "anagrafica_id": "ea4e7f4b-22a1-4558-a603-ae43decc61c4",
+      "via_piazza": "VIA X4",
+      "civico": "1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100"
+    },
+    "contatto": {
+      "anagrafica_id": "ea4e7f4b-22a1-4558-a603-ae43decc61c4",
+      "telefono": "3330000000",
+      "email": "ALESSIAFARINA2016@GMAIL.COM"
+    }
+  },
+  {
+    "auth": {
+      "id": "e9d2f6d3-cc52-4eb3-b117-fbbda92ecd27",
+      "email": "alesi.paolo@libero.it"
+    },
+    "utente": {
+      "id": "e9d2f6d3-cc52-4eb3-b117-fbbda92ecd27",
+      "nome": "PAOLO",
+      "cognome": "ALESI",
+      "codice_fiscale": "LSAPLA82R25H769H",
+      "data_nascita": "1982-10-25",
+      "ruolo": [
+        "tesserato_esterno",
+        "socio_approvato",
+        "consigliere"
+      ],
+      "email": "alesi.paolo@libero.it",
+      "data_creazione": "2026-05-31T15:24:27.08264+00:00",
+      "indirizzo": "VIA X3",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100",
+      "tutore_nome": null,
+      "tutore_cognome": null,
+      "tutore_codice_fiscale": null,
+      "tutore_email": null,
+      "tipo_adesione": "socio_tesserato",
+      "tipo_tessera": "tessera_integrativa_a",
+      "certificato_medico_url": "https://zpategmkelqmexetpaot.supabase.co/storage/v1/object/public/certificati_medici/e9d2f6d3-cc52-4eb3-b117-fbbda92ecd27/certificato_1780241079129.pdf",
+      "quota_totale": 45,
+      "luogo_nascita_provincia": "AP",
+      "luogo_nascita_comune": "San Benedetto del Tronto",
+      "cellulare": null,
+      "certificato_tipologia": null,
+      "certificato_data_emissione": null,
+      "avatar_url": null,
+      "emergenza_nome": null,
+      "emergenza_telefono": null,
+      "consenso_marketing": false,
+      "consenso_audiovisivi": false
+    },
+    "anagrafica": {
+      "id": "bb6f0171-4782-497b-9153-e180234b44f2",
+      "utente_id": "e9d2f6d3-cc52-4eb3-b117-fbbda92ecd27",
+      "cognome": "ALESI",
+      "nome": "PAOLO",
+      "codice_fiscale": "LSAPLA82R25H769H",
+      "sesso": "M",
+      "data_nascita": "1982-10-25",
+      "stato_nascita": "Italia",
+      "provincia_nascita": "AP",
+      "comune_nascita": "San Benedetto del Tronto",
+      "created_at": "2026-05-31T17:03:47.893961+00:00"
+    },
+    "indirizzo": {
+      "anagrafica_id": "bb6f0171-4782-497b-9153-e180234b44f2",
+      "via_piazza": "VIA X3",
+      "civico": "1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100"
+    },
+    "contatto": {
+      "anagrafica_id": "bb6f0171-4782-497b-9153-e180234b44f2",
+      "telefono": "3330000000",
+      "email": "alesi.paolo@libero.it"
+    }
+  },
+  {
+    "auth": {
+      "id": "2f82f743-4b64-4829-9a55-ee81f53abf6f",
+      "email": "serpaoletti@gmail.com"
+    },
+    "utente": {
+      "id": "2f82f743-4b64-4829-9a55-ee81f53abf6f",
+      "nome": "SERGIO",
+      "cognome": "PAOLETTI",
+      "codice_fiscale": "PLTSRG80E17H769B",
+      "data_nascita": "1980-05-17",
+      "ruolo": [
+        "tesserato_esterno",
+        "socio_approvato",
+        "segretario"
+      ],
+      "email": "SERPAOLETTI@GMAIL.COM",
+      "data_creazione": "2026-05-31T15:22:39.772267+00:00",
+      "indirizzo": "VIA X2",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100",
+      "tutore_nome": null,
+      "tutore_cognome": null,
+      "tutore_codice_fiscale": null,
+      "tutore_email": null,
+      "tipo_adesione": "socio_tesserato",
+      "tipo_tessera": "tessera_integrativa_a",
+      "certificato_medico_url": "https://zpategmkelqmexetpaot.supabase.co/storage/v1/object/public/certificati_medici/2f82f743-4b64-4829-9a55-ee81f53abf6f/certificato_1780240972661.pdf",
+      "quota_totale": 45,
+      "luogo_nascita_provincia": "AP",
+      "luogo_nascita_comune": "San Benedetto del Tronto",
+      "cellulare": null,
+      "certificato_tipologia": null,
+      "certificato_data_emissione": null,
+      "avatar_url": null,
+      "emergenza_nome": null,
+      "emergenza_telefono": null,
+      "consenso_marketing": false,
+      "consenso_audiovisivi": false
+    },
+    "anagrafica": {
+      "id": "fc7da345-f6d1-409e-9b34-f1f0192dfef2",
+      "utente_id": "2f82f743-4b64-4829-9a55-ee81f53abf6f",
+      "cognome": "PAOLETTI",
+      "nome": "SERGIO",
+      "codice_fiscale": "PLTSRG80E17H769B",
+      "sesso": "M",
+      "data_nascita": "1980-05-17",
+      "stato_nascita": "Italia",
+      "provincia_nascita": "AP",
+      "comune_nascita": "San Benedetto del Tronto",
+      "created_at": "2026-05-31T17:03:47.893961+00:00"
+    },
+    "indirizzo": {
+      "anagrafica_id": "fc7da345-f6d1-409e-9b34-f1f0192dfef2",
+      "via_piazza": "VIA X2",
+      "civico": "1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100"
+    },
+    "contatto": {
+      "anagrafica_id": "fc7da345-f6d1-409e-9b34-f1f0192dfef2",
+      "telefono": "3330000000",
+      "email": "SERPAOLETTI@GMAIL.COM"
+    }
+  },
+  {
+    "auth": {
+      "id": "fc261f42-6572-4a19-8ad9-4d354a7fb635",
+      "email": "spawnak47@hotmail.it"
+    },
+    "utente": {
+      "id": "fc261f42-6572-4a19-8ad9-4d354a7fb635",
+      "nome": "MANUEL",
+      "cognome": "LA COMMARE",
+      "codice_fiscale": "LCMMNL86C31A462Q",
+      "data_nascita": "1973-10-15",
+      "ruolo": [
+        "socio_approvato",
+        "vice_presidente"
+      ],
+      "email": "spawnak47@hotmail.it",
+      "data_creazione": "2026-05-31T15:21:12.155984+00:00",
+      "indirizzo": "VAI X1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100",
+      "tutore_nome": null,
+      "tutore_cognome": null,
+      "tutore_codice_fiscale": null,
+      "tutore_email": null,
+      "tipo_adesione": "socio_tesserato",
+      "tipo_tessera": "tessera_base_silver",
+      "certificato_medico_url": "https://zpategmkelqmexetpaot.supabase.co/storage/v1/object/public/certificati_medici/fc261f42-6572-4a19-8ad9-4d354a7fb635/certificato_1780240884001.pdf",
+      "quota_totale": 35,
+      "luogo_nascita_provincia": "AP",
+      "luogo_nascita_comune": "Ascoli Piceno",
+      "cellulare": null,
+      "certificato_tipologia": null,
+      "certificato_data_emissione": null,
+      "avatar_url": null,
+      "emergenza_nome": null,
+      "emergenza_telefono": null,
+      "consenso_marketing": false,
+      "consenso_audiovisivi": false
+    },
+    "anagrafica": {
+      "id": "2790dedd-0c5d-4335-8c1a-cb89f6d733fd",
+      "utente_id": "fc261f42-6572-4a19-8ad9-4d354a7fb635",
+      "cognome": "LA COMMARE",
+      "nome": "MANUEL",
+      "codice_fiscale": "LCMMNL86C31A462Q",
+      "sesso": "M",
+      "data_nascita": "1973-10-15",
+      "stato_nascita": "Italia",
+      "provincia_nascita": "AP",
+      "comune_nascita": "Ascoli Piceno",
+      "created_at": "2026-05-31T17:03:47.893961+00:00"
+    },
+    "indirizzo": {
+      "anagrafica_id": "2790dedd-0c5d-4335-8c1a-cb89f6d733fd",
+      "via_piazza": "VAI X1",
+      "civico": "1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100"
+    },
+    "contatto": {
+      "anagrafica_id": "2790dedd-0c5d-4335-8c1a-cb89f6d733fd",
+      "telefono": "3330000000",
+      "email": "spawnak47@hotmail.it"
+    }
+  },
+  {
+    "auth": {
+      "id": "afb93c7b-a75d-42fb-b005-13d09fb6834d",
+      "email": "nexglg@gmail.com"
+    },
+    "utente": {
+      "id": "afb93c7b-a75d-42fb-b005-13d09fb6834d",
+      "nome": "Tito Fabio",
+      "cognome": "Paoletti",
+      "codice_fiscale": null,
+      "data_nascita": null,
+      "ruolo": [
+        "presidente",
+        "socio_approvato",
+        "tesserato_esterno",
+        "istruttore",
+        "volontario"
+      ],
+      "email": "nexglg@gmail.com",
+      "data_creazione": "2026-05-31T14:55:41.628719+00:00",
+      "indirizzo": null,
+      "provincia": null,
+      "comune": null,
+      "cap": null,
+      "tutore_nome": null,
+      "tutore_cognome": null,
+      "tutore_codice_fiscale": null,
+      "tutore_email": null,
+      "tipo_adesione": null,
+      "tipo_tessera": null,
+      "certificato_medico_url": null,
+      "quota_totale": null,
+      "luogo_nascita_provincia": null,
+      "luogo_nascita_comune": null,
+      "cellulare": null,
+      "certificato_tipologia": null,
+      "certificato_data_emissione": null,
+      "avatar_url": null,
+      "emergenza_nome": null,
+      "emergenza_telefono": null,
+      "consenso_marketing": false,
+      "consenso_audiovisivi": false
+    },
+    "anagrafica": {
+      "id": "c987d876-3b86-4aae-ac0c-9b93622d8ca8",
+      "utente_id": "afb93c7b-a75d-42fb-b005-13d09fb6834d",
+      "cognome": "Paoletti",
+      "nome": "Tito Fabio",
+      "codice_fiscale": "N/D             ",
+      "sesso": "M",
+      "data_nascita": "2008-06-02",
+      "stato_nascita": "Italia",
+      "provincia_nascita": "AP",
+      "comune_nascita": "Ascoli Piceno",
+      "created_at": "2026-06-02T17:41:45.784395+00:00"
+    },
+    "indirizzo": {
+      "anagrafica_id": "c987d876-3b86-4aae-ac0c-9b93622d8ca8",
+      "via_piazza": "Via X",
+      "civico": "1",
+      "provincia": "AP",
+      "comune": "Ascoli Piceno",
+      "cap": "63100"
+    },
+    "contatto": {
+      "anagrafica_id": "c987d876-3b86-4aae-ac0c-9b93622d8ca8",
+      "telefono": "3330000000",
+      "email": "nexglg@gmail.com"
+    }
+  }
+]

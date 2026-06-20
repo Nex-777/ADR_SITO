@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.50</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.51</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -599,6 +599,21 @@
                         <h2 class="font-headline text-lg font-bold uppercase">Registro Tesserati</h2>
                         <p class="text-xs text-gray-500 uppercase">Flusso atleti e trasmissione RASD / CSEN</p>
                     </div>
+
+                    <!-- Widget Tessere CSEN -->
+                    <div class="hidden xl:flex bg-black/40 border border-white/10 p-2 gap-4 items-center shadow-[4px_4px_0_0_rgba(223,41,62,0.2)]">
+                        <div class="flex items-center gap-2 border-r border-white/10 pr-4">
+                            <span class="material-symbols-outlined text-primary text-sm">confirmation_number</span>
+                            <span class="font-headline text-[10px] text-gray-400 uppercase tracking-widest">Tessere Residue</span>
+                        </div>
+                        <div class="flex gap-4 font-mono text-xs uppercase px-2">
+                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Silver</span><span id="csen-silver" class="font-bold text-white text-sm animate-pulse">--</span></div>
+                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Gold</span><span id="csen-gold" class="font-bold text-white text-sm animate-pulse">--</span></div>
+                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Integ. A</span><span id="csen-inta" class="font-bold text-white text-sm animate-pulse">--</span></div>
+                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Integ. B</span><span id="csen-intb" class="font-bold text-white text-sm animate-pulse">--</span></div>
+                        </div>
+                    </div>
+
                     <!-- Bottone Esportazione CSEN -->
                     <button onclick="esportaCSEN()" class="bg-primary hover:bg-primary-dim text-white font-headline text-xs font-bold px-4 py-2 uppercase tracking-wider flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">download</span> ESPORTA CSV CSEN
@@ -1570,7 +1585,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.50"
+                VERSION: "1.00.51"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5644,7 +5659,53 @@
             window.location.href = "login.html";
         }
 
+        // Carica stato tessere CSEN
+        async function fetchCsenStatus() {
+            try {
+                if (isDevMode && !supabaseClient) {
+                    document.getElementById('csen-silver').textContent = '21';
+                    document.getElementById('csen-gold').textContent = '10';
+                    document.getElementById('csen-inta').textContent = '18';
+                    document.getElementById('csen-intb').textContent = '10';
+                    document.getElementById('csen-silver').classList.remove('animate-pulse');
+                    document.getElementById('csen-gold').classList.remove('animate-pulse');
+                    document.getElementById('csen-inta').classList.remove('animate-pulse');
+                    document.getElementById('csen-intb').classList.remove('animate-pulse');
+                    return;
+                }
+                const { data, error } = await supabaseClient.from('csen_status').select('*').eq('id', 1).single();
+                if (error && error.code !== 'PGRST116') {
+                    console.error("Errore fetch CSEN status:", error);
+                    return;
+                }
+                
+                const silverEl = document.getElementById('csen-silver');
+                const goldEl = document.getElementById('csen-gold');
+                const intaEl = document.getElementById('csen-inta');
+                const intbEl = document.getElementById('csen-intb');
+
+                if (data) {
+                    silverEl.textContent = data.base_silver;
+                    goldEl.textContent = data.base_gold;
+                    intaEl.textContent = data.integrativa_a;
+                    intbEl.textContent = data.integrativa_b;
+                } else {
+                    silverEl.textContent = '0';
+                    goldEl.textContent = '0';
+                    intaEl.textContent = '0';
+                    intbEl.textContent = '0';
+                }
+                silverEl.classList.remove('animate-pulse');
+                goldEl.classList.remove('animate-pulse');
+                intaEl.classList.remove('animate-pulse');
+                intbEl.classList.remove('animate-pulse');
+            } catch (err) {
+                console.error("Errore fetch CSEN status:", err);
+            }
+        }
+
         // Start checking session immediately
+        fetchCsenStatus();
         checkSession();
     </script>
 </body>
