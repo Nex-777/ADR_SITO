@@ -4,7 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
-## [2026-06-20] ingest | CSEN Scraper Integration (v1.00.53)
+## [2026-06-20] fix | CSEN Scraper Manual Trigger & Vercel API (v1.00.54)
+- Modified `portal/dashboard.html` to make "Tessere residue" widget clickable, triggering manual CSEN scraping.
+- Created Vercel serverless function `api/trigger-csen.js` to securely trigger the GitHub Actions workflow via API.
+- Removed cron schedule from `.github/workflows/csen.yml` to rely solely on manual triggers.
+- Bumped application version to `1.00.54`.
+
+
 - Created Playwright scraper script `scripts/scraper_csen.js` to automate reading residual membership cards from the CSEN portal.
 - Configured GitHub Actions workflow `.github/workflows/csen.yml` to run the scraper on a schedule and manually.
 - Integrated tessere status display widget into `portal/dashboard.html` with real-time Supabase integration.

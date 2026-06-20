@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.53</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.54</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -602,10 +602,10 @@
 
                     <!-- Widget Tessere CSEN -->
                     <div class="hidden xl:flex bg-black/40 border border-white/10 p-2 gap-4 items-center shadow-[4px_4px_0_0_rgba(223,41,62,0.2)]">
-                        <div class="flex items-center gap-2 border-r border-white/10 pr-4">
-                            <span class="material-symbols-outlined text-primary text-sm">confirmation_number</span>
-                            <span class="font-headline text-[10px] text-gray-400 uppercase tracking-widest">Tessere Residue</span>
-                        </div>
+                        <button onclick="triggerCsenScraper()" class="flex items-center gap-2 border-r border-white/10 pr-4 hover:bg-white/5 p-2 transition-colors focus:outline-none cursor-pointer group" title="Clicca per aggiornare manualmente dal portale CSEN">
+                            <span id="csen-sync-icon" class="material-symbols-outlined text-primary text-sm group-hover:rotate-180 transition-transform duration-500">sync</span>
+                            <span class="font-headline text-[10px] text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Tessere Residue</span>
+                        </button>
                         <div class="flex gap-4 font-mono text-xs uppercase px-2">
                             <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Silver</span><span id="csen-silver" class="font-bold text-white text-sm animate-pulse">--</span></div>
                             <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Gold</span><span id="csen-gold" class="font-bold text-white text-sm animate-pulse">--</span></div>
@@ -1585,7 +1585,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.53"
+                VERSION: "1.00.54"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5660,6 +5660,31 @@
         }
 
         // Carica stato tessere CSEN
+        async function triggerCsenScraper() {
+            try {
+                const icon = document.getElementById('csen-sync-icon');
+                if (icon) icon.classList.add('animate-spin');
+                
+                alert("Ho inviato il comando di aggiornamento! L'operazione richiede circa 45 secondi. I dati si aggiorneranno automaticamente alla fine.");
+                
+                // Chiama la nostra serverless function su Vercel
+                const res = await fetch('/api/trigger-csen', { method: 'POST' });
+                if (!res.ok) throw new Error("Errore nell'API trigger-csen");
+
+                // Aspetta 50 secondi e poi aggiorna i dati a schermo
+                setTimeout(() => {
+                    fetchCsenStatus();
+                    if (icon) icon.classList.remove('animate-spin');
+                    alert("Aggiornamento CSEN completato!");
+                }, 50000);
+
+            } catch(e) {
+                console.error(e);
+                alert("Si è verificato un errore durante l'avvio dell'aggiornamento.");
+                const icon = document.getElementById('csen-sync-icon');
+                if (icon) icon.classList.remove('animate-spin');
+            }
+        }
         async function fetchCsenStatus() {
             try {
                 if (isDevMode && !supabaseClient) {

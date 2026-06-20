@@ -1,10 +1,7 @@
 name: Aggiornamento Tessere CSEN
 
 on:
-  schedule:
-    # Esegui due volte al giorno: alle 06:00 e alle 18:00 UTC
-    - cron: '0 6,18 * * *'
-  workflow_dispatch: # Abilita l'esecuzione manuale da GitHub
+  workflow_dispatch: # Abilita l'esecuzione manuale da GitHub o API
 
 jobs:
   scrape:
