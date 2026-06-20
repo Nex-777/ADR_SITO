@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-20] fix | Fix Board Members display, Soci & Tesserati numbering, and Medical Certificate dates (v1.00.52)
+- Added `select_consiglio_utenti` and `update_admin_utenti` RLS policies to the `utenti` table on Supabase, resolving the issue where the "Gestione consiglio direttivo" list was empty for the logged-in administrator.
+- Corrected the progressive numbers and status of the 7 board members/soci in `registro_soci` to format `S_XX_2026` and set their status as approved (`data_delibera_direttivo` set to '2026-01-01').
+- Fixed the sequential numbers of tesserati in `registro_tesserati` to format `T_XXX_2026` using their CSV row sequence.
+- Accurately parsed and updated all medical certificate release dates (`data_rilascio` and `data_scadenza`) in the `certificati_medici` table using the values directly from the CSV file.
+- Bumped application version to `1.00.52`.
+
 ## [2026-06-20] fix | Fix Registry Refresh After Tesserato Activation (v1.00.50)
 - Added `loadTesserati()` and `loadStats()` to the callback of `attivaTesseramentoApprovazioni()` in `portal/dashboard.html` to ensure that when a tesserato is approved/activated, their profile immediately loads into the Registro Tesserati table and the stats update without requiring a manual page refresh.
 - Bumped application version to `1.00.50`.

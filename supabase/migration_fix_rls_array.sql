@@ -84,3 +84,17 @@ CREATE POLICY segretario_update_verbali ON public.verbali_consiglio FOR UPDATE U
 
 CREATE POLICY tesoriere_update_soci ON public.registro_soci FOR UPDATE USING ('tesoriere' = ANY(public.get_user_role(auth.uid())));
 CREATE POLICY tesoriere_update_tesserati ON public.registro_tesserati FOR UPDATE USING ('tesoriere' = ANY(public.get_user_role(auth.uid())));
+
+-- Policies for utenti table
+DROP POLICY IF EXISTS select_consiglio_utenti ON public.utenti;
+CREATE POLICY select_consiglio_utenti ON public.utenti FOR SELECT
+    USING (
+        (public.get_user_role(auth.uid()) && ARRAY['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere']::public.ruolo_utente[])
+        OR
+        (id = auth.uid())
+    );
+
+DROP POLICY IF EXISTS update_admin_utenti ON public.utenti;
+CREATE POLICY update_admin_utenti ON public.utenti FOR UPDATE
+    USING (public.get_user_role(auth.uid()) && ARRAY['presidente', 'vice_presidente']::public.ruolo_utente[]);
+
