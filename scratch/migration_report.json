@@ -1,0 +1,2179 @@
+{
+  "total_rows": 57,
+  "valid_records": [
+    {
+      "original_row": 2,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "TITO FABIO",
+          "cognome": "PAOLETTI",
+          "codice_fiscale": "PLTTFB77B11H769H",
+          "sesso": "M",
+          "data_nascita": "1977-02-11",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "san benedetto del tronto"
+        },
+        "indirizzo": {
+          "via_piazza": "via rigante",
+          "civico": "44",
+          "provincia": "AP",
+          "comune": "ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3282197368",
+          "email": "titofabiopaoletti@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-01-05",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-01-05",
+          "data_scadenza": "2027-01-05",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 3,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Marcello",
+          "cognome": "Testa",
+          "codice_fiscale": "TSTMCL67E13A462D",
+          "sesso": "M",
+          "data_nascita": "1967-05-13",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Catasta",
+          "civico": "6",
+          "provincia": "AP",
+          "comune": "Palmiano",
+          "cap": "63092"
+        },
+        "contatti": {
+          "telefono": "3291539780",
+          "email": "marcellotesta67@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-03-06",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-03-06",
+          "data_scadenza": "2026-03-06",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 4,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "SERGIO",
+          "cognome": "PAOLETTI",
+          "codice_fiscale": "PLTSRG80E17H769B",
+          "sesso": "M",
+          "data_nascita": "1980-05-17",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "san benedetto del tronto"
+        },
+        "indirizzo": {
+          "via_piazza": "via rigante",
+          "civico": "44",
+          "provincia": "AP",
+          "comune": "ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3333308016",
+          "email": "SERPAOLETTI@GMAIL.COM"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-01-05",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-01-05",
+          "data_scadenza": "2027-01-05",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 5,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Valerio massimo",
+          "cognome": "ciaralli",
+          "codice_fiscale": "CRLVRM85T14H769K",
+          "sesso": "M",
+          "data_nascita": "1985-12-14",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "AP"
+        },
+        "indirizzo": {
+          "via_piazza": "Corso Giuseppe Mazzini",
+          "civico": "194",
+          "provincia": "AP",
+          "comune": "ASCOLI PICENO",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3392446898",
+          "email": "valeciara1@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-06-24",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-06-24",
+          "data_scadenza": "2026-06-24",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 6,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Riccardo",
+          "cognome": "Morganti",
+          "codice_fiscale": "MRGRCR87B22A462M",
+          "sesso": "M",
+          "data_nascita": "1987-02-22",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "AP"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Pergolesi Gian Battista",
+          "civico": "2",
+          "provincia": "AP",
+          "comune": "ASCOLI PICENO",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3891736001",
+          "email": "riccardinoala@hotmail.it"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-09-23",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-09-23",
+          "data_scadenza": "2026-09-23",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 7,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Giulia",
+          "cognome": "Censori",
+          "codice_fiscale": "CNSGLI90D44A462F",
+          "sesso": "F",
+          "data_nascita": "1990-04-04",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ASCOLI PICENO"
+        },
+        "indirizzo": {
+          "via_piazza": "VIA SARDEGNA",
+          "civico": "7",
+          "provincia": "AP",
+          "comune": "ASCOLI PICENO",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3401477457",
+          "email": "flair.barenclan@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2024-04-12",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2024-04-12",
+          "data_scadenza": "2025-04-12",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 8,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "DANIELE",
+          "cognome": "CHIUCCHIU' MOSCA",
+          "codice_fiscale": "CHCDNL71C25A271X",
+          "sesso": "M",
+          "data_nascita": "1971-03-25",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AN",
+          "comune_nascita": "ANCONA"
+        },
+        "indirizzo": {
+          "via_piazza": "VIA ANTONIO VIVALDI",
+          "civico": "10",
+          "provincia": "AP",
+          "comune": "CASTEL DI LAMA",
+          "cap": "63082"
+        },
+        "contatti": {
+          "telefono": "3203234247",
+          "email": "daniele.chiuchiumosca@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-12-19",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-12-19",
+          "data_scadenza": "2026-12-19",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 9,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Paolo",
+          "cognome": "Paolantoni",
+          "codice_fiscale": "PLNPLA86D05A252J",
+          "sesso": "M",
+          "data_nascita": "1986-04-05",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Amandola"
+        },
+        "indirizzo": {
+          "via_piazza": "Strada casette",
+          "civico": "10",
+          "provincia": "AP",
+          "comune": "ROCCAFLUVIONE",
+          "cap": "63093"
+        },
+        "contatti": {
+          "telefono": "3403806047",
+          "email": "paolantoni.54@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-02-18",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-02-18",
+          "data_scadenza": "2026-02-18",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 10,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Eleonora",
+          "cognome": "Filipponi",
+          "codice_fiscale": "FLPLNR84D47A462Q",
+          "sesso": "F",
+          "data_nascita": "1984-04-07",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Via villa curti",
+          "civico": "10",
+          "provincia": "AP",
+          "comune": "Venarotta",
+          "cap": "63091"
+        },
+        "contatti": {
+          "telefono": "3204866763",
+          "email": "eleonorafil@yahoo.it"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-10-15",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-10-15",
+          "data_scadenza": "2026-10-15",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 11,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Cellini",
+          "cognome": "Nazzareno",
+          "codice_fiscale": "CLLNZR10C17A462M",
+          "sesso": "M",
+          "data_nascita": "2010-03-17",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Scalinata Giacomo Leopardi",
+          "civico": "9",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3479192937",
+          "email": "antonietta_acampora@libero.it"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-07-07",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-07-07",
+          "data_scadenza": "2026-07-07",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 12,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Andrea",
+          "cognome": "Flaiani",
+          "codice_fiscale": "FLNNDR72M26A462Z",
+          "sesso": "M",
+          "data_nascita": "1972-08-26",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ASCOLI PICENO"
+        },
+        "indirizzo": {
+          "via_piazza": "VALLEVENERE",
+          "civico": "16h",
+          "provincia": "AP",
+          "comune": "ASCOLI PICENO",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3407852945",
+          "email": "aflaiani@libero.it"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-07-15",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-07-15",
+          "data_scadenza": "2026-07-15",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 13,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Adriano",
+          "cognome": "Mathlouthi",
+          "codice_fiscale": "MTHDRN08H15G964E",
+          "sesso": "M",
+          "data_nascita": "2008-06-15",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "NA",
+          "comune_nascita": "Pozzuoli"
+        },
+        "indirizzo": {
+          "via_piazza": "strada macchignano",
+          "civico": "112",
+          "provincia": "AP",
+          "comune": "Roccafluvione",
+          "cap": "63093"
+        },
+        "contatti": {
+          "telefono": "3881517747",
+          "email": "virivea4@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-07-02",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-07-02",
+          "data_scadenza": "2026-07-02",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 14,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Giorgio",
+          "cognome": "Ricci",
+          "codice_fiscale": "RCCGRG87L01A462H",
+          "sesso": "M",
+          "data_nascita": "1987-07-01",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Via San serafino da montegranaro",
+          "civico": "2/c",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3404084975",
+          "email": "riccigiorgio87@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-10-31",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-10-31",
+          "data_scadenza": "2026-10-31",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 15,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Mario",
+          "cognome": "Paoli",
+          "codice_fiscale": "PLAMRA79L02E958P",
+          "sesso": "M",
+          "data_nascita": "1979-07-02",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Marino Roma"
+        },
+        "indirizzo": {
+          "via_piazza": "Fraz spelonga",
+          "civico": "168/a",
+          "provincia": "AP",
+          "comune": "Arquata del tronto",
+          "cap": "63096"
+        },
+        "contatti": {
+          "telefono": "3474181356",
+          "email": "paolim79@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-10-01",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-10-01",
+          "data_scadenza": "2026-10-01",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 16,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "ANDREA",
+          "cognome": "SCIAMANNA",
+          "codice_fiscale": "SCMNDR82D02H769X",
+          "sesso": "M",
+          "data_nascita": "1982-04-02",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "san benedetto del tronto"
+        },
+        "indirizzo": {
+          "via_piazza": "VIA EUROPA",
+          "civico": "25",
+          "provincia": "AP",
+          "comune": "VENAROTTA",
+          "cap": "63091"
+        },
+        "contatti": {
+          "telefono": "3249063081",
+          "email": "andreasciamanna0204@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-11-12",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-11-12",
+          "data_scadenza": "2026-11-12",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 17,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Danilo",
+          "cognome": "Clementi",
+          "codice_fiscale": "CLMDNL87T10A462A",
+          "sesso": "M",
+          "data_nascita": "1987-12-10",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Viale della Resistenza",
+          "civico": "58",
+          "provincia": "AP",
+          "comune": "Roccafluvione",
+          "cap": "63093"
+        },
+        "contatti": {
+          "telefono": "3201825042",
+          "email": "daniloclementi@icloud.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-01-22",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-01-22",
+          "data_scadenza": "2027-01-22",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 18,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Fabrizio",
+          "cognome": "Chiot",
+          "codice_fiscale": "CHTFRZ81S22F205W",
+          "sesso": "M",
+          "data_nascita": "1981-11-22",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MI",
+          "comune_nascita": "MI"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Po",
+          "civico": "6",
+          "provincia": "MI",
+          "comune": "SAN DONATO MILANESE",
+          "cap": "20097"
+        },
+        "contatti": {
+          "telefono": "3920115656",
+          "email": "fabrizio.chiot@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-08-20",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-08-20",
+          "data_scadenza": "2026-08-20",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 19,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Alessandro",
+          "cognome": "Cipiglio",
+          "codice_fiscale": "CPGLSN75H19F839Y",
+          "sesso": "M",
+          "data_nascita": "1975-06-19",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "NA",
+          "comune_nascita": "Napoli"
+        },
+        "indirizzo": {
+          "via_piazza": "Via stradivari",
+          "civico": "25",
+          "provincia": "MO",
+          "comune": "Modena",
+          "cap": "41121"
+        },
+        "contatti": {
+          "telefono": "3498546290",
+          "email": "alessandrocipiglio@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-11-07",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-11-07",
+          "data_scadenza": "2026-11-07",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 20,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Mattia",
+          "cognome": "Graziani",
+          "codice_fiscale": "GRZMTT02H11C632Q",
+          "sesso": "M",
+          "data_nascita": "2002-06-11",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "CH",
+          "comune_nascita": "Chieti"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Canonico",
+          "civico": "3",
+          "provincia": "PE",
+          "comune": "Pescara",
+          "cap": "65121"
+        },
+        "contatti": {
+          "telefono": "3478468098",
+          "email": "02mattiagraziani@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-07-28",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-07-28",
+          "data_scadenza": "2026-07-28",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 21,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Ines",
+          "cognome": "Troía",
+          "codice_fiscale": "TRONSI02B60G482J",
+          "sesso": "F",
+          "data_nascita": "2002-02-20",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "PE",
+          "comune_nascita": "Pescara"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Fiume Tavo",
+          "civico": "15",
+          "provincia": "PE",
+          "comune": "Cappelle Sul Tavo",
+          "cap": "65010"
+        },
+        "contatti": {
+          "telefono": "3296699075",
+          "email": "ines.troia.02@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-02-13",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-02-13",
+          "data_scadenza": "2027-02-13",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 22,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Oscar",
+          "cognome": "Losi",
+          "codice_fiscale": "LSOSRV98C05F257D",
+          "sesso": "M",
+          "data_nascita": "1998-03-05",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MO",
+          "comune_nascita": "Modena"
+        },
+        "indirizzo": {
+          "via_piazza": "Via de amicis",
+          "civico": "15",
+          "provincia": "MO",
+          "comune": "Formigine",
+          "cap": "41043"
+        },
+        "contatti": {
+          "telefono": "3342796989",
+          "email": "losioscarvalerio@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-03-28",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-03-28",
+          "data_scadenza": "2026-03-28",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 23,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Mirco",
+          "cognome": "Benatti",
+          "codice_fiscale": "BNTMRC01A05F257T",
+          "sesso": "M",
+          "data_nascita": "2001-01-05",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MO",
+          "comune_nascita": "MO"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Ascanio Sobrero,",
+          "civico": "22",
+          "provincia": "MO",
+          "comune": "Modena",
+          "cap": "41121"
+        },
+        "contatti": {
+          "telefono": "3335768856",
+          "email": "mircobenatti51@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2024-11-22",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2024-11-22",
+          "data_scadenza": "2025-11-22",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 24,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Francesco Maria",
+          "cognome": "Bruno",
+          "codice_fiscale": "BRNFNC00H18F839U",
+          "sesso": "M",
+          "data_nascita": "2000-06-18",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "NA",
+          "comune_nascita": "Napoli"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Dogali",
+          "civico": "57",
+          "provincia": "MO",
+          "comune": "Modena",
+          "cap": "41121"
+        },
+        "contatti": {
+          "telefono": "3334762270",
+          "email": "brunofrancescomaria@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-02-20",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-02-20",
+          "data_scadenza": "2027-02-20",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 25,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Giovanni",
+          "cognome": "Rosario De Conceicao",
+          "codice_fiscale": "RSRGNN01C18H501Q",
+          "sesso": "M",
+          "data_nascita": "2001-03-18",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "RM",
+          "comune_nascita": "RM"
+        },
+        "indirizzo": {
+          "via_piazza": "Viale Libia,",
+          "civico": "185",
+          "provincia": "RM",
+          "comune": "Roma",
+          "cap": "00118"
+        },
+        "contatti": {
+          "telefono": "3661506713",
+          "email": "giorodec18@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-01-20",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-01-20",
+          "data_scadenza": "2027-01-20",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 26,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Mirko",
+          "cognome": "Menabovi",
+          "codice_fiscale": "MNBMRK87S23F257K",
+          "sesso": "M",
+          "data_nascita": "1987-11-23",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MO",
+          "comune_nascita": "Modena"
+        },
+        "indirizzo": {
+          "via_piazza": "via Saluzzo",
+          "civico": "80",
+          "provincia": "MO",
+          "comune": "Modena",
+          "cap": "41121"
+        },
+        "contatti": {
+          "telefono": "3406670871",
+          "email": "angus87@msn.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-02-13",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-02-13",
+          "data_scadenza": "2027-02-13",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 27,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Federica",
+          "cognome": "Farcomeni",
+          "codice_fiscale": "FRCFRC02S54H501V",
+          "sesso": "F",
+          "data_nascita": "2002-11-14",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "RM",
+          "comune_nascita": "RM"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Camilla Virginia Savelli",
+          "civico": "snc",
+          "provincia": "RM",
+          "comune": "Roma",
+          "cap": "00118"
+        },
+        "contatti": {
+          "telefono": "3899548619",
+          "email": "farcomeni.federica02@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-10-07",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-10-07",
+          "data_scadenza": "2026-10-07",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 28,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Andrea",
+          "cognome": "De Salvo",
+          "codice_fiscale": "DSLNDR98R04F257O",
+          "sesso": "M",
+          "data_nascita": "1998-10-04",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MO",
+          "comune_nascita": "Modena"
+        },
+        "indirizzo": {
+          "via_piazza": "Viale della pace",
+          "civico": "38",
+          "provincia": "MO",
+          "comune": "Modena",
+          "cap": "41121"
+        },
+        "contatti": {
+          "telefono": "3407434833",
+          "email": "andredesa98@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-05-16",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-05-16",
+          "data_scadenza": "2026-05-16",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 29,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Giuseppe",
+          "cognome": "Di Giuseppe",
+          "codice_fiscale": "DGSGPP88P24A345K",
+          "sesso": "M",
+          "data_nascita": "1988-09-24",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AQ",
+          "comune_nascita": "L'Aquila"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Giovanni Iannucci",
+          "civico": "12",
+          "provincia": "PE",
+          "comune": "Città Sant'Angelo",
+          "cap": "65013"
+        },
+        "contatti": {
+          "telefono": "3477623042",
+          "email": "giuseppedigiuseppe.it@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-03-12",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-03-12",
+          "data_scadenza": "2026-03-12",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 30,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Chiara",
+          "cognome": "Traglia",
+          "codice_fiscale": "TRGCHR02H63G482N",
+          "sesso": "F",
+          "data_nascita": "2002-06-23",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "PE",
+          "comune_nascita": "Pescara"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Alberto D’Andrea",
+          "civico": "6",
+          "provincia": "PE",
+          "comune": "Montesilvano",
+          "cap": "65015"
+        },
+        "contatti": {
+          "telefono": "3409702566",
+          "email": "chiaratrag@icloud.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-03-12",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-03-12",
+          "data_scadenza": "2026-03-12",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 31,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Andrea",
+          "cognome": "Saccomandi",
+          "codice_fiscale": "SCCNDR92B13A488T",
+          "sesso": "M",
+          "data_nascita": "1992-02-13",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "TE",
+          "comune_nascita": "aTRI"
+        },
+        "indirizzo": {
+          "via_piazza": "Magliorano",
+          "civico": "4",
+          "provincia": "TE",
+          "comune": "Notaresco",
+          "cap": "64024"
+        },
+        "contatti": {
+          "telefono": "3349703808",
+          "email": "andrealegio3@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-03-12",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-03-12",
+          "data_scadenza": "2026-03-12",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 32,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "davide",
+          "cognome": "galteri",
+          "codice_fiscale": "GLTDVD88D13D643X",
+          "sesso": "M",
+          "data_nascita": "1988-04-13",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "PE",
+          "comune_nascita": "PE"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Carlo Pisacane",
+          "civico": "75",
+          "provincia": "PE",
+          "comune": "Pescara",
+          "cap": "65121"
+        },
+        "contatti": {
+          "telefono": "3297926242",
+          "email": "davidegalteri@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-03-24",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-03-24",
+          "data_scadenza": "2027-03-24",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 33,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Davide",
+          "cognome": "Fullone",
+          "codice_fiscale": "FLLDVD85S12L049T",
+          "sesso": "M",
+          "data_nascita": "1985-11-12",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "TA",
+          "comune_nascita": "Taranto"
+        },
+        "indirizzo": {
+          "via_piazza": "Contrada Marulli",
+          "civico": "35",
+          "provincia": "PE",
+          "comune": "Scafa",
+          "cap": "65027"
+        },
+        "contatti": {
+          "telefono": "3286555677",
+          "email": "davidefullone.85@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-06-01",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-06-01",
+          "data_scadenza": "2026-06-01",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 34,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Daniele",
+          "cognome": "Di Masci",
+          "codice_fiscale": "DMSDNL90L17G482G",
+          "sesso": "M",
+          "data_nascita": "1990-07-17",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "PE",
+          "comune_nascita": "Pescara"
+        },
+        "indirizzo": {
+          "via_piazza": "via Vittorio Veneto",
+          "civico": "35",
+          "provincia": "PE",
+          "comune": "Pescara",
+          "cap": "65121"
+        },
+        "contatti": {
+          "telefono": "3334610009",
+          "email": "danieledimasci@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-02-17",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-02-17",
+          "data_scadenza": "2027-02-17",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 35,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Fabio",
+          "cognome": "Tritapepe",
+          "codice_fiscale": "TRTFBA77H28A488S",
+          "sesso": "M",
+          "data_nascita": "1977-06-28",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "PE",
+          "comune_nascita": "Pescara"
+        },
+        "indirizzo": {
+          "via_piazza": "Contrada Piano Scarpara",
+          "civico": "23",
+          "provincia": "PE",
+          "comune": "Civitaquana",
+          "cap": "65010"
+        },
+        "contatti": {
+          "telefono": "393290111389",
+          "email": "fabio.tritapepe@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-03-26",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-03-26",
+          "data_scadenza": "2026-03-26",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 36,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Federico",
+          "cognome": "Prandini",
+          "codice_fiscale": "PRNFRC98M20F257H",
+          "sesso": "M",
+          "data_nascita": "1998-08-20",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MO",
+          "comune_nascita": "Ravarino"
+        },
+        "indirizzo": {
+          "via_piazza": "Via San Rocco",
+          "civico": "278",
+          "provincia": "MO",
+          "comune": "Ravarino",
+          "cap": "41017"
+        },
+        "contatti": {
+          "telefono": "3311150531",
+          "email": "federicoprandini30@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-02-18",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-02-18",
+          "data_scadenza": "2027-02-18",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 37,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Roberto",
+          "cognome": "Prandini",
+          "codice_fiscale": "PRNRRT05D25F257O",
+          "sesso": "M",
+          "data_nascita": "2005-04-25",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MO",
+          "comune_nascita": "Ravarino"
+        },
+        "indirizzo": {
+          "via_piazza": "Via San Rocco",
+          "civico": "278",
+          "provincia": "MO",
+          "comune": "Ravarino",
+          "cap": "41017"
+        },
+        "contatti": {
+          "telefono": "3917490675",
+          "email": "robertoprandini25@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-02-18",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-02-18",
+          "data_scadenza": "2027-02-18",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 38,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "valerio",
+          "cognome": "mannocchi",
+          "codice_fiscale": "MNNVLR94T31A462Z",
+          "sesso": "M",
+          "data_nascita": "1994-12-31",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ascoli piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "via sant'emidio rosso",
+          "civico": "5",
+          "provincia": "AP",
+          "comune": "ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3404701098",
+          "email": "valmannocchi@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-05-18",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-05-18",
+          "data_scadenza": "2026-05-18",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 39,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Rinaldo",
+          "cognome": "Amici",
+          "codice_fiscale": "MCARLD92E31A462W",
+          "sesso": "M",
+          "data_nascita": "1992-05-31",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Antonio Gramsci",
+          "civico": "24/h",
+          "provincia": "AP",
+          "comune": "Roccafluvione",
+          "cap": "63093"
+        },
+        "contatti": {
+          "telefono": "3899657401",
+          "email": "rinaldo.amici@hotmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-01-26",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-01-26",
+          "data_scadenza": "2027-01-26",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 40,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Franklin Sosthenes",
+          "cognome": "Maswi",
+          "codice_fiscale": "MSWFNK85A20Z357T",
+          "sesso": "M",
+          "data_nascita": "1985-01-20",
+          "stato_nascita": "Estero",
+          "provincia_nascita": "EE",
+          "comune_nascita": "Tanzania"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Emidio Luzi",
+          "civico": "2b",
+          "provincia": "AP",
+          "comune": "Ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3294654761",
+          "email": "franklinmaswi@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-10-10",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-10-10",
+          "data_scadenza": "2026-10-10",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 41,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Alessandro",
+          "cognome": "Coppari",
+          "codice_fiscale": "CPPLSN04P10E783B",
+          "sesso": "M",
+          "data_nascita": "2004-09-10",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "MC",
+          "comune_nascita": "Macerata"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Francesco Pais Serra",
+          "civico": "11",
+          "provincia": "RM",
+          "comune": "Roma",
+          "cap": "00118"
+        },
+        "contatti": {
+          "telefono": "3668385354",
+          "email": "copparialexandros@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-11-21",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-11-21",
+          "data_scadenza": "2026-11-21",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 42,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "luca",
+          "cognome": "capponi",
+          "codice_fiscale": "CPPLCU98L19A462E",
+          "sesso": "M",
+          "data_nascita": "1998-07-19",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ascoli piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "via roma",
+          "civico": "90",
+          "provincia": "AP",
+          "comune": "grottammare",
+          "cap": "63066"
+        },
+        "contatti": {
+          "telefono": "3299757141",
+          "email": "lucacapponi80@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-08-20",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-08-20",
+          "data_scadenza": "2026-08-20",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 43,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Gaia",
+          "cognome": "Di Matteo",
+          "codice_fiscale": "DMTGAI01E71A462I",
+          "sesso": "F",
+          "data_nascita": "2001-05-31",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ASCOLI PICENO"
+        },
+        "indirizzo": {
+          "via_piazza": "viale marcello federici",
+          "civico": "56",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3891360296",
+          "email": "agaiadm81@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-03-18",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-03-18",
+          "data_scadenza": "2027-03-18",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 44,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "ALESSIA",
+          "cognome": "FARINA",
+          "codice_fiscale": "FRNLSS85H66A462R",
+          "sesso": "F",
+          "data_nascita": "1985-06-26",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ASCOLI PICENO"
+        },
+        "indirizzo": {
+          "via_piazza": "VIA CORSO DI SOTTO",
+          "civico": "snc",
+          "provincia": "AP",
+          "comune": "ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3284586455",
+          "email": "Alessiafarina2016@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-01-10",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-01-10",
+          "data_scadenza": "2027-01-10",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 45,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "MICHELLE",
+          "cognome": "SCIBELLI",
+          "codice_fiscale": "SCBMHL87C66E507K",
+          "sesso": "F",
+          "data_nascita": "2026-03-26",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "LC",
+          "comune_nascita": "LECCO"
+        },
+        "indirizzo": {
+          "via_piazza": "VIA AURELIA",
+          "civico": "55",
+          "provincia": "IM",
+          "comune": "SAN LORENZO AL MARE",
+          "cap": "18017"
+        },
+        "contatti": {
+          "telefono": "3384238924",
+          "email": "michellescibelli@icloud.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-08-07",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-08-07",
+          "data_scadenza": "2026-08-07",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 46,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "LORENZO",
+          "cognome": "MONTEROSSO",
+          "codice_fiscale": "MNTLNZ94M10E290J",
+          "sesso": "M",
+          "data_nascita": "1994-08-10",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "IM",
+          "comune_nascita": "IMPERIA"
+        },
+        "indirizzo": {
+          "via_piazza": "REGIONE CROSE",
+          "civico": "16",
+          "provincia": "IM",
+          "comune": "CIPRESSA",
+          "cap": "18017"
+        },
+        "contatti": {
+          "telefono": "3496168641",
+          "email": "lomonte94@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-08-07",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-08-07",
+          "data_scadenza": "2026-08-07",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 47,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Arianna",
+          "cognome": "Pagnotta",
+          "codice_fiscale": "PGNRNN96A54A462L",
+          "sesso": "F",
+          "data_nascita": "1996-01-14",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Frazione Lisciano di Colloto",
+          "civico": "5",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3277382428",
+          "email": "pagnottaarianna4@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-08-01",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-08-01",
+          "data_scadenza": "2026-08-01",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 48,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Egor",
+          "cognome": "Umrihin",
+          "codice_fiscale": "MRHGRE95R20Z140H",
+          "sesso": "M",
+          "data_nascita": "1995-10-20",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "IM",
+          "comune_nascita": "TIRASPOL (MDA)"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Alessandro Volta",
+          "civico": "22",
+          "provincia": "IM",
+          "comune": "Sanremo",
+          "cap": "18038"
+        },
+        "contatti": {
+          "telefono": "3200979715",
+          "email": "eumrihin.geo@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-03-24",
+          "livello_copertura": "INTEGRATIVA_B",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-03-24",
+          "data_scadenza": "2027-03-24",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 49,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Jacopo",
+          "cognome": "Ameli",
+          "codice_fiscale": "MLAJCP91M22A462W",
+          "sesso": "M",
+          "data_nascita": "1991-08-22",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Largo degli aranci",
+          "civico": "2",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3476021355",
+          "email": "jacopo.ameli@libero.it"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-03-19",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-03-19",
+          "data_scadenza": "2027-03-19",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 50,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Stefano",
+          "cognome": "Tarquini",
+          "codice_fiscale": "TRQSFN76T25A462X",
+          "sesso": "M",
+          "data_nascita": "1976-12-25",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Adige",
+          "civico": "17",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3889237523",
+          "email": "stefanotarquini1976@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-03-17",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-03-17",
+          "data_scadenza": "2027-03-17",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 52,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "christian",
+          "cognome": "de vecchis",
+          "codice_fiscale": "DVCCRS11S07A462H",
+          "sesso": "M",
+          "data_nascita": "2011-11-07",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ascoli piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "via montenero",
+          "civico": "6",
+          "provincia": "AP",
+          "comune": "ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3200973045",
+          "email": "giuliodv77@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-08-20",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-08-20",
+          "data_scadenza": "2026-08-20",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 53,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Pieralberto",
+          "cognome": "Rosati",
+          "codice_fiscale": "RSTPLB92D24A462R",
+          "sesso": "M",
+          "data_nascita": "1992-04-24",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "ascoli piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "c.so vittorio emanuele",
+          "civico": "21",
+          "provincia": "AP",
+          "comune": "ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3386467224",
+          "email": "pieralbertorosati@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-11-05",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-11-05",
+          "data_scadenza": "2026-11-05",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 54,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Roberto",
+          "cognome": "Capponi",
+          "codice_fiscale": "CPPRRT75E26A462F",
+          "sesso": "M",
+          "data_nascita": "1975-05-26",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Ottaviano iannella",
+          "civico": "13",
+          "provincia": "AP",
+          "comune": "Ascoli piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3343441938",
+          "email": "robcap_75@hotmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-04-28",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-04-28",
+          "data_scadenza": "2027-04-28",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 55,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Fabio",
+          "cognome": "Morganti",
+          "codice_fiscale": "MRGFBA87R17A462X",
+          "sesso": "M",
+          "data_nascita": "1987-10-17",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "AP"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Monte Grappa,",
+          "civico": "9",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3487823944",
+          "email": "f1717@hotmail.it"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2025-11-17",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2025-11-17",
+          "data_scadenza": "2026-11-17",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 56,
+      "errors": [],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Giulio",
+          "cognome": "De Vecchis",
+          "codice_fiscale": "DVCGLI77M28A462E",
+          "sesso": "M",
+          "data_nascita": "1977-08-28",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "AP",
+          "comune_nascita": "Ascoli Piceno"
+        },
+        "indirizzo": {
+          "via_piazza": "via montenero",
+          "civico": "6",
+          "provincia": "AP",
+          "comune": "Ascoli Piceno",
+          "cap": "63100"
+        },
+        "contatti": {
+          "telefono": "3349330929",
+          "email": "giuliodv77@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-04-21",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-04-21",
+          "data_scadenza": "2027-04-21",
+          "file_url": ""
+        }
+      }
+    }
+  ],
+  "errors": [
+    {
+      "original_row": 51,
+      "errors": [
+        "Impossibile trovare il CAP per il comune: Sant’egidio alla vibrata"
+      ],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Benedetta",
+          "cognome": "Colangelo",
+          "codice_fiscale": "CLNBDT01H53I348C",
+          "sesso": "F",
+          "data_nascita": "2001-06-13",
+          "stato_nascita": "Italia",
+          "provincia_nascita": "TE",
+          "comune_nascita": "Sant’omero"
+        },
+        "indirizzo": {
+          "via_piazza": "Via cesare battisti",
+          "civico": "104",
+          "provincia": "TE",
+          "comune": "Sant’egidio alla vibrata",
+          "cap": "00000"
+        },
+        "contatti": {
+          "telefono": "3669512339",
+          "email": "benecolangelo@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-04-02",
+          "livello_copertura": "BASE",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-04-02",
+          "data_scadenza": "2027-04-02",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 57,
+      "errors": [
+        "Provincia di nascita non valida: Torino"
+      ],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Luca",
+          "cognome": "Giuliani",
+          "codice_fiscale": "GLNLCU87S20L219F",
+          "sesso": "M",
+          "data_nascita": "1987-11-20",
+          "stato_nascita": "Italia",
+          "provincia_nascita": null,
+          "comune_nascita": "Torino"
+        },
+        "indirizzo": {
+          "via_piazza": "Via carlotta benettini",
+          "civico": "7",
+          "provincia": "GE",
+          "comune": "Genova",
+          "cap": "16121"
+        },
+        "contatti": {
+          "telefono": "3467342428",
+          "email": "giuliani.lu@yahoo.it"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-05-05",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-05-05",
+          "data_scadenza": "2027-05-05",
+          "file_url": ""
+        }
+      }
+    },
+    {
+      "original_row": 58,
+      "errors": [
+        "Provincia di nascita non valida: Genova"
+      ],
+      "parsed_data": {
+        "anagrafica": {
+          "nome": "Luca",
+          "cognome": "Orsi",
+          "codice_fiscale": "RSOLCU93M31D969N",
+          "sesso": "M",
+          "data_nascita": "1993-08-31",
+          "stato_nascita": "Italia",
+          "provincia_nascita": null,
+          "comune_nascita": "GE"
+        },
+        "indirizzo": {
+          "via_piazza": "Via Del Villone",
+          "civico": "14",
+          "provincia": "GE",
+          "comune": "Rapallo",
+          "cap": "16035"
+        },
+        "contatti": {
+          "telefono": "3401555208",
+          "email": "lucaorsi.lo@gmail.com"
+        },
+        "registro_tesserati": {
+          "stato_tesseramento": "ATTIVO",
+          "data_richiesta_tesseramento": "2026-05-12",
+          "livello_copertura": "INTEGRATIVA_A",
+          "numero_tessera_csen": null
+        },
+        "certificato": {
+          "data_rilascio": "2026-05-12",
+          "data_scadenza": "2027-05-12",
+          "file_url": ""
+        }
+      }
+    }
+  ]
+}

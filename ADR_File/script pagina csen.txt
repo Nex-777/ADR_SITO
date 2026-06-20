@@ -1,0 +1,3182 @@
+
+
+<!DOCTYPE html>
+<html xmlns="https://www.w3.org/1999/xhtml" lang="it">
+<head>
+
+<title>Gestione Tesseramenti - Concept Studio</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta http-equiv="Content-Language" content="it" />
+<meta name="robots" content="noindex">
+<META name="description" content="Gestione Tesseramenti - Concept Studio">
+<META NAME="KEYWORDS" CONTENT="gestione tesseramenti, tesserati, comitati sportivi, sport, associazione, associazioni, asd">
+<meta name="Author" content="Frapa - Concept Studio" />
+<meta name="Copyright" content="Concept Studio" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+
+<link rel="icon" href="pics/favicon.png" />
+
+
+<link href='https://fonts.googleapis.com/css?family=Archivo+Narrow' rel='stylesheet' type='text/css'>
+
+
+
+<link rel="stylesheet" href="/website/asso_gestionetesserati_stylesheet.css">
+
+
+</head>
+
+
+
+<body>
+
+
+<script type="text/javascript">
+function confirmDelete() {
+return confirm("Sei sicuro di voler eliminare questo tesserato?");
+}
+function confirmReset() {
+return confirm("Sei sicuro di voler procedere al rinnovo della tessera? QUESTA AZIONE NON E' REVERSIBILE!!");
+}
+function confirmHardReset() {
+return confirm("Sei sicuro di voler procedere al rinnovo della tessera anche se NON è ancora scaduta? QUESTA AZIONE NON E' REVERSIBILE!!");
+}
+</script>
+
+
+<script type="text/javascript" src="/website/jquery-3.3.1.min.js"></script>
+
+
+
+<script type="text/javascript" src="/website/moment_data_format.js"></script>
+<script>moment.locale('it');</script>
+
+
+
+<div style="text-align: center;">
+<img src="pics/testata.png" style="width: 90%; margin: 10px 0;">
+</div>
+
+
+
+
+<style type="text/css">
+#box {
+position: relative;
+background-color: #6ea0ca;
+padding: 5px 10px;
+border-radius: 5px;
+margin-left: 5px; 
+display: inline;
+z-index: 100;
+color: white;
+}
+#box a {
+color: white;
+}
+#box:hover {
+background-color: red;
+}
+
+#boxsub {
+display: none;
+position: absolute;
+top: 32px;
+left: 0;
+}
+#box:hover > #boxsub {
+display: block;
+text-align: left;
+}
+#box #boxsub #box {
+display: inline-block;
+margin-left: 0;
+border: 1px solid white;
+}
+</style>
+
+<div class="only-desktop" style="position: relative; width: 90%; margin: 0 auto; margin-top: 5px; margin-bottom: 15px; text-align: right;">
+
+<div id="box" style="float: left;">
+<a href="index.asp?what=Admin">
+DATI ASSOCIAZIONE
+</a>
+</div>
+
+
+<div id="box">
+<a href="tesserati.asp?what=Statistiche">
+<img src="/website/icon_stats.png" style="height: 22px; margin-bottom: -6px; margin-left: 3px;">
+</a>
+</div>
+
+<div id="box">
+<a href="tesserati.asp?what=Corsi">
+ATTIVITÀ IST.
+</a>
+</div>
+
+<div id="box">
+<a href="tesserati.asp?what=Mailing">
+MAILING
+</a>
+</div>
+
+<div id="box">
+STAMPA
+
+<div id="boxsub">
+<div id="box">
+<a href="tesserati.asp?what=EsportaLista">
+REGISTRO
+</a>
+</div>
+<div id="box">
+<a href="tesserati.asp?what=AlboVolontari">
+ALBO<span style="opacity:0;">_</span>VOLONTARI
+</a>
+</div>
+<div id="box">
+<a href="tesserati.asp?what=ExportDB">
+ANAGRAFICA
+</a>
+</div>
+<div id="box">
+<a href="tesserati.asp?what=Distinta">
+DISTINTA<span style="opacity:0;">_</span>GARE
+</a>
+</div>
+<div id="box">
+<a href="tesserati.asp?what=PRINT">
+TESSERE
+</a>
+</div>
+</div>
+</div>
+
+<div id="box">
+<a href="tesserati.asp?what=Iscrizioni">
+ISCRIZIONI
+</a>
+</div>
+
+
+<div id="box" style="position: relative;">
+<div style="position: absolute; top: -5px; right: -5px; width: 15px; height: 15px; border-radius: 50%; background: red; color: white; font-size: 10px;"></div>
+<a href="tesserati.asp?what=Ricevute">
+RICEVUTE
+</a>
+</div>
+
+
+
+<div id="box">
+<a href="index.asp?what=Home Page&l=logout">
+ESCI - LOGOUT
+</a>
+</div>
+</div>
+
+
+
+<!-- MENU MOBILE -->
+<div style="text-align: center;"><div class="only-mobile" id="box" onclick="openwin();" style="width: 80%; text-transform: uppercase; text-align: center; margin: 0 auto; margin-bottom: 10px !important;">menu'</div></div>
+
+<div style="position: relative;">
+<div id="menumobile" style="position: absolute; top: 0; left: -100%; width: 95%; z-index: 10000; text-align: center; background: #ececec; border: 2px solid #0093dd; border-radius: 10px; padding: 10px 0; transition: all 1s ease;">
+
+<div id="box"><a href="index.asp?what=Admin">DATI ASSOCIAZIONE</a></div>
+
+<div style="height: 10px;"></div>
+
+
+
+<div id="box"><a href="tesserati.asp?what=Statistiche"><img src="/website/icon_stats.png" style="height: 22px; margin-bottom: -6px; margin-left: 3px;"></a></div>
+<br>
+<div id="box"><a href="tesserati.asp?what=Corsi">ATTIVITÀ IST.</a></div>
+<br>
+<div id="box"><a href="tesserati.asp?what=Mailing">MAILING</a></div>
+<br>
+<div id="box"><a href="tesserati.asp?what=EsportaLista">STAMPA REGISTRO</a></div>
+<br>
+<div id="box"><a href="tesserati.asp?what=AlboVolontari">STAMPA ALBO VOLONTARI</a></div>
+<br>
+<div id="box"><a href="tesserati.asp?what=ExportDB">SCARICA ANAGRAFICA</a></div>
+<br>
+<div id="box"><a href="tesserati.asp?what=PRINT">STAMPA TESSERE</a></div>
+<br>
+<div id="box"><a href="tesserati.asp?what=Iscrizioni">ISCRIZIONI</a></div>
+<br>
+
+
+<div id="box" style="position: relative;">
+<div style="position: absolute; top: -5px; right: -5px; width: 15px; height: 15px; border-radius: 50%; background: red; color: white; font-size: 10px;"></div>
+<a href="tesserati.asp?what=Ricevute">RICEVUTE</a>
+</div>
+
+<br>
+
+
+
+<div style="height: 10px;"></div>
+
+<div id="box"><a href="index.asp?what=Home Page&l=logout">ESCI - LOGOUT</a></div>
+</div>
+</div> <script>
+//document.getElementById("menu").style.left = "-100%";
+function openwin(){
+var x = document.getElementById("menumobile").style.left;
+if (x == "-100%") { document.getElementById("menumobile").style.left = "2%"; }
+else { document.getElementById("menumobile").style.left = "-100%"; }
+}
+</script>
+<!-- FINE MENU MOBILE -->
+
+
+
+
+<div style="position: relative; width: 95%; margin: 0 auto; padding: 10px; border-radius: 10px; background-color: white; box-shadow: 0 0 5px #ccc;">
+
+
+
+
+
+
+<table width="95%" border="0" cellpadding="2" cellspacing="0" align="center">
+<tr><td>
+
+<table width="100%" border="0" cellpadding="2" cellspacing="0"><tr>
+<td class="cell25" width="50%">
+<div style="font-size: 16px;">Sistema di gestione abilitato per l'associazione:<br>
+> <b>ADRENALINA CLUB A.S.D.</b></div>
+<br>
+Nominativi presenti nell'anagrafica: <b>364</b><br>
+
+
+Credito tessere:<br>
+Ultimo accredito Base Silver: <b>21</b> - Residuo: <b>21</b><br> Ultimo accredito Base Gold: <b>10</b> - Residuo: <b>10</b><br> Ultimo accredito Integrativa A: <b>19</b> - Residuo: <b>18</b><br> Ultimo accredito Integrativa B: <b>10</b> - Residuo: <b>10</b><br> 
+
+<div style="margin: 10px 0;"></div>
+</td>
+<td class="cell25" align="center">
+<a href="?what=Inserisci"><img src="pics/admin_add.jpg"></a>
+<div style="margin: 10px 0;"></div>
+</td>
+<td class="cell25" align="center">
+Cerca per Nome/Cognome/Tessera/C.F.:
+<form method="get" action="tesserati.asp"><input type="hidden" name="what" value="show"><input type="text" name="q" style="width: 150px;" minlength="3"><input type="submit" value="Cerca"></form>
+<div style="margin: 10px 0;"></div>
+</td>
+</tr></table>
+
+<br>
+
+<table width="96%" align="center" cellspacing="0" cellpadding="4" class="bg_table_head" style="padding: 3px; border-radius: 5px;">
+<tr>
+<td width="65%" style="text-align: left;">
+
+Elenco tesserati in ordine <select onchange="document.location.href='tesserati.asp?what=show' + this.value;" style="font-size: 12px; margin-top: 0; margin-bottom: 0;"><option value="" selected>Alfabetico</option><option value="&list=dataasc" >Data Tessera Crescente</option><option value="&list=datadesc" >Data Tessera Decrescente</option><option value="&list=tess" >Tessera Crescente</option></select>
+
+<div style="display: inline-block; margin-left: 10px;"> - &nbsp; FILTRA PER MESE <select onchange="document.location.href='tesserati.asp?what=show&list=' + this.value;" style="font-size: 12px; margin-top: 0; margin-bottom: 0;"><option></option><option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option><option value="05">Maggio</option><option value="06">Giugno</option><option value="07">Luglio</option><option value="08">Agosto</option><option value="09">Settembre</option><option value="10">Ottobre</option><option value="11">Novembre</option><option value="12">Dicembre</option></select></div>
+
+</td>
+<td width="35%" style="text-align: center;">
+
+<a href="?what=show&list=scadute"><div style="display: inline-block; background: white; margin: 0 2px; padding: 2px 10px; border-radius: 5px; color: #6EA0CA; font-weight: bold;">TESSERE SCADUTE</div></a>
+<a href="?what=show&list=certificatomedico"><div style="display: inline-block; background: white; margin: 0 2px; padding: 2px 10px; border-radius: 5px; color: #6EA0CA; font-weight: bold;">CERTIFICATI MEDICI SCADUTI</div></a>
+
+</td>
+</tr>
+</table>
+<br>
+
+
+
+<table id="tess31280" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ABRUZZESE</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">LORIS</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BRZLRS97T10D286W</div>
+Qualifica: Tesserato<br>
+Disciplina: CT003<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>10/12/1997</b><br>
+Luogo di nascita: <b>Desio</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>2056888</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 25/06/2024<br>
+Ora di Rilascio: 14:04
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=31280' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info31280(id) {
+var e = document.getElementById("text31280");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info31280('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text31280">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="31280"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="31280"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=31280"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess43158" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AGOSTINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ARIANNA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: GSTRNN95E49A462V</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>09/05/1995</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1912908</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 08/03/2024<br>
+Ora di Rilascio: 16:01
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=43158' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info43158(id) {
+var e = document.getElementById("text43158");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info43158('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text43158">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="43158"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="43158"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=43158"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess41899" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AGOSTINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">GIACOMO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: GSTGCM96A15A462C</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>15/01/1996</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1799100</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 02/02/2024<br>
+Ora di Rilascio: 16:21
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=41899' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info41899(id) {
+var e = document.getElementById("text41899");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info41899('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text41899">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="41899"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="41899"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=41899"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess34392" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AGUZZI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALESSANDRO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: GZZLSN72A20D488F</div>
+Qualifica: Tesserato<br>
+Disciplina: CT003<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>20/01/1972</b><br>
+Luogo di nascita: <b>Fano</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>689495</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 29/06/2023<br>
+Ora di Rilascio: 19:26
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2023
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=34392' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info34392(id) {
+var e = document.getElementById("text34392");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info34392('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text34392">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34392"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34392"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=34392"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess35393" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AIME</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">GIANLUCA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: MAIGLC95D23L219Z</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>23/04/1995</b><br>
+Luogo di nascita: <b>Torino</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1624602</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 26/05/2025<br>
+Ora di Rilascio: 19:14
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=35393' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info35393(id) {
+var e = document.getElementById("text35393");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info35393('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text35393">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="35393"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="35393"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=35393"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess18894" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AISELLI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALESSANDRO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: SLLLSN92A15F205U</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>15/01/1992</b><br>
+Luogo di nascita: <b>Milano</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1678078</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 31/07/2025<br>
+Ora di Rilascio: 17:12
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=18894' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info18894(id) {
+var e = document.getElementById("text18894");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info18894('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text18894">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="18894"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="18894"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=18894"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess34384" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALBERTINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANDREA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LBRNDR07T14A462Y</div>
+Qualifica: Tesserato<br>
+Disciplina: BI001, BI002, CK007, CK009, CT003<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>14/12/2007</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1798410</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 23/01/2024<br>
+Ora di Rilascio: 21:02
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=34384' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info34384(id) {
+var e = document.getElementById("text34384");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info34384('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text34384">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34384"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34384"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=34384"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess34387" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALBERTINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">GIUSEPPE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LBRGPP76C31A462K</div>
+Qualifica: Tesserato<br>
+Disciplina: BI001, BI002, CK007, CK009, CT003<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>31/03/1976</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>689496</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 29/06/2023<br>
+Ora di Rilascio: 19:21
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2023
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=34387' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info34387(id) {
+var e = document.getElementById("text34387");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info34387('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text34387">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34387"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34387"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=34387"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess34385" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALBERTINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">MATTEO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LBRMTT08E31A462V</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>31/05/2008</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1799101</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 02/02/2024<br>
+Ora di Rilascio: 16:15
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=34385' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info34385(id) {
+var e = document.getElementById("text34385");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info34385('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text34385">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34385"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="34385"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=34385"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess41137" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALESI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">DANIELE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LSADNL83S12A462N</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>12/11/1983</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1798367</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 22/01/2024<br>
+Ora di Rilascio: 19:50
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=41137' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info41137(id) {
+var e = document.getElementById("text41137");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info41137('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text41137">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="41137"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="41137"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=41137"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess4684" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALESI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">PAOLO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LSAPLA82R25H769H</div>
+Qualifica: Atleta Agonista<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>25/10/1982</b><br>
+Luogo di nascita: <b>San Benedetto Del Tronto</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1306502</b> - Tipo <b>B</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 11/01/2025<br>
+Ora di Rilascio: 18:41
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=4684' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info4684(id) {
+var e = document.getElementById("text4684");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info4684('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text4684">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="4684"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="4684"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=4684"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess42554" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALESSANDRINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANDREA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LSSNDR78H20A271Y</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>20/06/1978</b><br>
+Luogo di nascita: <b>Ancona</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1439160</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 20/02/2025<br>
+Ora di Rilascio: 12:52
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=42554' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info42554(id) {
+var e = document.getElementById("text42554");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info42554('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text42554">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="42554"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="42554"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=42554"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess53308" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALFINO</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">LEONARDO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LFNLRD10P24I156P</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: CK007, CK009<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>24/09/2010</b><br>
+Luogo di nascita: <b>San Severino Marche</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1400516</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 06/02/2025<br>
+Ora di Rilascio: 23:04
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=53308' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info53308(id) {
+var e = document.getElementById("text53308");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info53308('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text53308">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53308"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53308"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=53308"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess58061" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALLEGRETTI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">RICCARDO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LLGRCR99D17H501O</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>17/04/1999</b><br>
+Luogo di nascita: <b>Roma</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1678112</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 31/07/2025<br>
+Ora di Rilascio: 16:41
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=58061' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info58061(id) {
+var e = document.getElementById("text58061");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info58061('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text58061">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="58061"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="58061"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=58061"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess32394" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALTOMARE</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">DAFNE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LTMDFN01S45E715G</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>05/11/2001</b><br>
+Luogo di nascita: <b>Lucca</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1525330</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 26/03/2025<br>
+Ora di Rilascio: 15:47
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=32394' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info32394(id) {
+var e = document.getElementById("text32394");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info32394('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text32394">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="32394"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="32394"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=32394"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess32393" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ALTOMARE</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">SIRIO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: LTMSRI98C01E715O</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>01/03/1998</b><br>
+Luogo di nascita: <b>Lucca</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1525331</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 26/03/2025<br>
+Ora di Rilascio: 15:48
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=32393' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info32393(id) {
+var e = document.getElementById("text32393");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info32393('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text32393">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="32393"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="32393"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=32393"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess44261" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AMANDOLINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">MASSIMO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: MNDMSM69T28G289R</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>28/12/1969</b><br>
+Luogo di nascita: <b>Palmiano</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1928364</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 04/04/2024<br>
+Ora di Rilascio: 21:30
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=44261' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info44261(id) {
+var e = document.getElementById("text44261");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info44261('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text44261">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="44261"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="44261"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=44261"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess68294" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AMELI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">JACOPO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: MLAJCP91M22A462W</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>22/08/1991</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>26B2244361</b> - Tipo <b>Silver Base Silver</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 04/05/2026<br>
+Ora di Rilascio: 16:11
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2026
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<img src='pics/admin_mod2.jpg'></td><td class='cell5' style='position: relative;'><img src='pics/admin_del2.jpg'>
+</td>
+</tr>
+<script type="text/javascript">
+function info68294(id) {
+var e = document.getElementById("text68294");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info68294('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text68294">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="68294"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="68294"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=68294"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess65160" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AMICI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">RINALDO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: MCARLD92E31A462W</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>31/05/1992</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>26B3268859</b> - Tipo <b>Silver Base Silver</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 27/02/2026<br>
+Ora di Rilascio: 11:27
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2026
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<img src='pics/admin_mod2.jpg'></td><td class='cell5' style='position: relative;'><img src='pics/admin_del2.jpg'>
+</td>
+</tr>
+<script type="text/javascript">
+function info65160(id) {
+var e = document.getElementById("text65160");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info65160('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text65160">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="65160"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="65160"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=65160"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess23172" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AMICUCCI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">DANIELE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: MCCDNL75P09D704E</div>
+Qualifica: Tesserato<br>
+Disciplina: CT003<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>09/09/1975</b><br>
+Luogo di nascita: <b>Forli'</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>3060324</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 14/08/2023<br>
+Ora di Rilascio: 19:50
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2023
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=23172' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info23172(id) {
+var e = document.getElementById("text23172");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info23172('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text23172">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="23172"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="23172"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=23172"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess44263" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANCONETANI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANASTASI</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: NCNNTS95C70A462Q</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>30/03/1995</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1928365</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 04/04/2024<br>
+Ora di Rilascio: 21:35
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=44263' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info44263(id) {
+var e = document.getElementById("text44263");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info44263('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text44263">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="44263"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="44263"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=44263"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess53330" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANGELINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANTONIO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: NGLNTN71M31H501Z</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: CK007, CK009<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>31/08/1971</b><br>
+Luogo di nascita: <b>Roma</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1400519</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 06/02/2025<br>
+Ora di Rilascio: 23:31
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=53330' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info53330(id) {
+var e = document.getElementById("text53330");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info53330('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text53330">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53330"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53330"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=53330"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess30953" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANGELINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">CRISTIANA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: NGLCST87H51A462B</div>
+Qualifica: Tesserato<br>
+Disciplina: BI001, BI002<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>11/06/1987</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>2480444</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 23/02/2023<br>
+Ora di Rilascio: 15:21
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2023
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=30953' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info30953(id) {
+var e = document.getElementById("text30953");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info30953('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text30953">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="30953"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="30953"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=30953"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess44265" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANGELINI MARINUCCI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">VINCENZO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: NGLVCN93P16H769H</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>16/09/1993</b><br>
+Luogo di nascita: <b>San Benedetto Del Tronto</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1928369</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 04/04/2024<br>
+Ora di Rilascio: 21:40
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=44265' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info44265(id) {
+var e = document.getElementById("text44265");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info44265('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text44265">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="44265"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="44265"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=44265"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess36903" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANGELOZZI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">VANDA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: NGLVND90D52A462C</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, CK007, CK009, CT003, DR001<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>12/04/1990</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1387324</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 03/10/2023<br>
+Ora di Rilascio: 13:33
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: <script>document.write(moment('03/10/2023', 'DD-MM-YYYY').add(1, 'year').subtract(1, 'days').format('DD/MM/YYYY'));</script>
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=36903' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info36903(id) {
+var e = document.getElementById("text36903");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info36903('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text36903">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="36903"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="36903"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=36903"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess35401" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ANTONELLI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">CLAUDIO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: NTNCLD57C29C552L</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>29/03/1957</b><br>
+Luogo di nascita: <b>Cerveteri</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1912906</b> - Tipo <b>B</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 08/03/2024<br>
+Ora di Rilascio: 16:04
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=35401' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info35401(id) {
+var e = document.getElementById("text35401");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info35401('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text35401">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="35401"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="35401"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=35401"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess53314" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">APOSTOLI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">MASSIMILIANO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: PSTMSM79B15A462B</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: CK007, CK009<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>15/02/1979</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1400523</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 06/02/2025<br>
+Ora di Rilascio: 23:12
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=53314' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info53314(id) {
+var e = document.getElementById("text53314");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info53314('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text53314">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53314"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53314"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=53314"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess45451" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ARNOLDI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">GABRIELE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: RNLGRL99L03G856G</div>
+Qualifica: Tesserato<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>03/07/1999</b><br>
+Luogo di nascita: <b>Ponte San Pietro</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>2013484</b> - Tipo <b>B</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 24/05/2024<br>
+Ora di Rilascio: 18:00
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2024
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=45451' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info45451(id) {
+var e = document.getElementById("text45451");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info45451('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text45451">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="45451"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="45451"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=45451"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess53874" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ASCOLANI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">MARIAMADDALENA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: SCLMMD48C44H390G</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>04/03/1948</b><br>
+Luogo di nascita: <b>Roccafluvione</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1439064</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 20/02/2025<br>
+Ora di Rilascio: 14:52
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=53874' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info53874(id) {
+var e = document.getElementById("text53874");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info53874('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text53874">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53874"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53874"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=53874"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess45449" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">AVALLONE</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">SIMONE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: VLLSMN98H10F839O</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>10/06/1998</b><br>
+Luogo di nascita: <b>Napoli</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1624655</b> - Tipo <b>B</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 29/05/2025<br>
+Ora di Rilascio: 22:17
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=45449' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info45449(id) {
+var e = document.getElementById("text45449");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info45449('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text45449">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="45449"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="45449"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=45449"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess54976" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BACHETTI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">CLAUDIA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BCHCLD69C63A462M</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>23/03/1969</b><br>
+Luogo di nascita: <b>Ascoli Piceno</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1525269</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 26/03/2025<br>
+Ora di Rilascio: 15:49
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=54976' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info54976(id) {
+var e = document.getElementById("text54976");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info54976('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text54976">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="54976"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="54976"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=54976"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess53329" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BAFFERO</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">ELISA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BFFLSE99H42I828T</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: CK007, CK009<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>02/06/1999</b><br>
+Luogo di nascita: <b>Sondalo</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1400525</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 06/02/2025<br>
+Ora di Rilascio: 23:28
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=53329' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info53329(id) {
+var e = document.getElementById("text53329");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info53329('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text53329">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53329"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="53329"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=53329"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess33510" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BAGGIERIMARTINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">DAVIDE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BGGDVD96L06F205C</div>
+Qualifica: Tesserato<br>
+Disciplina: CT003<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>06/07/1996</b><br>
+Luogo di nascita: <b>Milano</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>2966943</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 27/05/2023<br>
+Ora di Rilascio: 19:16
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2023
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=33510' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info33510(id) {
+var e = document.getElementById("text33510");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info33510('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text33510">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="33510"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="33510"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=33510"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess58057" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BARATTA</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">MARTINA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BRTMTN02M65A326E</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>25/08/2002</b><br>
+Luogo di nascita: <b>Aosta</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1678080</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 31/07/2025<br>
+Ora di Rilascio: 15:20
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=58057' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info58057(id) {
+var e = document.getElementById("text58057");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info58057('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text58057">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="58057"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="58057"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=58057"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess47030" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BARBIERI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">RICCARDO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BRBRCR96H16I496B</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>16/06/1996</b><br>
+Luogo di nascita: <b>Scandiano</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1678113</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 31/07/2025<br>
+Ora di Rilascio: 17:43
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=47030' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info47030(id) {
+var e = document.getElementById("text47030");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info47030('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text47030">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="47030"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="47030"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=47030"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess54974" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BARTOLINI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">PAOLA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BRTPLA72L44A252X</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>04/07/1972</b><br>
+Luogo di nascita: <b>Amandola</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1525270</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 26/03/2025<br>
+Ora di Rilascio: 15:44
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=54974' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info54974(id) {
+var e = document.getElementById("text54974");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info54974('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text54974">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="54974"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="54974"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=54974"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess41891" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BELEGNI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">SIMONE</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BLGSMN00H12A271H</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>12/06/2000</b><br>
+Luogo di nascita: <b>Ancona</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1439161</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 20/02/2025<br>
+Ora di Rilascio: 13:25
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+<img src='../icon_certificatomedico_no.png' title='Certificato emesso il 21/06/2024' style='width: 45px;'><div style='font-size: 9px; line-height: 9px; color: red;'>CERTIFICATO MEDICO<br>SCADUTO</div>
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=41891' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info41891(id) {
+var e = document.getElementById("text41891");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info41891('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text41891">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="41891"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="41891"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=41891"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess23163" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BELLO</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">DANIELA</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BLLDNL88E44D508D</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: CT003<br>
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>04/05/1988</b><br>
+Luogo di nascita: <b>Fasano</b><br>
+<div style="display: inline-block; margin-top: 5px; ">
+N. Tessera: <b>1678054</b> - Tipo <b>Base</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 30/07/2025<br>
+Ora di Rilascio: 20:05
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=23163' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info23163(id) {
+var e = document.getElementById("text23163");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info23163('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text23163">
+<table width="100%"><tr>
+<td>
+
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="23163"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="23163"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=23163"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess43156" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BENATTI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">MIRCO</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BNTMRC01A05F257T</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>05/01/2001</b><br>
+Luogo di nascita: <b>Modena</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>26B3268839</b> - Tipo <b>Silver A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 27/02/2026<br>
+Ora di Rilascio: 10:55
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2026
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<img src='pics/admin_mod2.jpg'></td><td class='cell5' style='position: relative;'><img src='pics/admin_del2.jpg'>
+</td>
+</tr>
+<script type="text/javascript">
+function info43156(id) {
+var e = document.getElementById("text43156");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info43156('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text43156">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="43156"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="43156"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=43156"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+<table id="tess35376" width="96%" align="center" border="0" cellspacing="0" cellpadding="4" style="border-top: 1px solid gray; margin-bottom: 5px;">
+<tr>
+<td class="cell25">
+<b><div id="ToCapitalize" style="display: inline-block; font-size: 20px;">BENEDETTI</div> <div id="ToCapitalize" style="display: inline-block; font-size: 20px;">LORIS</div></b>
+
+<div style="font-size: 14px; text-transform: uppercase; margin-top: 5px;">C.F.: BNDLRS77P19E388O</div>
+Qualifica: Atleta Praticante<br>
+Disciplina: BC002, BI001, BI002, BO001, CK007, CK009, CT003,<br> DR001, CU004
+</td>
+
+<td class="cell25" width="24%">
+Data di nascita: <b>19/09/1977</b><br>
+Luogo di nascita: <b>Jesi</b><br>
+<div style="display: inline-block; margin-top: 5px; padding: 2px 5px; background: yellow;">
+N. Tessera: <b>1678055</b> - Tipo <b>A</b>
+</div>
+</td>
+
+<td class="cell25" width="20%">
+
+Data di Rilascio: 30/07/2025<br>
+Ora di Rilascio: 19:54:11
+
+<div style="margin-top: 5px; color: red;">
+
+Scade il: 31/12/2025
+
+</div>
+
+</td>
+
+
+<td class="cell5" valign="middle" align="center">
+
+</td>
+
+<td class="cell5" valign="middle" align="center">
+<a href='?what=RESET&id=35376' onclick='return confirmReset();'><img src='pics/admin_scaduta.jpg' border='0'></a><div style='font-size: 10px; line-height: 12px;'>Clicca per rinnovare o cancellare!</div>
+</td>
+</tr>
+<script type="text/javascript">
+function info35376(id) {
+var e = document.getElementById("text35376");
+if(e.style.display == 'none')
+e.style.display = 'block';
+else
+e.style.display = 'none';
+}
+</script>
+<tr class="bg_line_head">
+<td colspan="6">
+<div onclick="info35376('button');" style="font-size: 12px; cursor: pointer;"><div style="display: inline-block; background: #6ECAF1; padding: 1px 10px; border-radius: 10px;">+ INFO</div> Dati extra / Stampa Tessera / Ect.</div>
+
+<div style="display: none; margin-top: 5px;" id="text35376">
+<table width="100%"><tr>
+<td>
+<div>E-Mail: <b>maxlength=</b></div>
+</td>
+<td align="right">
+<div style="float: right; margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="35376"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Domanda Adesione"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=adesione"><input type="hidden" name="id" value="35376"><input type="submit" style="padding: 3px; font-size: 11px;" value="Stampa Tessera"></form></div>
+<div style="margin-left: 10px;"><form method="post" action="tesserati.asp?what=options&id=35376"><input type="submit" style="padding: 3px; font-size: 11px;" value="Modifica Dati"></form></div>
+</td>
+</tr></table>
+</div>
+</td>
+</tr>
+</table>
+
+
+
+</td>
+</tr></table>
+
+<br>
+
+<div style="text-align: center; margin: 10px 0;">
+<div style="display: inline;">Vai a Pagina</div> 
+<div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: yellow; color: black;'><b>1</b></div><a href='tesserati.asp?what=show&pagina=2'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>2</b></div></a><a href='tesserati.asp?what=show&pagina=3'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>3</b></div></a><a href='tesserati.asp?what=show&pagina=4'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>4</b></div></a><a href='tesserati.asp?what=show&pagina=5'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>5</b></div></a><a href='tesserati.asp?what=show&pagina=6'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>6</b></div></a><a href='tesserati.asp?what=show&pagina=7'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>7</b></div></a><a href='tesserati.asp?what=show&pagina=8'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>8</b></div></a><a href='tesserati.asp?what=show&pagina=9'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>9</b></div></a><a href='tesserati.asp?what=show&pagina=10'><div style='display: inline-block; padding: 4px 6px; margin: 5px; border-radius: 3px; background: #ccc; color: white;'><b>10</b></div></a>
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div style="display: table; width: 90%; margin: 0 auto;">
+<div style="display: table-cell; width: 5%;">
+</div>
+
+<div style="display: table-cell; text-align: center; vertical-align: middle;">
+<div style="font-size: 11px; font-family: verdana; color: #bbb;">
+&copy; Concept Studio - Portale Gestione Tesserati
+</div>
+</div>
+
+<div style="display: table-cell; width: 5%;">
+<a href="https://www.conceptstudio.it" target="_blank">
+<div style="text-align: right;">
+<img src="/c-logo_anim.png" align="absmiddle" style="padding: 10px 0;">
+</div>
+</a>
+</td>
+</div>
+
+
+
+
+</body>
+</html>
+
+
+

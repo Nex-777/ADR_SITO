@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.49</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.50</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1570,7 +1570,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.49"
+                VERSION: "1.00.50"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1792,7 +1792,10 @@
             const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
             const isApprovedSocio = userRoles.includes('socio_approvato');
 
-            document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario');
+            document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario', 'theme-socio');
+
+            const bannerApprovazioni = document.getElementById('board-alert-approvazioni-banner');
+            if (bannerApprovazioni) bannerApprovazioni.classList.add('hidden');
 
             // Funzione di utilità per nascondere tutti i bottoni tab amministrativi e atleti
             function hideAllTabs() {
@@ -1824,13 +1827,25 @@
                 document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
 
-                if (isApprovedSocio || isBoardMember) {
-                    document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
-                    document.getElementById('tab-btn-bilanci').classList.remove('hidden');
-                }
-
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
+
+                switchTab('user_profilo');
+            } else if (currentViewContext === 'member') {
+                document.body.classList.add('theme-socio');
+                document.getElementById('welcome-title').textContent = "Area Socio";
+                document.getElementById('welcome-subtitle').textContent = "Documentazione e Vita Associativa";
+                document.getElementById('board-stats-grid').classList.add('hidden');
+                document.getElementById('board-alert-board').classList.add('hidden');
+                document.getElementById('user-status-container').classList.add('hidden');
+                
+                // Mostra pulsanti socio
+                document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
+                document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
+                document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
+                document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
+                document.getElementById('tab-btn-bilanci').classList.remove('hidden');
 
                 switchTab('user_profilo');
             } else if (currentViewContext === 'instructor') {
@@ -1874,6 +1889,10 @@
                 document.getElementById('board-alert-board').classList.remove('hidden');
                 document.getElementById('user-status-container').classList.add('hidden');
                 
+                if (bannerApprovazioni && bannerApprovazioni.innerHTML.trim() !== '') {
+                    bannerApprovazioni.classList.remove('hidden');
+                }
+                
                 document.getElementById('tab-btn-approvazioni').classList.remove('hidden');
                 document.getElementById('tab-btn-soci').classList.remove('hidden');
                 document.getElementById('tab-btn-tesserati').classList.remove('hidden');
@@ -1896,11 +1915,13 @@
             if (userRoles.length > 0) {
                 const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
                 const isAthlete = userRoles.some(r => ['socio_approvato', 'tesserato_esterno', 'socio_in_attesa', 'minore'].includes(r));
+                const isSocio = userRoles.includes('socio_approvato');
                 const isInstructor = userRoles.includes('istruttore');
                 const isVolunteer = userRoles.includes('volontario');
 
                 let optionsHTML = '';
                 if (isBoardMember) optionsHTML += '<option value="board">AREA DIRETTIVO</option>';
+                if (isSocio) optionsHTML += '<option value="member">AREA SOCIO</option>';
                 if (isAthlete) optionsHTML += '<option value="athlete">AREA TESSERATO</option>';
                 if (isInstructor) optionsHTML += '<option value="instructor">AREA ISTRUTTORE</option>';
                 if (isVolunteer) optionsHTML += '<option value="volunteer">AREA VOLONTARIO</option>';
@@ -1919,6 +1940,7 @@
                 // Initial selection
                 if (!currentViewContext || !Array.from(switcher.options).find(o => o.value === currentViewContext)) {
                     if (isBoardMember) currentViewContext = 'board';
+                    else if (isSocio) currentViewContext = 'member';
                     else if (isAthlete) currentViewContext = 'athlete';
                     else if (isInstructor) currentViewContext = 'instructor';
                     else if (isVolunteer) currentViewContext = 'volunteer';
@@ -2515,6 +2537,8 @@
                 if (error) throw error;
                 alert("Tesserato attivato con successo! Il profilo è ora visibile nel Registro Tesserati.");
                 loadApprovazioni();
+                loadTesserati();
+                loadStats();
             } catch (error) {
                 console.error("Errore durante l'attivazione:", error);
                 alert("Errore durante l'attivazione: " + error.message);

@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-20] fix | Fix Registry Refresh After Tesserato Activation (v1.00.50)
+- Added `loadTesserati()` and `loadStats()` to the callback of `attivaTesseramentoApprovazioni()` in `portal/dashboard.html` to ensure that when a tesserato is approved/activated, their profile immediately loads into the Registro Tesserati table and the stats update without requiring a manual page refresh.
+- Bumped application version to `1.00.50`.
+
 ## [2026-06-20] fix | SQL Functions Multi-role Array Support (v1.00.49)
 - Redefined SQL stored procedures `approva_tesserato`, `get_user_role`, `elimina_utente_completo`, `elimina_utente_fantasma`, and `salva_verbale_relazionale` on Supabase to support checks against the migrated array type `ruolo_utente[]` instead of the old scalar type `ruolo_utente`.
 - Bumped application version to `1.00.49`.
@@ -12,6 +16,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Fixed error in `portal/dashboard.html` when activating tesserati; corrected RPC function call from `attiva_tesserato` to database-level `approva_tesserato` and populated the missing `p_deciso_da` administrator field.
 - Unified application versioning settings across all config, landing, and dashboard files to version `1.00.48`.
 - Bumped application version to `1.00.48`.
+
+## [2026-06-20] fix | Array Support for RLS Policies
+- Updated all Row Level Security (RLS) policies in the database to correctly support the array structure of `ruolo_utente[]` returned by `get_user_role()`. Previously, policies used the `IN` operator which caused them to fail silently and return empty results (e.g., in `registro_tesserati`). They now use the array overlap `&&` or `ANY()` operators.
+- Updated `elimina_utente_incompleto` stored procedure to correctly typecast and compare array roles.
 
 ## [2026-06-18] fix | Rename dashboard area and enforce single board role (v1.00.47)
 - Renamed "Board Dashboard" option in context switcher to "Area Direttivo".
