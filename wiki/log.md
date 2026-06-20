@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-20] ingest | CSEN Scraper Integration (v1.00.53)
+- Created Playwright scraper script `scripts/scraper_csen.js` to automate reading residual membership cards from the CSEN portal.
+- Configured GitHub Actions workflow `.github/workflows/csen.yml` to run the scraper on a schedule and manually.
+- Integrated tessere status display widget into `portal/dashboard.html` with real-time Supabase integration.
+- Created `csen_status` database table in Supabase.
+- Bumped application version to `1.00.53`.
+
 ## [2026-06-20] fix | Fix Board Members display, Soci & Tesserati numbering, and Medical Certificate dates (v1.00.52)
 - Added `select_consiglio_utenti` and `update_admin_utenti` RLS policies to the `utenti` table on Supabase, resolving the issue where the "Gestione consiglio direttivo" list was empty for the logged-in administrator.
 - Corrected the progressive numbers and status of the 7 board members/soci in `registro_soci` to format `S_XX_2026` and set their status as approved (`data_delibera_direttivo` set to '2026-01-01').

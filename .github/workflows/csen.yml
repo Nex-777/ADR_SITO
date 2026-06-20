@@ -1,0 +1,34 @@
+name: Aggiornamento Tessere CSEN
+
+on:
+  schedule:
+    # Esegui due volte al giorno: alle 06:00 e alle 18:00 UTC
+    - cron: '0 6,18 * * *'
+  workflow_dispatch: # Abilita l'esecuzione manuale da GitHub
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Configurazione Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Installazione dipendenze e Playwright
+        run: |
+          npm ci || npm install
+          npx playwright install --with-deps chromium
+
+      - name: Esecuzione dello Scraper
+        env:
+          CSEN_USER: ${{ secrets.CSEN_USER }}
+          CSEN_PASS: ${{ secrets.CSEN_PASS }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/scraper_csen.js
