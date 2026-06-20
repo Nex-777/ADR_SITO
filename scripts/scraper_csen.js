@@ -1,5 +1,5 @@
-const { chromium } = require('playwright');
-const { createClient } = require('@supabase/supabase-js');
+import { chromium } from 'playwright';
+import { createClient } from '@supabase/supabase-js';
 
 // Configurazione da variabili d'ambiente (GitHub Secrets)
 const CSEN_USER = process.env.CSEN_USER;
