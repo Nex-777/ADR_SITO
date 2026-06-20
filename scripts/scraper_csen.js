@@ -24,15 +24,16 @@ async function scrapeCsen() {
 
     try {
         console.log("1. Navigazione alla pagina di login...");
-        // Assicurati che l'URL sia quello corretto per il login
-        await page.goto('https://conceptstudio.it/website/csenascolipiceno/tesserati.asp');
+        // Andiamo direttamente all'indirizzo principale del portale
+        await page.goto('https://conceptstudio.it/website/csenascolipiceno/');
         
         console.log("2. Inserimento credenziali...");
-        await page.fill('input[type="text"], input[name="login"], input[name="utente"]', CSEN_USER);
-        await page.fill('input[type="password"], input[name="password"], input[name="pwd"]', CSEN_PASS);
+        // Seleziona specificamente i campi del form CSEN
+        await page.fill('input[name="affiliazionecsen"]', CSEN_USER);
+        await page.fill('input[name="password"]', CSEN_PASS);
         
-        // Clicca sul pulsante di invio
-        await page.click('input[type="submit"], button[type="submit"], input[value="Login"], input[value="Accedi"]');
+        // Clicca sul pulsante "Entra"
+        await page.click('input[type="submit"]');
 
         // Aspetta che la pagina si carichi completamente
         await page.waitForLoadState('networkidle');
