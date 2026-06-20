@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-20] fix | SQL Functions Multi-role Array Support (v1.00.49)
+- Redefined SQL stored procedures `approva_tesserato`, `get_user_role`, `elimina_utente_completo`, `elimina_utente_fantasma`, and `salva_verbale_relazionale` on Supabase to support checks against the migrated array type `ruolo_utente[]` instead of the old scalar type `ruolo_utente`.
+- Bumped application version to `1.00.49`.
+
 ## [2026-06-20] fix | Fix Dashboard Tesserati Activation RPC & Align Versions (v1.00.48)
 - Fixed error in `portal/dashboard.html` when activating tesserati; corrected RPC function call from `attiva_tesserato` to database-level `approva_tesserato` and populated the missing `p_deciso_da` administrator field.
 - Unified application versioning settings across all config, landing, and dashboard files to version `1.00.48`.

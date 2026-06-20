@@ -50,6 +50,10 @@
             --color-primary: #d97706; /* Amber-600 */
             --color-primary-dim: #b45309; /* Amber-700 */
         }
+        body.theme-socio {
+            --color-primary: #8b5cf6; /* Violet-500 */
+            --color-primary-dim: #6d28d9; /* Violet-700 */
+        }
         body.theme-istruttore {
             --color-primary: #2563eb; /* Blue-600 */
             --color-primary-dim: #1d4ed8; /* Blue-700 */
@@ -136,9 +140,10 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.48</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.49</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
+                    <option value="member">AREA SOCIO</option>
                     <option value="athlete">AREA TESSERATO</option>
                     <option value="instructor">AREA ISTRUTTORE</option>
                     <option value="volunteer">AREA VOLONTARIO</option>
@@ -1565,7 +1570,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.48"
+                VERSION: "1.00.49"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;

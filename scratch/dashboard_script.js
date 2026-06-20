@@ -227,7 +227,10 @@
             const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
             const isApprovedSocio = userRoles.includes('socio_approvato');
 
-            document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario');
+            document.body.classList.remove('theme-tesserato', 'theme-direttivo', 'theme-istruttore', 'theme-volontario', 'theme-socio');
+
+            const bannerApprovazioni = document.getElementById('board-alert-approvazioni-banner');
+            if (bannerApprovazioni) bannerApprovazioni.classList.add('hidden');
 
             // Funzione di utilità per nascondere tutti i bottoni tab amministrativi e atleti
             function hideAllTabs() {
@@ -261,13 +264,25 @@
                 document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
 
-                if (isApprovedSocio || isBoardMember) {
-                    document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
-                    document.getElementById('tab-btn-bilanci').classList.remove('hidden');
-                }
-
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
+
+                switchTab('user_profilo');
+            } else if (currentViewContext === 'member') {
+                document.body.classList.add('theme-socio');
+                document.getElementById('welcome-title').textContent = "Area Socio";
+                document.getElementById('welcome-subtitle').textContent = "Documentazione e Vita Associativa";
+                document.getElementById('board-stats-grid').classList.add('hidden');
+                document.getElementById('board-alert-board').classList.add('hidden');
+                document.getElementById('user-status-container').classList.add('hidden');
+                
+                // Mostra pulsanti socio
+                document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
+                document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
+                document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
+                document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
+                document.getElementById('tab-btn-bilanci').classList.remove('hidden');
 
                 switchTab('user_profilo');
             } else if (currentViewContext === 'instructor') {
@@ -308,6 +323,10 @@
                 document.getElementById('board-alert-board').classList.remove('hidden');
                 document.getElementById('user-status-container').classList.add('hidden');
                 
+                if (bannerApprovazioni && bannerApprovazioni.innerHTML.trim() !== '') {
+                    bannerApprovazioni.classList.remove('hidden');
+                }
+                
                 document.getElementById('tab-btn-approvazioni').classList.remove('hidden');
                 document.getElementById('tab-btn-soci').classList.remove('hidden');
                 document.getElementById('tab-btn-tesserati').classList.remove('hidden');
@@ -330,11 +349,13 @@
             if (userRoles.length > 0) {
                 const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
                 const isAthlete = userRoles.some(r => ['socio_approvato', 'tesserato_esterno', 'socio_in_attesa', 'minore'].includes(r));
+                const isSocio = userRoles.includes('socio_approvato');
                 const isInstructor = userRoles.includes('istruttore');
                 const isVolunteer = userRoles.includes('volontario');
 
                 let optionsHTML = '';
-                if (isBoardMember) optionsHTML += '<option value="board">BOARD DASHBOARD</option>';
+                if (isBoardMember) optionsHTML += '<option value="board">AREA DIRETTIVO</option>';
+                if (isSocio) optionsHTML += '<option value="member">AREA SOCIO</option>';
                 if (isAthlete) optionsHTML += '<option value="athlete">AREA TESSERATO</option>';
                 if (isInstructor) optionsHTML += '<option value="instructor">AREA ISTRUTTORE</option>';
                 if (isVolunteer) optionsHTML += '<option value="volunteer">AREA VOLONTARIO</option>';
@@ -353,6 +374,7 @@
                 // Initial selection
                 if (!currentViewContext || !Array.from(switcher.options).find(o => o.value === currentViewContext)) {
                     if (isBoardMember) currentViewContext = 'board';
+                    else if (isSocio) currentViewContext = 'member';
                     else if (isAthlete) currentViewContext = 'athlete';
                     else if (isInstructor) currentViewContext = 'instructor';
                     else if (isVolunteer) currentViewContext = 'volunteer';
