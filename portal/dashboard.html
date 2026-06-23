@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.60</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.61</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1829,7 +1829,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.60"
+                VERSION: "1.00.61"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5504,12 +5504,22 @@
 
                     // Certificato Semaforo
                     let semaforoCert = '';
+                    let testoScadenza = 'MANCANTE';
+                    if (atl.cert_scadenza) {
+                        const parts = atl.cert_scadenza.split('-');
+                        if (parts.length === 3) {
+                            testoScadenza = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                        } else {
+                            testoScadenza = atl.cert_scadenza;
+                        }
+                    }
+                    
                     if (atl.cert_stato === 'VERDE' && atl.cert_valido) {
-                        semaforoCert = '<span class="text-green-500 font-bold" title="VALIDO">🟢 VERDE</span>';
+                        semaforoCert = `<span class="text-green-500 font-bold" title="VALIDO">🟢 ${testoScadenza}</span>`;
                     } else if (atl.cert_stato === 'GIALLO' || atl.cert_stato === 'IN_ATTESA') {
-                        semaforoCert = '<span class="text-yellow-500 font-bold" title="IN VALIDAZIONE / SOSPESO">🟡 GIALLO</span>';
+                        semaforoCert = `<span class="text-yellow-500 font-bold" title="IN VALIDAZIONE / SOSPESO">🟡 ${testoScadenza}</span>`;
                     } else {
-                        semaforoCert = `<span class="text-red-500 font-bold" title="SCADUTO O MANCANTE">🔴 ROSSO ${atl.cert_scadenza ? '(' + atl.cert_scadenza + ')' : ''}</span>`;
+                        semaforoCert = `<span class="text-red-500 font-bold" title="SCADUTO O MANCANTE">🔴 ${testoScadenza}</span>`;
                     }
 
                     const checked = isPresente ? 'checked' : '';

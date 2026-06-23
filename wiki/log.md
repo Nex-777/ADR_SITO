@@ -358,3 +358,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Corrected database function prossimo_numero_ricevuta to avoid FOR UPDATE with aggregate functions causing 500 error in webhook.
 - Added missing RLS policies for ricevute_pagamenti and registro_spese.
 - Bumped application version to 1.00.59.
+
+## [2026-06-24] edit | Medical Certificate Display (v1.00.61)
+- Replaced textual color strings ('VERDE', 'GIALLO', 'ROSSO') with expiration date in instructor view for medical certificates.
+- Bumped application version to 1.00.61.
