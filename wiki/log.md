@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-23] fix | Align birth dates and sexes to Codice Fiscale (v1.00.55)
+- Created and executed a database update script to decode Italian Codice Fiscale values for all members.
+- Aligned birth dates and gender fields in the `anagrafiche` table with their official Codice Fiscale data (fixing errors for Valerio Mannocchi, Manuel La Commare, Tito Fabio Paoletti, and Michelle Scibelli).
+- Bumped application version to `1.00.55`.
+
 ## [2026-06-20] fix | CSEN Scraper Manual Trigger & Vercel API (v1.00.54)
 - Modified `portal/dashboard.html` to make "Tessere residue" widget clickable, triggering manual CSEN scraping.
 - Created Vercel serverless function `api/trigger-csen.js` to securely trigger the GitHub Actions workflow via API.
