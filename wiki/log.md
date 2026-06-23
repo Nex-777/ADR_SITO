@@ -346,3 +346,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 
 
+
+## [2026-06-24] fix | Webhook Database and RLS Fix (v1.00.59)
+- Corrected database function prossimo_numero_ricevuta to avoid FOR UPDATE with aggregate functions causing 500 error in webhook.
+- Added missing RLS policies for ricevute_pagamenti and registro_spese.
+- Bumped application version to 1.00.59.
