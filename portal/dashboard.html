@@ -6826,21 +6826,10 @@
         }
         async function fetchCsenStatus() {
             try {
-                if (isDevMode && !supabaseClient) {
-                    document.getElementById('csen-silver').textContent = '21';
-                    document.getElementById('csen-gold').textContent = '10';
-                    document.getElementById('csen-inta').textContent = '18';
-                    document.getElementById('csen-intb').textContent = '10';
-                    document.getElementById('csen-silver').classList.remove('animate-pulse');
-                    document.getElementById('csen-gold').classList.remove('animate-pulse');
-                    document.getElementById('csen-inta').classList.remove('animate-pulse');
-                    document.getElementById('csen-intb').classList.remove('animate-pulse');
-                    return;
-                }
+                // Nessun blocco dev mode qui
                 const { data, error } = await supabaseClient.from('csen_status').select('*').eq('id', 1).single();
                 if (error && error.code !== 'PGRST116') {
                     console.error("Errore fetch CSEN status:", error);
-                    alert("Errore fetch CSEN status: " + JSON.stringify(error));
                     return;
                 }
                 
@@ -6866,7 +6855,6 @@
                 intbEl.classList.remove('animate-pulse');
             } catch (err) {
                 console.error("Errore fetch CSEN status catch:", err);
-                alert("Errore inaspettato in fetch CSEN status: " + err.message);
             }
         }
 
