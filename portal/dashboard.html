@@ -6865,7 +6865,8 @@
                 intaEl.classList.remove('animate-pulse');
                 intbEl.classList.remove('animate-pulse');
             } catch (err) {
-                console.error("Errore fetch CSEN status:", err);
+                console.error("Errore fetch CSEN status catch:", err);
+                alert("Errore inaspettato in fetch CSEN status: " + err.message);
             }
         }
 
