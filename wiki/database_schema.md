@@ -306,3 +306,8 @@ Introdotta con `migration_patch_istruttori_v2.sql` per consolidare le policy e l
 - **`public.iscrizioni_eventi` (UPDATE)**: Aggiunta policy `update_own_iscrizioni` (permette agli atleti di modificare la colonna `orario_libero` delle proprie iscrizioni) e `update_board_iscrizioni` (consente al Direttivo di aggiornare le iscrizioni).
 - **Accesso Istruttori**: Estese le policy di `SELECT` sulle tabelle `utenti`, `anagrafiche`, `registro_soci`, `registro_tesserati` e `certificati_medici` per consentire agli istruttori di visualizzare lo stato (badge/semafori) esclusivamente per gli atleti iscritti ai corsi da loro seguiti.
 
+## 🩹 Patch Ricorsione Policy v3
+
+Introdotta con `migration_patch_istruttori_v3.sql` per risolvere l'errore di ricorsione infinita (codice 500 / 42P17) rilevato durante il caricamento del profilo utente al login:
+- **Prevenzione Ricorsione**: Sostituite sistematicamente le query dirette `(SELECT ruolo FROM public.utenti WHERE id = auth.uid())` con la funzione `SECURITY DEFINER` `public.get_user_role(auth.uid())` su tutte le policy RLS delle tabelle eventi (`eventi`, `iscrizioni_eventi`, `istruttori_eventi`, `presenze_eventi`).
+

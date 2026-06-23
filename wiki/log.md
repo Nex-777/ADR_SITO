@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-23] fix | Policy Recursion Fix (v1.00.58)
+- Creata ed applicata la migrazione `supabase/migration_patch_istruttori_v3.sql` per risolvere un problema di ricorsione infinita (errore 500 / 42P17) sulle policy RLS di `utenti` e `iscrizioni_eventi`.
+- Sostituite sistematicamente le query dirette a `public.utenti` con la chiamata alla funzione `security definer` `public.get_user_role(auth.uid())` per le tabelle eventi, iscrizioni, istruttori e presenze.
+- Allineato il numero di versione a `1.00.58` su `login.html` e `dashboard.html`.
+- Bumped application version to `1.00.58`.
+
 ## [2026-06-23] fix | Patch Istruttori v2 (v1.00.57)
 - Creata ed applicata la migrazione `supabase/migration_patch_istruttori_v2.sql` per aggiornare le policy RLS su `utenti`, `anagrafiche`, `registro_soci`, `registro_tesserati`, `certificati_medici` e `iscrizioni_eventi`.
 - Risolti 13 bug e gap funzionali dell'area istruttori/corsi (BUG-01, BUG-02, BUG-03, BUG-04, BUG-05, BUG-06, BUG-07, GAP-01, GAP-03, RLS-01, RLS-03).
