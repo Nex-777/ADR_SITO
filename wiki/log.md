@@ -4,6 +4,22 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-23] fix | Patch Istruttori v2 (v1.00.57)
+- Creata ed applicata la migrazione `supabase/migration_patch_istruttori_v2.sql` per aggiornare le policy RLS su `utenti`, `anagrafiche`, `registro_soci`, `registro_tesserati`, `certificati_medici` e `iscrizioni_eventi`.
+- Risolti 13 bug e gap funzionali dell'area istruttori/corsi (BUG-01, BUG-02, BUG-03, BUG-04, BUG-05, BUG-06, BUG-07, GAP-01, GAP-03, RLS-01, RLS-03).
+- Aggiunto toggle "Orario Libero" nell'area atleta per consentire agli atleti di dichiarare lo svolgimento del programma fuori orario.
+- Disabilitato il pulsante di salvataggio presenze per prevenire doppi click.
+- Ottimizzate le query con filtri server-side e rimosse ambiguità sulle FK dello storico presenze.
+- Bumped application version to `1.00.57`.
+
+## [2026-06-23] ingest | Istruttori Corsi e Presenze (v1.00.56)
+- Creata la migrazione `supabase/migration_istruttori_corsi.sql` e configurato il database (tabelle `istruttori_eventi`, `presenze_eventi`, RLS, e view `vw_stato_atleta_corso`).
+- Aggiunta interfaccia CRUD Gestione Corsi nel pannello Direttivo (Presidente/Vice Presidente) con orari e piani JSONB.
+- Aggiunta interfaccia Assegnazione Istruttori ai Corsi con calcolo automatico dei differenziali nel pannello Direttivo.
+- Sviluppata l'Area Istruttore con elenco dei corsi assegnati, visualizzazione presenze, widget storico lezioni, e warning visivi per certificati scaduti.
+- Aggiornata la documentazione wiki (`database_schema.md`, `portal_dashboard.md`).
+- Bumped application version to `1.00.56`.
+
 ## [2026-06-23] fix | Align birth dates and sexes to Codice Fiscale (v1.00.55)
 - Created and executed a database update script to decode Italian Codice Fiscale values for all members.
 - Aligned birth dates and gender fields in the `anagrafiche` table with their official Codice Fiscale data (fixing errors for Valerio Mannocchi, Manuel La Commare, Tito Fabio Paoletti, and Michelle Scibelli).

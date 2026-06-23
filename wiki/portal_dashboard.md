@@ -64,3 +64,43 @@ Standard athletes and members (`!isBoardMember` such as `tesserato_esterno` or `
 -   Lists all user payments (memberships, donations, and events).
 -   Provides an action to open a clean printable window containing receipt details (representing the paid invoice).
 
+---
+
+## 🏋️‍♂️ Gestione Corsi ed Eventi (Direttivo)
+
+Aggiunto nella versione **1.00.56**:
+-   **Ruoli Autorizzati**: `presidente` e `vice_presidente`.
+-   **Dashboard Section**: Tab "GESTIONE CORSI" nella sidebar amministrativa.
+-   **Funzionalità CRUD**:
+    -   **Creazione/Modifica Corso**: Modale per inserire titolo, descrizione, luogo, prezzo base, Stripe Price ID e cap massimo partecipanti.
+    -   **Orari Settimanali (JSONB)**: Sezione con checkbox per selezionare i giorni e time picker per l'ora.
+    -   **Piani Abbonamento (JSONB)**: Interfaccia per aggiungere N piani tariffari associati (nome e prezzo).
+    -   **Cancellazione**: Eliminazione logica del corso con cascata automatica su iscrizioni, presenze e assegnazioni.
+-   **Assegnazione Istruttori**:
+    -   Modale attivabile sulla riga del corso per assegnare uno o più istruttori (utenti con ruolo `istruttore`).
+    -   Gestione dei differenziali (inserisce o cancella record in `istruttori_eventi` in base al delta delle checkbox).
+
+---
+
+## 👨‍🏫 Area Istruttore
+
+Aggiunta nella versione **1.00.56**:
+-   **Ruolo Autorizzato**: `istruttore`.
+-   **Dashboard Section**: Tab "I MIEI CORSI" (contesto `instructor` nel switcher).
+-   **Widget 1: I Miei Corsi**:
+    -   Card grid dei corsi in cui l'utente loggato è assegnato come istruttore.
+    -   Visualizza orari settimanali, luogo, numero iscritti totali e quanti di questi usufruiscono dell'orario libero.
+-   **Widget 2: Registro Presenze**:
+    -   **Date Picker**: Consente di registrare presenze per qualsiasi lezione (oggi, passata o futura).
+    -   **Stato Atleti (View vw_stato_atleta_corso)**: Tabella atleti iscritti che visualizza:
+        -   *Fruizione*: Badge "ORARIO LIBERO" o "ORARIO CORSO".
+        -   *Stato Quota*: Stato pagamento abbonamento e quota annuale di iscrizione.
+        -   *Tessera e CSEN*: Validità del tesseramento societario e tesseramento CSEN.
+        -   *Certificato Medico*: Icona semaforo (🟢 Verde, 🟡 Giallo, 🔴 Rosso) e data di scadenza.
+    -   **Registrazione Presenze**: Toggle checkbox per registrare la presenza dell'atleta.
+    -   **Warning Visivi**: Righe contrassegnate con bordo rosso in caso di certificato medico non in regola/scaduto (il salvataggio è comunque consentito).
+-   **Widget 3: Storico Presenze**:
+    -   Visualizza l'elenco delle lezioni passate registrate, con conteggio dei presenti/assenti e l'indicazione dell'operatore che ha effettuato il salvataggio.
+    -   Pulsante di modifica per riaprire il registro presenze per quella determinata data.
+
+

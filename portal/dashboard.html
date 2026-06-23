@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.55</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.57</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -220,6 +220,10 @@
 
                 <button onclick="switchTab('quote')" id="tab-btn-quote" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
                     <span class="material-symbols-outlined text-sm">payments</span> QUOTE E CASSA
+                </button>
+
+                <button onclick="switchTab('gestione_corsi')" id="tab-btn-gestione_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">fitness_center</span> GESTIONE CORSI
                 </button>
 
                 <button onclick="switchTab('contabilita')" id="tab-btn-contabilita" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
@@ -847,6 +851,55 @@
                 </div>
             </div>
 
+            <!-- TAB: GESTIONE CORSI -->
+            <div id="panel-gestione_corsi" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Gestione Corsi ed Eventi</h2>
+                        <p class="text-xs text-gray-500 uppercase">Crea e modifica i programmi dei corsi, i relativi orari e assegna gli istruttori</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="openModalCorso('corso')" class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
+                            NUOVO CORSO
+                        </button>
+                        <button onclick="openModalCorso('evento')" class="border border-white/20 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-white hover:text-black transition-all uppercase">
+                            NUOVO EVENTO
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab Interni Corsi/Eventi -->
+                <div class="flex gap-4 border-b border-white/10 pb-px">
+                    <button id="subtab-btn-corsi" onclick="switchSubTabCorsi('corso')" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide">
+                        CORSI ATTIVI
+                    </button>
+                    <button id="subtab-btn-eventi" onclick="switchSubTabCorsi('evento')" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide">
+                        EVENTI IN PROGRAMMA
+                    </button>
+                </div>
+
+                <!-- Tabella Corsi/Eventi -->
+                <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                            <tr>
+                                <th class="p-4">Titolo</th>
+                                <th class="p-4">Luogo</th>
+                                <th class="p-4" id="col-orari-header">Orari Settimanali</th>
+                                <th class="p-4">Istruttori</th>
+                                <th class="p-4 text-center">N. Iscritti</th>
+                                <th class="p-4 text-right">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corsi-list-body" class="divide-y divide-white/5 uppercase font-mono">
+                            <tr>
+                                <td colspan="6" class="p-4 text-center text-gray-500">Caricamento corsi...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- TAB 10: USER PROFILE (IL MIO PROFILO) -->
             <div id="panel-user_profilo" class="tab-panel space-y-6 hidden">
                 <div>
@@ -1065,19 +1118,103 @@
                 </div>
             </div>
 
-            <!-- TAB 12: CORSI -->
-            <!-- DUMMY PANEL: INSTRUCTOR CORSI -->
+            <!-- TAB 12: AREA ISTRUTTORE -->
             <div id="panel-instructor_corsi" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
+                <!-- WIDGET 1: LISTA CORSI ASSEGNATI -->
+                <div id="instructor-widget-courses" class="space-y-6">
                     <div>
                         <h2 class="font-headline text-lg font-bold uppercase">I Tuoi Corsi (Istruttore)</h2>
-                        <p class="text-xs text-gray-500 uppercase">Gestisci i corsi che insegni e le presenze</p>
+                        <p class="text-xs text-gray-500 uppercase">Seleziona uno dei tuoi corsi assegnati per gestire il registro presenze e verificare lo stato degli iscritti.</p>
+                    </div>
+                    <div id="instructor-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <p class="text-xs text-gray-500 uppercase col-span-full">Caricamento corsi in corso...</p>
                     </div>
                 </div>
-                <div class="border border-white/10 bg-black/40 p-12 text-center text-gray-400">
-                    <span class="material-symbols-outlined text-4xl mb-4 text-primary">school</span>
-                    <p class="font-headline font-bold uppercase tracking-wider text-sm">Dashboard Corsi in Costruzione</p>
-                    <p class="text-xs mt-2">Questa è un'anteprima visiva. L'area istruttore sarà sviluppata nei prossimi task.</p>
+
+                <!-- WIDGET 2: REGISTRO CORSO & STORICO -->
+                <div id="instructor-widget-registro" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <button onclick="closeRegistroCorso()" class="text-xs text-primary hover:underline font-headline font-bold uppercase tracking-wider flex items-center gap-1 mb-2">
+                                <span class="material-symbols-outlined text-xs">arrow_back</span> TORNA AI MIEI CORSI
+                            </button>
+                            <h2 id="instructor-course-detail-title" class="font-headline text-lg font-bold uppercase text-white">NOME CORSO</h2>
+                            <p id="instructor-course-detail-subtitle" class="text-xs text-gray-500 uppercase">REGISTRO PRESENZE E ANAGRAFICHE ATLETI</p>
+                        </div>
+                        <div class="flex gap-2 bg-black border border-white/10 p-1">
+                            <button id="instructor-registro-tab-btn" onclick="toggleInstructorRegistroTab('registro')" class="px-3 py-1.5 font-headline text-xs font-bold uppercase bg-primary text-white transition-all">
+                                REGISTRO APPUNTO
+                            </button>
+                            <button id="instructor-storico-tab-btn" onclick="toggleInstructorRegistroTab('storico')" class="px-3 py-1.5 font-headline text-xs font-bold uppercase text-gray-400 hover:text-white transition-all">
+                                STORICO LEZIONI
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB REGISTRO APPUNTO -->
+                    <div id="instructor-tab-registro" class="space-y-6">
+                        <!-- Date picker + stats header -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-black border border-white/10 p-4">
+                            <div class="space-y-1">
+                                <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">SELEZIONA DATA LEZIONE</label>
+                                <input type="date" id="instructor-presence-date" onchange="onPresenceDateChange()" class="bg-[#121212] border border-white/20 text-white p-2 text-xs font-mono w-full">
+                            </div>
+                            <div class="flex flex-col justify-center">
+                                <p class="text-[9px] text-gray-400 font-headline uppercase">PRESENZE REGISTRATE</p>
+                                <p id="instructor-presence-count" class="text-2xl font-headline font-black text-primary mt-1">0 / 0</p>
+                            </div>
+                            <div class="flex items-center justify-end">
+                                <button onclick="savePresenze()" class="w-full sm:w-auto bg-white text-black font-headline text-xs font-bold px-6 py-3 hover:bg-primary hover:text-white transition-all uppercase">
+                                    SALVA PRESENZE
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tabella Iscritti -->
+                        <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                                    <tr>
+                                        <th class="p-4">Atleta</th>
+                                        <th class="p-4 text-center">Fruizione</th>
+                                        <th class="p-4 text-center">Quota Corso</th>
+                                        <th class="p-4 text-center">Quota Ann.</th>
+                                        <th class="p-4 text-center">Tessera</th>
+                                        <th class="p-4 text-center">CSEN</th>
+                                        <th class="p-4 text-center">Certificato Medico</th>
+                                        <th class="p-4 text-center">Presenza</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="instructor-iscritti-body" class="divide-y divide-white/5 uppercase font-mono">
+                                    <tr>
+                                        <td colspan="8" class="p-4 text-center text-gray-500">Caricamento iscritti...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB STORICO LEZIONI -->
+                    <div id="instructor-tab-storico" class="space-y-6 hidden">
+                        <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                                    <tr>
+                                        <th class="p-4">Data Lezione</th>
+                                        <th class="p-4 text-center">Presenti</th>
+                                        <th class="p-4 text-center">Assenti</th>
+                                        <th class="p-4">Registrato Da</th>
+                                        <th class="p-4 text-right">Azione</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="instructor-storico-body" class="divide-y divide-white/5 uppercase font-mono">
+                                    <tr>
+                                        <td colspan="5" class="p-4 text-center text-gray-500">Nessuna lezione registrata in precedenza.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1529,6 +1666,113 @@
         </div>
     </div>
 
+    <!-- Modal per Nuovo/Modifica Corso -->
+    <div id="modal-corso" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="border border-white/10 bg-[#121212] p-6 max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="modal-corso-title" class="font-headline text-sm font-bold uppercase tracking-wider text-primary">NUOVO CORSO</h3>
+            <div class="space-y-3">
+                <input type="hidden" id="modal-corso-id">
+                <input type="hidden" id="modal-corso-tipo" value="corso">
+                
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TITOLO CORSO *</label>
+                    <input type="text" id="modal-corso-titolo" class="w-full brutalist-input bg-black text-white" placeholder="ES. CORSO ACROBATICA" required>
+                </div>
+                
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DESCRIZIONE</label>
+                    <textarea id="modal-corso-descrizione" class="w-full brutalist-input bg-black text-white h-20" placeholder="DESCRIZIONE DEL CORSO..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">LUOGO *</label>
+                        <input type="text" id="modal-corso-luogo" class="w-full brutalist-input bg-black text-white" placeholder="ES. PALESTRA A" required>
+                    </div>
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">MAX PARTECIPANTI</label>
+                        <input type="number" id="modal-corso-max-partecipanti" class="w-full brutalist-input bg-black text-white" placeholder="ES. 20">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">PREZZO BASE (€)</label>
+                        <input type="number" step="0.01" id="modal-corso-prezzo" class="w-full brutalist-input bg-black text-white" placeholder="ES. 50">
+                    </div>
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">STRIPE PRICE ID</label>
+                        <input type="text" id="modal-corso-stripe-id" class="w-full brutalist-input bg-black text-white" placeholder="price_...">
+                    </div>
+                </div>
+
+                <!-- Orari settimanali (solo per tipo = 'corso') -->
+                <div id="modal-corso-orari-container" class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORARI SETTIMANALI (SELEZIONA GIORNI E ORA)</label>
+                    <div class="border border-white/10 p-3 bg-black space-y-2">
+                        <div class="grid grid-cols-4 gap-2">
+                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="LUN" class="giorno-checkbox bg-black border-white/20 text-primary"> LUN</label>
+                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="MAR" class="giorno-checkbox bg-black border-white/20 text-primary"> MAR</label>
+                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="MER" class="giorno-checkbox bg-black border-white/20 text-primary"> MER</label>
+                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="GIO" class="giorno-checkbox bg-black border-white/20 text-primary"> GIO</label>
+                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="VEN" class="giorno-checkbox bg-black border-white/20 text-primary"> VEN</label>
+                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="SAB" class="giorno-checkbox bg-black border-white/20 text-primary"> SAB</label>
+                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="DOM" class="giorno-checkbox bg-black border-white/20 text-primary"> DOM</label>
+                        </div>
+                        <div class="flex items-center gap-2 pt-2 border-t border-white/5">
+                            <span class="text-[9px] text-gray-400 font-headline">ORA INIZIO:</span>
+                            <input type="time" id="modal-corso-ora" class="bg-black border border-white/20 text-white p-1 text-xs font-mono">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Piani Abbonamento (solo per tipo = 'corso') -->
+                <div id="modal-corso-piani-container" class="group">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase">PIANI ABBONAMENTO EXTRA</label>
+                        <button onclick="addAbbonamentoInput()" class="text-[9px] text-primary hover:underline font-headline font-bold uppercase">+ AGGIUNGI PIANO</button>
+                    </div>
+                    <div id="abbonamenti-list-container" class="space-y-2 max-h-24 overflow-y-auto">
+                        <!-- Inseriti dinamicamente -->
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-4 pt-2">
+                <button onclick="closeModalCorso()" class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all">
+                    ANNULLA
+                </button>
+                <button onclick="saveCorso()" class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all">
+                    SALVA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal per Assegnazione Istruttori -->
+    <div id="modal-assegna-istruttori" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">ASSEGNA ISTRUTTORI</h3>
+            <p id="modal-assegna-istruttori-subtitle" class="text-xs text-gray-400 uppercase">SELEZIONA GLI ISTRUTTORI DA ASSEGNARE AL CORSO</p>
+            <div class="space-y-3">
+                <input type="hidden" id="modal-assegna-evento-id">
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ISTRUTTORI DISPONIBILI</label>
+                    <div id="assegna-istruttori-list" class="flex flex-col gap-2 p-3 bg-black border border-white/20 max-h-60 overflow-y-auto">
+                        <!-- Inseriti dinamicamente -->
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-4 pt-2">
+                <button onclick="closeModalAssegnaIstruttori()" class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all">
+                    ANNULLA
+                </button>
+                <button onclick="submitAssegnaIstruttori()" class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all">
+                    CONFERMA
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal per Nuova Spesa -->
     <div id="modal-spesa" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
         <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4">
@@ -1585,7 +1829,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.55"
+                VERSION: "1.00.57"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1817,7 +2061,7 @@
                 const tabs = [
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
                     'instructor_corsi', 'volunteer_eventi',
-                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci'
+                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi'
                 ];
                 tabs.forEach(tab => {
                     const el = document.getElementById(`tab-btn-${tab}`);
@@ -1913,6 +2157,12 @@
                 document.getElementById('tab-btn-tesserati').classList.remove('hidden');
                 document.getElementById('tab-btn-quote').classList.remove('hidden');
                 document.getElementById('tab-btn-contabilita').classList.remove('hidden');
+                
+                const isPresidentOrVP = userRoles.some(r => ['presidente', 'vice_presidente'].includes(r));
+                if (isPresidentOrVP) {
+                    document.getElementById('tab-btn-gestione_corsi').classList.remove('hidden');
+                }
+
                 document.getElementById('tab-btn-direttivo').classList.remove('hidden');
                 document.getElementById('tab-btn-verbali').classList.remove('hidden');
                 document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
@@ -4583,6 +4833,845 @@
             }
         }
 
+        // ==========================================
+        // GESTIONE CORSI E ASSEGNAZIONE ISTRUTTORI
+        // ==========================================
+        let currentCorsiSubTab = 'corso';
+
+        async function switchSubTabCorsi(tipo) {
+            currentCorsiSubTab = tipo;
+            const corsiBtn = document.getElementById('subtab-btn-corsi');
+            const eventiBtn = document.getElementById('subtab-btn-eventi');
+            const orariHeader = document.getElementById('col-orari-header');
+            
+            if (tipo === 'corso') {
+                if (corsiBtn) corsiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide";
+                if (eventiBtn) eventiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide";
+                if (orariHeader) orariHeader.classList.remove('hidden');
+            } else {
+                if (corsiBtn) corsiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide";
+                if (eventiBtn) eventiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide";
+                if (orariHeader) orariHeader.classList.add('hidden');
+            }
+            await loadGestioneCorsi();
+        }
+
+        async function loadGestioneCorsi() {
+            const tbody = document.getElementById('corsi-list-body');
+            if (!tbody) return;
+            const numCols = currentCorsiSubTab === 'corso' ? 6 : 5;
+            tbody.innerHTML = `<tr><td colspan="${numCols}" class="p-4 text-center text-gray-500">Caricamento in corso...</td></tr>`;
+            try {
+                // Fetch events/courses
+                const { data: eventi, error } = await supabaseClient
+                    .from('eventi')
+                    .select('*')
+                    .eq('tipo', currentCorsiSubTab)
+                    .order('titolo', { ascending: true });
+
+                if (error) throw error;
+                if (!eventi || eventi.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="${numCols}" class="p-4 text-center text-gray-500">Nessun ${currentCorsiSubTab === 'corso' ? 'corso attivo' : 'evento in programma'} trovato.</td></tr>`;
+                    return;
+                }
+
+                // Per visualizzare istruttori ed iscritti facciamo fetch di supporto
+                const { data: istruttori, error: errIst } = await supabaseClient
+                    .from('istruttori_eventi')
+                    .select('*, utenti(id, nome, cognome)');
+                if (errIst) throw errIst;
+
+                const { data: iscrizioni, error: errIsc } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .select('evento_id');
+                if (errIsc) throw errIsc;
+
+                tbody.innerHTML = '';
+                eventi.forEach(evt => {
+                    // Trova istruttori assegnati a questo evento
+                    const assegnati = istruttori
+                        .filter(ie => ie.evento_id === evt.id && ie.utenti)
+                        .map(ie => `${ie.utenti.nome} ${ie.utenti.cognome}`.toUpperCase());
+                    
+                    const istruttoriBadge = assegnati.length > 0 
+                        ? assegnati.map(name => `<span class="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 text-[9px] font-bold mr-1 inline-block">${name}</span>`).join('')
+                        : '<span class="text-gray-500">NESSUNO</span>';
+
+                    // Trova numero iscritti
+                    const nIscritti = iscrizioni.filter(i => i.evento_id === evt.id).length;
+
+                    // Formatta orari
+                    let orariStr = '-';
+                    if (evt.tipo === 'corso' && evt.orari_settimanali) {
+                        try {
+                            const orari = typeof evt.orari_settimanali === 'string' ? JSON.parse(evt.orari_settimanali) : evt.orari_settimanali;
+                            if (Array.isArray(orari)) {
+                                orariStr = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(', ');
+                            }
+                        } catch (e) {
+                            console.error("Errore parse orari:", e);
+                        }
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-white/5 transition-all";
+                    tr.innerHTML = `
+                        <td class="p-4 font-bold text-white">${evt.titolo.toUpperCase()}</td>
+                        <td class="p-4 text-gray-300">${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}</td>
+                        ${currentCorsiSubTab === 'corso' ? `<td class="p-4 text-gray-400 font-mono text-[11px]">${orariStr}</td>` : ''}
+                        <td class="p-4">${istruttoriBadge}</td>
+                        <td class="p-4 text-center font-bold text-white">${nIscritti}</td>
+                        <td class="p-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <button onclick="openModalAssegnaIstruttori('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" class="border border-primary/30 bg-primary/10 text-primary px-3 py-1 font-headline font-bold text-[10px] hover:bg-primary hover:text-white transition-all uppercase">
+                                    Istruttori
+                                </button>
+                                <button onclick="editCorso('${evt.id}')" class="border border-white/20 hover:border-white text-gray-400 hover:text-white px-3 py-1 font-headline font-bold text-[10px] transition-all uppercase">
+                                    Modifica
+                                </button>
+                                <button onclick="deleteCorso('${evt.id}')" class="border border-red-500/30 hover:border-red-500 text-red-500 px-3 py-1 font-headline font-bold text-[10px] transition-all uppercase">
+                                    Elimina
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Errore loadGestioneCorsi:", err);
+                const numCols = currentCorsiSubTab === 'corso' ? 6 : 5;
+                tbody.innerHTML = `<tr><td colspan="${numCols}" class="p-4 text-center text-red-500">Errore: ${err.message}</td></tr>`;
+            }
+        }
+
+        function openModalCorso(tipo) {
+            document.getElementById('modal-corso-id').value = '';
+            document.getElementById('modal-corso-tipo').value = tipo;
+            document.getElementById('modal-corso-title').textContent = tipo === 'corso' ? 'NUOVO CORSO' : 'NUOVO EVENTO';
+            
+            document.getElementById('modal-corso-titolo').value = '';
+            document.getElementById('modal-corso-descrizione').value = '';
+            document.getElementById('modal-corso-luogo').value = '';
+            document.getElementById('modal-corso-max-partecipanti').value = '';
+            document.getElementById('modal-corso-prezzo').value = '';
+            document.getElementById('modal-corso-stripe-id').value = '';
+            
+            // Reset checkbox giorni
+            const checkboxes = document.querySelectorAll('.giorno-checkbox');
+            checkboxes.forEach(c => c.checked = false);
+            document.getElementById('modal-corso-ora').value = '';
+
+            // Reset piani
+            document.getElementById('abbonamenti-list-container').innerHTML = '';
+
+            const orariCont = document.getElementById('modal-corso-orari-container');
+            const pianiCont = document.getElementById('modal-corso-piani-container');
+            
+            if (tipo === 'corso') {
+                if (orariCont) orariCont.classList.remove('hidden');
+                if (pianiCont) pianiCont.classList.remove('hidden');
+            } else {
+                if (orariCont) orariCont.classList.add('hidden');
+                if (pianiCont) pianiCont.classList.add('hidden');
+            }
+
+            document.getElementById('modal-corso').classList.remove('hidden');
+        }
+
+        function closeModalCorso() {
+            document.getElementById('modal-corso').classList.add('hidden');
+        }
+
+        function addAbbonamentoInput(nome = '', prezzo = '') {
+            const container = document.getElementById('abbonamenti-list-container');
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center abbonamento-row";
+            div.innerHTML = `
+                <input type="text" placeholder="NOME PIANO (ES. MENSILE)" value="${nome}" class="flex-1 bg-black border border-white/20 text-white p-1 text-[11px] font-mono plan-name">
+                <input type="number" step="0.01" placeholder="PREZZO" value="${prezzo}" class="w-20 bg-black border border-white/20 text-white p-1 text-[11px] font-mono plan-price">
+                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-400 font-bold px-1 text-xs">X</button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function editCorso(id) {
+            try {
+                const { data: evt, error } = await supabaseClient
+                    .from('eventi')
+                    .select('*')
+                    .eq('id', id)
+                    .single();
+                if (error) throw error;
+
+                document.getElementById('modal-corso-id').value = evt.id;
+                document.getElementById('modal-corso-tipo').value = evt.tipo;
+                document.getElementById('modal-corso-title').textContent = evt.tipo === 'corso' ? 'MODIFICA CORSO' : 'MODIFICA EVENTO';
+                
+                document.getElementById('modal-corso-titolo').value = evt.titolo;
+                document.getElementById('modal-corso-descrizione').value = evt.descrizione || '';
+                document.getElementById('modal-corso-luogo').value = evt.luogo || '';
+                document.getElementById('modal-corso-max-partecipanti').value = evt.max_partecipanti || '';
+                document.getElementById('modal-corso-prezzo').value = evt.prezzo || '';
+                document.getElementById('modal-corso-stripe-id').value = evt.stripe_price_id || '';
+
+                const orariCont = document.getElementById('modal-corso-orari-container');
+                const pianiCont = document.getElementById('modal-corso-piani-container');
+
+                // Reset checkbox giorni
+                const checkboxes = document.querySelectorAll('.giorno-checkbox');
+                checkboxes.forEach(c => c.checked = false);
+                document.getElementById('modal-corso-ora').value = '';
+
+                // Reset piani
+                document.getElementById('abbonamenti-list-container').innerHTML = '';
+
+                if (evt.tipo === 'corso') {
+                    if (orariCont) orariCont.classList.remove('hidden');
+                    if (pianiCont) pianiCont.classList.remove('hidden');
+
+                    // Popola orari
+                    if (evt.orari_settimanali) {
+                        try {
+                            const orari = typeof evt.orari_settimanali === 'string' ? JSON.parse(evt.orari_settimanali) : evt.orari_settimanali;
+                            if (Array.isArray(orari) && orari.length > 0) {
+                                orari.forEach(o => {
+                                    const cb = Array.from(checkboxes).find(c => c.value === o.giorno);
+                                    if (cb) cb.checked = true;
+                                });
+                                document.getElementById('modal-corso-ora').value = orari[0].ora || '';
+                            }
+                        } catch (e) {
+                            console.error("Errore parse orari in edit:", e);
+                        }
+                    }
+
+                    // Popola piani
+                    if (evt.piani_abbonamento) {
+                        try {
+                            const piani = typeof evt.piani_abbonamento === 'string' ? JSON.parse(evt.piani_abbonamento) : evt.piani_abbonamento;
+                            if (Array.isArray(piani)) {
+                                piani.forEach(p => {
+                                    addAbbonamentoInput(p.nome, p.prezzo);
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Errore parse piani in edit:", e);
+                        }
+                    }
+                } else {
+                    if (orariCont) orariCont.classList.add('hidden');
+                    if (pianiCont) pianiCont.classList.add('hidden');
+                }
+
+                document.getElementById('modal-corso').classList.remove('hidden');
+            } catch (err) {
+                alert("Errore caricamento dati corso: " + err.message);
+            }
+        }
+
+        async function saveCorso() {
+            const id = document.getElementById('modal-corso-id').value;
+            const tipo = document.getElementById('modal-corso-tipo').value;
+            const titolo = document.getElementById('modal-corso-titolo').value.trim();
+            const descrizione = document.getElementById('modal-corso-descrizione').value.trim();
+            const luogo = document.getElementById('modal-corso-luogo').value.trim();
+            const maxPartecipantiVal = document.getElementById('modal-corso-max-partecipanti').value;
+            const prezzoVal = document.getElementById('modal-corso-prezzo').value;
+            const stripePriceId = document.getElementById('modal-corso-stripe-id').value.trim();
+
+            if (!titolo || !luogo) {
+                alert("Titolo e Luogo sono obbligatori.");
+                return;
+            }
+
+            const max_partecipanti = maxPartecipantiVal ? parseInt(maxPartecipantiVal) : null;
+            const prezzo = prezzoVal ? parseFloat(prezzoVal) : null;
+
+            let orari_settimanali = null;
+            let piani_abbonamento = null;
+
+            if (tipo === 'corso') {
+                // Costruisci orari settimanali
+                const cbs = document.querySelectorAll('.giorno-checkbox:checked');
+                const ora = document.getElementById('modal-corso-ora').value;
+                if (cbs.length > 0) {
+                    orari_settimanali = Array.from(cbs).map(cb => ({
+                        giorno: cb.value,
+                        ora: ora || '00:00'
+                    }));
+                }
+
+                // Costruisci piani abbonamento
+                const rows = document.querySelectorAll('.abbonamento-row');
+                const piani = [];
+                rows.forEach(r => {
+                    const nomePiano = r.querySelector('.plan-name').value.trim();
+                    const prezzoPiano = parseFloat(r.querySelector('.plan-price').value);
+                    if (nomePiano && !isNaN(prezzoPiano)) {
+                        piani.push({ nome: nomePiano, prezzo: prezzoPiano });
+                    }
+                });
+                if (piani.length > 0) {
+                    piani_abbonamento = piani;
+                }
+            }
+
+            const payload = {
+                titolo,
+                descrizione,
+                tipo,
+                luogo,
+                max_partecipanti,
+                prezzo,
+                stripe_price_id: stripePriceId || null,
+                orari_settimanali,
+                piani_abbonamento
+            };
+
+            try {
+                if (id) {
+                    // Update
+                    const { error } = await supabaseClient
+                        .from('eventi')
+                        .update(payload)
+                        .eq('id', id);
+                    if (error) throw error;
+                    await scriviAuditLog("MODIFICA_EVENTO", "eventi", id, payload);
+                } else {
+                    // Insert
+                    const { data, error } = await supabaseClient
+                        .from('eventi')
+                        .insert(payload)
+                        .select('id')
+                        .single();
+                    if (error) throw error;
+                    await scriviAuditLog("CREAZIONE_EVENTO", "eventi", data.id, payload);
+                }
+
+                alert("Corso/Evento salvato con successo!");
+                closeModalCorso();
+                await loadGestioneCorsi();
+            } catch (err) {
+                alert("Errore durante il salvataggio: " + err.message);
+            }
+        }
+
+        async function deleteCorso(id) {
+            if (!confirm("Sei sicuro di voler eliminare questo corso/evento? Verranno eliminate tutte le iscrizioni, presenze e assegnazioni istruttori associate.")) {
+                return;
+            }
+            try {
+                const { error } = await supabaseClient
+                    .from('eventi')
+                    .delete()
+                    .eq('id', id);
+                if (error) throw error;
+                await scriviAuditLog("ELIMINAZIONE_EVENTO", "eventi", id, { id });
+                alert("Corso/Evento eliminato con successo!");
+                await loadGestioneCorsi();
+            } catch (err) {
+                alert("Errore durante l'eliminazione: " + err.message);
+            }
+        }
+
+        async function openModalAssegnaIstruttori(eventoId, eventoTitolo) {
+            document.getElementById('modal-assegna-evento-id').value = eventoId;
+            document.getElementById('modal-assegna-istruttori-subtitle').textContent = `CORSO: ${eventoTitolo.toUpperCase()}`;
+            
+            const container = document.getElementById('assegna-istruttori-list');
+            container.innerHTML = '<p class="text-xs text-gray-500">Caricamento istruttori...</p>';
+            
+            try {
+                const { data: utenti, error: errUtenti } = await supabaseClient
+                    .from('utenti')
+                    .select('id, nome, cognome, ruolo')
+                    .contains('ruolo', ['istruttore']);
+                
+                if (errUtenti) throw errUtenti;
+                
+                const istruttori = utenti || [];
+
+                if (istruttori.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-gray-500">Nessun utente con ruolo Istruttore registrato.</p>';
+                    document.getElementById('modal-assegna-istruttori').classList.remove('hidden');
+                    return;
+                }
+
+                const { data: assegnazioni, error: errAssegna } = await supabaseClient
+                    .from('istruttori_eventi')
+                    .select('istruttore_id')
+                    .eq('evento_id', eventoId);
+                
+                if (errAssegna) throw errAssegna;
+
+                const assegnatiIds = assegnazioni.map(a => a.istruttore_id);
+
+                container.innerHTML = '';
+                istruttori.forEach(ist => {
+                    const isChecked = assegnatiIds.includes(ist.id) ? 'checked' : '';
+                    const label = document.createElement('label');
+                    label.className = "flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white transition-all";
+                    label.innerHTML = `
+                        <input type="checkbox" value="${ist.id}" ${isChecked} class="istruttore-checkbox bg-black border-white/20 text-primary focus:ring-primary">
+                        <span>${ist.nome.toUpperCase()} ${ist.cognome.toUpperCase()}</span>
+                    `;
+                    container.appendChild(label);
+                });
+
+                document.getElementById('modal-assegna-istruttori').classList.remove('hidden');
+            } catch (err) {
+                alert("Errore caricamento modale assegnazione: " + err.message);
+            }
+        }
+
+        function closeModalAssegnaIstruttori() {
+            document.getElementById('modal-assegna-istruttori').classList.add('hidden');
+        }
+
+        async function submitAssegnaIstruttori() {
+            const eventoId = document.getElementById('modal-assegna-evento-id').value;
+            const checkBoxes = document.querySelectorAll('.istruttore-checkbox');
+            const selectedIds = Array.from(checkBoxes).filter(cb => cb.checked).map(cb => cb.value);
+
+            try {
+                const { data: assegnazioni, error: errAssegna } = await supabaseClient
+                    .from('istruttori_eventi')
+                    .select('istruttore_id')
+                    .eq('evento_id', eventoId);
+                
+                if (errAssegna) throw errAssegna;
+
+                const currentIds = assegnazioni.map(a => a.istruttore_id);
+
+                const daAggiungere = selectedIds.filter(id => !currentIds.includes(id));
+                const daRimuovere = currentIds.filter(id => !selectedIds.includes(id));
+
+                if (daAggiungere.length > 0) {
+                    const inserts = daAggiungere.map(istId => ({
+                        evento_id: eventoId,
+                        istruttore_id: istId
+                    }));
+                    const { error } = await supabaseClient
+                        .from('istruttori_eventi')
+                        .insert(inserts);
+                    if (error) throw error;
+                }
+
+                if (daRimuovere.length > 0) {
+                    const { error } = await supabaseClient
+                        .from('istruttori_eventi')
+                        .delete()
+                        .eq('evento_id', eventoId)
+                        .in('istruttore_id', daRimuovere);
+                    if (error) throw error;
+                }
+
+                await scriviAuditLog("ASSEGNAZIONE_ISTRUTTORI", "istruttori_eventi", eventoId, { aggiunti: daAggiungere, rimossi: daRimuovere });
+                alert("Assegnazione istruttori salvata con successo!");
+                closeModalAssegnaIstruttori();
+                await loadGestioneCorsi();
+            } catch (err) {
+                alert("Errore salvataggio assegnazione istruttori: " + err.message);
+            }
+        }
+
+        // ==========================================
+        // AREA ISTRUTTORI (CORSI E REGISTRO PRESENZE)
+        // ==========================================
+        let instructorSelectedCourseId = null;
+        let instructorStudentsData = [];
+        let instructorPresencesData = {};
+
+        async function loadInstructorCorsi() {
+            const grid = document.getElementById('instructor-courses-grid');
+            if (!grid) return;
+            grid.innerHTML = '<p class="text-xs text-gray-500 uppercase col-span-full">Caricamento corsi in corso...</p>';
+
+            try {
+                if (!currentUser) return;
+
+                // 1. Fetch assigned events
+                const { data: assegnati, error: errAssegna } = await supabaseClient
+                    .from('istruttori_eventi')
+                    .select('*, eventi(*)')
+                    .eq('istruttore_id', currentUser.id);
+
+                if (errAssegna) throw errAssegna;
+
+                if (!assegnati || assegnati.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-full border border-white/10 bg-black/40 p-8 text-center text-gray-500">
+                            <span class="material-symbols-outlined text-3xl mb-2 text-gray-600">info</span>
+                            <p class="font-headline font-bold uppercase tracking-wider text-xs">Nessun corso assegnato</p>
+                            <p class="text-[10px] mt-1">Non sei stato assegnato ad alcun corso dal Consiglio Direttivo.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 2. Fetch enrollment stats for count
+                const eventiIds = assegnati.map(a => a.eventi?.id).filter(Boolean);
+                const { data: iscrizioni, error: errIsc } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .select('evento_id, orario_libero')
+                    .in('evento_id', eventiIds);
+                if (errIsc) throw errIsc;
+
+                grid.innerHTML = '';
+                assegnati.forEach(a => {
+                    const evt = a.eventi;
+                    if (!evt) return;
+
+                    const totalIscritti = iscrizioni.filter(i => i.evento_id === evt.id).length;
+                    const orarioLiberoCount = iscrizioni.filter(i => i.evento_id === evt.id && i.orario_libero).length;
+
+                    // Formatta orari
+                    let orariStr = 'ORARIO NON SPECIFICATO';
+                    if (evt.orari_settimanali) {
+                        try {
+                            const orari = typeof evt.orari_settimanali === 'string' ? JSON.parse(evt.orari_settimanali) : evt.orari_settimanali;
+                            if (Array.isArray(orari)) {
+                                orariStr = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(' | ');
+                            }
+                        } catch (e) {
+                            console.error("Errore parse orari:", e);
+                        }
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = "border border-white/10 p-5 bg-black/40 space-y-4 hover:border-primary/50 transition-all flex flex-col justify-between";
+                    card.innerHTML = `
+                        <div class="space-y-2">
+                            <span class="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest">${evt.tipo}</span>
+                            <h3 class="font-headline text-sm font-bold uppercase text-white">${evt.titolo.toUpperCase()}</h3>
+                            <p class="text-[10px] text-gray-400 font-mono flex items-center gap-1 uppercase">
+                                <span class="material-symbols-outlined text-xs">schedule</span> ${orariStr}
+                            </p>
+                            <p class="text-[10px] text-gray-400 font-mono flex items-center gap-1 uppercase">
+                                <span class="material-symbols-outlined text-xs">location_on</span> LUOGO: ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}
+                            </p>
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                                <div>
+                                    <span class="text-[8px] text-gray-500 font-headline">ISCRITTI TOTALI</span>
+                                    <p class="font-headline font-bold text-white text-xs">${totalIscritti}</p>
+                                </div>
+                                <div>
+                                    <span class="text-[8px] text-gray-500 font-headline">ORARIO LIBERO</span>
+                                    <p class="font-headline font-bold text-yellow-500 text-xs">${orarioLiberoCount}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="openRegistroCorso('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.luogo ? evt.luogo.replace(/'/g, "\\'") : ''}', '${orariStr.replace(/'/g, "\\'")}')" class="w-full bg-white text-black font-headline text-xs font-bold py-2 hover:bg-primary hover:text-white transition-all uppercase tracking-wider">
+                            APRI REGISTRO
+                        </button>
+                    `;
+                    grid.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error("Errore loadInstructorCorsi:", err);
+                grid.innerHTML = `<p class="text-xs text-red-500 uppercase col-span-full">Errore nel caricamento: ${err.message}</p>`;
+            }
+        }
+
+        async function openRegistroCorso(eventoId, title, luogo, orariStr) {
+            instructorSelectedCourseId = eventoId;
+            document.getElementById('instructor-widget-courses').classList.add('hidden');
+            document.getElementById('instructor-widget-registro').classList.remove('hidden');
+
+            document.getElementById('instructor-course-detail-title').textContent = title.toUpperCase();
+            document.getElementById('instructor-course-detail-subtitle').textContent = `ORARIO: ${orariStr.toUpperCase()} | LUOGO: ${luogo.toUpperCase()}`;
+
+            // Reset tabs
+            toggleInstructorRegistroTab('registro');
+
+            // Imposta data a oggi se vuota o non settata
+            const dateInput = document.getElementById('instructor-presence-date');
+            if (dateInput && !dateInput.value) {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
+            }
+
+            await loadRegistroIscritti();
+        }
+
+        function closeRegistroCorso() {
+            instructorSelectedCourseId = null;
+            document.getElementById('instructor-widget-registro').classList.add('hidden');
+            document.getElementById('instructor-widget-courses').classList.remove('hidden');
+            loadInstructorCorsi();
+        }
+
+        function toggleInstructorRegistroTab(tab) {
+            const regTab = document.getElementById('instructor-tab-registro');
+            const storTab = document.getElementById('instructor-tab-storico');
+            const regBtn = document.getElementById('instructor-registro-tab-btn');
+            const storBtn = document.getElementById('instructor-storico-tab-btn');
+
+            if (tab === 'registro') {
+                if (regTab) regTab.classList.remove('hidden');
+                if (storTab) storTab.classList.add('hidden');
+                if (regBtn) regBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase bg-primary text-white transition-all";
+                if (storBtn) storBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase text-gray-400 hover:text-white transition-all";
+                loadRegistroIscritti();
+            } else {
+                if (regTab) regTab.classList.add('hidden');
+                if (storTab) storTab.classList.remove('hidden');
+                if (regBtn) regBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase text-gray-400 hover:text-white transition-all";
+                if (storBtn) storBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase bg-primary text-white transition-all";
+                loadStoricoPresenze();
+            }
+        }
+
+        async function onPresenceDateChange() {
+            await loadRegistroIscritti();
+        }
+
+        async function loadRegistroIscritti() {
+            if (!instructorSelectedCourseId) return;
+
+            const tbody = document.getElementById('instructor-iscritti-body');
+            const countDisplay = document.getElementById('instructor-presence-count');
+            const dateInput = document.getElementById('instructor-presence-date');
+
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-500">Caricamento iscritti...</td></tr>';
+
+            const dataSelezionata = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
+            try {
+                // 1. Fetch from VIEW
+                const { data: atleti, error: errAtleti } = await supabaseClient
+                    .from('vw_stato_atleta_corso')
+                    .select('*')
+                    .eq('evento_id', instructorSelectedCourseId)
+                    .order('cognome', { ascending: true });
+
+                if (errAtleti) throw errAtleti;
+
+                // 2. Fetch presences for selected date
+                const { data: presenze, error: errPresenze } = await supabaseClient
+                    .from('presenze_eventi')
+                    .select('utente_id, presente')
+                    .eq('evento_id', instructorSelectedCourseId)
+                    .eq('data_lezione', dataSelezionata);
+
+                if (errPresenze) throw errPresenze;
+
+                instructorStudentsData = atleti || [];
+                instructorPresencesData = {};
+                presenze.forEach(p => {
+                    instructorPresencesData[p.utente_id] = p.presente;
+                });
+
+                if (instructorStudentsData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-500">Nessun atleta iscritto a questo corso.</td></tr>';
+                    if (countDisplay) countDisplay.textContent = '0 / 0';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                let presentiCount = 0;
+
+                instructorStudentsData.forEach(atl => {
+                    const isPresente = instructorPresencesData[atl.utente_id] === true;
+                    if (isPresente) presentiCount++;
+
+                    // Warning per certificato non valido
+                    const warningStyle = !atl.cert_valido ? 'border-l-4 border-red-500 bg-red-500/5' : '';
+                    const certTooltip = !atl.cert_valido ? 'title="⚠ CERTIFICATO MEDICO NON IN REGOLA O SCADUTO"' : '';
+
+                    // Badge Rendering
+                    const badgeOrario = atl.orario_libero 
+                        ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold">ORARIO LIBERO</span>'
+                        : '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">ORARIO CORSO</span>';
+
+                    const badgeQuotaCorso = atl.stato_pagamento === 'PAGATO'
+                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">PAGATO</span>'
+                        : (atl.stato_pagamento === 'GRATUITO' ? '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">GRATUITO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA PAGARE</span>');
+
+                    const badgeQuotaAnn = atl.quota_annuale_ok
+                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">IN REGOLA</span>'
+                        : `<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA COPRIRE (€${atl.quota_totale})</span>`;
+
+                    const badgeTessera = atl.tessera_valida
+                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">ATTIVA</span>'
+                        : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">SCADUTA</span>';
+
+                    const badgeCsen = atl.stato_tesseramento === 'ATTIVO'
+                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">ATTIVO</span>'
+                        : (atl.stato_tesseramento === 'SOSPESO' ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold">SOSPESO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">SCADUTO</span>');
+
+                    // Certificato Semaforo
+                    let semaforoCert = '';
+                    if (atl.cert_stato === 'VERDE' && atl.cert_valido) {
+                        semaforoCert = '<span class="text-green-500 font-bold" title="VALIDO">🟢 VERDE</span>';
+                    } else if (atl.cert_stato === 'GIALLO' || atl.cert_stato === 'IN_ATTESA') {
+                        semaforoCert = '<span class="text-yellow-500 font-bold" title="IN VALIDAZIONE / SOSPESO">🟡 GIALLO</span>';
+                    } else {
+                        semaforoCert = `<span class="text-red-500 font-bold" title="SCADUTO O MANCANTE">🔴 ROSSO ${atl.cert_scadenza ? '(' + atl.cert_scadenza + ')' : ''}</span>`;
+                    }
+
+                    const checked = isPresente ? 'checked' : '';
+
+                    const tr = document.createElement('tr');
+                    tr.className = `hover:bg-white/5 transition-all ${warningStyle}`;
+                    tr.setAttribute('data-atleta-id', atl.utente_id);
+                    tr.innerHTML = `
+                        <td class="p-4 font-bold text-white uppercase flex items-center gap-2" ${certTooltip}>
+                            ${!atl.cert_valido ? '<span class="text-red-500 font-bold">⚠</span>' : ''}
+                            ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
+                        </td>
+                        <td class="p-4 text-center">${badgeOrario}</td>
+                        <td class="p-4 text-center">${badgeQuotaCorso}</td>
+                        <td class="p-4 text-center">${badgeQuotaAnn}</td>
+                        <td class="p-4 text-center">${badgeTessera}</td>
+                        <td class="p-4 text-center">${badgeCsen}</td>
+                        <td class="p-4 text-center font-mono text-[11px]">${semaforoCert}</td>
+                        <td class="p-4 text-center">
+                            <input type="checkbox" ${checked} onchange="updatePresenceCount()" class="presence-toggle-chk form-checkbox h-4 w-4 bg-black border-white/20 text-primary focus:ring-primary">
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                if (countDisplay) countDisplay.textContent = `${presentiCount} / ${instructorStudentsData.length}`;
+
+            } catch (err) {
+                console.error("Errore loadRegistroIscritti:", err);
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-red-500">Errore: ${err.message}</td></tr>`;
+            }
+        }
+
+        function updatePresenceCount() {
+            const chks = document.querySelectorAll('.presence-toggle-chk');
+            const total = chks.length;
+            const checked = Array.from(chks).filter(c => c.checked).length;
+            const countDisplay = document.getElementById('instructor-presence-count');
+            if (countDisplay) {
+                countDisplay.textContent = `${checked} / ${total}`;
+            }
+        }
+
+        async function savePresenze() {
+            if (!instructorSelectedCourseId) return;
+
+            const dateInput = document.getElementById('instructor-presence-date');
+            if (!dateInput || !dateInput.value) {
+                alert("Data lezione non valida.");
+                return;
+            }
+
+            const btn = document.querySelector('button[onclick="savePresenze()"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'SALVATAGGIO IN CORSO...';
+            }
+
+            const dataLezione = dateInput.value;
+            const rows = document.querySelectorAll('#instructor-iscritti-body tr[data-atleta-id]');
+            const upserts = [];
+
+            rows.forEach(r => {
+                const utenteId = r.getAttribute('data-atleta-id');
+                const presente = r.querySelector('.presence-toggle-chk').checked;
+                upserts.push({
+                    evento_id: instructorSelectedCourseId,
+                    utente_id: utenteId,
+                    data_lezione: dataLezione,
+                    presente: presente,
+                    registrato_da: currentUser.id
+                });
+            });
+
+            try {
+                const { error } = await supabaseClient
+                    .from('presenze_eventi')
+                    .upsert(upserts, { onConflict: 'evento_id,utente_id,data_lezione' });
+
+                if (error) throw error;
+
+                await scriviAuditLog("REGISTRAZIONE_PRESENZE", "presenze_eventi", instructorSelectedCourseId, { data: dataLezione, count: upserts.length });
+                alert("Presenze registrate con successo!");
+                await loadRegistroIscritti();
+            } catch (err) {
+                alert("Errore nel salvataggio delle presenze: " + err.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'SALVA PRESENZE';
+                }
+            }
+        }
+
+        async function loadStoricoPresenze() {
+            if (!instructorSelectedCourseId) return;
+
+            const tbody = document.getElementById('instructor-storico-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Caricamento storico...</td></tr>';
+
+            try {
+                const { data: presenze, error } = await supabaseClient
+                    .from('presenze_eventi')
+                    .select('data_lezione, presente, registrato_da, utenti:utenti!presenze_eventi_registrato_da_fkey(nome, cognome)')
+                    .eq('evento_id', instructorSelectedCourseId)
+                    .order('data_lezione', { ascending: false });
+
+                if (error) throw error;
+
+                if (!presenze || presenze.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Nessuna lezione registrata in precedenza.</td></tr>';
+                    return;
+                }
+
+                const dateGroup = {};
+                presenze.forEach(p => {
+                    const d = p.data_lezione;
+                    if (!dateGroup[d]) {
+                        dateGroup[d] = {
+                            presenti: 0,
+                            assenti: 0,
+                            registratoDa: p.utenti ? `${p.utenti.nome} ${p.utenti.cognome}`.toUpperCase() : 'N/D'
+                        };
+                    }
+                    if (p.presente) dateGroup[d].presenti++;
+                    else dateGroup[d].assenti++;
+                });
+
+                tbody.innerHTML = '';
+                Object.keys(dateGroup).forEach(dateStr => {
+                    const stat = dateGroup[dateStr];
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-white/5 transition-all";
+                    tr.innerHTML = `
+                        <td class="p-4 font-bold text-white font-mono">${dateStr}</td>
+                        <td class="p-4 text-center text-green-500 font-bold">${stat.presenti}</td>
+                        <td class="p-4 text-center text-gray-500">${stat.assenti}</td>
+                        <td class="p-4 text-gray-400">${stat.registratoDa}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="loadPresenzaDataStorico('${dateStr}')" class="border border-white/20 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white hover:text-black transition-all uppercase">
+                                Modifica Presenze
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error("Errore loadStoricoPresenze:", err);
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Errore: ${err.message}</td></tr>`;
+            }
+        }
+
+        function loadPresenzaDataStorico(dataStr) {
+            const dateInput = document.getElementById('instructor-presence-date');
+            if (dateInput) {
+                dateInput.value = dataStr;
+            }
+            toggleInstructorRegistroTab('registro');
+        }
+
         // Tab Switching Logic
         function switchTab(tabId) {
             // Nasconde tutti i pannelli
@@ -4591,6 +5680,15 @@
 
             // Mostra il pannello attivo
             document.getElementById(`panel-${tabId}`).classList.remove('hidden');
+
+            // Hook per caricamento dati
+            if (tabId === 'gestione_corsi') {
+                loadGestioneCorsi();
+            } else if (tabId === 'instructor_corsi') {
+                loadInstructorCorsi();
+            } else if (tabId === 'user_corsi' || tabId === 'user_eventi') {
+                loadUserEventi();
+            }
 
             // Reset stile bottoni navigation
             const navButtons = document.querySelectorAll('aside button');
@@ -5400,6 +6498,10 @@
                                     </div>
                                     <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>
                                     <p class="text-[9px] text-gray-500">Luogo: ${escapeHtml(ev.luogo || 'Sede Club')}</p>
+                                    <label class="flex items-center gap-2 mt-2 text-[10px] text-gray-300 cursor-pointer hover:text-white transition-all normal-case font-sans">
+                                        <input type="checkbox" onchange="toggleOrarioLibero('${ev.id}', this.checked)" ${iscr.orario_libero ? 'checked' : ''} class="bg-black border-white/20 text-primary focus:ring-primary">
+                                        <span>Orario Libero (svolgo il programma fuori orario)</span>
+                                    </label>
                                 </div>
                             `;
                         }).join('');
@@ -5433,6 +6535,21 @@
                 console.error("Errore caricamento eventi:", err);
             }
         }
+
+        window.toggleOrarioLibero = async function(eventoId, value) {
+            try {
+                if (!currentUser) return;
+                const { error } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .update({ orario_libero: value })
+                    .eq('evento_id', eventoId)
+                    .eq('utente_id', currentUser.id);
+                if (error) throw error;
+            } catch (err) {
+                console.error("Errore salvataggio orario libero:", err);
+                alert("Errore durante il salvataggio: " + err.message);
+            }
+        };
 
         window.aggiornaPrezzoCard = function(eventoId) {
             const select = document.getElementById(`plan-select-${eventoId}`);

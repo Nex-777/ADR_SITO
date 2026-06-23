@@ -84,7 +84,7 @@ ALTER TABLE public.verbali_consiglio ENABLE ROW LEVEL SECURITY;
 
 -- Helper function per determinare il ruolo dell'utente loggato
 CREATE OR REPLACE FUNCTION public.get_user_role(user_id UUID)
-RETURNS public.ruolo_utente AS $$
+RETURNS public.ruolo_utente[] AS $$
     SELECT ruolo FROM public.utenti WHERE id = user_id;
 $$ LANGUAGE sql SECURITY DEFINER;
 

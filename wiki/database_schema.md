@@ -200,3 +200,109 @@ The registry utilizes gapless progressive numbers for both Soci and Tesserati:
 -   **Soci**: Format `S-N/ANNO` (e.g. `S-1/2026`). Assigned upon council minute registration.
 -   **Tesserati**: Format `T-N/ANNO` (e.g. `T-1/2026`). Assigned upon president/vp activation in the dashboard.
 -   **Methodology**: Handled securely on the database layer via `next_registro_number(tipo, anno)` generator function called within the atomic transactions (`salva_verbale_relazionale` and `approva_tesserato`).
+
+---
+
+## 🏋️‍♂️ Gestione Corsi, Istruttori e Presenze (Riforma 2026)
+
+Le seguenti tabelle, colonne e viste supportano il sistema di assegnazione istruttori e registro presenze introdotto a Giugno 2026:
+
+### 1. Colonne aggiuntive su `public.eventi`
+- `tipo` (`varchar`): Distingue tra `'corso'` (corsi ricorrenti settimanali) e `'evento'` (singolo evento o stage).
+- `orari_settimanali` (`jsonb`): Contiene la programmazione dei giorni e orari del corso (es. `[{"giorno": "LUN", "ora": "18:00"}, {"giorno": "MER", "ora": "18:00"}]`).
+- `piani_abbonamento` (`jsonb`): Contiene i piani di pagamento associabili al corso (es. `[{"nome": "Mensile", "prezzo": 50}]`).
+
+### 2. Colonne aggiuntive su `public.iscrizioni_eventi`
+- `orario_libero` (`boolean`): Specifica se l'atleta usufruisce del corso al di fuori degli orari previsti (orario libero, default `false`).
+
+### 3. Nuova tabella `public.istruttori_eventi`
+Mappa l'assegnazione molti-a-molti degli istruttori ai corsi.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Chiave primaria. |
+| `evento_id` | `uuid` (FK) | Riferimento a `public.eventi(id)` ON DELETE CASCADE. |
+| `istruttore_id` | `uuid` (FK) | Riferimento a `public.utenti(id)` ON DELETE CASCADE. |
+| `data_assegnazione` | `timestamptz` | Data e ora dell'assegnazione. |
+
+### 4. Nuova tabella `public.presenze_eventi`
+Tiene traccia delle presenze degli atleti registrate dagli istruttori lezione per lezione.
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Chiave primaria. |
+| `evento_id` | `uuid` (FK) | Riferimento a `public.eventi(id)` ON DELETE CASCADE. |
+| `utente_id` | `uuid` (FK) | Riferimento a `public.utenti(id)` ON DELETE CASCADE. |
+| `data_lezione` | `date` | Data del giorno di lezione. |
+| `presente` | `boolean` | Flag di presenza (default `false`). |
+| `registrato_da` | `uuid` (FK) | Riferimento all'istruttore/operatore in `public.utenti(id)`. |
+| `created_at` | `timestamptz` | Timestamp creazione. |
+
+### 5. Nuova vista `public.vw_stato_atleta_corso`
+Centralizza tutti i join relativi a tesseramento, quota annuale, quota corso, validità tessera CSEN e certificato medico (esponendo **solo** lo stato del semaforo e la scadenza per la tutela dei dati sensibili degli atleti).
+
+```sql
+CREATE OR REPLACE VIEW public.vw_stato_atleta_corso AS
+SELECT
+    ie.id AS iscrizione_id,
+    ie.evento_id,
+    ie.utente_id,
+    ie.stato_pagamento,
+    ie.orario_libero,
+    u.nome,
+    u.cognome,
+    COALESCE(u.quota_totale, 0) AS quota_totale,
+    CASE WHEN COALESCE(u.quota_totale, 0) <= 0 THEN true ELSE false END AS quota_annuale_ok,
+    rs.quota_scadenza,
+    CASE WHEN rs.quota_scadenza >= CURRENT_DATE THEN true ELSE false END AS tessera_valida,
+    rt.stato_tesseramento,
+    cm.stato_validazione AS cert_stato,
+    cm.data_scadenza AS cert_scadenza,
+    CASE
+        WHEN cm.stato_validazione = 'VERDE' AND cm.data_scadenza >= CURRENT_DATE THEN true
+        ELSE false
+    END AS cert_valido
+FROM public.iscrizioni_eventi ie
+JOIN public.utenti u ON u.id = ie.utente_id
+LEFT JOIN public.anagrafiche a ON a.utente_id = u.id
+LEFT JOIN public.registro_soci rs ON rs.anagrafica_id = a.id
+LEFT JOIN public.registro_tesserati rt ON rt.anagrafica_id = a.id
+LEFT JOIN LATERAL (
+    SELECT stato_validazione, data_scadenza
+    FROM public.certificati_medici
+    WHERE certificati_medici.anagrafica_id = a.id
+    ORDER BY data_scadenza DESC
+    LIMIT 1
+) cm ON true;
+```
+
+---
+
+## 🔒 Policy di Sicurezza RLS per Corsi e Presenze
+
+Le seguenti regole di accesso e scrittura controllano le tabelle relative ai corsi e presenze:
+
+### `public.eventi`
+- **SELECT**: Consentito a tutti gli utenti autenticati (`auth.uid() IS NOT NULL`).
+- **ALL (Write)**: Limitato esclusivamente al ruolo `presidente` e `vice_presidente` (tramite controllo array in `utenti.ruolo`).
+
+### `public.iscrizioni_eventi`
+- **SELECT**: Consentito a membri del Consiglio Direttivo, all'atleta stesso (`utente_id = auth.uid()`), o agli istruttori assegnati a quel corso (`istruttori_eventi`).
+- **INSERT**: Consentito all'utente stesso per iscrizioni dirette ad eventi gratuiti o tramite webhooks Stripe (bypassa RLS via Service Role).
+- **DELETE**: Riservato a `presidente` e `vice_presidente`.
+
+### `public.istruttori_eventi`
+- **SELECT**: Consentito ai membri del Consiglio Direttivo o all'istruttore stesso (`istruttore_id = auth.uid()`).
+- **ALL (Write)**: Riservato a `presidente` e `vice_presidente`.
+
+### `public.presenze_eventi`
+- **SELECT**: Consentito ai membri del Consiglio Direttivo o agli istruttori assegnati al corso.
+- **INSERT/UPDATE**: Consentito solo agli istruttori assegnati a quel corso.
+- **DELETE**: Riservato a `presidente` e `vice_presidente`.
+
+## 🩹 Patch Istruttori v2
+
+Introdotta con `migration_patch_istruttori_v2.sql` per consolidare le policy e l'area atleta:
+- **`public.iscrizioni_eventi` (UPDATE)**: Aggiunta policy `update_own_iscrizioni` (permette agli atleti di modificare la colonna `orario_libero` delle proprie iscrizioni) e `update_board_iscrizioni` (consente al Direttivo di aggiornare le iscrizioni).
+- **Accesso Istruttori**: Estese le policy di `SELECT` sulle tabelle `utenti`, `anagrafiche`, `registro_soci`, `registro_tesserati` e `certificati_medici` per consentire agli istruttori di visualizzare lo stato (badge/semafori) esclusivamente per gli atleti iscritti ai corsi da loro seguiti.
+
