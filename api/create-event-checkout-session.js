@@ -54,7 +54,7 @@ export default async function handler(req, res) {
  
     try {
         const utenteId = user.id;
-        const { eventId, nomePiano } = req.body;
+        const { eventId, nomePiano, renew } = req.body;
 
         if (!eventId) {
             return res.status(400).json({ error: 'Identificativo evento mancante.' });
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
             .eq('utente_id', utenteId)
             .maybeSingle();
 
-        if (iscrizioneEsistente) {
+        if (iscrizioneEsistente && !renew) {
             return res.status(400).json({ error: 'Sei già iscritto a questo evento.' });
         }
 
@@ -173,7 +173,8 @@ export default async function handler(req, res) {
                 utenteId: utenteId,
                 eventId: eventId,
                 importo: prezzo.toString(),
-                causale: description
+                causale: description,
+                renew: renew ? 'true' : 'false'
             },
             success_url: `${reqOrigin}/portal/dashboard.html?event_payment=success&event_id=${eventId}`,
             cancel_url: `${reqOrigin}/portal/dashboard.html?event_payment=cancel`,

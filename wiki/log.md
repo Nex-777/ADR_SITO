@@ -51,6 +51,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Accurately parsed and updated all medical certificate release dates (`data_rilascio` and `data_scadenza`) in the `certificati_medici` table using the values directly from the CSV file.
 - Bumped application version to `1.00.52`.
 
+## [2026-06-24] feat | Add Course Cancellation and Renewal Buttons (v1.00.60)
+- Added "Cancellati" and "Rinnova" buttons to user's active course cards in `portal/dashboard.html`.
+- Defined a new RLS policy `delete_own_iscrizioni` on `public.iscrizioni_eventi` to allow users to delete their own registrations when canceling.
+- Updated `/api/create-event-checkout-session` to accept a `renew` flag and bypass existing enrollment checks when renewing.
+- Updated `/api/stripe-webhook` to perform an `UPDATE` on existing registration rows when processing a Stripe payment completion for course renewals instead of throwing a unique constraint violation.
+- Bumped application version to `1.00.60`.
+
 ## [2026-06-20] fix | Fix Registry Refresh After Tesserato Activation (v1.00.50)
 - Added `loadTesserati()` and `loadStats()` to the callback of `attivaTesseramentoApprovazioni()` in `portal/dashboard.html` to ensure that when a tesserato is approved/activated, their profile immediately loads into the Registro Tesserati table and the stats update without requiring a manual page refresh.
 - Bumped application version to `1.00.50`.

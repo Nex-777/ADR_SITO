@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.59</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.60</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1829,7 +1829,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpwYXRlZ21rZWxxbWV4ZXRwYW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3Mjk0NDAsImV4cCI6MjA5NTMwNTQ0MH0.jeRMwUwK5GQXKiiZNIJlag3oeWej_rTg8EaYZi4QhpM",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.59"
+                VERSION: "1.00.60"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6502,6 +6502,10 @@
                                         <input type="checkbox" onchange="toggleOrarioLibero('${ev.id}', this.checked)" ${iscr.orario_libero ? 'checked' : ''} class="bg-black border-white/20 text-primary focus:ring-primary">
                                         <span>Orario Libero (svolgo il programma fuori orario)</span>
                                     </label>
+                                    <div class="mt-4 flex gap-2 pt-2 border-t border-white/5">
+                                        <button onclick="iscrivitiEvento('${ev.id}', ${parseFloat(ev.prezzo) || 0}, true)" class="flex-1 bg-white text-black text-[9px] font-headline font-bold py-1.5 uppercase hover:bg-green-500 hover:text-white transition-all tracking-wider">RINNOVA</button>
+                                        <button onclick="disiscriviCorso('${iscr.id}', '${escapeHtml(ev.titolo).replace(/'/g, "\\'")}')" class="flex-1 bg-primary/10 border border-primary/30 text-primary text-[9px] font-headline font-bold py-1.5 uppercase hover:bg-primary hover:text-white transition-all tracking-wider">CANCELLATI</button>
+                                    </div>
                                 </div>
                             `;
                         }).join('');
@@ -6563,7 +6567,7 @@
             }
         };
 
-        async function iscrivitiEvento(eventoId, prezzo) {
+        async function iscrivitiEvento(eventoId, prezzo, renew = false) {
             try {
                 const select = document.getElementById(`plan-select-${eventoId}`);
                 let prezzoCorrente = prezzo;
@@ -6590,7 +6594,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ eventId: eventoId, nomePiano: nomePiano })
+                    body: JSON.stringify({ eventId: eventoId, nomePiano: nomePiano, renew: renew })
                 });
 
                 const data = await res.json();
@@ -6608,6 +6612,24 @@
             } catch (err) {
                 console.error("Errore iscrizione evento:", err);
                 alert("Errore iscrizione: " + err.message);
+            }
+        }
+
+        async function disiscriviCorso(iscrizioneId, titolo) {
+            if (!confirm(`Sei sicuro di volerti cancellare dal corso "${titolo}"?`)) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .delete()
+                    .eq('id', iscrizioneId);
+
+                if (error) throw error;
+
+                alert(`Cancellazione dal corso "${titolo}" completata con successo.`);
+                await loadUserEventi();
+            } catch (err) {
+                console.error("Errore disiscrizione corso:", err);
+                alert("Errore durante la cancellazione: " + err.message);
             }
         }
 
@@ -6818,6 +6840,7 @@
                 const { data, error } = await supabaseClient.from('csen_status').select('*').eq('id', 1).single();
                 if (error && error.code !== 'PGRST116') {
                     console.error("Errore fetch CSEN status:", error);
+                    alert("Errore fetch CSEN status: " + JSON.stringify(error));
                     return;
                 }
                 

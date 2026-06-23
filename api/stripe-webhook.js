@@ -115,20 +115,39 @@ export default async function handler(req, res) {
 
             // 3. Gestisci logica specifica in base all'oggetto del pagamento
             if (eventId) {
-                // Iscrizione Corso/Evento: inserisci l'iscrizione
-                const { error: eventRegError } = await supabase
-                    .from('iscrizioni_eventi')
-                    .insert({
-                        evento_id: eventId,
-                        utente_id: utenteId,
-                        stato_pagamento: 'PAGATO',
-                        codice_transazione: stripePaymentId
-                    });
-                
-                if (eventRegError) {
-                    throw new Error("Errore inserimento iscrizione evento: " + eventRegError.message);
+                const renew = session.metadata?.renew === 'true';
+                if (renew) {
+                    // Aggiorna l'iscrizione esistente per rinnovo
+                    const { error: eventRegError } = await supabase
+                        .from('iscrizioni_eventi')
+                        .update({
+                            stato_pagamento: 'PAGATO',
+                            codice_transazione: stripePaymentId,
+                            data_iscrizione: new Date().toISOString()
+                        })
+                        .eq('evento_id', eventId)
+                        .eq('utente_id', utenteId);
+                    
+                    if (eventRegError) {
+                        throw new Error("Errore aggiornamento iscrizione evento per rinnovo: " + eventRegError.message);
+                    }
+                    console.log(`Rinnovato corso/evento ${eventId} per utente ${utenteId}`);
+                } else {
+                    // Iscrizione Corso/Evento: inserisci l'iscrizione
+                    const { error: eventRegError } = await supabase
+                        .from('iscrizioni_eventi')
+                        .insert({
+                            evento_id: eventId,
+                            utente_id: utenteId,
+                            stato_pagamento: 'PAGATO',
+                            codice_transazione: stripePaymentId
+                        });
+                    
+                    if (eventRegError) {
+                        throw new Error("Errore inserimento iscrizione evento: " + eventRegError.message);
+                    }
+                    console.log(`Iscritto utente ${utenteId} all'evento ${eventId}`);
                 }
-                console.log(`Iscritto utente ${utenteId} all'evento ${eventId}`);
             } else {
                 // Quota Associativa: Salda la quota impostando a 0.00
                 const { error: updateError } = await supabase
