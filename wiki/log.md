@@ -362,3 +362,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-06-24] edit | Medical Certificate Display (v1.00.61)
 - Replaced textual color strings ('VERDE', 'GIALLO', 'ROSSO') with expiration date in instructor view for medical certificates.
 - Bumped application version to 1.00.61.
+
+## [2026-06-24] fix | Critical Security Remediation & Key Rotation (v1.00.62)
+- Implemented core security fixes for the 7 critical vulnerabilities identified in the audit (C-01 to C-07).
+- Secured `/api/validate-cert` and `/api/trigger-csen` endpoints with authorization checks, rate limiting, and sanitized error responses.
+- Hardened CORS allowed origins verification in OTP endpoints to prevent host header spoofing.
+- Fixed Stripe webhook fail-closed logic when configuration variables are missing.
+- Added authorization validation in the `salva_verbale_relazionale` stored procedure on Supabase.
+- Removed sensitive files (`portal/config.js` and `scratch/test-fetch.js`) from Git tracking and added them to `.gitignore`.
+- Coordinated the rotation of Supabase JWT Signing keys, disabling of legacy API keys, and revocation of the leaked symmetric HS256 secret.
+- Bumped application version to 1.00.62.

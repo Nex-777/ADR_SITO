@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.61</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.62</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1706,6 +1706,15 @@
                     </div>
                 </div>
 
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TIPOLOGIA</label>
+                    <label class="flex items-center gap-2 cursor-pointer bg-black border border-white/10 p-2 text-xs font-mono text-gray-300 hover:border-primary transition-colors">
+                        <input type="checkbox" id="modal-corso-is-sportivo" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary focus:ring-offset-0" checked>
+                        <span>CORSO/EVENTO SPORTIVO (Visibile solo ai Tesserati)</span>
+                    </label>
+                    <p class="text-[8px] text-gray-500 uppercase mt-1">Se non selezionato, sarà visibile anche ai "Solo Soci".</p>
+                </div>
+
                 <!-- Orari settimanali (solo per tipo = 'corso') -->
                 <div id="modal-corso-orari-container" class="group">
                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORARI SETTIMANALI (SELEZIONA GIORNI E ORA)</label>
@@ -2179,7 +2188,7 @@
             // Context Switcher setup
             if (userRoles.length > 0) {
                 const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
-                const isAthlete = userRoles.some(r => ['socio_approvato', 'tesserato_esterno', 'socio_in_attesa', 'minore'].includes(r));
+                const isAthlete = userRoles.some(r => ['tesserato', 'tesserato_esterno', 'minore'].includes(r));
                 const isSocio = userRoles.includes('socio_approvato');
                 const isInstructor = userRoles.includes('istruttore');
                 const isVolunteer = userRoles.includes('volontario');
@@ -4955,6 +4964,7 @@
             document.getElementById('modal-corso-max-partecipanti').value = '';
             document.getElementById('modal-corso-prezzo').value = '';
             document.getElementById('modal-corso-stripe-id').value = '';
+            document.getElementById('modal-corso-is-sportivo').checked = true; // Default sportivo
             
             // Reset checkbox giorni
             const checkboxes = document.querySelectorAll('.giorno-checkbox');
@@ -5013,6 +5023,7 @@
                 document.getElementById('modal-corso-max-partecipanti').value = evt.max_partecipanti || '';
                 document.getElementById('modal-corso-prezzo').value = evt.prezzo || '';
                 document.getElementById('modal-corso-stripe-id').value = evt.stripe_price_id || '';
+                document.getElementById('modal-corso-is-sportivo').checked = evt.is_sportivo !== false;
 
                 const orariCont = document.getElementById('modal-corso-orari-container');
                 const pianiCont = document.getElementById('modal-corso-piani-container');
@@ -5078,6 +5089,7 @@
             const maxPartecipantiVal = document.getElementById('modal-corso-max-partecipanti').value;
             const prezzoVal = document.getElementById('modal-corso-prezzo').value;
             const stripePriceId = document.getElementById('modal-corso-stripe-id').value.trim();
+            const is_sportivo = document.getElementById('modal-corso-is-sportivo').checked;
 
             if (!titolo || !luogo) {
                 alert("Titolo e Luogo sono obbligatori.");
@@ -5125,7 +5137,8 @@
                 prezzo,
                 stripe_price_id: stripePriceId || null,
                 orari_settimanali,
-                piani_abbonamento
+                piani_abbonamento,
+                is_sportivo
             };
 
             try {
@@ -6418,8 +6431,13 @@
                 const activeIscr = iscrizioni || [];
                 const eventiList = eventi || [];
 
-                const corsiList = eventiList.filter(e => e.tipo === 'corso');
-                const eventiInProg = eventiList.filter(e => e.tipo === 'evento');
+                let filteredEventiList = eventiList;
+                if (currentViewContext === 'member') {
+                    filteredEventiList = eventiList.filter(e => !e.is_sportivo);
+                }
+
+                const corsiList = filteredEventiList.filter(e => e.tipo === 'corso');
+                const eventiInProg = filteredEventiList.filter(e => e.tipo === 'evento');
 
                 const renderCard = (ev) => {
                     const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');

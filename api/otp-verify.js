@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         'http://127.0.0.1:8080'
     ];
     const origin = req.headers.origin;
-    if (origin && allowedOrigins.some(o => origin.startsWith(o) || o.includes(origin))) {
+    if (origin && allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Vary', 'Origin');
@@ -241,7 +241,10 @@ export default async function handler(req, res) {
                     console.log(`Triggering AI Validation at ${apiBase}/api/validate-cert`);
                     await fetch(`${apiBase}/api/validate-cert`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-internal-secret': process.env.CRON_SECRET || ''
+                        },
                         body: JSON.stringify({
                             anagrafica_id: anagraficaId,
                             file_url: profile.certificato_medico_url

@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         'http://127.0.0.1:8080'
     ];
     const origin = req.headers.origin;
-    if (origin && allowedOrigins.some(o => origin.startsWith(o) || o.includes(origin))) {
+    if (origin && allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Vary', 'Origin');

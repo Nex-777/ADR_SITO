@@ -25,11 +25,15 @@ export default async function handler(req, res) {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!stripeSecretKey || !webhookSecret) {
         console.error('Configurazione webhook di Stripe mancante su Vercel.');
         return res.status(500).send('Webhook Error: Stripe is not configured properly');
+    }
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Configurazione Supabase mancante su Vercel (SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY).');
+        return res.status(500).send('Webhook Error: Database is not configured properly');
     }
 
     let event;
