@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-25] fix | Merge duplicate Tito Fabio Paoletti accounts and set correct Codice Fiscale (v1.00.68)
+- Merged the duplicate athlete (\`titofabiopaoletti@gmail.com\`) and president (\`nexglg@gmail.com\`) profiles in the database.
+- Transferred the correct tesseramento (\`T_001_2026\` / \`INTEGRATIVA_B\`) and medical certificate of the athlete to the president's \`anagrafiche\` record.
+- Deleted duplicate records, updated the president's Codice Fiscale to \`PLTTFB77B11H769H\` and birth date to \`1977-02-11\`, and deleted the redundant athlete auth account.
+- Verified automatic syncing to the \`utenti\` table via the \`sync_anagrafica_to_utente\` trigger.
+- Bumped application version to \`1.00.68\`.
+
 ## [2026-06-25] fix | Sync 'utenti' table with 'anagrafiche' and set up bidirectional database triggers (v1.00.67)
 - Aligned existing web profiles (\`utenti\` table) with the corrected personal details (such as \`data_nascita\`) in \`anagrafiche\` to resolve the mismatch in Valerio Mannocchi's personal dashboard details.
 - Created \`sync_anagrafica_to_utente\` and \`sync_utente_to_anagrafica\` PostgreSQL triggers and functions to automatically synchronize profile data (names, dates, emails, contacts, and residence addresses) bidirectionally between the tables.
