@@ -179,7 +179,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.69</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.70</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -703,7 +703,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.69"
+                VERSION: "1.00.70"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1682,6 +1682,24 @@
                 console.error("Errore controllo preventivo email:", checkErr);
             }
 
+            // 1.b Controllo preventivo Codice Fiscale
+            try {
+                const { data: existingCfData, error: cfError } = await supabaseClient
+                    .from('anagrafiche')
+                    .select('id')
+                    .eq('codice_fiscale', cf)
+                    .maybeSingle();
+                
+                if (existingCfData) {
+                    alert("Questo Codice Fiscale risulta già registrato nel sistema. Se sei tu e non hai mai effettuato l'accesso, torna alla schermata di Login e utilizza la funzione 'Primo Accesso / Password Dimenticata' per impostare la tua password.");
+                    btnInviaOtp.disabled = false;
+                    btnInviaOtp.textContent = "INVIA CODICE OTP";
+                    return;
+                }
+            } catch (cfErr) {
+                console.error("Errore controllo preventivo CF:", cfErr);
+            }
+
             let userId = null;
             jwtToken = null;
 
@@ -1715,7 +1733,7 @@
                         });
                         
                         if (signInError) {
-                            throw new Error("L'utente risulta già registrato. Se sei tu, assicurati di aver inserito la password corretta usata in precedenza.");
+                            throw new Error("Il tuo indirizzo email risulta già registrato nel sistema. Se è il tuo primo accesso, torna alla schermata di Login e utilizza la funzione 'Primo Accesso / Password Dimenticata' per impostare la tua password personale.");
                         }
                         
                         userId = signInData.user.id;
