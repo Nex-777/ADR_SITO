@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-25] fix | Correct SRI Integrity Hashes & Bump (v1.00.66)
+- Corrected the SRI (Subresource Integrity) hashes for `ScrollTrigger.min.js` and `lenis.min.js` in `index.html` which were preventing the landing page from loading completely.
+- Bumped application version to `1.00.66` across all configuration files and HTML headers.
+
 ## [2026-06-25] security | Security Hardening v2 — Post-Verifica (v1.00.65)
 - Verifica post-implementazione del piano di sicurezza originale: analizzati tutti i 10 file API, 7 file frontend, 13 file SQL/DB, 1 Edge Function.
 - **4 vulnerabilità CRITICHE** scoperte e risolte:
