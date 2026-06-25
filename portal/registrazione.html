@@ -179,7 +179,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.62</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.64</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -703,12 +703,23 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.63"
+                VERSION: "1.00.64"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+        // Security override for window.alert to prevent raw database/exception leak
+        const _originalAlert = window.alert;
+        window.alert = function(message) {
+            if (typeof message === 'string' && (message.toLowerCase().includes('errore') || message.toLowerCase().includes('exception') || message.toLowerCase().includes('failed') || message.toLowerCase().includes('supabase'))) {
+                console.error("Technical error alert intercepted:", message);
+                _originalAlert("Si è verificato un errore durante l'operazione. Riprova più tardi o contatta il direttivo per assistenza.");
+            } else {
+                _originalAlert(message);
+            }
+        };
 
         // --- 2. Developer/Mock Mode Configuration ---
         const isDevMode = false;
@@ -1643,12 +1654,6 @@
             // Determina il ruolo in utenti
             const defaultRole = isMinor ? 'tesserato_esterno' : (selectedAdesione === 'tesserato' ? 'tesserato_esterno' : 'socio_in_attesa');
 
-            // Quota totale calcolata numericamente
-            let quotaVal = 0;
-            if (selectedAdesione === 'socio') quotaVal = tariffe.quota_socio;
-            else if (selectedAdesione === 'tesserato') quotaVal = tariffe[selectedTessera] || 0;
-            else if (selectedAdesione === 'socio_tesserato') quotaVal = tariffe.quota_socio + (tariffe[selectedTessera] || 0);
-
             // 1. Controllo preventivo sul database utenti per evitare la sovrascrittura di profili esistenti/amministrativi
             try {
                 const { data: dbUser, error: checkError } = await supabaseClient
@@ -1749,7 +1754,7 @@
                     createdUserSession = { user: authData.user, access_token: jwtToken };
                 }
                 
-                console.log("Supabase Session Ready. User ID:", userId);
+                console.log("Supabase Session Ready.");
             } catch (err) {
                 console.error("Auth process error:", err);
                 alert("Errore di registrazione auth: " + err.message);
@@ -1899,7 +1904,7 @@
                         .createSignedUrl(filePath, 300);
                     if (signedUrlError) throw signedUrlError;
                     certificatoMedicoUrl = urlData.signedUrl;
-                    console.log("Certificato medico caricato con successo. URL:", certificatoMedicoUrl);
+                    console.log("Certificato medico caricato con successo.");
                 }
 
                 // 2. Generate PDF with jsPDF
@@ -1989,7 +1994,7 @@
                     .createSignedUrl(pdfPath, 300);
                 if (signedUrlError) throw signedUrlError;
                 pdfPublicUrl = urlData.signedUrl;
-                console.log("PDF caricato con successo. URL:", pdfPublicUrl);
+                console.log("PDF caricato con successo.");
 
                 // 4. Update utenti with certificato_medico_url if uploaded, and tutore_documento_url if uploaded
                 let tutoreDocumentoUrl = "";
@@ -2012,7 +2017,7 @@
                         .createSignedUrl(filePath, 300);
                     if (parentSignedUrlError) throw parentSignedUrlError;
                     tutoreDocumentoUrl = parentUrlData.signedUrl;
-                    console.log("Documento tutore caricato con successo. URL:", tutoreDocumentoUrl);
+                    console.log("Documento tutore caricato con successo.");
                 }
 
                 if (certificatoMedicoUrl || tutoreDocumentoUrl) {

@@ -66,7 +66,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.62</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.64</span>
                 <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">PORTALE PAGAMENTI</span>
             </div>
             <a href="login.html" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase tracking-wider transition-all">
@@ -147,29 +147,44 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.63"
+                VERSION: "1.00.64"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Security override for window.alert to prevent raw database/exception leak
+        const _originalAlert = window.alert;
+        window.alert = function(message) {
+            if (typeof message === 'string' && (message.toLowerCase().includes('errore') || message.toLowerCase().includes('exception') || message.toLowerCase().includes('failed') || message.toLowerCase().includes('supabase'))) {
+                console.error("Technical error alert intercepted:", message);
+                _originalAlert("Si è verificato un errore durante l'elaborazione del pagamento. Riprova più tardi.");
+            } else {
+                _originalAlert(message);
+            }
+        };
+
         let utenteId = null;
         let quota = 0;
 
         async function init() {
+            // Check active session first
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+            if (sessionError || !session) {
+                showError("Sessione scaduta o non valida. Effettua nuovamente il login per accedere al pagamento.");
+                return;
+            }
+
             const params = new URLSearchParams(window.location.search);
-            utenteId = params.get('id');
             const isCancel = params.get('payment') === 'cancel';
 
             if (isCancel) {
                 document.getElementById('cancel-notification').classList.remove('hidden');
             }
 
-            if (!utenteId) {
-                showError("ID Utente non valido o mancante nella richiesta.");
-                return;
-            }
+            // Secure user identity retrieval from active session to prevent IDOR
+            utenteId = session.user.id;
 
             try {
                 // Fetch utente details directly from Supabase
@@ -282,7 +297,7 @@
                 }
             } catch (err) {
                 console.error("Stripe Checkout Error:", err);
-                alert("Errore nell'avviare il pagamento: " + err.message);
+                alert("Errore nell'avviare il pagamento. Riprova più tardi.");
                 payBtn.disabled = false;
                 payBtn.innerHTML = `PAGA CON STRIPE <span class="material-symbols-outlined text-xl">credit_card</span>`;
             }

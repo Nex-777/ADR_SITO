@@ -44,7 +44,8 @@ serve(async (req) => {
     // Get User
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: authError?.message ?? 'Unauthorized' }), {
+      if (authError) console.error("Edge OTP Auth error:", authError);
+      return new Response(JSON.stringify({ error: 'Token non valido o sessione scaduta.' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -85,7 +86,8 @@ serve(async (req) => {
       });
 
     if (insertError) {
-      return new Response(JSON.stringify({ error: insertError.message }), {
+      console.error("Edge OTP Insert error:", insertError);
+      return new Response(JSON.stringify({ error: 'Errore interno durante l\'avvio della firma.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -127,7 +129,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("Edge OTP Catch error:", err);
+    return new Response(JSON.stringify({ error: 'Errore interno del server.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

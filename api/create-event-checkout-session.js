@@ -81,7 +81,8 @@ export default async function handler(req, res) {
             .maybeSingle();
 
         if (eventError) {
-            return res.status(500).json({ error: 'Errore recupero evento: ' + eventError.message });
+            console.error('Errore recupero evento in create-event-checkout-session:', eventError);
+            return res.status(500).json({ error: 'Errore durante il recupero dei dati del corso.' });
         }
 
         if (!evento) {
@@ -141,7 +142,8 @@ export default async function handler(req, res) {
                 });
 
             if (insertError) {
-                return res.status(500).json({ error: 'Errore iscrizione evento gratuito: ' + insertError.message });
+                console.error('Errore iscrizione evento gratuito in create-event-checkout-session:', insertError);
+                return res.status(500).json({ error: 'Errore durante la registrazione al corso gratuito.' });
             }
 
             return res.status(200).json({ free: true });

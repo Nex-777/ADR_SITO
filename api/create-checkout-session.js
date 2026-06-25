@@ -80,7 +80,8 @@ export default async function handler(req, res) {
             .maybeSingle();
 
         if (profileError) {
-            return res.status(500).json({ error: 'Errore query Supabase: ' + profileError.message });
+            console.error('Errore query Supabase in create-checkout-session:', profileError);
+            return res.status(500).json({ error: 'Errore durante il caricamento del profilo utente.' });
         }
 
         if (!profile) {

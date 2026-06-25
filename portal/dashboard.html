@@ -140,7 +140,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.62</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.64</span>
                 <select id="context-switcher" onchange="switchContext(this.value)" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1838,12 +1838,23 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.63"
+                VERSION: "1.00.64"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Security override for window.alert to prevent raw database/exception leak
+        const _originalAlert = window.alert;
+        window.alert = function(message) {
+            if (typeof message === 'string' && (message.toLowerCase().includes('errore') || message.toLowerCase().includes('exception') || message.toLowerCase().includes('failed') || message.toLowerCase().includes('supabase'))) {
+                console.error("Technical error alert intercepted:", message);
+                _originalAlert("Si è verificato un errore durante l'operazione. Riprova più tardi o contatta il direttivo per assistenza.");
+            } else {
+                _originalAlert(message);
+            }
+        };
 
         function escapeHtml(text) {
             if (text === null || text === undefined) return '';
@@ -1912,11 +1923,11 @@
                 if (!currentUser) return;
                 let ip = 'N/A';
                 try {
-                    const res = await fetch('https://api.ipify.org?format=json');
+                    const res = await fetch('/api/get-ip');
                     const data = await res.json();
                     ip = data.ip;
                 } catch (e) {
-                    console.warn("Impossibile rilevare IP:", e);
+                    console.warn("Impossibile rilevare IP localmente:", e);
                 }
 
                 const { error } = await supabaseClient

@@ -15,7 +15,8 @@ export default async function handler(req, res) {
             supabase = createClient(supabaseUrl, supabaseServiceKey);
         }
     } catch (envError) {
-        return res.status(500).json({ error: envError.message });
+        console.error('OTP-verify Config Error:', envError);
+        return res.status(500).json({ error: 'Errore di configurazione del server.' });
     }
     // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -61,7 +62,8 @@ export default async function handler(req, res) {
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
         
         if (authError || !user) {
-            return res.status(401).json({ error: 'Invalid token: ' + (authError?.message || 'User not found') });
+            if (authError) console.error('Auth error in otp-verify:', authError);
+            return res.status(401).json({ error: 'Token non valido o sessione scaduta.' });
         }
         
         const utenteId = user.id;
@@ -98,7 +100,8 @@ export default async function handler(req, res) {
             .maybeSingle();
             
         if (queryError) {
-            return res.status(500).json({ error: 'Database query error: ' + queryError.message });
+            console.error('Database query error in otp-verify:', queryError);
+            return res.status(500).json({ error: 'Errore interno del server durante la verifica.' });
         }
         
         if (!atti) {
@@ -139,7 +142,8 @@ export default async function handler(req, res) {
             .maybeSingle();
             
         if (profileError || !profile) {
-            return res.status(500).json({ error: 'Failed to retrieve user profile data: ' + (profileError?.message || 'Profile not found') });
+            if (profileError) console.error('Failed to retrieve user profile data in otp-verify:', profileError);
+            return res.status(500).json({ error: 'Profilo utente non trovato o non accessibile.' });
         }
 
         // Parse sex and address parts
@@ -177,7 +181,8 @@ export default async function handler(req, res) {
             .single();
 
         if (anagError) {
-            return res.status(500).json({ error: 'Errore inserimento anagrafica: ' + anagError.message });
+            console.error('Errore inserimento anagrafica in otp-verify:', anagError);
+            return res.status(500).json({ error: 'Errore interno del server durante la firma.' });
         }
         const anagraficaId = anagData.id;
 

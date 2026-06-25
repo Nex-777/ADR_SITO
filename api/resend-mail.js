@@ -2,8 +2,8 @@ const resendApiKey = process.env.RESEND_API_KEY;
 
 export async function sendEmail({ to, subject, html }) {
     if (!resendApiKey) {
-        console.warn("RESEND_API_KEY environment variable is not defined. Email dispatch simulated.");
-        return { success: true, simulated: true };
+        console.error("RESEND_API_KEY non definita. Impossibile inviare l'email.");
+        return { success: false, error: 'Servizio di invio email non configurato.' };
     }
 
     try {

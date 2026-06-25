@@ -372,3 +372,16 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Removed sensitive files (`portal/config.js` and `scratch/test-fetch.js`) from Git tracking and added them to `.gitignore`.
 - Coordinated the rotation of Supabase JWT Signing keys, disabling of legacy API keys, and revocation of the leaked symmetric HS256 secret.
 - Bumped application version to 1.00.62.
+
+## [2026-06-25] fix | High and Medium Security Hardening (v1.00.64)
+- Enabled RLS on the `rate_limits` table with no public policies to block unauthorized client access.
+- Implemented RLS SELECT policies for `bilanci` and `verbali_assemblea` restricting access to approved members and board members, and write permissions to authorized board members.
+- Updated `ricevute_pagamenti` RLS policies to grant select permissions to all board members.
+- Created `/api/get-ip` endpoint to fetch client IP from Vercel headers, replacing third-party `api.ipify.org` calls in the dashboard for GDPR compliance.
+- Overrode `window.alert` in the portal (dashboard, registration, and payment pages) with a security interceptor to hide technical database and runtime errors from end-users.
+- Removed sensitive UUID and signed URL print statements in `registrazione.html`.
+- Secured `pagamento.html` against IDOR by retrieving user identity directly from the verified Supabase session instead of URL parameters.
+- Sanitized raw database error returns with generic error messages in `api/cron-scadenze.js`, `api/otp-verify.js`, `api/create-checkout-session.js`, `api/create-event-checkout-session.js`, and the Deno Edge Function `supabase/functions/otp/index.ts`.
+- Rewrote the `approva_tesserato` stored procedure to generate CSEN numbers securely using cryptographically secure random bytes.
+- Bumped application version to 1.00.64.
+
