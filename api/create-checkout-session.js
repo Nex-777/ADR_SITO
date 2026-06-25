@@ -37,10 +37,10 @@ export default async function handler(req, res) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
  
     if (!stripeSecretKey) {
-        return res.status(500).json({ error: 'Configurazione incompleta: manca STRIPE_SECRET_KEY su Vercel.' });
+        return res.status(500).json({ error: 'Errore di configurazione del server.' });
     }
     if (!supabaseUrl || !supabaseServiceKey) {
-        return res.status(500).json({ error: 'Configurazione incompleta: mancano le credenziali Supabase su Vercel.' });
+        return res.status(500).json({ error: 'Errore di configurazione del server.' });
     }
  
     // Autenticazione tramite Token Bearer
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
         }
 
         if (!profile) {
-            return res.status(404).json({ error: 'Profilo utente non trovato su Supabase.' });
+            return res.status(404).json({ error: 'Profilo utente non trovato.' });
         }
 
         const quota = parseFloat(profile.quota_totale);

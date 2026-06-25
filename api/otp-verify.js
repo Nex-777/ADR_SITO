@@ -352,7 +352,10 @@ export default async function handler(req, res) {
             data_firma: new Date().toISOString()
         };
         if (req.body.url_pdf_generato) {
-            updateData.url_pdf_generato = req.body.url_pdf_generato;
+            const supabaseUrlPrefix = process.env.SUPABASE_URL + '/storage/v1/';
+            if (req.body.url_pdf_generato.startsWith(supabaseUrlPrefix)) {
+                updateData.url_pdf_generato = req.body.url_pdf_generato;
+            }
         }
         await supabase
             .from('atti_adesione')

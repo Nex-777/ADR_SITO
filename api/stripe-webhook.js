@@ -29,11 +29,11 @@ export default async function handler(req, res) {
 
     if (!stripeSecretKey || !webhookSecret) {
         console.error('Configurazione webhook di Stripe mancante su Vercel.');
-        return res.status(500).send('Webhook Error: Stripe is not configured properly');
+        return res.status(500).send('Errore di configurazione del server.');
     }
     if (!supabaseUrl || !supabaseServiceKey) {
         console.error('Configurazione Supabase mancante su Vercel (SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY).');
-        return res.status(500).send('Webhook Error: Database is not configured properly');
+        return res.status(500).send('Errore di configurazione del server.');
     }
 
     let event;

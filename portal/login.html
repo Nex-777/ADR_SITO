@@ -91,7 +91,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.64</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.65</span>
             </div>
             <a href="registrazione.html" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase tracking-wider transition-all">
                 REGISTRATI
@@ -162,12 +162,24 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.64"
+                VERSION: "1.00.65"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // === Security: Intercept alerts to prevent technical error leaks ===
+        const _originalAlert = window.alert;
+        window.alert = function(msg) {
+            if (typeof msg === 'string') {
+                const lower = msg.toLowerCase();
+                if (lower.includes('supabase') || lower.includes('exception') || lower.includes('failed') || lower.includes('postgres') || lower.includes('rls') || lower.includes('jwt') || lower.includes('token')) {
+                    return _originalAlert.call(window, 'Si è verificato un errore. Riprova più tardi.');
+                }
+            }
+            return _originalAlert.call(window, msg);
+        };
 
         const form = document.getElementById('login-form');
         const errorEl = document.getElementById('error-message');
@@ -205,7 +217,8 @@
 
             } catch (err) {
                 console.error("Login error:", err);
-                errorEl.textContent = err.message.toUpperCase();
+                const safeMsg = (typeof err.message === 'string' && (err.message.toLowerCase().includes('supabase') || err.message.toLowerCase().includes('postgres') || err.message.toLowerCase().includes('jwt') || err.message.toLowerCase().includes('rls'))) ? 'CREDENZIALI NON VALIDE. RIPROVA.' : err.message.toUpperCase();
+                errorEl.textContent = safeMsg;
                 errorEl.classList.remove('hidden');
             }
         });

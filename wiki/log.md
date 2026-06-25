@@ -4,6 +4,18 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-25] security | Security Hardening v2 — Post-Verifica (v1.00.65)
+- Verifica post-implementazione del piano di sicurezza originale: analizzati tutti i 10 file API, 7 file frontend, 13 file SQL/DB, 1 Edge Function.
+- **4 vulnerabilità CRITICHE** scoperte e risolte:
+  - `salva_verbale_relazionale()`: aggiunto auth check (era senza NESSUN controllo)
+  - `elimina_utente_fantasma()`: corretto bug tipo scalare/array nella verifica ruoli
+  - `otp.js`: sanitizzati 3 messaggi errore che esponevano dettagli interni
+  - `dashboard.html`: corrette 4 vulnerabilità XSS (err.message in innerHTML)
+- **4 vulnerabilità ALTE** risolte: checkout API tech names, login.html interceptor, validate-cert medical log, otp-verify URL validation.
+- **6 vulnerabilità MEDIE** risolte: stripe-webhook sanitizzazione, RLS verbali tipo array, next_registro_number auth, cron-scadenze env validation, versione allineata, SRI su CDN.
+- Creata migrazione `supabase/migration_security_hardening_v2.sql` (4 fix DB).
+- Versione aggiornata a `1.00.65` su tutti i file (16 file modificati totali).
+
 ## [2026-06-23] fix | Policy Recursion Fix (v1.00.58)
 - Creata ed applicata la migrazione `supabase/migration_patch_istruttori_v3.sql` per risolvere un problema di ricorsione infinita (errore 500 / 42P17) sulle policy RLS di `utenti` e `iscrizioni_eventi`.
 - Sostituite sistematicamente le query dirette a `public.utenti` con la chiamata alla funzione `security definer` `public.get_user_role(auth.uid())` per le tabelle eventi, iscrizioni, istruttori e presenze.

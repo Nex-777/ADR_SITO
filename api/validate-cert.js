@@ -172,7 +172,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
             responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         }
 
-        console.log(`[AI VALIDATION] Gemini response:`, responseText);
+        console.log('[AI VALIDATION] Gemini response received, length:', responseText.length);
 
         const aiResult = JSON.parse(responseText);
 

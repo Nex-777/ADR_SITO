@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         }
     } catch (envError) {
         console.error('API Config Error:', envError);
-        return res.status(500).json({ error: envError.message });
+        return res.status(500).json({ error: 'Errore di configurazione del server.' });
     }
 
     // Enable CORS
@@ -71,7 +71,7 @@ export default async function handler(req, res) {
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
         
         if (authError || !user) {
-            return res.status(401).json({ error: 'Invalid token: ' + (authError?.message || 'User not found') });
+            return res.status(401).json({ error: 'Token non valido o sessione scaduta.' });
         }
         
         const utenteId = user.id;
@@ -115,7 +115,7 @@ export default async function handler(req, res) {
             });
             
         if (insertError) {
-            return res.status(500).json({ error: 'Failed to create sign request: ' + insertError.message });
+            return res.status(500).json({ error: 'Errore interno del server.' });
         }
         
         // 7. Send email via Resend

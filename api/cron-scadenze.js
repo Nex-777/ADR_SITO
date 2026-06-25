@@ -4,6 +4,10 @@ import { sendEmail } from './resend-mail.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('Missing Supabase environment variables.');
+    throw new Error('Server configuration error');
+}
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export default async function handler(req, res) {
