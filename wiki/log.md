@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-25] fix | Sync 'utenti' table with 'anagrafiche' and set up bidirectional database triggers (v1.00.67)
+- Aligned existing web profiles (\`utenti\` table) with the corrected personal details (such as \`data_nascita\`) in \`anagrafiche\` to resolve the mismatch in Valerio Mannocchi's personal dashboard details.
+- Created \`sync_anagrafica_to_utente\` and \`sync_utente_to_anagrafica\` PostgreSQL triggers and functions to automatically synchronize profile data (names, dates, emails, contacts, and residence addresses) bidirectionally between the tables.
+- Saved SQL definitions in \`supabase/migration_sync_triggers.sql\`.
+- Bumped application version to \`1.00.67\`.
+
 ## [2026-06-25] fix | Correct SRI Integrity Hashes & Bump (v1.00.66)
 - Corrected the SRI (Subresource Integrity) hashes for `ScrollTrigger.min.js` and `lenis.min.js` in `index.html` which were preventing the landing page from loading completely.
 - Bumped application version to `1.00.66` across all configuration files and HTML headers.
