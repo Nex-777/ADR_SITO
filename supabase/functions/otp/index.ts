@@ -54,6 +54,20 @@ serve(async (req) => {
     const utenteId = user.id;
     const email = user.email;
 
+    // Rate limiting check
+    const clientIp = req.headers.get('x-real-ip') || '127.0.0.1';
+    const { data: allowed } = await supabase.rpc('check_rate_limit', {
+      p_key: `otp-edge:${clientIp}`,
+      p_max_requests: 3,
+      p_window_seconds: 60
+    });
+    if (allowed === false) {
+      return new Response(JSON.stringify({ error: 'Troppe richieste di generazione OTP. Riprova tra un minuto.' }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Generate OTP
     // Generate OTP cryptographically securely
     const array = new Uint32Array(1);

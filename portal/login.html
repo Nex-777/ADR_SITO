@@ -91,7 +91,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.71</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.72</span>
             </div>
             <a href="registrazione.html" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase tracking-wider transition-all">
                 REGISTRATI
@@ -118,7 +118,7 @@
                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">PASSWORD *</label>
                     <div class="relative">
                         <input type="password" id="password" class="w-full brutalist-input pr-12" placeholder="••••••••" required>
-                        <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white flex items-center justify-center">
+                        <button type="button" id="toggle-password" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white flex items-center justify-center">
                             <span class="material-symbols-outlined text-lg">visibility</span>
                         </button>
                     </div>
@@ -147,84 +147,6 @@
     </footer>
 
     <!-- Script Logic -->
-    <script>
-        function togglePasswordVisibility(inputId, buttonEl) {
-            const input = document.getElementById(inputId);
-            const icon = buttonEl.querySelector('.material-symbols-outlined');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.textContent = 'visibility_off';
-            } else {
-                input.type = 'password';
-                icon.textContent = 'visibility';
-            }
-        }
-
-        if (typeof APP_CONFIG === 'undefined') {
-            window.APP_CONFIG = {
-                SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
-                SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
-                API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.71"
-            };
-        }
-        const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
-        const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // === Security: Intercept alerts to prevent technical error leaks ===
-        const _originalAlert = window.alert;
-        window.alert = function(msg) {
-            if (typeof msg === 'string') {
-                const lower = msg.toLowerCase();
-                if (lower.includes('supabase') || lower.includes('exception') || lower.includes('failed') || lower.includes('postgres') || lower.includes('rls') || lower.includes('jwt') || lower.includes('token')) {
-                    return _originalAlert.call(window, 'Si è verificato un errore. Riprova più tardi.');
-                }
-            }
-            return _originalAlert.call(window, msg);
-        };
-
-        const form = document.getElementById('login-form');
-        const errorEl = document.getElementById('error-message');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            errorEl.classList.add('hidden');
-
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-
-            try {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (error) throw error;
-
-                // Controllo del ruolo utente nel database pubblico
-                const { data: profile, error: profileError } = await supabaseClient
-                    .from('utenti')
-                    .select('ruolo')
-                    .eq('id', data.user.id)
-                    .maybeSingle();
-
-                if (profileError || !profile) {
-                    throw new Error("Profilo utente non trovato nel database.");
-                }
-
-                const ruolo = profile.ruolo;
-
-                // Reindirizzamento alla dashboard per visualizzare lo status
-                window.location.href = "dashboard.html";
-
-            } catch (err) {
-                console.error("Login error:", err);
-                const safeMsg = (typeof err.message === 'string' && (err.message.toLowerCase().includes('supabase') || err.message.toLowerCase().includes('postgres') || err.message.toLowerCase().includes('jwt') || err.message.toLowerCase().includes('rls'))) ? 'CREDENZIALI NON VALIDE. RIPROVA.' : err.message.toUpperCase();
-                errorEl.textContent = safeMsg;
-                errorEl.classList.remove('hidden');
-            }
-        });
-    </script>
+    <script src="login.js"></script>
 </body>
 </html>

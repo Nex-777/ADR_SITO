@@ -137,7 +137,7 @@ export default async function handler(req, res) {
         // Fetch user data from public.utenti
         const { data: profile, error: profileError } = await supabase
             .from('utenti')
-            .select('*')
+            .select('id, codice_fiscale, indirizzo, nome, cognome, data_nascita, luogo_nascita_provincia, luogo_nascita_comune, provincia, comune, cap, cellulare, email, certificato_medico_url, certificato_data_emissione, certificato_tipologia, tipo_adesione, tipo_tessera')
             .eq('id', utenteId)
             .maybeSingle();
             

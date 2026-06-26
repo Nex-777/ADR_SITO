@@ -76,7 +76,7 @@ export default async function handler(req, res) {
         // 1. Recupera le informazioni dell'evento da Supabase
         const { data: evento, error: eventError } = await supabase
             .from('eventi')
-            .select('*')
+            .select('id, prezzo, piani_abbonamento, titolo')
             .eq('id', eventId)
             .maybeSingle();
 

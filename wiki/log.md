@@ -4,6 +4,16 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-26] security | Security Hardening v3 — Short-term fixes (v1.00.72)
+- Exported missing SQL schemas and database function definitions (`check_rate_limit()`, `prossimo_numero_ricevuta()`, and 12 custom tables) from production DB into repository (`supabase/schema_exported.sql`).
+- Resolved `SELECT *` security violations in `api/otp-verify.js` (utenti table) and `api/create-event-checkout-session.js` (eventi table) by specifying exact columns.
+- Added rate limiting validation using `check_rate_limit()` RPC check inside the Deno Supabase Edge Function for OTP.
+- Implemented RLS UPDATE and DELETE policies for the four board meeting tables (`riunioni_consiglio`, `presenze_riunione`, `punti_odg`, `votazioni_odg`) restricting modifications to board members.
+- Configured weekly Dependabot updates (`.github/dependabot.yml`) for the npm package ecosystem.
+- Created Semgrep SAST workflow (`.github/workflows/semgrep.yml`) running static scans on pushes to main, pull requests, and a weekly cron.
+- Extracted inline JavaScript from `forgot-password.html`, `login.html`, and `reset-password.html` to separate external `.js` files, eliminating inline click/submit handlers.
+- Bumped application version to `1.00.72` across all configuration files and HTML headers.
+
 ## [2026-06-26] security | Security Hardening v3 — Immediate priority fixes (v1.00.71)
 - Dropped 2 unsafe overloads of `salva_verbale_relazionale()` (17-param and 18-param versions without auth checks) from production DB.
 - Removed tracked utility scripts (`check.js`, `check_users.cjs`, `check_users.js`) from git and updated `.gitignore` to exclude `*.cjs`, utility scripts, and ENV files.
