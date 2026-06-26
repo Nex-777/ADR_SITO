@@ -4,6 +4,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-26] security | Security Hardening v3 — Immediate priority fixes (v1.00.71)
+- Dropped 2 unsafe overloads of `salva_verbale_relazionale()` (17-param and 18-param versions without auth checks) from production DB.
+- Removed tracked utility scripts (`check.js`, `check_users.cjs`, `check_users.js`) from git and updated `.gitignore` to exclude `*.cjs`, utility scripts, and ENV files.
+- Added `Content-Security-Policy-Report-Only` header to `vercel.json` to map legitimate sources before enforcing CSP.
+- Created migration file `migration_drop_unsafe_overloads.sql` for version control.
+- Verified RLS policies in production: all role-based policies already use `&&` array overlap operator (fixed in prior migration).
+- Bumped version to `1.00.71`.
+
 ## [2026-06-25] fix | Merge duplicate Tito Fabio Paoletti accounts and set correct Codice Fiscale (v1.00.68)
 - Merged the duplicate athlete (\`titofabiopaoletti@gmail.com\`) and president (\`nexglg@gmail.com\`) profiles in the database.
 - Transferred the correct tesseramento (\`T_001_2026\` / \`INTEGRATIVA_B\`) and medical certificate of the athlete to the president's \`anagrafiche\` record.

@@ -8,3 +8,9 @@ node_modules/
 portal/config.js
 config.js
 scratch/
+
+# Utility/debug scripts (may contain hardcoded keys)
+*.cjs
+check.js
+check_users.js
+file da non usare ENV.txt
