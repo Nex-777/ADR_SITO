@@ -1,660 +1,4 @@
-<!DOCTYPE html><html class="dark" lang="it"><head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>PORTALE REGISTRAZIONE ADRENALINA - REGISTRAZIONE ATLETA</title>
-    <meta name="description" content="Registrazione Atleta al portale di registrazione di Adrenalina Club. Gestisci la tua evoluzione atletica.">
-    <link rel="icon" type="image/png" href="../assets/logo_icon.png">
-    
-    <!-- Scripts & Frameworks -->
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="sha384-d+vyQ0dYcymoP8ndq2hW7FGC50nqGdXUEgoOUGxbbkAJwZqL7h+jKN0GGgn9hFDS" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js"></script>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-    
-    
-    
-    <style>
-        :root {
-            --primary: #df293e;
-            color-scheme: dark;
-        }
-        
-        body {
-            overflow-x: hidden;
-            width: 100%;
-            background-color: #0e0e0e;
-            position: relative;
-        }
-
-        /* Kinetic Brutalism Styles */
-        .brutalist-input {
-            background-color: rgba(255, 255, 255, 0.02) !important;
-            background: rgba(255, 255, 255, 0.02) !important;
-            border: none !important;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
-            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            font-size: 1.1rem;
-            padding: 0.8rem 0.5rem;
-            color: white !important;
-            width: 100%;
-        }
-        
-        .brutalist-input:focus {
-            outline: none !important;
-            border-bottom: 2px solid var(--primary) !important;
-            padding-left: 1rem;
-            background-color: rgba(223, 41, 62, 0.05) !important;
-        }
-
-        /* Override browser autofill background and text colors */
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus, 
-        input:-webkit-autofill:active {
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: #ffffff !important;
-            transition: background-color 5000s ease-in-out 0s;
-            box-shadow: inset 0 0 20px 20px #0e0e0e !important;
-        }
-
-        .brutalist-select {
-            background-color: #1a1a1a !important;
-            background: #1a1a1a !important;
-            border: none !important;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
-            color: white !important;
-            padding: 0.8rem 0.5rem;
-            width: 100%;
-            transition: all 0.4s;
-        }
-
-        .brutalist-select:focus {
-            outline: none !important;
-            border-bottom: 2px solid var(--primary) !important;
-            background-color: #20201f !important;
-        }
-
-        select option {
-            background-color: #1a1a1a !important;
-            color: #ffffff !important;
-        }
-
-        select {
-            color-scheme: dark !important;
-        }
-
-        /* Webkit autofill fix for dark mode */
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus,
-        textarea:-webkit-autofill,
-        textarea:-webkit-autofill:hover,
-        textarea:-webkit-autofill:focus,
-        select:-webkit-autofill,
-        select:-webkit-autofill:hover,
-        select:-webkit-autofill:focus {
-            border: none !important;
-            border-bottom: 2px solid var(--primary) !important;
-            -webkit-text-fill-color: white !important;
-            -webkit-box-shadow: 0 0 0px 1000px #1a1a1a inset !important;
-            transition: background-color 5000s ease-in-out 0s;
-        }
-
-        .portal-gradient {
-            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
-        }
-
-        .noise-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            opacity: 0.03;
-            z-index: 9999;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-        }
-
-        /* Slanted Headlines */
-        h1, h2, h3, .font-headline {
-            transform: skewX(-6deg);
-            display: inline-block;
-            transform-origin: left bottom;
-        }
-
-        .step-panel {
-            display: none;
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        .step-panel.active {
-            display: block;
-            opacity: 1;
-            transform: translateY(0);
-        }
-    </style>
-    <link rel="stylesheet" href="../output.css">
-</head>
-<body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen flex flex-col justify-between overflow-x-hidden">
-    <div class="noise-overlay"></div>
-
-    <!-- TopAppBar -->
-    <header class="bg-background/80 backdrop-blur-xl fixed top-0 w-full z-40 border-b border-white/5">
-        <nav class="flex justify-between items-center px-4 sm:px-6 md:px-12 py-4 w-full max-w-[1920px] mx-auto">
-            <div class="flex items-center gap-4">
-                <a href="../index.html" class="flex items-center gap-3 group">
-                    <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
-                    <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
-                </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.72</span>
-            </div>
-            <div class="flex items-center gap-4">
-                <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
-                    PORTALE REGISTRAZIONE ADRENALINA SECURE REGISTRATION
-                </span>
-            </div>
-        </nav>
-    </header>
-
-    <main class="flex-grow pt-24 pb-12 px-4 md:px-8 flex items-center justify-center">
-        <div class="w-full max-w-6xl bg-surface-container border border-white/10 grid grid-cols-1 lg:grid-cols-12 min-h-[650px] relative">
-            
-            <!-- Left Panel: Form (60%) -->
-            <div class="lg:col-span-7 p-6 sm:p-10 md:p-12 flex flex-col justify-between">
-                
-                <!-- Progress Header -->
-                <div class="mb-8">
-                    <div class="flex justify-between items-center text-xs font-headline uppercase tracking-wider text-on-surface-variant mb-4">
-                        <span id="step-label">PASSO 1 DI 4: ANAGRAFICA</span>
-                        <span id="step-percent" class="text-primary font-bold">25%</span>
-                    </div>
-                    <!-- Progress Bar Track -->
-                    <div class="h-1 bg-white/5 w-full relative">
-                        <div id="progress-indicator" class="h-full bg-primary transition-all duration-500" style="width: 25%;"></div>
-                    </div>
-                </div>
-
-                <!-- Registration Form -->
-                <form id="registration-form" class="space-y-6">
-                    
-                    <!-- STEP 1: Dati Anagrafici -->
-                    <div id="step-1" class="step-panel active space-y-6">
-                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">DATI ANAGRAFICI</h2>
-                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Fornisci le informazioni di base per creare la tua identità atletica.</p>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">NOME</label>
-                                <input type="text" id="nome" class="brutalist-input" placeholder="STEVE" required="">
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COGNOME</label>
-                                <input type="text" id="cognome" class="brutalist-input" placeholder="REICHENBACH" required="">
-                            </div>
-                        </div>
-
-                        <div class="group">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CODICE FISCALE</label>
-                            <input type="text" id="codice_fiscale" class="brutalist-input uppercase" placeholder="RCHSTV95A01F205Z" required="" maxlength="16">
-                            <span id="cf_validation_status" class="text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold">Inserisci il codice fiscale per la verifica formale.</span>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI NASCITA</label>
-                                <input type="date" id="data_nascita" class="brutalist-input" required="">
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">EMAIL</label>
-                                <input type="email" id="email" class="brutalist-input" placeholder="WARRIOR@ADRENALINA.IT" autocomplete="off" required="">
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PASSWORD *</label>
-                                <div class="relative">
-                                    <input type="password" id="password" class="brutalist-input w-full pr-12" placeholder="••••••••" minlength="8" autocomplete="new-password" required="">
-                                    <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white flex items-center justify-center" id="auto-registrazione-click-1">
-                                        <span class="material-symbols-outlined text-lg">visibility</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PROVINCIA DI NASCITA</label>
-                                <select id="provincia_nascita" class="brutalist-select" required="">
-                                    <option value="" disabled="" selected="">Seleziona...</option>
-                                </select>
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COMUNE DI NASCITA</label>
-                                <select id="comune_nascita" class="brutalist-select" required="" disabled="">
-                                    <option value="" disabled="" selected="">Scegli Provincia prima...</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Selezione Tipo di Iscrizione in Cards Brutaliste -->
-                        <div class="group space-y-3" id="tipo_adesione_container">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">TIPO DI ADESIONE</label>
-                            <input type="hidden" id="tipo_adesione" name="tipo_adesione" value="" required="">
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <!-- Card Tesserato -->
-                                <div id="card-tesserato" class="border-2 border-white/10 hover:border-primary/50 p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between group/card relative">
-                                    <div>
-                                        <div class="flex flex-col gap-1 mb-2">
-                                            <h3 class="font-headline text-xs font-bold text-white uppercase group-hover/card:text-primary leading-tight">TESSERATO</h3>
-                                            <span class="font-headline text-[8px] font-black text-primary bg-primary/10 px-2 py-0.5 self-start w-fit" id="price-tag-tesserato">TESSERA</span>
-                                        </div>
-                                        <p class="text-[9px] text-on-surface-variant uppercase leading-relaxed">
-                                            Solo tesseramento corsi. Richiede selezione della tessera sportiva. Certificato medico obbligatorio.
-                                        </p>
-                                    </div>
-                                    <div class="mt-4 flex items-center justify-between text-[9px] font-headline text-gray-500 group-hover/card:text-white">
-                                        <span id="label-card-tesserato">SELEZIONA</span>
-                                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card Socio + Tesserato -->
-                                <div id="card-socio-tesserato" class="border-2 border-white/10 hover:border-primary/50 p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between group/card relative">
-                                    <div>
-                                        <div class="flex flex-col gap-1 mb-2">
-                                            <h3 class="font-headline text-xs font-bold text-white uppercase group-hover/card:text-primary leading-tight">SOCIO + TESSERATO</h3>
-                                            <span class="font-headline text-[8px] font-black text-primary bg-primary/10 px-2 py-0.5 self-start w-fit" id="price-tag-socio-tesserato">€25 + TESSERA</span>
-                                        </div>
-                                        <p class="text-[9px] text-on-surface-variant uppercase leading-relaxed">
-                                            Quota socio (€25) + Quota tessera a scelta. Tutti i vantaggi del socio + tesseramento. Certificato medico obbligatorio.
-                                        </p>
-                                    </div>
-                                    <div class="mt-4 flex items-center justify-between text-[9px] font-headline text-gray-500 group-hover/card:text-white">
-                                        <span id="label-card-socio-tesserato">SELEZIONA</span>
-                                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
-                                    </div>
-                                </div>
-
-                                <!-- Card Socio -->
-                                <div id="card-socio" class="border-2 border-white/10 hover:border-primary/50 p-4 cursor-pointer transition-all duration-300 flex flex-col justify-between group/card relative">
-                                    <div>
-                                        <div class="flex flex-col gap-1 mb-2">
-                                            <h3 class="font-headline text-xs font-bold text-white uppercase group-hover/card:text-primary leading-tight">SOCIO</h3>
-                                            <span class="font-headline text-[8px] font-black text-primary bg-primary/10 px-2 py-0.5 self-start w-fit" id="price-tag-socio">€25</span>
-                                        </div>
-                                        <p class="text-[9px] text-on-surface-variant uppercase leading-relaxed">
-                                            Quota socio ordinario. Diritto di voto, partecipazione alla vita associativa. Certificato medico facoltativo.
-                                        </p>
-                                    </div>
-                                    <div class="mt-4 flex items-center justify-between text-[9px] font-headline text-gray-500 group-hover/card:text-white">
-                                        <span id="label-card-socio">SELEZIONA</span>
-                                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Sezione Scelta Tessera Sportiva (Condizionale) -->
-                        <div id="tessera_sportiva_container" class="space-y-3 hidden border border-white/10 p-4 bg-black/25">
-                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">SELEZIONA LA TESSERA SPORTIVA</label>
-                                <div class="flex flex-wrap gap-x-4 gap-y-1">
-                                    <a href="../CSEN_Estratti_polize/ESTRATTO INFORTUNI BASE 25-26.pdf" target="_blank" class="text-[9px] font-bold text-gray-400 hover:text-primary uppercase tracking-wider flex items-center gap-1 transition-colors">
-                                        <span class="material-symbols-outlined text-[12px]">description</span>
-                                        Estratto Infortuni Base Silver/Gold
-                                    </a>
-                                    <a href="../CSEN_Estratti_polize/ESTRATTO INTEGRATIVA 25-26.pdf" target="_blank" class="text-[9px] font-bold text-gray-400 hover:text-primary uppercase tracking-wider flex items-center gap-1 transition-colors">
-                                        <span class="material-symbols-outlined text-[12px]">description</span>
-                                        Estratto Integrativa A/B
-                                    </a>
-                                </div>
-                            </div>
-                            <input type="hidden" id="tipo_tessera" name="tipo_tessera" value="">
-                            
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <!-- Tessera Silver -->
-                                <div id="tessera-silver" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in">
-                                    <div>
-                                        <h4 class="font-headline text-xs font-bold text-white uppercase">BASE SILVER</h4>
-                                        <p class="text-[9px] text-gray-400 uppercase">Tessera sportiva base silver</p>
-                                    </div>
-                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-silver">€10</span>
-                                </div>
-
-                                <!-- Tessera Gold -->
-                                <div id="tessera-gold" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in">
-                                    <div>
-                                        <h4 class="font-headline text-xs font-bold text-white uppercase">BASE GOLD</h4>
-                                        <p class="text-[9px] text-gray-400 uppercase">Tessera sportiva base gold</p>
-                                    </div>
-                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-gold">€15</span>
-                                </div>
-
-                                <!-- Tessera Integrativa A -->
-                                <div id="tessera-integrativa-a" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in">
-                                    <div>
-                                        <h4 class="font-headline text-xs font-bold text-white uppercase">INTEGRATIVA A</h4>
-                                        <p class="text-[9px] text-gray-400 uppercase">Copertura assicurativa integrativa a</p>
-                                    </div>
-                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-integrativa-a">€20</span>
-                                </div>
-
-                                <!-- Tessera Integrativa B -->
-                                <div id="tessera-integrativa-b" class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex justify-between items-center transition-all animate-fade-in">
-                                    <div>
-                                        <h4 class="font-headline text-xs font-bold text-white uppercase">INTEGRATIVA B</h4>
-                                        <p class="text-[9px] text-gray-400 uppercase">Copertura assicurativa integrativa b</p>
-                                    </div>
-                                    <span class="font-headline text-xs font-bold text-primary" id="price-tag-integrativa-b">€25</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Sezione Caricamento Certificato Medico (Condizionale) -->
-                        <div id="certificato_medico_container" class="space-y-4 hidden border border-white/10 p-4 bg-black/25">
-                            <div class="flex justify-between items-center">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CERTIFICATO MEDICO (OBBLIGATORIO)</label>
-                                <span class="text-[9px] text-gray-400">PDF, PNG, JPG (MAX 5MB)</span>
-                            </div>
-                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative mb-3" id="auto-registrazione-click-2">
-                                <input type="file" id="certificato_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
-                                <span class="material-symbols-outlined text-2xl text-primary mb-1">upload_file</span>
-                                <p class="text-xs text-white uppercase font-bold" id="certificato-file-name">SELEZIONA O TRASCINA IL CERTIFICATO</p>
-                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="certificato-file-status">Nessun file selezionato</p>
-                            </div>
-                            <!-- Nuovi Campi Certificato (Tipologia e Data Emissione) -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="group">
-                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">TIPOLOGIA CERTIFICATO *</label>
-                                    <select id="certificato_tipologia" class="brutalist-select text-xs">
-                                        <option value="" disabled="" selected="">SELEZIONA TIPOLOGIA</option>
-                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
-                                        <option value="AGONISTICO">AGONISTICO</option>
-                                    </select>
-                                </div>
-                                <div class="group">
-                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI EMISSIONE *</label>
-                                    <input type="date" id="certificato_data_emissione" class="w-full brutalist-input bg-black text-white text-xs p-2">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Riepilogo Quota Dinamico -->
-                        <div id="riepilogo_quota_container" class="bg-primary/5 border border-primary/20 p-4 flex justify-between items-center hidden">
-                            <div>
-                                <h4 class="font-headline text-xs font-bold text-white uppercase">RIEPILOGO QUOTA DA VERSARE</h4>
-                                <p class="text-[9px] text-gray-400 uppercase" id="riepilogo_quota_dettagli">Nessuna quota selezionata</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="font-headline text-xl font-black text-primary" id="riepilogo_quota_totale">€0.00</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 2: Indirizzo di Residenza -->
-                    <div id="step-2" class="step-panel space-y-6">
-                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">INDIRIZZO DI RESIDENZA</h2>
-                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Compila con il massimo aiuto del sistema in cascata.</p>
-                        
-                        <div class="group">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">INDIRIZZO (VIA/PIAZZA E CIVICO)</label>
-                            <input type="text" id="indirizzo" class="brutalist-input" placeholder="Via della Forza, 42" required="">
-                        </div>
-
-                        <div class="group">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CELLULARE (OPZIONALE - PER AGGIORNAMENTI WHATSAPP)</label>
-                            <input type="tel" id="cellulare" class="brutalist-input" placeholder="+39 347 1234567">
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PROVINCIA</label>
-                                <select id="provincia" class="brutalist-select" required="">
-                                    <option value="" disabled="" selected="">Seleziona...</option>
-                                    <!-- Caricato dinamicamente -->
-                                </select>
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COMUNE</label>
-                                <select id="comune" class="brutalist-select" required="" disabled="">
-                                    <option value="" disabled="" selected="">Scegli Provincia prima...</option>
-                                </select>
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CAP</label>
-                                <input type="text" id="cap" class="brutalist-input w-full" placeholder="00100" required="" readonly="">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 3: Dati Genitore/Tutore (Condizionale per Minorenni) -->
-                    <div id="step-3" class="step-panel space-y-6">
-                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">DATI GENITORE / TUTORE</h2>
-                        <p class="text-xs text-primary uppercase font-bold tracking-wider mb-6">Rilevato atleta minorenne. I seguenti campi sono obbligatori ai fini legali.</p>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">NOME DEL TUTORE</label>
-                                <input type="text" id="tutore_nome" class="brutalist-input" placeholder="MARIO">
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COGNOME DEL TUTORE</label>
-                                <input type="text" id="tutore_cognome" class="brutalist-input" placeholder="REICHENBACH">
-                            </div>
-                        </div>
-
-                        <div class="group">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">CODICE FISCALE TUTORE</label>
-                            <input type="text" id="tutore_codice_fiscale" class="brutalist-input uppercase" placeholder="MRARCG70A01F205Z" maxlength="16">
-                        </div>
-
-                        <div class="group">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">EMAIL DEL TUTORE</label>
-                            <input type="email" id="tutore_email" class="brutalist-input" placeholder="TUTORE@EXAMPLE.COM">
-                        </div>
-
-                        <!-- Caricamento Documento d'Identità del Genitore (Obbligatorio per Minorenni) -->
-                        <div class="group space-y-2 pt-2">
-                            <div class="flex justify-between items-center">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">DOCUMENTO D'IDENTITÀ DEL GENITORE/TUTORE (OBBLIGATORIO)</label>
-                                <span class="text-[9px] text-gray-400">PDF, PNG, JPG (MAX 5MB)</span>
-                            </div>
-                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-registrazione-click-3">
-                                <input type="file" id="tutore_documento_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
-                                <span class="material-symbols-outlined text-2xl text-primary mb-1">upload_file</span>
-                                <p class="text-xs text-white uppercase font-bold" id="tutore-documento-file-name">SELEZIONA O TRASCINA IL DOCUMENTO</p>
-                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="tutore-documento-file-status">Nessun file selezionato</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- STEP 4: Firma Digitale & Validazione OTP -->
-                    <div id="step-4" class="step-panel space-y-6">
-                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">FIRMA DIGITALE &amp; INVIO</h2>
-                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Valida la tua identità e firma digitalmente l'adesione all'Adrenalina Club.</p>
-                        
-                        <!-- Modulo Statuto e Vincolo Associativo (Condizionale per Socio / Socio + Tesserato) -->
-                        <div id="statuto_box_container" class="space-y-3 hidden">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">ACCETTAZIONE STATUTO E VINCOLO ASSOCIATIVO</label>
-                            <div class="bg-white/5 border border-white/10 p-4 text-xs max-h-32 overflow-y-auto text-gray-400 space-y-2">
-                                <p class="font-bold text-white uppercase tracking-wider">DOMANDA DI AMMISSIONE A SOCIO ASD ADRENALINA CLUB APS</p>
-                                <p>Con la presente richiesta il sottoscritto dichiara sotto la propria responsabilità di aver preso visione dello Statuto Sociale e dei Regolamenti dell'ente. Si impegna a rispettarli integralmente, a condividerne le finalità civiche, solidaristiche e di utilità sociale, a collaborare attivamente alla vita associativa e ad effettuare il pagamento della quota annuale stabilita.</p>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <input type="checkbox" id="consenso_statuto" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0">
-                                <label for="consenso_statuto" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
-                                    Accetto integralmente lo Statuto, i regolamenti dell'Associazione ed il vincolo associativo *
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Informativa Privacy Istituzionale con Scroll Obbligatorio (Tutti) -->
-                        <div class="space-y-3">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">INFORMATIVA PRIVACY ISTITUZIONALE (REG. UE 2016/679)</label>
-                            <div id="privacy_scroll_box" class="bg-white/5 border border-white/10 p-4 text-xs max-h-40 overflow-y-auto text-gray-400 space-y-3 scrollbar-thin">
-                                <p class="font-bold text-white uppercase tracking-wider">INFORMATIVA SUL TRATTAMENTO DEI DATI PERSONALI (ART. 13 GDPR)</p>
-                                <p>Ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR), ASD Adrenalina Club APS informa che i dati personali anagrafici e, se presenti, sanitari o riguardanti minori, forniti durante la registrazione verranno trattati esclusivamente per:</p>
-                                <p>1. Gestione del rapporto associativo/di tesseramento (invio convocazioni, gestione quote, partecipazione ad attività istituzionali).</p>
-                                <p>2. Adempimento di obblighi di legge (trasmissione dei dati al Registro Nazionale delle Attività Sportive Dilettantistiche - RASD, comunicazione al RUNTS ed allo CSEN ai fini assicurativi).</p>
-                                <p>I dati contrassegnati come obbligatori sono necessari per la costituzione del rapporto associativo o per l'erogazione del tesseramento sportivo. In caso di rifiuto a fornire tali dati non sarà possibile completare la registrazione.</p>
-                                <p class="text-white font-bold uppercase">SCORRI QUESTO TESTO FINO IN FONDO PER ABILITARE LA PRESA VISIONE.</p>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <input type="checkbox" id="consenso_privacy" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0" disabled="">
-                                <label for="consenso_privacy" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer opacity-40" id="label_consenso_privacy">
-                                    Dichiaro di aver preso visione dell'informativa privacy istituzionale obbligatoria *
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Consenso Trattamento Dati Sanitari e Automazione (Condizionale per Tesserati) -->
-                        <div id="sanitari_box_container" class="space-y-3 hidden">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">TRATTAMENTO DATI SANITARI ED ELABORAZIONE AUTOMATIZZATA</label>
-                            <p class="text-[9px] text-gray-400 uppercase leading-relaxed">
-                                Acconsento al trattamento dei miei dati relativi alla salute (certificato medico di idoneità sportiva) ed alla sua elaborazione automatizzata tramite algoritmi di intelligenza artificiale visiva per estrazione e verifica automatica di data di emissione, scadenza e tipologia.
-                            </p>
-                            <div class="flex items-start gap-3">
-                                <input type="checkbox" id="consenso_sanitari" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0">
-                                <label for="consenso_sanitari" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
-                                    Presto il consenso al trattamento dei dati sanitari e verifica AI *
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Consenso Trattamento Audiovisivi (Foto/Video) (Condizionale per Socio / Socio + Tesserato) -->
-                        <div id="audiovisivi_box_container" class="space-y-3 hidden">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CONSENSO TRATTAMENTO AUDIOVISIVI (FOTO/VIDEO)</label>
-                            <p class="text-[9px] text-gray-400 uppercase leading-relaxed">
-                                Presto il consenso all'utilizzo e alla pubblicazione di foto o riprese video che mi ritraggono durante le attività istituzionali per scopi descrittivi, promozionali e social del Club.
-                            </p>
-                            <div class="grid grid-cols-2 gap-4">
-                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-foto-acconsento">
-                                    <span class="text-xs font-bold text-white uppercase">ACCONSENTO</span>
-                                    <input type="radio" name="consenso_audiovisivi" value="acconsento" class="accent-primary h-4 w-4">
-                                </label>
-                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-foto-nego">
-                                    <span class="text-xs font-bold text-white uppercase">NON ACCONSENTO</span>
-                                    <input type="radio" name="consenso_audiovisivi" value="nego" class="accent-primary h-4 w-4">
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Consenso Comunicazioni Commerciali/Sponsor (Tutti) -->
-                        <div class="space-y-3">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CONSENSO COMUNICAZIONI COMMERCIALI E SPONSOR</label>
-                            <p class="text-[9px] text-gray-400 uppercase leading-relaxed">
-                                Presto il consenso all'invio di newsletter, offerte commerciali, promozioni e comunicazioni da parte di partner o sponsor commerciali terzi convenzionati con ASD Adrenalina Club.
-                            </p>
-                            <div class="grid grid-cols-2 gap-4">
-                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-marketing-acconsento">
-                                    <span class="text-xs font-bold text-white uppercase">ACCONSENTO</span>
-                                    <input type="radio" name="consenso_marketing" value="acconsento" class="accent-primary h-4 w-4">
-                                </label>
-                                <label class="border border-white/10 p-3 cursor-pointer hover:border-primary/50 flex items-center justify-between transition-all" id="label-marketing-nego">
-                                    <span class="text-xs font-bold text-white uppercase">NON ACCONSENTO</span>
-                                    <input type="radio" name="consenso_marketing" value="nego" class="accent-primary h-4 w-4">
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Consenso Firma Elettronica ed E-Sign (Tutti) -->
-                        <div class="space-y-3 pt-3 border-t border-white/5">
-                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">FIRMA ELETTRONICA SEMPLICE (E-SIGN)</label>
-                            <div class="flex items-start gap-3">
-                                <input type="checkbox" id="consenso_legale" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none focus:ring-0 focus:ring-offset-0">
-                                <label for="consenso_legale" class="text-xs uppercase tracking-wider text-gray-300 font-bold select-none cursor-pointer">
-                                    Accetto la formula legale di adesione e presto il consenso alla firma elettronica *
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- OTP Section -->
-                        <div id="otp-flow-section" class="border border-white/10 p-6 bg-black/40 space-y-4 hidden">
-                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div>
-                                    <h4 class="font-headline text-sm font-bold text-white uppercase">CODICE VERIFICA OTP INVIATO</h4>
-                                    <p class="text-[10px] text-gray-400 uppercase">Inserisci il codice di sicurezza a 6 cifre ricevuto via email per completare la firma.</p>
-                                </div>
-                                <div id="otp-timer" class="font-headline text-xs text-primary font-bold bg-primary/10 px-2 py-1 shrink-0">
-                                    TIMER: 15:00
-                                </div>
-                            </div>
-                            <div class="flex gap-4">
-                                <input type="text" id="otp_code" class="brutalist-input text-center font-headline text-3xl tracking-[0.4em] max-w-[200px]" placeholder="123456" maxlength="6">
-                                <button type="button" id="btn-valida-otp" class="flex-grow bg-white text-black font-headline font-bold text-sm tracking-widest uppercase hover:bg-primary hover:text-white transition-all active:scale-95">
-                                    CONFERMA FIRMA
-                                </button>
-                            </div>
-                            <div class="text-right">
-                                <button type="button" id="btn-rinvia-otp-manuale" class="text-[10px] text-gray-400 hover:text-primary uppercase underline font-bold tracking-wider">
-                                    Non hai ricevuto la mail? Rinvia codice
-                                </button>
-                            </div>
-                        </div>
-
-                        <div id="btn-invia-otp-container">
-                            <button type="button" id="btn-invia-otp" class="w-full bg-white text-black font-headline font-black text-xl py-5 uppercase tracking-wider hover:bg-primary hover:text-white transition-all active:scale-[0.98] flex justify-between items-center px-8">
-                                INVIA CODICE OTP
-                                <span class="material-symbols-outlined text-3xl">mail</span>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
-                <!-- Navigation Controls -->
-                <div class="flex justify-between items-center mt-12 pt-6 border-t border-white/5">
-                    <button type="button" id="btn-back" class="border border-white/20 text-gray-400 font-headline font-bold text-xs uppercase py-3 px-6 hover:bg-white/10 transition-all select-none invisible">
-                        INDIETRO
-                    </button>
-                    <button type="button" id="btn-next" class="portal-gradient text-white font-headline font-bold text-xs uppercase py-3 px-8 hover:brightness-110 transition-all select-none active:scale-95">
-                        AVANTI
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Right Panel: Brand Context (40%) -->
-            <div class="lg:col-span-5 bg-black/50 border-l border-white/10 hidden lg:flex flex-col justify-between p-12 relative overflow-hidden">
-                <div class="absolute inset-0 z-0 opacity-20">
-                    <img id="brand-bg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbNeq9DAMB1droXtH7-3F_DS_f1Mlc6O4wzZ7QZl1uurS-4fsdpwINBb6NkyRN03C6ZJuKHJvNe6HmODfICQ71wgdBDTxyOoHqA-Il4hyCrxYGEkNAnVtmIM8pX5OCWQC42M5ldfFX2iyz1ICJnIeSHbtF5xlSehjOimSWe1DNnjJA966bJdD1cT3genf5-AoUxSSfJ6AtoM-GJOSHszS59uTDwUJ-hD_xeu68r_rxZDu9gKpBRqBMTjMvmuSGPSOFFFE68PoYJMcI" alt="Athlete" class="w-full h-full object-cover grayscale">
-                    <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
-                </div>
-                
-                <div class="relative z-10">
-                    <span class="font-label text-primary font-black uppercase tracking-[0.2em] text-[10px] mb-4 block">ADRENALINA CLUB</span>
-                    <h3 class="font-headline text-3xl font-black text-white uppercase leading-none mb-6">
-                        IL TUO ACCESSO<br>AL NUCLEO
-                    </h3>
-                    <p class="text-xs text-on-surface-variant leading-relaxed max-w-sm uppercase font-light">
-                        Una volta registrato, il portale atleti gestirà la tua biometria, le tue presenze, i tuoi massimali e la tua progressione fisica.
-                    </p>
-                </div>
-
-                <div class="relative z-10 bg-surface-container-high p-6 border-l-4 border-primary">
-                    <p class="text-xs font-headline text-white uppercase font-bold italic mb-2">CODICE DI CONDOTTA</p>
-                    <p class="text-[10px] text-on-surface-variant uppercase leading-loose">
-                        Nessuna mediocrità. Rispetto reciproco, costanza, scienza della forza ed adesione ai protocolli stabiliti.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-black w-full border-t border-white/10 py-6 px-6">
-        <div class="max-w-[1920px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] uppercase text-gray-600 tracking-wider">
-            <span>© 2026 ASD ADRENALINA CLUB APS | Via Rigantè 44, 63100 Ascoli Piceno | CF: 92042260445 - P.IVA: 02014060442 - SDI: J6URRTW | POWERED BY ADRENALINA CORE.</span>
-            <div class="flex gap-6">
-                <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
-                <a href="#" class="hover:text-white transition-colors">Termini Legali</a>
-            </div>
-        </div>
-    </footer>
-
-    <!-- App Logic -->
-    <script>
-        function togglePasswordVisibility(inputId, buttonEl) {
+function togglePasswordVisibility(inputId, buttonEl) {
             const input = document.getElementById(inputId);
             const icon = buttonEl.querySelector('.material-symbols-outlined');
             if (input.type === 'password') {
@@ -2061,7 +1405,101 @@
                 updateOtpButtonStatus("CONFERMA FIRMA", false);
             }
         });
-    </script>
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('registration-form');
+    if (el) {
+        el.addEventListener('submit', function(event) {
+            event.preventDefault();
+        });
+    }
+});
 
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-registrazione-click-1');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            togglePasswordVisibility('password', this)
+        });
+    }
+});
 
-</body></html>
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('card-tesserato');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            selectAdesione('tesserato')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('card-socio-tesserato');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            selectAdesione('socio_tesserato')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('card-socio');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            selectAdesione('socio')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tessera-silver');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            selectTessera('tessera_base_silver')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tessera-gold');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            selectTessera('tessera_base_gold')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tessera-integrativa-a');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            selectTessera('tessera_integrativa_a')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tessera-integrativa-b');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            selectTessera('tessera_integrativa_b')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-registrazione-click-2');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            document.getElementById('certificato_file').click()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-registrazione-click-3');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            document.getElementById('tutore_documento_file').click()
+        });
+    }
+});

@@ -432,3 +432,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Rewrote the `approva_tesserato` stored procedure to generate CSEN numbers securely using cryptographically secure random bytes.
 - Bumped application version to 1.00.64.
 
+
+## [2026-06-26] update | Medium-Term Security & UI Tasks (v1.00.73)
+- Initialized Supabase configuration for local CLI and prepared pgTAP testing directory.
+- Extracted inline JavaScript from \index.html\ and \portal/pagamento.html\ into external \index.js\ and \pagamento.js\ scripts to reduce inline scripts.
+- Migrated Tailwind CSS from CDN to a local build via the new Tailwind CSS v4 CLI (\@tailwindcss/cli\), replacing inline configuration in HTML with a proper \input.css\ and \package.json\ build step.
+- Bumped application version to 1.00.73 across the codebase.
+

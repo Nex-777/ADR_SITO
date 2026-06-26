@@ -7,7 +7,7 @@
     <meta name="description" content="Accedi al portale atleti e amministrazione di Adrenalina Club."/>
     
     <!-- Scripts & Frameworks -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="sha384-d+vyQ0dYcymoP8ndq2hW7FGC50nqGdXUEgoOUGxbbkAJwZqL7h+jKN0GGgn9hFDS" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="config.js"></script>
@@ -15,31 +15,7 @@
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Syncopate:wght@400;700&family=Manrope:wght@200;400;600;800&family=Inter:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#df293e",
-                        "primary-dim": "#b91c1c",
-                        "background": "#0e0e0e",
-                        "surface": "#0e0e0e",
-                        "surface-container": "#1a1a1a",
-                        "surface-container-high": "#20201f",
-                        "surface-container-low": "#131313",
-                        "on-surface": "#ffffff",
-                        "on-surface-variant": "#a3a3a3",
-                    },
-                    fontFamily: {
-                        headline: ["Orbitron", "sans-serif"],
-                        label: ["Syncopate", "sans-serif"],
-                        body: ["Manrope", "sans-serif"],
-                    }
-                }
-            }
-        };
-    </script>
+    
     
     <style>
         body {
@@ -80,6 +56,7 @@
             box-shadow: inset 0 0 20px 20px #0e0e0e !important;
         }
     </style>
+    <link rel="stylesheet" href="../output.css">
 </head>
 <body class="min-h-screen flex flex-col justify-between bg-background text-on-surface">
 
@@ -91,7 +68,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.72</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.73</span>
             </div>
             <a href="registrazione.html" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase tracking-wider transition-all">
                 REGISTRATI

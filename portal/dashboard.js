@@ -1,1813 +1,4 @@
-<!DOCTYPE html><html class="dark" lang="it"><head>
-    <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>ADRENALINA CLUB - DASHBOARD DIRETTIVA</title>
-    <meta name="description" content="Pannello di controllo della direzione sportiva ed amministrativa di Adrenalina Club.">
-    
-    <!-- Scripts & Frameworks -->
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="sha384-d+vyQ0dYcymoP8ndq2hW7FGC50nqGdXUEgoOUGxbbkAJwZqL7h+jKN0GGgn9hFDS" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js"></script>
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-    
-    
-    
-    <style>
-        :root, body.theme-tesserato {
-            --color-primary: #df293e;
-            --color-primary-dim: #b91c1c;
-        }
-        body.theme-direttivo {
-            --color-primary: #d97706; /* Amber-600 */
-            --color-primary-dim: #b45309; /* Amber-700 */
-        }
-        body.theme-socio {
-            --color-primary: #8b5cf6; /* Violet-500 */
-            --color-primary-dim: #6d28d9; /* Violet-700 */
-        }
-        body.theme-istruttore {
-            --color-primary: #2563eb; /* Blue-600 */
-            --color-primary-dim: #1d4ed8; /* Blue-700 */
-        }
-        body.theme-volontario {
-            --color-primary: #059669; /* Emerald-600 */
-            --color-primary-dim: #047857; /* Emerald-700 */
-        }
-        
-        body {
-            font-family: 'Manrope', sans-serif;
-            background-color: #0e0e0e;
-            color: #ffffff;
-            color-scheme: dark;
-        }
-
-        select option {
-            background-color: #121212 !important;
-            color: #ffffff !important;
-        }
-        .font-headline { font-family: 'Orbitron', sans-serif; }
-        .font-label { font-family: 'Syncopate', sans-serif; }
-        
-        /* Brutalist styles */
-        .brutalist-border {
-            border: 2px solid #ffffff;
-        }
-        .brutalist-input {
-            background-color: #000000;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            font-family: 'Manrope', sans-serif;
-            padding: 12px 16px;
-            transition: all 0.2s ease;
-        }
-        .brutalist-input:focus {
-            border-color: #df293e;
-            outline: none;
-            box-shadow: 0 0 10px rgba(223, 41, 62, 0.2);
-        }
-        .brutalist-btn {
-            border: 1px solid #ffffff;
-            transition: all 0.2s ease;
-        }
-        .brutalist-btn:hover {
-            background-color: #df293e;
-            border-color: #df293e;
-            box-shadow: 4px 4px 0px #ffffff;
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0e0e0e; }
-        ::-webkit-scrollbar-thumb { background: #df293e; }
-
-        /* Specificity override for input fields under Tailwind Forms reset */
-        input[type="text"].brutalist-input,
-        input[type="date"].brutalist-input,
-        input[type="time"].brutalist-input,
-        input[type="number"].brutalist-input,
-        textarea.brutalist-input,
-        select.brutalist-input {
-            background-color: #000000 !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        }
-        input[type="text"].brutalist-input:focus,
-        input[type="date"].brutalist-input:focus,
-        input[type="time"].brutalist-input:focus,
-        input[type="number"].brutalist-input:focus,
-        textarea.brutalist-input:focus,
-        select.brutalist-input:focus {
-            border-color: #df293e !important;
-            box-shadow: 0 0 10px rgba(223, 41, 62, 0.2) !important;
-        }
-    </style>
-    <link rel="stylesheet" href="../output.css">
-</head>
-<body class="min-h-screen flex flex-col bg-background text-on-surface">
-
-    <!-- Header / Navbar -->
-    <header class="border-b border-white/10 bg-black/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <a href="../index.html" class="flex items-center gap-3 group">
-                    <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
-                    <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
-                </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-primary border border-primary/40 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.73</span>
-                <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
-                    <option value="board">AREA DIRETTIVO</option>
-                    <option value="member">AREA SOCIO</option>
-                    <option value="athlete">AREA TESSERATO</option>
-                    <option value="instructor">AREA ISTRUTTORE</option>
-                    <option value="volunteer">AREA VOLONTARIO</option>
-                </select>
-                <span id="static-context-badge" class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider hidden">AREA TESSERATO</span>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="text-right">
-                    <p id="user-display-name" class="text-xs font-bold uppercase tracking-wider">Caricamento...</p>
-                    <p id="user-display-role" class="text-[9px] text-primary font-headline font-bold uppercase tracking-widest">Ruolo: -</p>
-                </div>
-                <button class="border border-white/10 hover:border-primary/50 text-gray-400 hover:text-white px-3 py-1.5 text-xs font-headline uppercase tracking-wider transition-all" id="auto-dashboard-click-1">
-                    LOGOUT
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content Area -->
-    <main class="flex-grow max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        
-        <!-- Sidebar Navigation -->
-        <aside class="lg:col-span-1 space-y-4">
-            <div class="border border-white/10 p-4 bg-black/40 space-y-2">
-                <p class="text-[10px] font-label text-primary font-bold tracking-wider mb-3">PANNELLI DISPONIBILI</p>
-                
-                <!-- Nav Links -->
-                <button id="tab-btn-panoramica" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-primary/30 bg-primary/10 text-white flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">dashboard</span> PANORAMICA
-                </button>
-
-                <!-- User Dashboard Navigation (Non-board Members) -->
-                <button id="tab-btn-user_profilo" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">person</span> IL MIO PROFILO
-                </button>
-                
-                <button id="tab-btn-user_certificato" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">medical_services</span> CERTIFICATO MEDICO
-                </button>
-                
-                <button id="tab-btn-user_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">fitness_center</span> CORSI
-                </button>
-                
-                <button id="tab-btn-user_eventi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">event</span> EVENTI
-                </button>
-
-                <!-- Instructor Dashboard Navigation -->
-                <button id="tab-btn-instructor_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">school</span> CORSI SEGUITI
-                </button>
-
-                <!-- Volunteer Dashboard Navigation -->
-                <button id="tab-btn-volunteer_eventi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">event_available</span> GESTIONE EVENTI
-                </button>
-                
-                <button id="tab-btn-user_pagamenti" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">receipt_long</span> PAGAMENTI E RICEVUTE
-                </button>
-                
-                <button id="tab-btn-approvazioni" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">rule</span> REGISTRO APPROVAZIONI
-                </button>
-                
-                <button id="tab-btn-soci" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">group</span> REGISTRO SOCI
-                </button>
-                
-                <button id="tab-btn-tesserati" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">sports_kabaddi</span> REGISTRO TESSERATI
-                </button>
-
-                <button id="tab-btn-quote" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">payments</span> QUOTE E CASSA
-                </button>
-
-                <button id="tab-btn-gestione_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">fitness_center</span> GESTIONE CORSI
-                </button>
-
-                <button id="tab-btn-contabilita" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">calculate</span> CONTABILITÀ
-                </button>
-
-                <button id="tab-btn-direttivo" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">shield_person</span> GESTIONE DIRETTIVO
-                </button>
-
-                <button id="tab-btn-verbali" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">gavel</span> VERBALI DIRETTIVO
-                </button>
-
-                <button id="tab-btn-verbali_assemblea" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">groups</span> VERBALI ASSEMBLEA
-                </button>
-
-                <button id="tab-btn-bilanci" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-sm">account_balance_wallet</span> BILANCI E RENDICONTI
-                </button>
-            </div>
-
-            <!-- Role Summary Card -->
-            <div class="border border-white/10 p-4 bg-black/25 space-y-2">
-                <h4 class="font-headline text-[10px] text-primary font-bold uppercase tracking-widest">LIVELLO AUTORIZZAZIONE</h4>
-                <p id="auth-description" class="text-[11px] text-gray-400 uppercase leading-relaxed font-light">
-                    Rilevazione permessi in corso...
-                </p>
-            </div>
-        </aside>
-
-        <!-- Dynamic Panels -->
-        <section class="lg:col-span-3 space-y-6">
-
-            <!-- TAB 1: PANORAMICA (TUTTI I RUOLI) -->
-            <div id="panel-panoramica" class="tab-panel space-y-6">
-                <div class="border border-white/10 p-6 bg-black/40 relative overflow-hidden">
-                    <div class="relative z-10 space-y-2">
-                        <h2 id="welcome-title" class="font-headline text-xl font-bold uppercase">Benvenuto nel Portale</h2>
-                        <p id="welcome-subtitle" class="text-xs text-gray-400 uppercase tracking-wide">Adrenalina Club - Portale Atleti e Amministrazione</p>
-                    </div>
-                </div>
-
-                <!-- Stats Grid (Board members only) -->
-                <div id="board-stats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="border border-white/10 p-4 bg-black/20 cursor-pointer hover:border-primary/50 transition-all" id="auto-dashboard-click-2">
-                        <p class="text-[10px] text-gray-500 font-headline uppercase">IN ATTESA APPROVAZIONE</p>
-                        <p id="stat-approvazioni-attesa" class="text-2xl font-headline font-black text-primary mt-1">-</p>
-                    </div>
-                    <div class="border border-white/10 p-4 bg-black/20">
-                        <p class="text-[10px] text-gray-500 font-headline uppercase">SOCI IN ATTESA DELIBERA</p>
-                        <p id="stat-soci-attesa" class="text-2xl font-headline font-black text-white mt-1">-</p>
-                    </div>
-                    <div class="border border-white/10 p-4 bg-black/20">
-                        <p class="text-[10px] text-gray-500 font-headline uppercase">ISCRITTI ATTIVI</p>
-                        <p id="stat-soci-attivi" class="text-2xl font-headline font-black text-white mt-1">-</p>
-                    </div>
-                    <div class="border border-white/10 p-4 bg-black/20">
-                        <p class="text-[10px] text-gray-500 font-headline uppercase">CERTIFICATI SCADUTI / SOSPESI</p>
-                        <p id="stat-certificati-scaduti" class="text-2xl font-headline font-black text-yellow-500 mt-1">-</p>
-                    </div>
-                </div>
-
-                <!-- Alert Board (Board members only) -->
-                <div id="board-alert-board" class="border border-white/10 p-4 bg-yellow-500/5 border-l-4 border-yellow-500 space-y-2">
-                    <p class="font-headline text-xs font-bold text-yellow-500 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">warning</span> ALERT LEGALI E ADEMPIMENTI
-                    </p>
-                    <ul class="text-[11px] text-gray-400 uppercase space-y-1 font-mono">
-                        <li>• Deposito Bilancio d'Esercizio (Art. 48 CTS): Scadenza RUNTS entro 180 giorni (Termine 30 Giugno).</li>
-                        <li>• Verifica Certificazione Medica obbligatoria per atleti tesserati attivi.</li>
-                        <li>• Controllo indirizzo PEC dell'Associazione (deve essere PEC dell'ente, non del Presidente).</li>
-                    </ul>
-                </div>
-
-                <!-- Dynamic approvals banner alert -->
-                <div id="board-alert-approvazioni-banner" class="hidden border border-primary/20 p-4 bg-primary/5 border-l-4 border-primary text-xs font-mono uppercase">
-                    <!-- Popolated dynamically by loadStats -->
-                </div>
-
-                <!-- User Profile / Pending Status Banner (Non-board members / pending) -->
-                <div id="user-status-container" class="hidden space-y-6">
-                    <div class="border border-white/10 p-6 bg-yellow-500/5 border-l-4 border-yellow-500 space-y-4">
-                        <h3 class="font-headline text-sm font-bold text-yellow-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="material-symbols-outlined">warning</span> DOMANDA IN ATTESA DI DELIBERA
-                        </h3>
-                        <p class="text-xs text-gray-300 uppercase leading-relaxed font-mono">
-                            La tua domanda di ammissione a socio è stata firmata digitalmente con successo ed è in fase di valutazione da parte del Consiglio Direttivo dell'Associazione (Art. 21 CTS).
-                        </p>
-                        <p class="text-xs text-gray-400 uppercase leading-relaxed font-mono">
-                            Non appena la domanda verrà deliberata e ratificata nel libro soci da parte del Presidente, riceverai un'e-mail contenente il link ufficiale per procedere al pagamento della quota sociale e attivare il tuo profilo atleti.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Sezione Stato Certificato Medico (Atleti Generici) -->
-                <div id="user-certificate-container" class="hidden space-y-6">
-                    <div id="user-cert-status-box" class="border p-6 space-y-4 bg-white/5 border-white/10">
-                        <h3 class="font-headline text-sm font-bold uppercase tracking-widest flex items-center gap-2" id="user-cert-title">
-                            <span class="material-symbols-outlined" id="user-cert-icon">medical_services</span> CERTIFICATO MEDICO
-                        </h3>
-                        <p class="text-xs text-gray-300 uppercase leading-relaxed font-mono" id="user-cert-message">
-                            Verifica del certificato medico in corso...
-                        </p>
-                        <!-- Form di ricaricamento (nascosto di default, mostrato solo se mancante o rosso) -->
-                        <div id="user-cert-upload-form" class="hidden space-y-4 border-t border-white/5 pt-4">
-                            <p class="text-[10px] text-gray-400 uppercase font-headline">CARICA NUOVO CERTIFICATO MEDICO</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="group">
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TIPOLOGIA CERTIFICATO</label>
-                                    <select id="dash-cert-tipologia" class="w-full brutalist-input bg-black text-white text-xs p-2 border border-white/20">
-                                        <option value="" disabled="" selected="">SELEZIONA</option>
-                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
-                                        <option value="AGONISTICO">AGONISTICO</option>
-                                    </select>
-                                </div>
-                                <div class="group">
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA DI EMISSIONE</label>
-                                    <input type="date" id="dash-cert-data-emissione" class="w-full brutalist-input bg-black text-white text-xs p-2 border border-white/20">
-                                </div>
-                            </div>
-                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-dashboard-click-3">
-                                <input type="file" id="dash_cert_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
-                                <span class="material-symbols-outlined text-xl text-primary mb-1">upload_file</span>
-                                <p class="text-xs text-white uppercase font-bold" id="dash-cert-file-name">SELEZIONA O TRASCINA IL CERTIFICATO</p>
-                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="dash-cert-file-status">Nessun file selezionato</p>
-                            </div>
-                            <button id="btn-upload-cert-dash" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-4 py-2 transition-all uppercase tracking-wider">
-                                INVIA DOCUMENTO
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Payment Banner (For users who have a quota to pay) -->
-                <div id="user-payment-container" class="hidden space-y-6">
-                    <div class="border border-primary/20 p-6 bg-primary/5 border-l-4 border-primary space-y-4">
-                        <h3 class="font-headline text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-2">
-                            <span class="material-symbols-outlined">payments</span> QUOTA DA SALDARE
-                        </h3>
-                        <p class="text-xs text-gray-300 uppercase leading-relaxed font-mono">
-                            Hai una quota di iscrizione/tesseramento da saldare del valore di <span id="payment-quota-amount" class="text-primary font-bold">€0.00</span>.
-                        </p>
-                        <p class="text-xs text-gray-400 uppercase leading-relaxed font-mono">
-                            Procedi al pagamento sicuro online tramite Stripe per completare la tua iscrizione ed attivare il tuo profilo.
-                        </p>
-                        <button class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-6 py-3 transition-all uppercase tracking-wider" id="auto-dashboard-click-4">
-                            PAGA ORA CON STRIPE
-                        </button>
-                    </div>
-                </div>
-
-                <!-- User Summary Widget (Visible to members only) -->
-                <div id="user-panoramica-widgets" class="hidden space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Card Stato e Dati Principali -->
-                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm">badge</span> STATO REGISTRO SPORTIVO
-                            </h3>
-                            <div class="space-y-2 text-xs font-mono uppercase">
-                                <div class="flex justify-between border-b border-white/5 pb-2">
-                                    <span class="text-gray-400">Data Iscrizione:</span>
-                                    <span id="user-info-data-approvazione" class="text-white">-</span>
-                                </div>
-                                <div class="flex justify-between border-b border-white/5 pb-2">
-                                    <span class="text-gray-400">Scadenza Associazione:</span>
-                                    <div class="flex items-center gap-2">
-                                        <span id="user-info-scadenza-iscrizione" class="text-white">-</span>
-                                        <span id="user-info-scadenza-status" class="px-1.5 py-0.5 text-[8px] font-headline font-bold rounded"></span>
-                                    </div>
-                                </div>
-                                <div class="flex justify-between border-b border-white/5 pb-2">
-                                    <span class="text-gray-400">Scadenza Certificato:</span>
-                                    <span id="user-info-scadenza-certificato" class="text-white">-</span>
-                                </div>
-                                <div class="flex justify-between border-b border-white/5 pb-2">
-                                    <span class="text-gray-400">Livello / Qualifica:</span>
-                                    <span id="user-info-livello" class="text-primary font-bold">-</span>
-                                </div>
-                                <div class="flex justify-between pb-2">
-                                    <span class="text-gray-400">Contatto Emergenza:</span>
-                                    <span id="user-info-contatto-emergenza" class="text-white">-</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Card Download Documenti Utili -->
-                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                                <span class="material-symbols-outlined text-sm">download</span> AREA DOWNLOAD
-                            </h3>
-                            <p class="text-[10px] text-gray-500 uppercase">Scarica la documentazione ufficiale del Club</p>
-                            <ul class="text-xs uppercase space-y-2 font-mono">
-                                <li class="flex items-center justify-between border-b border-white/5 pb-2">
-                                    <span>Statuto Associazione (ETS)</span>
-                                    <a href="#" class="text-primary hover:underline flex items-center gap-1 font-bold" id="auto-dashboard-click-5">
-                                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
-                                    </a>
-                                </li>
-                                <li class="flex items-center justify-between border-b border-white/5 pb-2">
-                                    <span>Regolamento Interno del Club</span>
-                                    <a href="#" class="text-primary hover:underline flex items-center gap-1 font-bold" id="auto-dashboard-click-6">
-                                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
-                                    </a>
-                                </li>
-                                <li class="flex items-center justify-between pb-2">
-                                    <span>Scarico Responsabilità Allenamenti</span>
-                                    <a href="#" class="text-primary hover:underline flex items-center gap-1 font-bold" id="auto-dashboard-click-7">
-                                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Bacheca Notizie -->
-                    <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                            <span class="material-symbols-outlined text-sm">campaign</span> BACHECA COMUNICAZIONI CLUB
-                        </h3>
-                        <div id="user-bacheca-notizie" class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-                            <p class="text-xs text-gray-500 uppercase font-mono">Nessuna comunicazione recente in bacheca.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB REGISTRO APPROVAZIONI -->
-            <div id="panel-approvazioni" class="tab-panel space-y-6 hidden">
-                <div>
-                    <h2 class="font-headline text-lg font-bold uppercase">Registro Approvazioni</h2>
-                    <p class="text-xs text-gray-500 uppercase">Gestione e validazione delle candidature e dei tesserati pendenti</p>
-                </div>
-
-                <!-- Sezione Soci Pendenti -->
-                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                    <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">group_add</span> SOCI IN ATTESA DELIBERA (DELIBERA VIA VERBALE DIRETTO)
-                    </h3>
-                    <div class="overflow-x-auto border border-white/5 bg-black/20">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
-                                <tr>
-                                    <th class="p-3">Candidato</th>
-                                    <th class="p-3 font-mono">Codice Fiscale</th>
-                                    <th class="p-3">Data Richiesta</th>
-                                    <th class="p-3">Tipo Adesione</th>
-                                    <th class="p-3 text-right">Stato</th>
-                                </tr>
-                            </thead>
-                            <tbody id="approvazioni-soci-list" class="divide-y divide-white/5 uppercase font-mono">
-                                <tr>
-                                    <td colspan="5" class="p-3 text-center text-gray-500">Nessuna richiesta di socio in attesa.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Sezione Tesserati Pendenti -->
-                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                    <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">sports_kabaddi</span> TESSERATI IN ATTESA DI ATTIVAZIONE
-                    </h3>
-                    <div class="overflow-x-auto border border-white/5 bg-black/20">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
-                                <tr>
-                                    <th class="p-3">Atleta</th>
-                                    <th class="p-3 font-mono">Codice Fiscale</th>
-                                    <th class="p-3">Copertura</th>
-                                    <th class="p-3 text-center">Certificato Medico</th>
-                                    <th class="p-3">Data Richiesta</th>
-                                    <th class="p-3 text-right">Azione</th>
-                                </tr>
-                            </thead>
-                            <tbody id="approvazioni-tesserati-list" class="divide-y divide-white/5 uppercase font-mono">
-                                <tr>
-                                    <td colspan="6" class="p-3 text-center text-gray-500">Nessuna richiesta di tesserato in attesa.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Registrazioni Incomplete / OTP Fallito -->
-                <div class="border border-red-500/30 p-6 bg-red-950/20 space-y-4">
-                    <h3 class="font-headline text-xs font-bold text-red-400 uppercase tracking-widest flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">warning</span> REGISTRAZIONI INCOMPLETE (OTP SOSPESO/FALLITO)
-                    </h3>
-                    <p class="text-[10px] text-gray-400 font-mono">Utenti in stallo durante l'inserimento o convalida OTP. Senza anagrafica completa bloccano l'email.</p>
-                    <div class="overflow-x-auto border border-red-500/20 bg-black/40">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-red-900/20 text-gray-400 font-headline uppercase text-[9px] border-b border-red-500/20">
-                                <tr>
-                                    <th class="p-3">Nome / Cognome</th>
-                                    <th class="p-3">Email</th>
-                                    <th class="p-3 font-mono">Codice Fiscale</th>
-                                    <th class="p-3">Data Registrazione</th>
-                                    <th class="p-3 text-right">Azione</th>
-                                </tr>
-                            </thead>
-                            <tbody id="approvazioni-incomplete-list" class="divide-y divide-red-500/10 uppercase font-mono text-gray-400">
-                                <tr>
-                                    <td colspan="5" class="p-3 text-center text-gray-500">Nessuna registrazione incompleta.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Storico Approvazioni Rifiutati/Approvati -->
-                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                    <h3 class="font-headline text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">history</span> CRONOLOGIA RECENTE DECISIONI
-                    </h3>
-                    <div class="overflow-x-auto border border-white/5 bg-black/20">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
-                                <tr>
-                                    <th class="p-3">Nominativo</th>
-                                    <th class="p-3">Tipo Adesione</th>
-                                    <th class="p-3">Data Decisione</th>
-                                    <th class="p-3">Esito</th>
-                                    <th class="p-3 text-right">Dettaglio / Note</th>
-                                </tr>
-                            </thead>
-                            <tbody id="approvazioni-storico-list" class="divide-y divide-white/5 uppercase font-mono text-gray-400">
-                                <tr>
-                                    <td colspan="5" class="p-3 text-center text-gray-500">Nessuna decisione recente.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 2: GESTIONE SOCI (PRESIDENTE, VP, SEGRETARIO, CONSIGLIERI READ-ONLY) -->
-            <div id="panel-soci" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Registro Soci</h2>
-                        <p class="text-xs text-gray-500 uppercase">Domande e delibere per la governance ETS</p>
-                    </div>
-                </div>
-
-                <!-- Soci Table -->
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-8">N. <span id="sort-icon-soci-id_socio"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-9">Nominativo / Anagrafica / Residenza <span id="sort-icon-soci-nominativo"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-10">Codice Fiscale <span id="sort-icon-soci-codice_fiscale"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-11">Domanda / Delibera (Decorrenza) <span id="sort-icon-soci-data_domanda"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-12">Scadenza Quota <span id="sort-icon-soci-quota_scadenza"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-13">Stato Socio <span id="sort-icon-soci-stato_socio"></span></th>
-                                <th class="p-4 text-right select-none">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="soci-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <!-- Popolato dinamicamente -->
-                            <tr>
-                                <td colspan="7" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB 3: TESSERATI (TUTTI I RUOLI - PRESIDENTE/VP E SEGRETARIO CON AZIONI) -->
-            <div id="panel-tesserati" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Registro Tesserati</h2>
-                        <p class="text-xs text-gray-500 uppercase">Flusso atleti e trasmissione RASD / CSEN</p>
-                    </div>
-
-                    <!-- Widget Tessere CSEN -->
-                    <div class="hidden xl:flex bg-black/40 border border-white/10 p-2 gap-4 items-center shadow-[4px_4px_0_0_rgba(223,41,62,0.2)]">
-                        <button class="flex items-center gap-2 border-r border-white/10 pr-4 hover:bg-white/5 p-2 transition-colors focus:outline-none cursor-pointer group" title="Clicca per aggiornare manualmente dal portale CSEN" id="auto-dashboard-click-14">
-                            <span id="csen-sync-icon" class="material-symbols-outlined text-primary text-sm group-hover:rotate-180 transition-transform duration-500">sync</span>
-                            <span class="font-headline text-[10px] text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Tessere Residue</span>
-                        </button>
-                        <div class="flex gap-4 font-mono text-xs uppercase px-2">
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Silver</span><span id="csen-silver" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Gold</span><span id="csen-gold" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Integ. A</span><span id="csen-inta" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Integ. B</span><span id="csen-intb" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                        </div>
-                    </div>
-
-                    <!-- Bottone Esportazione CSEN -->
-                    <button class="bg-primary hover:bg-primary-dim text-white font-headline text-xs font-bold px-4 py-2 uppercase tracking-wider flex items-center gap-2" id="auto-dashboard-click-15">
-                        <span class="material-symbols-outlined text-sm">download</span> ESPORTA CSV CSEN
-                    </button>
-                </div>
-
-                <!-- Sezione Certificati Medici da Revisionare (GIALLO) -->
-                <div id="giallo-certificati-container" class="hidden border border-yellow-500/20 bg-yellow-500/5 p-6 space-y-4">
-                    <h3 class="font-headline text-xs font-bold text-yellow-500 uppercase tracking-widest flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">rule</span> CERTIFICATI MEDICI DA VERIFICARE (GIALLO)
-                    </h3>
-                    <div class="overflow-x-auto border border-yellow-500/10">
-                        <table class="w-full text-left text-xs bg-black/40">
-                            <thead class="bg-yellow-500/10 text-yellow-500 font-headline uppercase text-[9px] border-b border-yellow-500/10">
-                                <tr>
-                                    <th class="p-3">Atleta</th>
-                                    <th class="p-3 font-mono">Codice Fiscale</th>
-                                    <th class="p-3">Tipologia Dichiarata</th>
-                                    <th class="p-3">Data Emissione</th>
-                                    <th class="p-3 text-center">Documento</th>
-                                    <th class="p-3 text-right">Azioni</th>
-                                </tr>
-                            </thead>
-                            <tbody id="giallo-certificati-list" class="divide-y divide-yellow-500/10 uppercase font-mono">
-                                <!-- Popolato dinamicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Tesserati Table -->
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-16">N. <span id="sort-icon-tess-id_tesserato"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-17">Atleta / Anagrafica <span id="sort-icon-tess-nominativo"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-18">Tessera CSEN <span id="sort-icon-tess-numero_tessera_csen"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-19">Copertura <span id="sort-icon-tess-livello_copertura"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-20">Certificato Medico <span id="sort-icon-tess-certificato"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-21">Stato Tesseramento <span id="sort-icon-tess-stato_tesseramento"></span></th>
-                                <th class="p-4 text-right select-none">Azione</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tesserati-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <!-- Popolato dinamicamente -->
-                            <tr>
-                                <td colspan="7" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB 4: QUOTE E CASSA (PRESIDENTE, VP, TESORIERE, CONSIGLIERI READ-ONLY) -->
-            <div id="panel-quote" class="tab-panel space-y-6 hidden">
-                <div>
-                    <h2 class="font-headline text-lg font-bold uppercase">Stato Quote Associative e Tesseramenti</h2>
-                    <p class="text-xs text-gray-500 uppercase">Controllo scadenze quote solari e pagamenti</p>
-                </div>
-
-                <!-- Quote Table -->
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-22">Nominativo <span id="sort-icon-quote-nominativo"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-23">Tipo Adesione <span id="sort-icon-quote-tipo_adesione"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-24">Quota Totale <span id="sort-icon-quote-quota_totale"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-25">Scadenza Quota <span id="sort-icon-quote-quota_scadenza"></span></th>
-                                <th class="p-4 text-right select-none cursor-pointer hover:bg-white/10 transition-all" id="auto-dashboard-click-26">Stato / Azione <span id="sort-icon-quote-stato"></span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="quote-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <!-- Popolato dinamicamente -->
-                            <tr>
-                                <td colspan="5" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB 5: VERBALI (TUTTI - PRES/VP APPROVA, SEGRETARIO SCRIVE, ALTRI READ) -->
-            <div id="panel-verbali" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Verbali del Consiglio Direttivo</h2>
-                        <p class="text-xs text-gray-500 uppercase">Archivio delle riunioni e delle delibere legali</p>
-                    </div>
-                    <button id="btn-crea-verbale-toggle" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
-                        REDIGI NUOVO VERBALE
-                    </button>
-                </div>
-
-                <!-- Verbali List -->
-                <div class="space-y-4" id="verbali-container">
-                    <!-- Popolato dinamicamente -->
-                </div>
-            </div>
-
-            <!-- TAB 6: GESTIONE DIRETTIVO (TUTTI - EDITABILE DA PRESIDENTE/VP) -->
-            <div id="panel-direttivo" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Componenti del Consiglio Direttivo</h2>
-                        <p class="text-xs text-gray-500 uppercase">Gestione e variazioni dei ruoli istituzionali</p>
-                    </div>
-                    <button id="btn-nomina-direttivo-toggle" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
-                        NOMINA COMPONENTE
-                    </button>
-                </div>
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-27">Nominativo <span id="sort-icon-direttivo-nominativo"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-28">Codice Fiscale <span id="sort-icon-direttivo-codice_fiscale"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-29">Email <span id="sort-icon-direttivo-email"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-30">Ruolo Attuale <span id="sort-icon-direttivo-ruolo"></span></th>
-                                <th class="p-4 text-right select-none">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="direttivo-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <!-- Popolato dinamicamente -->
-                            <tr>
-                                <td colspan="5" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB 7: VERBALI ASSEMBLEA SOCI -->
-            <div id="panel-verbali_assemblea" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Verbali dell'Assemblea dei Soci</h2>
-                        <p class="text-xs text-gray-500 uppercase">Archivio storico dei verbali assembleari</p>
-                    </div>
-                    <button id="btn-crea-verbale-assemblea-toggle" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
-                        REDIGI VERBALE ASSEMBLEA
-                    </button>
-                </div>
-                <div class="space-y-4" id="verbali-assemblea-container">
-                    <!-- Popolato dinamicamente -->
-                </div>
-            </div>
-
-            <!-- TAB 8: BILANCI E RENDICONTI -->
-            <div id="panel-bilanci" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Rendiconti Economici e Finanziari</h2>
-                        <p class="text-xs text-gray-500 uppercase">Bilanci consuntivi e preventivi approvati</p>
-                    </div>
-                    <button id="btn-nuovo-bilancio-toggle" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
-                        CARICA RENDICONTO
-                    </button>
-                </div>
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-31">Anno <span id="sort-icon-bilanci-anno"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-32">Titolo <span id="sort-icon-bilanci-titolo"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-33">Entrate <span id="sort-icon-bilanci-entrate"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-34">Uscite <span id="sort-icon-bilanci-uscite"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-35">Avanzo / Disavanzo <span id="sort-icon-bilanci-avanzo"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-36">Stato <span id="sort-icon-bilanci-stato"></span></th>
-                                <th class="p-4 text-right select-none">Azione</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bilanci-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <!-- Popolato dinamicamente -->
-                            <tr>
-                                <td colspan="7" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB 9: CONTABILITA -->
-            <div id="panel-contabilita" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Prima Nota e Contabilità</h2>
-                        <p class="text-xs text-gray-500 uppercase">Tracciabilità in tempo reale di entrate (ricevute) e uscite (spese)</p>
-                    </div>
-                    <button id="btn-nuova-spesa-toggle" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
-                        REGISTRA SPESA / USCITA
-                    </button>
-                </div>
-
-                <!-- Contabilità Totali -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <div class="border border-white/10 p-4 bg-black/20">
-                        <p class="text-[10px] text-green-500 font-headline uppercase">TOTALE ENTRATE (RICEVUTE)</p>
-                        <p id="cont-totale-entrate" class="text-2xl font-headline font-black text-green-500 mt-1">€0.00</p>
-                    </div>
-                    <div class="border border-white/10 p-4 bg-black/20">
-                        <p class="text-[10px] text-primary font-headline uppercase">TOTALE USCITE (SPESE)</p>
-                        <p id="cont-totale-uscite" class="text-2xl font-headline font-black text-primary mt-1">€0.00</p>
-                    </div>
-                    <div class="border border-white/10 p-4 bg-black/20">
-                        <p class="text-[10px] text-white font-headline uppercase">SALDO CASSA</p>
-                        <p id="cont-saldo-cassa" class="text-2xl font-headline font-black text-white mt-1">€0.00</p>
-                    </div>
-                </div>
-
-                <!-- Prima Nota Table -->
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-37">Data <span id="sort-icon-contabilita-data"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-38">Tipo <span id="sort-icon-contabilita-tipo"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-39">Causale / Voce spesa <span id="sort-icon-contabilita-causale"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-40">Soggetto / Beneficiario <span id="sort-icon-contabilita-soggetto"></span></th>
-                                <th class="p-4 cursor-pointer hover:bg-white/10 select-none transition-all" id="auto-dashboard-click-41">Importo <span id="sort-icon-contabilita-importo"></span></th>
-                                <th class="p-4 text-gray-400 select-none">Dettagli Ricevuta/Audit</th>
-                            </tr>
-                        </thead>
-                        <tbody id="contabilita-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <tr>
-                                <td colspan="6" class="p-4 text-center text-gray-500">Caricamento prima nota...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB: GESTIONE CORSI -->
-            <div id="panel-gestione_corsi" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Gestione Corsi ed Eventi</h2>
-                        <p class="text-xs text-gray-500 uppercase">Crea e modifica i programmi dei corsi, i relativi orari e assegna gli istruttori</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase" id="auto-dashboard-click-42">
-                            NUOVO CORSO
-                        </button>
-                        <button class="border border-white/20 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-white hover:text-black transition-all uppercase" id="auto-dashboard-click-43">
-                            NUOVO EVENTO
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Tab Interni Corsi/Eventi -->
-                <div class="flex gap-4 border-b border-white/10 pb-px">
-                    <button id="subtab-btn-corsi" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide">
-                        CORSI ATTIVI
-                    </button>
-                    <button id="subtab-btn-eventi" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide">
-                        EVENTI IN PROGRAMMA
-                    </button>
-                </div>
-
-                <!-- Tabella Corsi/Eventi -->
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4">Titolo</th>
-                                <th class="p-4">Luogo</th>
-                                <th class="p-4" id="col-orari-header">Orari Settimanali</th>
-                                <th class="p-4">Istruttori</th>
-                                <th class="p-4 text-center">N. Iscritti</th>
-                                <th class="p-4 text-right">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corsi-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <tr>
-                                <td colspan="6" class="p-4 text-center text-gray-500">Caricamento corsi...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- TAB 10: USER PROFILE (IL MIO PROFILO) -->
-            <div id="panel-user_profilo" class="tab-panel space-y-6 hidden">
-                <div>
-                    <h2 class="font-headline text-lg font-bold uppercase">Il Mio Profilo</h2>
-                    <p class="text-xs text-gray-500 uppercase">Gestisci i tuoi dati anagrafici, i contatti e le autorizzazioni privacy</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left column: Avatar upload and password change -->
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="border border-white/10 p-6 bg-black/40 text-center space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">FOTO PROFILO</h3>
-                            <div class="flex flex-col items-center space-y-2">
-                                <div class="w-32 h-32 border border-white/20 bg-black flex items-center justify-center relative overflow-hidden">
-                                    <img id="user-avatar-preview" src="" alt="Avatar" class="w-full h-full object-cover hidden">
-                                    <span id="user-avatar-placeholder" class="material-symbols-outlined text-4xl text-gray-500">account_circle</span>
-                                </div>
-                                <input type="file" id="user-avatar-file" accept="image/*" class="hidden">
-                                <button class="bg-white/10 text-white border border-white/20 hover:bg-white hover:text-black font-headline text-[10px] font-bold px-3 py-1.5 transition-all uppercase" id="auto-dashboard-click-44">
-                                    CARICA IMMAGINE
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">CAMBIA PASSWORD</h3>
-                            <form id="form-user-password" class="space-y-3">
-                                <div>
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Nuova Password</label>
-                                    <input type="password" id="user-new-password" class="w-full brutalist-input text-xs" required="" minlength="6">
-                                </div>
-                                <div>
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Conferma Password</label>
-                                    <input type="password" id="user-confirm-password" class="w-full brutalist-input text-xs" required="" minlength="6">
-                                </div>
-                                <button type="submit" class="w-full bg-white text-black hover:bg-primary hover:text-white font-headline text-[10px] font-bold py-2 transition-all uppercase">
-                                    AGGIORNA PASSWORD
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Right column: Personal details form -->
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="border border-white/10 p-6 bg-black/40 space-y-6">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">DATI PERSONALI</h3>
-                            
-                            <form id="form-user-profilo" class="space-y-4">
-                                <!-- Technical data (read-only) -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Nome</label>
-                                        <input type="text" id="user-profilo-nome" class="w-full brutalist-input text-xs opacity-50" readonly="">
-                                    </div>
-                                    <div>
-                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Cognome</label>
-                                        <input type="text" id="user-profilo-cognome" class="w-full brutalist-input text-xs opacity-50" readonly="">
-                                    </div>
-                                    <div>
-                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Codice Fiscale</label>
-                                        <input type="text" id="user-profilo-cf" class="w-full brutalist-input text-xs opacity-50 font-mono" readonly="">
-                                    </div>
-                                    <div>
-                                        <label class="block font-headline text-[9px] font-bold text-gray-500 uppercase mb-1">Data Nascita</label>
-                                        <input type="date" id="user-profilo-data-nascita" class="w-full brutalist-input text-xs opacity-50" readonly="">
-                                    </div>
-                                </div>
-
-                                <div class="border-t border-white/5 pt-4 space-y-4">
-                                    <h4 class="font-headline text-[10px] font-bold text-primary uppercase">Contatti e Residenza (Modificabili)</h4>
-                                    
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Email</label>
-                                            <input type="email" id="user-profilo-email" class="w-full brutalist-input text-xs" required="">
-                                        </div>
-                                        <div>
-                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Cellulare / Telefono</label>
-                                            <input type="text" id="user-profilo-cellulare" class="w-full brutalist-input text-xs" required="">
-                                        </div>
-                                        <div class="md:col-span-2">
-                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Indirizzo Residenza</label>
-                                            <input type="text" id="user-profilo-indirizzo" class="w-full brutalist-input text-xs" required="">
-                                        </div>
-                                        <div>
-                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Comune</label>
-                                            <input type="text" id="user-profilo-comune" class="w-full brutalist-input text-xs" required="">
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Provincia</label>
-                                                <input type="text" id="user-profilo-provincia" class="w-full brutalist-input text-xs" required="" maxlength="2">
-                                            </div>
-                                            <div>
-                                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">CAP</label>
-                                                <input type="text" id="user-profilo-cap" class="w-full brutalist-input text-xs" required="" maxlength="5">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="border-t border-white/5 pt-4 space-y-4">
-                                    <h4 class="font-headline text-[10px] font-bold text-primary uppercase">Contatto di Emergenza</h4>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Nominativo Contatto</label>
-                                            <input type="text" id="user-profilo-emergenza-nome" class="w-full brutalist-input text-xs" placeholder="E.g. Mario Rossi (Padre)">
-                                        </div>
-                                        <div>
-                                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Telefono Contatto</label>
-                                            <input type="text" id="user-profilo-emergenza-telefono" class="w-full brutalist-input text-xs" placeholder="E.g. +39 333 1234567">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="border-t border-white/5 pt-4 space-y-4">
-                                    <h4 class="font-headline text-[10px] font-bold text-primary uppercase">Consensi Privacy (GDPR)</h4>
-                                    <div class="space-y-3 text-xs uppercase font-mono">
-                                        <div class="flex items-start gap-3">
-                                            <input type="checkbox" id="user-consenso-marketing" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none">
-                                            <label for="user-consenso-marketing" class="text-gray-300 font-bold select-none cursor-pointer">
-                                                Acconsento alla ricezione di comunicazioni di marketing, newsletter ed offerte dagli sponsor del Club.
-                                            </label>
-                                        </div>
-                                        <div class="flex items-start gap-3">
-                                            <input type="checkbox" id="user-consenso-audiovisivi" class="mt-1 accent-primary h-4 w-4 bg-transparent border border-white/20 rounded-none">
-                                            <label for="user-consenso-audiovisivi" class="text-gray-300 font-bold select-none cursor-pointer">
-                                                Acconsento al trattamento di riprese audio/video e foto per finalità promozionali, social e istituzionali.
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <button type="submit" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-6 py-2.5 transition-all uppercase tracking-wider">
-                                    SALVA MODIFICHE PROFILO
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 11: USER CERTIFICATO DETTAGLI -->
-            <div id="panel-user_certificato" class="tab-panel space-y-6 hidden">
-                <div>
-                    <h2 class="font-headline text-lg font-bold uppercase">Stato Certificato Medico</h2>
-                    <p class="text-xs text-gray-500 uppercase">Verifica la validità ed effettua il caricamento del tuo certificato medico d'idoneità</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left: Current state and upload -->
-                    <div class="lg:col-span-1 space-y-6">
-                        <div id="user-cert-status-card" class="border p-6 space-y-4 bg-black/40">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">STATO ATTUALE</h3>
-                            <div id="user-cert-badge-box" class="p-3 border-l-4 font-mono text-xs uppercase">
-                                <span id="user-cert-badge-text">Rilevamento in corso...</span>
-                            </div>
-                            <div class="text-xs font-mono space-y-1 uppercase text-gray-400">
-                                <div>TIPOLOGIA: <span id="user-cert-info-tipo" class="text-white">-</span></div>
-                                <div>SCADENZA: <span id="user-cert-info-scadenza" class="text-white">-</span></div>
-                                <div>MEDICO: <span id="user-cert-info-medico" class="text-white">-</span></div>
-                            </div>
-                        </div>
-
-                        <div class="border p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">CARICA NUOVO CERTIFICATO</h3>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Tipologia Certificato</label>
-                                    <select id="user-new-cert-tipo" class="w-full brutalist-input text-xs">
-                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
-                                        <option value="AGONISTICO">AGONISTICO</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Data Rilascio / Emissione</label>
-                                    <input type="date" id="user-new-cert-data" class="w-full brutalist-input text-xs">
-                                </div>
-                                <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-dashboard-click-45">
-                                    <input type="file" id="user-new-cert-file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
-                                    <span class="material-symbols-outlined text-xl text-primary mb-1">upload_file</span>
-                                    <p class="text-[10px] text-white uppercase font-bold" id="user-new-cert-file-name">SELEZIONA FILE CERTIFICATO</p>
-                                    <p class="text-[8px] text-gray-400 mt-1 uppercase" id="user-new-cert-file-status">Nessun file (PDF, PNG, JPG)</p>
-                                </div>
-                                <button id="btn-user-upload-cert" class="w-full bg-white text-black hover:bg-primary hover:text-white font-headline text-[10px] font-bold py-2 transition-all uppercase tracking-wider">
-                                    INVIA PER APPROVAZIONE
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: History log -->
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">CRONOLOGIA CERTIFICATI MEDICI</h3>
-                            <div class="overflow-x-auto border border-white/5 bg-black/20">
-                                <table class="w-full text-left text-xs">
-                                    <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
-                                        <tr>
-                                            <th class="p-3">Data Caricamento</th>
-                                            <th class="p-3">Tipologia</th>
-                                            <th class="p-3">Data Scadenza</th>
-                                            <th class="p-3">Stato</th>
-                                            <th class="p-3 text-right">Documento</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="user-cert-history-body" class="divide-y divide-white/5 uppercase font-mono">
-                                        <tr>
-                                            <td colspan="5" class="p-3 text-center text-gray-500">Nessun certificato in archivio.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 12: AREA ISTRUTTORE -->
-            <div id="panel-instructor_corsi" class="tab-panel space-y-6 hidden">
-                <!-- WIDGET 1: LISTA CORSI ASSEGNATI -->
-                <div id="instructor-widget-courses" class="space-y-6">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">I Tuoi Corsi (Istruttore)</h2>
-                        <p class="text-xs text-gray-500 uppercase">Seleziona uno dei tuoi corsi assegnati per gestire il registro presenze e verificare lo stato degli iscritti.</p>
-                    </div>
-                    <div id="instructor-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <p class="text-xs text-gray-500 uppercase col-span-full">Caricamento corsi in corso...</p>
-                    </div>
-                </div>
-
-                <!-- WIDGET 2: REGISTRO CORSO & STORICO -->
-                <div id="instructor-widget-registro" class="space-y-6 hidden">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <button class="text-xs text-primary hover:underline font-headline font-bold uppercase tracking-wider flex items-center gap-1 mb-2" id="auto-dashboard-click-46">
-                                <span class="material-symbols-outlined text-xs">arrow_back</span> TORNA AI MIEI CORSI
-                            </button>
-                            <h2 id="instructor-course-detail-title" class="font-headline text-lg font-bold uppercase text-white">NOME CORSO</h2>
-                            <p id="instructor-course-detail-subtitle" class="text-xs text-gray-500 uppercase">REGISTRO PRESENZE E ANAGRAFICHE ATLETI</p>
-                        </div>
-                        <div class="flex gap-2 bg-black border border-white/10 p-1">
-                            <button id="instructor-registro-tab-btn" class="px-3 py-1.5 font-headline text-xs font-bold uppercase bg-primary text-white transition-all">
-                                REGISTRO APPUNTO
-                            </button>
-                            <button id="instructor-storico-tab-btn" class="px-3 py-1.5 font-headline text-xs font-bold uppercase text-gray-400 hover:text-white transition-all">
-                                STORICO LEZIONI
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- TAB REGISTRO APPUNTO -->
-                    <div id="instructor-tab-registro" class="space-y-6">
-                        <!-- Date picker + stats header -->
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-black border border-white/10 p-4">
-                            <div class="space-y-1">
-                                <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">SELEZIONA DATA LEZIONE</label>
-                                <input type="date" id="instructor-presence-date" class="bg-[#121212] border border-white/20 text-white p-2 text-xs font-mono w-full">
-                            </div>
-                            <div class="flex flex-col justify-center">
-                                <p class="text-[9px] text-gray-400 font-headline uppercase">PRESENZE REGISTRATE</p>
-                                <p id="instructor-presence-count" class="text-2xl font-headline font-black text-primary mt-1">0 / 0</p>
-                            </div>
-                            <div class="flex items-center justify-end">
-                                <button class="w-full sm:w-auto bg-white text-black font-headline text-xs font-bold px-6 py-3 hover:bg-primary hover:text-white transition-all uppercase" id="auto-dashboard-click-47">
-                                    SALVA PRESENZE
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Tabella Iscritti -->
-                        <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                                    <tr>
-                                        <th class="p-4">Atleta</th>
-                                        <th class="p-4 text-center">Fruizione</th>
-                                        <th class="p-4 text-center">Quota Corso</th>
-                                        <th class="p-4 text-center">Quota Ann.</th>
-                                        <th class="p-4 text-center">Tessera</th>
-                                        <th class="p-4 text-center">CSEN</th>
-                                        <th class="p-4 text-center">Certificato Medico</th>
-                                        <th class="p-4 text-center">Presenza</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="instructor-iscritti-body" class="divide-y divide-white/5 uppercase font-mono">
-                                    <tr>
-                                        <td colspan="8" class="p-4 text-center text-gray-500">Caricamento iscritti...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- TAB STORICO LEZIONI -->
-                    <div id="instructor-tab-storico" class="space-y-6 hidden">
-                        <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                            <table class="w-full text-left text-xs">
-                                <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                                    <tr>
-                                        <th class="p-4">Data Lezione</th>
-                                        <th class="p-4 text-center">Presenti</th>
-                                        <th class="p-4 text-center">Assenti</th>
-                                        <th class="p-4">Registrato Da</th>
-                                        <th class="p-4 text-right">Azione</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="instructor-storico-body" class="divide-y divide-white/5 uppercase font-mono">
-                                    <tr>
-                                        <td colspan="5" class="p-4 text-center text-gray-500">Nessuna lezione registrata in precedenza.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- DUMMY PANEL: VOLUNTEER EVENTI -->
-            <div id="panel-volunteer_eventi" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Gestione Eventi (Volontari)</h2>
-                        <p class="text-xs text-gray-500 uppercase">Organizza e supervisiona gli eventi del club</p>
-                    </div>
-                </div>
-                <div class="border border-white/10 bg-black/40 p-12 text-center text-gray-400">
-                    <span class="material-symbols-outlined text-4xl mb-4 text-primary">event_available</span>
-                    <p class="font-headline font-bold uppercase tracking-wider text-sm">Dashboard Eventi in Costruzione</p>
-                    <p class="text-xs mt-2">Questa è un'anteprima visiva. L'area volontari sarà sviluppata nei prossimi task.</p>
-                </div>
-            </div>
-
-            <div id="panel-user_corsi" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Corsi Attivi</h2>
-                        <p class="text-xs text-gray-500 uppercase">Visualizza e iscriviti ai corsi del club</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left: available courses showcase -->
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="space-y-3">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">CORSI ATTIVI</h3>
-                            <div id="user-corsi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Populated dynamically -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: user's reservations for courses -->
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">I MIEI CORSI</h3>
-                            <div id="user-corsi-iscrizioni" class="space-y-4 font-mono text-xs uppercase">
-                                <p class="text-xs text-gray-500 uppercase font-mono">Caricamento...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 14: EVENTI -->
-            <div id="panel-user_eventi" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Eventi in Programma</h2>
-                        <p class="text-xs text-gray-500 uppercase">Visualizza e prenota la tua partecipazione agli eventi del club</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Left: available events showcase -->
-                    <div class="lg:col-span-2 space-y-6">
-                        <div class="space-y-3">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">EVENTI IN PROGRAMMA</h3>
-                            <div id="user-eventi-catalogo" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Populated dynamically -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: user's reservations for events -->
-                    <div class="lg:col-span-1 space-y-6">
-                        <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">I MIEI EVENTI</h3>
-                            <div id="user-eventi-iscrizioni" class="space-y-4 font-mono text-xs uppercase">
-                                <p class="text-xs text-gray-500 uppercase font-mono">Caricamento...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 13: PAGAMENTI E RICEVUTE -->
-            <div id="panel-user_pagamenti" class="tab-panel space-y-6 hidden">
-                <div>
-                    <h2 class="font-headline text-lg font-bold uppercase">Storico Pagamenti e Ricevute</h2>
-                    <p class="text-xs text-gray-500 uppercase">Controlla lo stato delle tue quote associative ed eventi e scarica i documenti di pagamento in PDF</p>
-                </div>
-
-                <div class="border border-white/10 p-6 bg-black/40 space-y-4">
-                    <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/5 pb-2">REGISTRO TRANSAZIONI PERSONALE</h3>
-                    <div class="overflow-x-auto border border-white/5 bg-black/20">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[9px] border-b border-white/10">
-                                <tr>
-                                    <th class="p-4">Numero Ricevuta</th>
-                                    <th class="p-4">Data Pagamento</th>
-                                    <th class="p-4">Importo</th>
-                                    <th class="p-4">Metodo</th>
-                                    <th class="p-4">Causale</th>
-                                    <th class="p-4 text-right">Azione</th>
-                                </tr>
-                            </thead>
-                            <tbody id="user-pagamenti-body" class="divide-y divide-white/5 uppercase font-mono">
-                                <tr>
-                                    <td colspan="6" class="p-4 text-center text-gray-500">Nessuna transazione registrata.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-        </section>
-    </main>
-
-    <!-- Modal per Approva Socio (Presidente / VP / Segretario) -->
-    <div id="modal-approvazione" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4">
-            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">DELIBERA CONSIGLIO DIRETTIVO</h3>
-            <p class="text-xs text-gray-400 uppercase">Inserisci i dati della riunione del consiglio per approvare ufficialmente la domanda di ammissione.</p>
-            
-            <div class="space-y-3">
-                <input type="hidden" id="approvazione-socio-id">
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">NUMERO VERBALE *</label>
-                    <input type="text" id="delibera-numero-verbale" class="w-full brutalist-input" placeholder="E.g. VERB-2026-05" required="">
-                </div>
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA VERBALE / RIUNIONE *</label>
-                    <input type="date" id="delibera-data" class="w-full brutalist-input" required="">
-                </div>
-            </div>
-            
-            <div class="flex gap-4 pt-2">
-                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-48">
-                    ANNULLA
-                </button>
-                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-49">
-                    REGISTRA DELIBERA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal per Nuovo Verbale (Segretario, Presidente, VP) -->
-    <div id="modal-nuovo-verbale" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#0d0d0d] p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-6">
-            <div class="flex justify-between items-center border-b border-white/10 pb-4">
-                <h3 class="font-headline text-lg font-bold uppercase tracking-wider text-primary">REDIGI VERBALE DI CONSIGLIO DIRETTIVO</h3>
-                <span class="text-[10px] font-mono text-gray-500 bg-white/5 px-2 py-1 uppercase" id="wizard-step-indicator">Step 1 di 4</span>
-            </div>
-            
-            <!-- Wizard Step Headers -->
-            <div class="flex border-b border-white/5 pb-2">
-                <div class="flex-1 text-center py-2 text-[10px] font-headline font-bold border-b-2 border-primary text-primary cursor-pointer uppercase" id="step-tab-1">1. Info Generali</div>
-                <div class="flex-1 text-center py-2 text-[10px] font-headline font-bold border-b-2 border-transparent text-gray-500 cursor-pointer uppercase" id="step-tab-2">2. Presenze &amp; Quorum</div>
-                <div class="flex-1 text-center py-2 text-[10px] font-headline font-bold border-b-2 border-transparent text-gray-500 cursor-pointer uppercase" id="step-tab-3">3. Ordine del Giorno</div>
-                <div class="flex-1 text-center py-2 text-[10px] font-headline font-bold border-b-2 border-transparent text-gray-500 cursor-pointer uppercase" id="step-tab-4">4. Anteprima &amp; Firma</div>
-            </div>
-
-            <!-- Step 1: Info Generali -->
-            <div id="wizard-step-1" class="space-y-4">
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">
-                            NUMERO VERBALE *
-                            <span id="manual-number-warning" class="text-primary text-[8px] font-bold uppercase ml-2 hidden animate-pulse">⚠️ MODIFICATO</span>
-                        </label>
-                        <input type="text" id="verbale-numero" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" placeholder="E.g. VERB-2026-08" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA RIUNIONE *</label>
-                        <input type="date" id="verbale-data" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TIPO SEDUTA *</label>
-                        <select id="verbale-tipo" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" required="">
-                            <option value="ORDINARIA" selected="">ORDINARIA</option>
-                            <option value="STRAORDINARIA">STRAORDINARIA</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-4 gap-4">
-                    <div class="group col-span-2">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">LUOGO / PIATTAFORMA DI RIUNIONE *</label>
-                        <input type="text" id="verbale-luogo" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" value="Sede sociale sita in Via Monte Lungo 12, Roma" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORA INIZIO *</label>
-                        <input type="time" id="verbale-ora-inizio" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" value="18:00" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORA FINE *</label>
-                        <input type="time" id="verbale-ora-fine" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" value="19:30" required="">
-                    </div>
-                </div>
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">PRESIDENTE DI SEDUTA *</label>
-                        <select id="verbale-presidente-select" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" required=""></select>
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">SEGRETARIO VERBALIZZANTE *</label>
-                        <select id="verbale-segretario-select" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" required=""></select>
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">MODALITÀ DI CONVOCAZIONE *</label>
-                        <input type="text" id="verbale-convocazione-mezzo" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" value="Email" placeholder="PEC / Email / Lettera a mano" required="">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA CONVOCAZIONE *</label>
-                        <input type="date" id="verbale-convocazione-data" class="w-full brutalist-input bg-black text-white p-2 border border-white/20 text-xs font-mono uppercase focus:outline-none focus:border-primary" required="">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 2: Presenze & Quorum -->
-            <div id="wizard-step-2" class="space-y-4 hidden">
-                <div class="border border-white/10 bg-white/5 p-4 rounded flex items-center justify-between">
-                    <div>
-                        <h4 class="font-headline text-xs font-bold text-white uppercase">VERIFICA QUORUM COSTITUTIVO</h4>
-                        <p class="text-[10px] text-gray-400 mt-1 uppercase">La riunione è validamente costituita con la presenza della maggioranza dei membri in carica (fisici + deleghe).</p>
-                    </div>
-                    <div id="quorum-constitutivo-indicator" class="px-4 py-2 border font-headline text-xs font-bold rounded uppercase">
-                        Nessun dato
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-xs text-white">
-                        <thead>
-                            <tr class="border-b border-white/20 text-gray-400 uppercase text-[10px]">
-                                <th class="p-3 font-headline font-bold">Consigliere / Carica</th>
-                                <th class="p-3 font-headline font-bold text-center">Presente</th>
-                                <th class="p-3 font-headline font-bold text-center">Assente Giustificato</th>
-                                <th class="p-3 font-headline font-bold text-center">Assente Ingiustificato</th>
-                                <th class="p-3 font-headline font-bold text-center">Delega A</th>
-                            </tr>
-                        </thead>
-                        <tbody id="presenze-list-body">
-                            <!-- Popolato via JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Step 3: Ordine del Giorno -->
-            <div id="wizard-step-3" class="space-y-4 hidden">
-                <!-- Punto 1: Nuovi Soci -->
-                <div class="border border-white/10 p-4 bg-black/40 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h4 class="font-headline text-xs font-bold text-primary uppercase">ODG 1: Esame e approvazione delle domande di ammissione di nuovi soci</h4>
-                        <span class="text-[9px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded font-bold uppercase" id="soci-pending-count">0 In attesa</span>
-                    </div>
-                    <p class="text-[10px] text-gray-400 uppercase">Le seguenti domande di ammissione verranno approvate ed inserite nel Libro Soci:</p>
-                    <div class="max-h-40 overflow-y-auto border border-white/5 bg-black/20 p-2" id="soci-pending-list-wizard">
-                        <!-- Popolato via JS -->
-                    </div>
-                    <!-- Votazione Punto 1 -->
-                    <div class="grid grid-cols-4 gap-4 items-end bg-white/5 p-3 rounded">
-                        <div class="col-span-2">
-                            <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase mb-1">Deliberazione sul Punto 1</label>
-                            <select id="votazione-punto-1-tipo" class="w-full brutalist-input bg-black text-white text-xs p-2 border border-white/20">
-                                <option value="UNANIMITA" selected="">All'unanimità dei presenti</option>
-                                <option value="MAGGIORANZA">A maggioranza dei presenti</option>
-                            </select>
-                        </div>
-                        <div class="col-span-2 flex gap-2 hidden" id="voti-punto-1-dettaglio">
-                            <div>
-                                <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase mb-1">Favorevoli</label>
-                                <input type="number" id="voti-punto-1-favorevoli" class="w-16 brutalist-input bg-black text-white text-xs p-2 border border-white/20" value="0">
-                            </div>
-                            <div>
-                                <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase mb-1">Contrari</label>
-                                <input type="number" id="voti-punto-1-contrari" class="w-16 brutalist-input bg-black text-white text-xs p-2 border border-white/20" value="0">
-                            </div>
-                            <div>
-                                <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase mb-1">Astenuti</label>
-                                <input type="number" id="voti-punto-1-astenuti" class="w-16 brutalist-input bg-black text-white text-xs p-2 border border-white/20" value="0">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Punti Aggiuntivi -->
-                <div class="space-y-4" id="wizard-punti-aggiuntivi-container">
-                    <!-- Dinamicamente inseriti punti ODG 2, ODG 3... -->
-                </div>
-
-                <div class="flex justify-between items-center pt-2">
-                    <button type="button" class="border border-dashed border-white/20 text-gray-400 hover:text-white px-4 py-2 text-[10px] font-headline uppercase transition-all" id="auto-dashboard-click-50">
-                        + Aggiungi Punto all'Ordine del Giorno
-                    </button>
-                </div>
-
-                <!-- Punto Finale: Varie ed eventuali -->
-                <div class="border border-white/10 p-4 bg-black/40 space-y-3">
-                    <h4 class="font-headline text-xs font-bold text-white uppercase">ODG 4: Varie ed eventuali</h4>
-                    <textarea id="discussione-varie" rows="2" class="w-full brutalist-input text-xs bg-black text-white p-2 border border-white/20" placeholder="Spazio dedicato a comunicazioni minori che non richiedono delibere vincolanti strutturate o per questioni emerse..."></textarea>
-                </div>
-            </div>
-
-            <!-- Step 4: Anteprima & Firma -->
-            <div id="wizard-step-4" class="space-y-4 hidden">
-                <div class="border border-white/10 bg-black/40 p-4 space-y-2 flex justify-between items-center">
-                    <div>
-                        <h4 class="font-headline text-xs font-bold text-white uppercase">ANTEPRIMA CONFORME DEL VERBALE</h4>
-                        <p class="text-[9px] text-gray-500 uppercase">Verifica la conformità del testo finale che verrà registrato in archivio e stampato.</p>
-                    </div>
-                    <button type="button" class="bg-white/10 text-white border border-white/20 hover:bg-white hover:text-black font-headline text-[10px] font-bold px-3 py-1.5 transition-all uppercase" id="auto-dashboard-click-51">
-                        STAMPA VERBALE
-                    </button>
-                </div>
-                <textarea id="verbale-anteprevia-testo" rows="12" class="w-full brutalist-input font-mono text-[11px] uppercase leading-relaxed bg-[#050505] text-gray-300 p-4 border border-white/10" readonly=""></textarea>
-            </div>
-            
-            <!-- Wizard Navigation buttons -->
-            <div class="flex gap-4 pt-4 border-t border-white/10">
-                <button type="button" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-52">
-                    ANNULLA
-                </button>
-                <div class="flex-1"></div>
-                <button type="button" id="btn-wizard-prev" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase transition-all hidden">
-                    PRECEDENTE
-                </button>
-                <button type="button" id="btn-wizard-next" class="bg-white text-black font-headline font-bold px-6 py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all">
-                    SUCCESSIVO
-                </button>
-                <button type="button" id="btn-wizard-submit" class="bg-primary text-white font-headline font-bold px-6 py-2 text-xs uppercase hover:bg-primary/80 transition-all hidden">
-                    SALVA E PUBBLICA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal per Verbale Assemblea -->
-    <div id="modal-verbale-assemblea" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#121212] p-6 max-w-lg w-full space-y-4">
-            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">REDIGI VERBALE ASSEMBLEA</h3>
-            <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">NUMERO VERBALE *</label>
-                        <input type="text" id="verbale-ass-numero" class="w-full brutalist-input" placeholder="E.g. VERB-ASS-2026-02" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA ASSEMBLEA *</label>
-                        <input type="date" id="verbale-ass-data" class="w-full brutalist-input" required="">
-                    </div>
-                </div>
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TESTO VERBALE / DELIBERE *</label>
-                    <textarea id="verbale-ass-testo" rows="6" class="w-full brutalist-input" placeholder="Scrivi qui il verbale dell'assemblea dei soci..." required=""></textarea>
-                </div>
-            </div>
-            <div class="flex gap-4 pt-2">
-                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-53">
-                    ANNULLA
-                </button>
-                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-54">
-                    SALVA E PUBBLICA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal per Bilancio -->
-    <div id="modal-bilancio" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4">
-            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">INSERISCI RENDICONTO / BILANCIO</h3>
-            <div class="space-y-3">
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ANNO RIFERIMENTO *</label>
-                    <input type="number" id="bilancio-anno" class="w-full brutalist-input" placeholder="2026" required="">
-                </div>
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TITOLO RENDICONTO *</label>
-                    <input type="text" id="bilancio-titolo" class="w-full brutalist-input" placeholder="E.g. Bilancio Consuntivo 2026" required="">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TOTALE ENTRATE *</label>
-                        <input type="number" step="0.01" id="bilancio-entrate" class="w-full brutalist-input" placeholder="0.00" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TOTALE USCITE *</label>
-                        <input type="number" step="0.01" id="bilancio-uscite" class="w-full brutalist-input" placeholder="0.00" required="">
-                    </div>
-                </div>
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">AVANZO / DISAVANZO</label>
-                    <input type="number" step="0.01" id="bilancio-avanzo" class="w-full brutalist-input bg-neutral-900" placeholder="0.00" readonly="">
-                </div>
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">STATO BILANCIO</label>
-                    <select id="bilancio-stato" class="w-full brutalist-input bg-black text-white">
-                        <option value="IN_REDAZIONE">IN REDAZIONE</option>
-                        <option value="APPROVATO_CONSIGLIO">APPROVATO DAL CONSIGLIO</option>
-                        <option value="APPROVATO_ASSEMBLEA">APPROVATO DALL'ASSEMBLEA</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex gap-4 pt-2">
-                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-55">
-                    ANNULLA
-                </button>
-                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-56">
-                    SALVA RENDICONTO
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal per Nomina Componente Direttivo -->
-    <div id="modal-nomina-direttivo" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4">
-            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">NOMINA COMPONENTE DIRETTIVO</h3>
-            <p class="text-xs text-gray-400 uppercase">Seleziona un socio già approvato per nominarlo nel Consiglio Direttivo dell'Associazione.</p>
-            <div class="space-y-3">
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">SELEZIONA SOCIO *</label>
-                    <select id="nomina-socio-select" class="w-full brutalist-input bg-black text-white">
-                        <option value="" disabled="" selected="">Caricamento soci...</option>
-                    </select>
-                </div>
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">RUOLO DA ASSEGNARE *</label>
-                    <div id="nomina-ruolo-select" class="flex flex-col gap-2 p-2 bg-black border border-white/20">
-                            <label class="flex items-center gap-2"><input type="checkbox" value="presidente" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Presidente</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" value="vice_presidente" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Vice Presidente</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" value="segretario" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Segretario</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" value="tesoriere" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Tesoriere</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" value="consigliere" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Consigliere</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" value="socio_approvato" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Socio Approvato</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" value="istruttore" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Istruttore</label>
-                            <label class="flex items-center gap-2"><input type="checkbox" value="volontario" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary"> Volontario</label>
-                        </div>
-                </div>
-            </div>
-            <div class="flex gap-4 pt-2">
-                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-57">
-                    ANNULLA
-                </button>
-                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-58">
-                    CONFERMA NOMINA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal per Nuovo/Modifica Corso -->
-    <div id="modal-corso" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#121212] p-6 max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 id="modal-corso-title" class="font-headline text-sm font-bold uppercase tracking-wider text-primary">NUOVO CORSO</h3>
-            <div class="space-y-3">
-                <input type="hidden" id="modal-corso-id">
-                <input type="hidden" id="modal-corso-tipo" value="corso">
-                
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TITOLO CORSO *</label>
-                    <input type="text" id="modal-corso-titolo" class="w-full brutalist-input bg-black text-white" placeholder="ES. CORSO ACROBATICA" required="">
-                </div>
-                
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DESCRIZIONE</label>
-                    <textarea id="modal-corso-descrizione" class="w-full brutalist-input bg-black text-white h-20" placeholder="DESCRIZIONE DEL CORSO..."></textarea>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">LUOGO *</label>
-                        <input type="text" id="modal-corso-luogo" class="w-full brutalist-input bg-black text-white" placeholder="ES. PALESTRA A" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">MAX PARTECIPANTI</label>
-                        <input type="number" id="modal-corso-max-partecipanti" class="w-full brutalist-input bg-black text-white" placeholder="ES. 20">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">PREZZO BASE (€)</label>
-                        <input type="number" step="0.01" id="modal-corso-prezzo" class="w-full brutalist-input bg-black text-white" placeholder="ES. 50">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">STRIPE PRICE ID</label>
-                        <input type="text" id="modal-corso-stripe-id" class="w-full brutalist-input bg-black text-white" placeholder="price_...">
-                    </div>
-                </div>
-
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TIPOLOGIA</label>
-                    <label class="flex items-center gap-2 cursor-pointer bg-black border border-white/10 p-2 text-xs font-mono text-gray-300 hover:border-primary transition-colors">
-                        <input type="checkbox" id="modal-corso-is-sportivo" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary focus:ring-offset-0" checked="">
-                        <span>CORSO/EVENTO SPORTIVO (Visibile solo ai Tesserati)</span>
-                    </label>
-                    <p class="text-[8px] text-gray-500 uppercase mt-1">Se non selezionato, sarà visibile anche ai "Solo Soci".</p>
-                </div>
-
-                <!-- Orari settimanali (solo per tipo = 'corso') -->
-                <div id="modal-corso-orari-container" class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORARI SETTIMANALI (SELEZIONA GIORNI E ORA)</label>
-                    <div class="border border-white/10 p-3 bg-black space-y-2">
-                        <div class="grid grid-cols-4 gap-2">
-                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="LUN" class="giorno-checkbox bg-black border-white/20 text-primary"> LUN</label>
-                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="MAR" class="giorno-checkbox bg-black border-white/20 text-primary"> MAR</label>
-                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="MER" class="giorno-checkbox bg-black border-white/20 text-primary"> MER</label>
-                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="GIO" class="giorno-checkbox bg-black border-white/20 text-primary"> GIO</label>
-                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="VEN" class="giorno-checkbox bg-black border-white/20 text-primary"> VEN</label>
-                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="SAB" class="giorno-checkbox bg-black border-white/20 text-primary"> SAB</label>
-                            <label class="flex items-center gap-1 text-[10px] font-mono text-gray-400"><input type="checkbox" value="DOM" class="giorno-checkbox bg-black border-white/20 text-primary"> DOM</label>
-                        </div>
-                        <div class="flex items-center gap-2 pt-2 border-t border-white/5">
-                            <span class="text-[9px] text-gray-400 font-headline">ORA INIZIO:</span>
-                            <input type="time" id="modal-corso-ora" class="bg-black border border-white/20 text-white p-1 text-xs font-mono">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Piani Abbonamento (solo per tipo = 'corso') -->
-                <div id="modal-corso-piani-container" class="group">
-                    <div class="flex justify-between items-center mb-1">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase">PIANI ABBONAMENTO EXTRA</label>
-                        <button class="text-[9px] text-primary hover:underline font-headline font-bold uppercase" id="auto-dashboard-click-59">+ AGGIUNGI PIANO</button>
-                    </div>
-                    <div id="abbonamenti-list-container" class="space-y-2 max-h-24 overflow-y-auto">
-                        <!-- Inseriti dinamicamente -->
-                    </div>
-                </div>
-            </div>
-            <div class="flex gap-4 pt-2">
-                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-60">
-                    ANNULLA
-                </button>
-                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-61">
-                    SALVA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal per Assegnazione Istruttori -->
-    <div id="modal-assegna-istruttori" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">ASSEGNA ISTRUTTORI</h3>
-            <p id="modal-assegna-istruttori-subtitle" class="text-xs text-gray-400 uppercase">SELEZIONA GLI ISTRUTTORI DA ASSEGNARE AL CORSO</p>
-            <div class="space-y-3">
-                <input type="hidden" id="modal-assegna-evento-id">
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ISTRUTTORI DISPONIBILI</label>
-                    <div id="assegna-istruttori-list" class="flex flex-col gap-2 p-3 bg-black border border-white/20 max-h-60 overflow-y-auto">
-                        <!-- Inseriti dinamicamente -->
-                    </div>
-                </div>
-            </div>
-            <div class="flex gap-4 pt-2">
-                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-62">
-                    ANNULLA
-                </button>
-                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-63">
-                    CONFERMA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal per Nuova Spesa -->
-    <div id="modal-spesa" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4">
-            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">REGISTRA SPESA / USCITA</h3>
-            <div class="space-y-3">
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TITOLO SPESA *</label>
-                    <input type="text" id="spesa-titolo" class="w-full brutalist-input" placeholder="E.g. Affitto locali, acquisto palloni..." required="">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">IMPORTO (€) *</label>
-                        <input type="number" step="0.01" id="spesa-importo" class="w-full brutalist-input" placeholder="0.00" required="">
-                    </div>
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA SPESA *</label>
-                        <input type="date" id="spesa-data" class="w-full brutalist-input" required="">
-                    </div>
-                </div>
-                <div class="group">
-                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">CATEGORIA *</label>
-                    <select id="spesa-categoria" class="w-full brutalist-input bg-black text-white">
-                        <option value="AFFITTO">Affitto e Utenze</option>
-                        <option value="ATTREZZATURE">Attrezzature Sportive</option>
-                        <option value="SERVIZI">Servizi e Consulenze</option>
-                        <option value="COMPENSI">Compensi e Rimborsi</option>
-                        <option value="ALTRO">Altro</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex gap-4 pt-2">
-                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" id="auto-dashboard-click-64">
-                    ANNULLA
-                </button>
-                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-65">
-                    REGISTRA USCITA
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-black w-full border-t border-white/10 py-6 px-6 mt-12">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-[10px] uppercase text-gray-600 tracking-wider">
-            <span>© 2026 ASD ADRENALINA CLUB APS - AREA RISERVATA DIRETTIVO.</span>
-        </div>
-    </footer>
-
-    <!-- App Logic -->
-    <script>
-        // Supabase Initialization
+// Supabase Initialization
         if (typeof APP_CONFIG === 'undefined') {
             window.APP_CONFIG = {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
@@ -6875,7 +5066,994 @@
         // Start checking session immediately
         fetchCsenStatus();
         checkSession();
-    </script>
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('context-switcher');
+    if (el) {
+        el.addEventListener('change', function(event) {
+            switchContext(this.value)
+        });
+    }
+});
 
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-1');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            handleLogout()
+        });
+    }
+});
 
-</body></html>
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-panoramica');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('panoramica')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-user_profilo');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('user_profilo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-user_certificato');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('user_certificato')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-user_corsi');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('user_corsi')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-user_eventi');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('user_eventi')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-instructor_corsi');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('instructor_corsi')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-volunteer_eventi');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('volunteer_eventi')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-user_pagamenti');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('user_pagamenti')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-approvazioni');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('approvazioni')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-soci');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('soci')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-tesserati');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('tesserati')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-quote');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('quote')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-gestione_corsi');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('gestione_corsi')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-contabilita');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('contabilita')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-direttivo');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('direttivo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-verbali');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('verbali')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-verbali_assemblea');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('verbali_assemblea')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-bilanci');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('bilanci')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-2');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('approvazioni')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-3');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            document.getElementById('dash_cert_file').click()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-upload-cert-dash');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            uploadCertificatoDashboard()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-4');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            vaiAlPagamento()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-5');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            alert('File Statuto in corso di caricamento sul server.')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-6');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            alert('File Regolamento in corso di caricamento sul server.')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-7');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            alert('File Scarico Responsabilità in corso di caricamento sul server.')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-8');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortSoci('id_socio')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-9');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortSoci('nominativo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-10');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortSoci('codice_fiscale')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-11');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortSoci('data_domanda')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-12');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortSoci('quota_scadenza')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-13');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortSoci('stato_socio')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-14');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            triggerCsenScraper()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-15');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            esportaCSEN()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-16');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortTesserati('id_tesserato')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-17');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortTesserati('nominativo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-18');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortTesserati('numero_tessera_csen')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-19');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortTesserati('livello_copertura')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-20');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortTesserati('certificato')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-21');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortTesserati('stato_tesseramento')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-22');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortQuote('nominativo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-23');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortQuote('tipo_adesione')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-24');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortQuote('quota_totale')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-25');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortQuote('quota_scadenza')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-26');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortQuote('stato')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-crea-verbale-toggle');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            showNewVerbaleModal()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-nomina-direttivo-toggle');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            showNominaDirettivoModal()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-27');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortDirettivo('nominativo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-28');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortDirettivo('codice_fiscale')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-29');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortDirettivo('email')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-30');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortDirettivo('ruolo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-crea-verbale-assemblea-toggle');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            showNewVerbaleAssembleaModal()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-nuovo-bilancio-toggle');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            showNuovoBilancioModal()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-31');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortBilanci('anno')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-32');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortBilanci('titolo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-33');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortBilanci('entrate')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-34');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortBilanci('uscite')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-35');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortBilanci('avanzo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-36');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortBilanci('stato')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-nuova-spesa-toggle');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            showNuovaSpesaModal()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-37');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortContabilita('data')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-38');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortContabilita('tipo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-39');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortContabilita('causale')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-40');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortContabilita('soggetto')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-41');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortContabilita('importo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-42');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            openModalCorso('corso')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-43');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            openModalCorso('evento')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('subtab-btn-corsi');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchSubTabCorsi('corso')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('subtab-btn-eventi');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchSubTabCorsi('evento')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('user-avatar-file');
+    if (el) {
+        el.addEventListener('change', function(event) {
+            previewAndUploadAvatar()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-44');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            document.getElementById('user-avatar-file').click()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('form-user-password');
+    if (el) {
+        el.addEventListener('submit', function(event) {
+            event.preventDefault();
+            updateUserPassword(event)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('form-user-profilo');
+    if (el) {
+        el.addEventListener('submit', function(event) {
+            event.preventDefault();
+            saveUserProfilo(event)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-45');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            document.getElementById('user-new-cert-file').click()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('user-new-cert-file');
+    if (el) {
+        el.addEventListener('change', function(event) {
+            handleNewCertFileSelected()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-user-upload-cert');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            uploadNewCertificate()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-46');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeRegistroCorso()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('instructor-registro-tab-btn');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            toggleInstructorRegistroTab('registro')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('instructor-storico-tab-btn');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            toggleInstructorRegistroTab('storico')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('instructor-presence-date');
+    if (el) {
+        el.addEventListener('change', function(event) {
+            onPresenceDateChange()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-47');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            savePresenze()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-48');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalApprovazione()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-49');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            submitApprovazione()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('step-tab-1');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            goToStep(1)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('step-tab-2');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            goToStep(2)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('step-tab-3');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            goToStep(3)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('step-tab-4');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            goToStep(4)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('votazione-punto-1-tipo');
+    if (el) {
+        el.addEventListener('change', function(event) {
+            toggleVotiPunto1(this.value)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-50');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            aggiungiPuntoAggiuntivo()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-51');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            stampaVerbale()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-52');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalVerbale()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-wizard-prev');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            navigateWizard(-1)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-wizard-next');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            navigateWizard(1)
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('btn-wizard-submit');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            concludiEInviaVerbale()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-53');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalVerbaleAssemblea()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-54');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            submitVerbaleAssemblea()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('bilancio-entrate');
+    if (el) {
+        el.addEventListener('input', function(event) {
+            calcolaAvanzo()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('bilancio-uscite');
+    if (el) {
+        el.addEventListener('input', function(event) {
+            calcolaAvanzo()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-55');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalBilancio()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-56');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            submitBilancio()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-57');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalNominaDirettivo()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-58');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            submitNominaDirettivo()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-59');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            addAbbonamentoInput()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-60');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalCorso()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-61');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            saveCorso()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-62');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalAssegnaIstruttori()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-63');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            submitAssegnaIstruttori()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-64');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            closeModalSpesa()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-65');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            submitSpesa()
+        });
+    }
+});

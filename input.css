@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #df293e;
+  --color-primary-dim: #b91c1c;
+  --color-background: #0e0e0e;
+  --color-surface: #0e0e0e;
+  --color-surface-container: #1a1a1a;
+  --color-surface-container-high: #20201f;
+  --color-surface-container-low: #131313;
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #adaaaa;
+
+  --font-headline: Orbitron, sans-serif;
+  --font-body: Manrope, sans-serif;
+  --font-label: Syncopate, Inter, sans-serif;
+
+  --radius-portal: 1.5rem;
+}
+
+@layer base {
+    body {
+        font-family: 'Manrope', sans-serif;
+        background-color: #0e0e0e;
+        color: #ffffff;
+    }
+}
+
+@layer components {
+    .font-headline { font-family: 'Orbitron', sans-serif; }
+    .font-label { font-family: 'Syncopate', sans-serif; }
+    
+    .brutalist-input {
+        @apply bg-transparent border-none border-b-2 border-white/10 text-white w-full;
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        font-size: 1.1rem;
+        padding: 0.8rem 0.5rem;
+    }
+    
+    .brutalist-input:focus {
+        @apply outline-none border-b-2 border-primary bg-primary/5 pl-4;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.01);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+}
