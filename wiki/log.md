@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] update | Adjust Silver and Gold License Tariffs (v1.00.77)
+- Adjusted Base Silver license fee to €14.00 and Base Gold license fee to €18.00 in database.
+- Updated hardcoded visual labels to match adjusted tariffs in `portal/registrazione.html`.
+- Unified application versioning settings across all files to version `1.00.77`.
+- Bumped application version to `1.00.77`.
+
 ## [2026-06-28] update | Update Membership and Card Tariffs (v1.00.76)
 - Updated membership fee `quota_socio` to €50.00 and sports license fees (Base Silver €15, Base Gold €19, Integrativa B €30) in database.
 - Updated hardcoded visual labels to match new tariffs in `portal/registrazione.html`.
