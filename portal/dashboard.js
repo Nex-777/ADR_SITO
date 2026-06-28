@@ -3188,12 +3188,12 @@
             if (tipo === 'corso') {
                 if (corsiBtn) corsiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide";
                 if (eventiBtn) eventiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide";
-                if (orariHeader) orariHeader.classList.remove('hidden');
+                if (orariHeader) { orariHeader.classList.remove('hidden'); orariHeader.textContent = 'ORARI SETTIMANALI'; }
                 if (istruttoriHeader) istruttoriHeader.textContent = 'ISTRUTTORI';
             } else {
                 if (corsiBtn) corsiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide";
                 if (eventiBtn) eventiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide";
-                if (orariHeader) orariHeader.classList.add('hidden');
+                if (orariHeader) { orariHeader.classList.remove('hidden'); orariHeader.textContent = 'GIORNATE'; }
                 if (istruttoriHeader) istruttoriHeader.textContent = 'RESPONSABILI';
             }
             await loadGestioneCorsi();
@@ -3202,7 +3202,7 @@
         async function loadGestioneCorsi() {
             const tbody = document.getElementById('corsi-list-body');
             if (!tbody) return;
-            const numCols = currentCorsiSubTab === 'corso' ? 6 : 5;
+            const numCols = 6;
             tbody.innerHTML = `<tr><td colspan="${numCols}" class="p-4 text-center text-gray-500">Caricamento in corso...</td></tr>`;
             try {
                 // Fetch events/courses
@@ -3253,7 +3253,7 @@
                     // Trova numero iscritti
                     const nIscritti = iscrizioni.filter(i => i.evento_id === evt.id).length;
 
-                    // Formatta orari
+                    // Formatta orari o date
                     let orariStr = '-';
                     if (evt.tipo === 'corso' && evt.orari_settimanali) {
                         try {
@@ -3264,14 +3264,32 @@
                         } catch (e) {
                             console.error("Errore parse orari:", e);
                         }
+                    } else if (evt.tipo === 'evento') {
+                        try {
+                            if (evt.giornate && evt.giornate.length > 0) {
+                                const giornate = typeof evt.giornate === 'string' ? JSON.parse(evt.giornate) : evt.giornate;
+                                if (giornate.length === 1) {
+                                    orariStr = `${formatDate(giornate[0].data)} ${giornate[0].ora_inizio || ''}`;
+                                } else {
+                                    orariStr = `${formatDate(giornate[0].data)} (+${giornate.length - 1} date)`;
+                                }
+                            } else if (evt.data_evento) {
+                                orariStr = `${formatDate(evt.data_evento)} ${evt.ora_evento || ''}`;
+                            }
+                        } catch(e) {
+                            console.error("Errore parse giornate:", e);
+                        }
                     }
 
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-white/5 transition-all";
                     tr.innerHTML = `
-                        <td class="p-4 font-bold text-white">${evt.titolo.toUpperCase()}</td>
+                        <td class="p-4 font-bold text-white">
+                            ${evt.titolo.toUpperCase()}
+                            ${evt.link_sito ? `<a href="${evt.link_sito}" target="_blank" class="ml-2 text-primary hover:underline" title="Visita il sito dell'evento"><span class="material-symbols-outlined text-[10px] align-middle">language</span></a>` : ''}
+                        </td>
                         <td class="p-4 text-gray-300">${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}</td>
-                        ${currentCorsiSubTab === 'corso' ? `<td class="p-4 text-gray-400 font-mono text-[11px]">${orariStr}</td>` : ''}
+                        <td class="p-4 text-gray-400 font-mono text-[11px]">${orariStr}</td>
                         <td class="p-4">${istruttoriBadge}</td>
                         <td class="p-4 text-center font-bold text-white">${nIscritti}</td>
                         <td class="p-4 text-right">
@@ -3316,10 +3334,23 @@
             document.getElementById('modal-corso-stripe-id').value = '';
             document.getElementById('modal-corso-is-sportivo').checked = true; // Default sportivo
             
+            const linkEl = document.getElementById('modal-corso-link');
+            if(linkEl) linkEl.value = '';
+            
+            const contattiEl = document.getElementById('modal-corso-contatti');
+            if(contattiEl) contattiEl.value = '';
+            
             // Reset data/ora evento
             const dataEventoCont = document.getElementById('modal-evento-data-container');
-            document.getElementById('modal-evento-data').value = '';
-            document.getElementById('modal-evento-ora').value = '';
+            const giornateList = document.getElementById('modal-evento-giornate-list');
+            if (giornateList) {
+                giornateList.innerHTML = '';
+            }
+            if (document.getElementById('modal-evento-data')) document.getElementById('modal-evento-data').value = '';
+            if (document.getElementById('modal-evento-ora')) document.getElementById('modal-evento-ora').value = '';
+            
+            // Popola responsabili
+            loadResponsabiliSelect();
 
             // Reset checkbox giorni
             const checkboxes = document.querySelectorAll('.giorno-checkbox');
@@ -3360,6 +3391,105 @@
             `;
             container.appendChild(div);
         }
+
+        // --- NEW LOGIC FOR GIORNATE EVENTO ---
+        function addGiornataInput(data = '', inizio = '', fine = '') {
+            const container = document.getElementById('modal-evento-giornate-list');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center giornata-row bg-white/5 p-2 border border-white/10 rounded-sm";
+            div.innerHTML = `
+                <div class="flex-1">
+                    <label class="text-[8px] text-gray-500 block mb-0.5 uppercase">DATA *</label>
+                    <input type="date" value="${data}" class="w-full bg-black border border-white/20 text-white p-1 text-[11px] font-mono g-data">
+                </div>
+                <div class="w-20">
+                    <label class="text-[8px] text-gray-500 block mb-0.5 uppercase">INIZIO *</label>
+                    <input type="time" value="${inizio}" class="w-full bg-black border border-white/20 text-white p-1 text-[11px] font-mono g-inizio">
+                </div>
+                <div class="w-20">
+                    <label class="text-[8px] text-gray-500 block mb-0.5 uppercase">FINE</label>
+                    <input type="time" value="${fine}" class="w-full bg-black border border-white/20 text-white p-1 text-[11px] font-mono g-fine">
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-400 font-bold px-2 mt-3 text-xs" title="Rimuovi Giornata">X</button>
+            `;
+            container.appendChild(div);
+        }
+        
+        // Add listener for + AGGIUNGI GIORNATA button
+        setTimeout(() => {
+            const btnAdd = document.getElementById('btn-add-giornata');
+            if (btnAdd) {
+                btnAdd.addEventListener('click', () => addGiornataInput());
+            }
+        }, 1000);
+        
+        // Load Soci for Responsabili Multi-select
+        let sociDisponibiliList = [];
+        async function loadResponsabiliSelect(eventoId = null) {
+            const selectEl = document.getElementById('modal-corso-responsabili');
+            if (!selectEl) return;
+            selectEl.innerHTML = '<option value="" disabled>Caricamento soci...</option>';
+            
+            try {
+                // Prendi tutti i soci attivi
+                if (sociDisponibiliList.length === 0) {
+                    const { data: sociData, error } = await supabaseClient
+                        .from('utenti')
+                        .select('id, nome, cognome, telefono, email')
+                        .in('tipo_adesione', ['Socio', 'Atleta/Socio']);
+                    if (error) throw error;
+                    sociDisponibiliList = sociData || [];
+                }
+                
+                let assignedIds = [];
+                if (eventoId) {
+                    const { data: rel, error: relErr } = await supabaseClient
+                        .from('responsabili_eventi')
+                        .select('socio_id')
+                        .eq('evento_id', eventoId);
+                    if (!relErr && rel) {
+                        assignedIds = rel.map(r => r.socio_id);
+                    }
+                }
+                
+                selectEl.innerHTML = '';
+                sociDisponibiliList.sort((a,b) => (a.cognome||'').localeCompare(b.cognome||'')).forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.text = `${s.nome} ${s.cognome}`;
+                    opt.setAttribute('data-tel', s.telefono || '');
+                    opt.setAttribute('data-email', s.email || '');
+                    if (assignedIds.includes(s.id)) opt.selected = true;
+                    selectEl.appendChild(opt);
+                });
+                
+            } catch (err) {
+                console.error("Errore caricamento soci per responsabili:", err);
+                selectEl.innerHTML = '<option value="" disabled>Errore caricamento</option>';
+            }
+        }
+        
+        // Auto-fill contatti when responsabili selection changes
+        setTimeout(() => {
+            const selectEl = document.getElementById('modal-corso-responsabili');
+            const contattiEl = document.getElementById('modal-corso-contatti');
+            if (selectEl && contattiEl) {
+                selectEl.addEventListener('change', () => {
+                    let text = '';
+                    Array.from(selectEl.selectedOptions).forEach(opt => {
+                        const tel = opt.getAttribute('data-tel');
+                        const email = opt.getAttribute('data-email');
+                        if (tel || email) {
+                            text += `${opt.text}: ${tel ? tel : ''} ${email ? '('+email+')' : ''}\n`;
+                        }
+                    });
+                    if (text) {
+                        contattiEl.value = text.trim();
+                    }
+                });
+            }
+        }, 1000);
 
         async function editCorso(id) {
             try {
@@ -3433,9 +3563,28 @@
                     if (pianiCont) pianiCont.classList.add('hidden');
                     if (dataEventoCont) dataEventoCont.classList.remove('hidden');
                     
-                    document.getElementById('modal-evento-data').value = evt.data_evento || '';
-                    document.getElementById('modal-evento-ora').value = evt.ora_evento || '';
+                    if (document.getElementById('modal-evento-data')) document.getElementById('modal-evento-data').value = evt.data_evento || '';
+                    if (document.getElementById('modal-evento-ora')) document.getElementById('modal-evento-ora').value = evt.ora_evento || '';
+                    
+                    const giornateList = document.getElementById('modal-evento-giornate-list');
+                    if (giornateList) {
+                        giornateList.innerHTML = '';
+                        if (evt.giornate && evt.giornate.length > 0) {
+                            const giornate = typeof evt.giornate === 'string' ? JSON.parse(evt.giornate) : evt.giornate;
+                            giornate.forEach(g => addGiornataInput(g.data, g.ora_inizio, g.ora_fine));
+                        } else if (evt.data_evento) {
+                            addGiornataInput(evt.data_evento, evt.ora_evento || '', '');
+                        }
+                    }
                 }
+                
+                const linkEl = document.getElementById('modal-corso-link');
+                if (linkEl) linkEl.value = evt.link_sito || '';
+                
+                const contattiEl = document.getElementById('modal-corso-contatti');
+                if (contattiEl) contattiEl.value = evt.contatti || '';
+                
+                await loadResponsabiliSelect(evt.id);
 
                 document.getElementById('modal-corso').classList.remove('hidden');
             } catch (err) {
@@ -3491,16 +3640,37 @@
                 }
             }
 
+            let giornate_evento = null;
             let data_evento = null;
             let ora_evento = null;
+            
             if (tipo === 'evento') {
-                data_evento = document.getElementById('modal-evento-data').value;
-                ora_evento = document.getElementById('modal-evento-ora').value || null;
-                if (!data_evento) {
-                    alert("Data evento è obbligatoria per gli eventi.");
+                const giornateRows = document.querySelectorAll('.giornata-row');
+                const giornate = [];
+                giornateRows.forEach(r => {
+                    const data = r.querySelector('.g-data').value;
+                    const inizio = r.querySelector('.g-inizio').value;
+                    const fine = r.querySelector('.g-fine').value;
+                    if (data) {
+                        giornate.push({ data, ora_inizio: inizio, ora_fine: fine });
+                    }
+                });
+                
+                if (giornate.length === 0) {
+                    alert("Almeno una giornata è obbligatoria per gli eventi.");
                     return;
                 }
+                
+                giornate_evento = giornate;
+                // Mantieni data_evento e ora_evento per retrocompatibilità (usa la prima giornata)
+                data_evento = giornate[0].data;
+                ora_evento = giornate[0].ora_inizio || null;
             }
+            
+            const link_sito = document.getElementById('modal-corso-link') ? document.getElementById('modal-corso-link').value.trim() : null;
+            const contatti = document.getElementById('modal-corso-contatti') ? document.getElementById('modal-corso-contatti').value.trim() : null;
+            const responsabiliSelect = document.getElementById('modal-corso-responsabili');
+            const responsabili_selezionati = responsabiliSelect ? Array.from(responsabiliSelect.selectedOptions).map(o => o.value) : [];
 
             const payload = {
                 titolo,
@@ -3514,10 +3684,14 @@
                 piani_abbonamento,
                 is_sportivo,
                 data_evento,
-                ora_evento
+                ora_evento,
+                giornate: giornate_evento,
+                link_sito,
+                contatti
             };
 
             try {
+                let savedId = id;
                 if (id) {
                     // Update
                     const { error } = await supabaseClient
@@ -3534,7 +3708,27 @@
                         .select('id')
                         .single();
                     if (error) throw error;
+                    savedId = data.id;
                     await scriviAuditLog("CREAZIONE_EVENTO", "eventi", data.id, payload);
+                }
+                
+                // --- Save Responsabili ---
+                if (savedId) {
+                    // Delete existing first
+                    await supabaseClient.from('responsabili_eventi').delete().eq('evento_id', savedId);
+                    
+                    // Insert new ones
+                    if (responsabili_selezionati.length > 0) {
+                        const relPayload = responsabili_selezionati.map(socio_id => ({
+                            evento_id: savedId,
+                            socio_id: socio_id
+                        }));
+                        const { error: relErr } = await supabaseClient.from('responsabili_eventi').insert(relPayload);
+                        if (relErr) {
+                            console.error("Errore salvataggio responsabili:", relErr);
+                            // don't throw, let event save succeed
+                        }
+                    }
                 }
 
                 alert("Corso/Evento salvato con successo!");

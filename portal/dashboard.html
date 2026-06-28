@@ -559,7 +559,7 @@
                 </button>
 
                 <button id="tab-btn-gestione_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
-                    <span class="material-symbols-outlined text-sm">fitness_center</span> GESTIONE CORSI
+                    <span class="material-symbols-outlined text-sm">fitness_center</span> CORSI & EVENTI
                 </button>
 
                 <button id="tab-btn-contabilita" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
@@ -2063,17 +2063,34 @@
                 </div>
 
 
-                <!-- Data e Ora (solo per tipo = 'evento') -->
+                <!-- Link Sito (Per Corsi e Eventi) -->
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">LINK SITO (URL) (Opzionale)</label>
+                    <input type="url" id="modal-corso-link" class="w-full brutalist-input bg-black text-white" placeholder="https://...">
+                </div>
+
+                <!-- Date e Orari (solo per tipo = 'evento') - Supporto Giornate Multiple -->
                 <div id="modal-evento-data-container" class="group hidden">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA EVENTO *</label>
-                            <input type="date" id="modal-evento-data" class="w-full brutalist-input bg-black text-white font-mono">
-                        </div>
-                        <div>
-                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORA EVENTO *</label>
-                            <input type="time" id="modal-evento-ora" class="w-full brutalist-input bg-black text-white font-mono">
-                        </div>
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">GIORNATE EVENTO *</label>
+                    <div id="modal-evento-giornate-list" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- Le righe delle giornate verranno inserite qui dinamicamente via JS -->
+                    </div>
+                    <button type="button" id="btn-add-giornata" class="mt-2 w-full border border-primary/40 text-primary hover:bg-primary hover:text-white text-[10px] font-bold uppercase py-1.5 transition-colors">
+                        + AGGIUNGI GIORNATA
+                    </button>
+                </div>
+
+                <!-- Assegnazione Responsabili e Contatti -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">RESPONSABILI (Tieni premuto CTRL per multi-selezione)</label>
+                        <select id="modal-corso-responsabili" multiple class="w-full brutalist-input bg-black text-white h-24 text-xs">
+                            <!-- Popolato da JS -->
+                        </select>
+                    </div>
+                    <div class="group">
+                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">CONTATTI (Telefono/Email)</label>
+                        <textarea id="modal-corso-contatti" class="w-full brutalist-input bg-black text-white h-24 text-xs" placeholder="Inserisci contatti o seleziona un responsabile..."></textarea>
                     </div>
                 </div>
 
@@ -2289,7 +2306,7 @@
                 'soci': { icon: 'group', label: 'Registro Soci' },
                 'tesserati': { icon: 'sports_kabaddi', label: 'Registro Tesserati' },
                 'quote': { icon: 'payments', label: 'Quote e Cassa' },
-                'gestione_corsi': { icon: 'fitness_center', label: 'Gestione Corsi' },
+                'gestione_corsi': { icon: 'fitness_center', label: 'Corsi & Eventi' },
                 'contabilita': { icon: 'calculate', label: 'Contabilità' },
                 'direttivo': { icon: 'shield_person', label: 'Gestione Direttivo' },
                 'verbali': { icon: 'gavel', label: 'Verbali Direttivo' },

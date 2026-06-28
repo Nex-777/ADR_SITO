@@ -4,6 +4,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] feat | Corsi & Eventi Redesign (v1.00.83)
+- Rinominata la voce del menu da "GESTIONE CORSI" a "CORSI & EVENTI".
+- Supporto per giornate multiple negli eventi: rimosso il singolo input data/ora e inserita gestione ad array JSON in `dashboard.js`. Modificato schema DB consigliato con nuova colonna `giornate` di tipo JSONB in `eventi`.
+- Aggiunta colonna `link_sito` per gli eventi.
+- Integrata selezione "Responsabili" in fase di creazione dell'evento (prima andava assegnata dopo la creazione). Autosalvataggio su tabella relazionale `responsabili_eventi`.
+- Aggiunta colonna e campo testo `contatti` (Telefono/Email) con autocompilazione JS in tempo reale quando si seleziona uno o più soci responsabili.
+- Aggiornata tabella `renderCorsiTable` per mostrare le nuove date multiple.
+
 ## [2026-06-28] feat | Mobile UX Redesign (v1.00.82)
 - Complete mobile responsive redesign of the dashboard portal.
 - Added bottom navigation bar with 5 tabs (Home, Profilo, Certificato, Corsi, Pagamenti) for athlete users.
