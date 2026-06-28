@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] feat | Mobile Speed & Usability Optimization (v1.00.78)
+- Replaced main landing page `index.html` with a fully responsive, simplified, and high-performance design.
+- Built via Stitch mockups, focusing on quick mobile loading, vertical swipe layout for disciplines, and touch-optimized bottom navigation.
+- Bumped application version to `1.00.78` across config files and HTML headers.
+
 ## [2026-06-28] update | Adjust Silver and Gold License Tariffs (v1.00.77)
 - Adjusted Base Silver license fee to €14.00 and Base Gold license fee to €18.00 in database.
 - Updated hardcoded visual labels to match adjusted tariffs in `portal/registrazione.html`.
