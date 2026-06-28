@@ -4,6 +4,19 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] feat | Mobile UX Redesign (v1.00.82)
+- Complete mobile responsive redesign of the dashboard portal.
+- Added bottom navigation bar with 5 tabs (Home, Profilo, Certificato, Corsi, Pagamenti) for athlete users.
+- Added hamburger menu overlay for board members to access all panels on mobile.
+- Hidden desktop sidebar on mobile, content takes full width.
+- Converted tesserati table to touch-friendly card view on mobile screens.
+- Full-screen modals on mobile for better interaction.
+- Enlarged form inputs to 48px, font sizes to readable levels, 44px minimum touch targets.
+- Compact header hiding version badge on mobile.
+- Pure CSS-only approach using `@media (max-width: 1023px)` — desktop layout completely untouched.
+- Consulted Stitch for UI/UX design system reference.
+- Files modified: `dashboard.html`, `dashboard.js`, `output.css`, version files.
+
 ## [2026-06-28] fix | Eventi e Responsabili (v1.00.82)
 - Risolto errore 'not-null constraint' in fase di creazione di un nuovo evento su `data_evento` aggiungendo i campi mancanti Data/Ora nella UI `dashboard.html`.
 - Creata la tabella `responsabili_eventi` in Supabase per assegnare i soci come responsabili degli eventi.
