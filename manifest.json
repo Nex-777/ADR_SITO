@@ -1,0 +1,20 @@
+{
+  "name": "Adrenalina Club",
+  "short_name": "Adrenalina",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#df293e",
+  "icons": [
+    {
+      "src": "/assets/logo_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/logo_icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
