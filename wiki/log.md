@@ -453,3 +453,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ## [2026-06-28] fix | Allow unsafe-inline scripts in CSP
 - Added 'unsafe-inline' to script-src in vercel.json Content-Security-Policy to unbreak inline onclick event handlers used across the dashboard.
+
+## [2026-06-28] style | Improve Version Badge Legibility (v1.00.74)
+- Changed the color scheme of the version badge in the header across all HTML files to neutral white/gray (	ext-white/70, g-white/5) for better readability against dark backgrounds, avoiding conflicts with theme-specific primary colors like the dark blue of the instructor role.
+- Bumped application version to 1.00.74.
