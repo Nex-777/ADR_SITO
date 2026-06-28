@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] fix | Apple Touch Icons, CSP allowed domains, and Local CSS Compilation (v1.00.79)
+- Added Apple Touch Icons (`apple-touch-icon`) and high-res shortcut icons for clean home screen shortcut branding.
+- Allowed `lh3.googleusercontent.com` in `vercel.json` Content-Security-Policy `img-src` to fix broken images in production.
+- Stripped Tailwind CDN scripts from `index.html` via `remove_tailwind.js` and linked it directly to local `./output.css` to respect strict production CSP.
+- Compiled and minified local styles to `./output.css` using Tailwind CLI.
+- Bumped application version to `1.00.79` across config files and HTML headers.
+
 ## [2026-06-28] feat | Mobile Speed & Usability Optimization (v1.00.78)
 - Replaced main landing page `index.html` with a fully responsive, simplified, and high-performance design.
 - Built via Stitch mockups, focusing on quick mobile loading, vertical swipe layout for disciplines, and touch-optimized bottom navigation.
