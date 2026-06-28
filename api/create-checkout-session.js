@@ -99,11 +99,19 @@ export default async function handler(req, res) {
             : 'SOCIO';
         const description = `Quota annuale 2026 - ${tipoAdesioneLabel} per ${profile.nome} ${profile.cognome}`;
 
+        // Calcola la quota e la commissione del 2% per le spese di gestione
+        const baseAmount = Math.round(quota * 100);
+        const feeAmount = Math.round(quota * 0.02 * 100);
+        const totalAmount = baseAmount + feeAmount;
+        const totalQuota = (totalAmount / 100).toFixed(2);
+
         // 2. Crea la Sessione di Stripe Checkout
         const origin = req.headers.origin || 'https://portal.adrenalinaclub.it';
         
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
+            automatic_payment_methods: {
+                enabled: true,
+            },
             line_items: [
                 {
                     price_data: {
@@ -112,7 +120,17 @@ export default async function handler(req, res) {
                             name: `Quota Associativa / Tesseramento`,
                             description: description,
                         },
-                        unit_amount: Math.round(quota * 100), // importo in centesimi
+                        unit_amount: baseAmount,
+                    },
+                    quantity: 1,
+                },
+                {
+                    price_data: {
+                        currency: 'eur',
+                        product_data: {
+                            name: `Spese di gestione transazione e amministrative (2%)`,
+                        },
+                        unit_amount: feeAmount,
                     },
                     quantity: 1,
                 },
@@ -121,7 +139,7 @@ export default async function handler(req, res) {
             customer_email: profile.email,
             metadata: {
                 utenteId: utenteId,
-                importo: quota.toString(),
+                importo: totalQuota,
                 causale: description
             },
             success_url: `${origin}/portal/dashboard.html?payment=success`,

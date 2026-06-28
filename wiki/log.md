@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] ingest | Stripe Multi-Method & Management Fee (v1.00.80)
+- Configured dynamic payment methods (`automatic_payment_methods`) to support Klarna (BNPL), PayPal, and SEPA.
+- Added automatic 2% administrative/management fee calculation and line item to all Stripe Checkout API sessions.
+- Bumped application version to `1.00.80` across config files and HTML headers.
+
 ## [2026-06-28] fix | Apple Touch Icons, CSP allowed domains, and Local CSS Compilation (v1.00.79)
 - Added Apple Touch Icons (`apple-touch-icon`) and high-res shortcut icons for clean home screen shortcut branding.
 - Allowed `lh3.googleusercontent.com` in `vercel.json` Content-Security-Policy `img-src` to fix broken images in production.
