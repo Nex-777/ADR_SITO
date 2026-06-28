@@ -4,3 +4,4 @@ const APP_CONFIG = {
     API_BASE_URL: "https://portal.adrenalinaclub.it", // Vercel production API URL
     VERSION: "1.00.75"
 };
+

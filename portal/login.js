@@ -24,7 +24,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: "https://portal.adrenalinaclub.it",
-        VERSION: "1.00.74"
+        VERSION: "1.00.75"
     };
 }
 const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -86,3 +86,4 @@ if (form) {
         }
     });
 }
+

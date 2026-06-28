@@ -457,3 +457,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-06-28] style | Improve Version Badge Legibility (v1.00.74)
 - Changed the color scheme of the version badge in the header across all HTML files to neutral white/gray (	ext-white/70, g-white/5) for better readability against dark backgrounds, avoiding conflicts with theme-specific primary colors like the dark blue of the instructor role.
 - Bumped application version to 1.00.74.
+
+## [2026-06-28] style | Fix Version Badge Legibility & Cache-Control (v1.00.75)
+- Fixed a regex replacement error that skipped HTML files in the previous version bump.
+- Bumped application version to 1.00.75 across all HTML and JS files.
