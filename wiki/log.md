@@ -450,3 +450,6 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Removed leftover inline scripts from dashboard.html and registrazione.html that were blocked by Strict CSP.
 - Removed portal/config.js from .gitignore so it deploys properly to Vercel and fixes 404 errors.
 - Bumped version to 1.00.75.
+
+## [2026-06-28] fix | Allow unsafe-inline scripts in CSP
+- Added 'unsafe-inline' to script-src in vercel.json Content-Security-Policy to unbreak inline onclick event handlers used across the dashboard.
