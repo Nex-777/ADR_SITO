@@ -4,6 +4,18 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] update | Update Membership and Card Tariffs (v1.00.76)
+- Updated membership fee `quota_socio` to €50.00 and sports license fees (Base Silver €15, Base Gold €19, Integrativa B €30) in database.
+- Updated hardcoded visual labels to match new tariffs in `portal/registrazione.html`.
+- Unified application versioning settings across all files to version `1.00.76`.
+- Bumped application version to `1.00.76`.
+
+## [2026-06-28] ingest | Search Bar in Registro Tesserati
+- Implemented real-time search bar (Proposta 1: Minimalist Brutalist Inline Bar) in the "Registro Tesserati" panel.
+- Added live client-side filtering logic for names, tax codes, registry numbers, and CSEN card numbers in `portal/dashboard.js`.
+- Added interactive result count updates.
+- Modified files: `portal/dashboard.html` and `portal/dashboard.js`.
+
 ## [2026-06-26] security | Security Hardening v3 — Short-term fixes (v1.00.72)
 - Exported missing SQL schemas and database function definitions (`check_rate_limit()`, `prossimo_numero_ricevuta()`, and 12 custom tables) from production DB into repository (`supabase/schema_exported.sql`).
 - Resolved `SELECT *` security violations in `api/otp-verify.js` (utenti table) and `api/create-event-checkout-session.js` (eventi table) by specifying exact columns.

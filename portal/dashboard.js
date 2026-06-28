@@ -1318,12 +1318,30 @@
             const body = document.getElementById('tesserati-list-body');
             body.innerHTML = '';
 
-            if (tesseratiData.length === 0) {
-                body.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">Nessun tesseramento presente.</td></tr>';
+            const searchInput = document.getElementById('tesserati-search');
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            const filteredData = tesseratiData.filter(tess => {
+                if (!query) return true;
+                const nomeComp = tess.anagrafiche ? `${tess.anagrafiche.nome} ${tess.anagrafiche.cognome}`.toLowerCase() : '';
+                const cf = tess.anagrafiche ? String(tess.anagrafiche.codice_fiscale).toLowerCase() : '';
+                const csen = tess.numero_tessera_csen ? String(tess.numero_tessera_csen).toLowerCase() : '';
+                const reg = tess.numero_registro ? String(tess.numero_registro).toLowerCase() : '';
+                return nomeComp.includes(query) || cf.includes(query) || csen.includes(query) || reg.includes(query);
+            });
+
+            // Update result counter
+            const counterEl = document.getElementById('tesserati-search-count');
+            if (counterEl) {
+                counterEl.textContent = `${filteredData.length} RISULTATI`;
+            }
+
+            if (filteredData.length === 0) {
+                body.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">Nessun tesseramento corrispondente ai criteri di ricerca.</td></tr>';
                 return;
             }
 
-            tesseratiData.forEach(tess => {
+            filteredData.forEach(tess => {
                 const row = document.createElement('tr');
                 const nomeComp = tess.anagrafiche ? escapeHtml(`${tess.anagrafiche.nome} ${tess.anagrafiche.cognome}`) : 'N/D';
                 const cf = tess.anagrafiche ? escapeHtml(tess.anagrafiche.codice_fiscale) : 'N/D';
@@ -1935,6 +1953,14 @@
                     }
                 });
             });
+
+            // Live search for tesserati
+            const searchInput = document.getElementById('tesserati-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    renderTesseratiTable();
+                });
+            }
         });
 
         // Handle attendance changes to dynamically enable/disable and populate proxy targets
