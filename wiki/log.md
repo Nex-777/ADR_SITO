@@ -439,3 +439,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Migrated Tailwind CSS from CDN to a local build via the new Tailwind CSS v4 CLI (\@tailwindcss/cli\), replacing inline configuration in HTML with a proper \input.css\ and \package.json\ build step.
 - Bumped application version to 1.00.73 across the codebase.
 
+
+## [2026-06-26] update | Security Refactoring (Long Term)
+- Extracted JS from registrazione.html and dashboard.html into separate JS files.
+- Replaced inline event handlers with standard EventListeners to support Strict CSP.
+- Enabled Strict CSP in vercel.json.
+- Configured Vitest for API testing and added basic tests for get-ip.js.
+
+## [2026-06-28] fix | Security Refactoring (Long Term)
+- Removed leftover inline scripts from dashboard.html and registrazione.html that were blocked by Strict CSP.
+- Removed portal/config.js from .gitignore so it deploys properly to Vercel and fixes 404 errors.
+- Bumped version to 1.00.75.
