@@ -109,6 +109,317 @@
             border-color: #df293e !important;
             box-shadow: 0 0 10px rgba(223, 41, 62, 0.2) !important;
         }
+
+        /* ===== MOBILE RESPONSIVE OVERRIDES ===== */
+        @media (max-width: 1023px) {
+            /* Hide desktop sidebar on mobile */
+            aside.lg\:col-span-1 { display: none !important; }
+
+            /* Main content takes full width */
+            main { padding: 16px !important; padding-bottom: 90px !important; gap: 16px !important; }
+            main > section { grid-column: 1 / -1; }
+
+            /* Compact header */
+            header { padding: 10px 16px !important; }
+            header .max-w-7xl { gap: 8px; }
+            
+            /* Hide version badge on mobile */
+            header span[class*="font-mono"][class*="tracking-widest"] { display: none !important; }
+            
+            /* Hide context switcher badge on mobile header */
+            #static-context-badge { display: none !important; }
+            
+            /* Compact user display */
+            header #user-display-name { font-size: 11px; }
+            header #user-display-role { font-size: 9px; }
+
+            /* Logout button - icon only style */
+            header button[id="auto-dashboard-click-1"] {
+                padding: 8px 10px;
+                min-width: 44px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 10px;
+            }
+
+            /* Panel titles - more readable */
+            .tab-panel h2 { font-size: 16px !important; }
+            .tab-panel h3 { font-size: 13px !important; }
+
+            /* Stats grid - 2 columns on mobile */
+            #board-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+            #board-stats-grid > div { padding: 12px !important; }
+            #board-stats-grid p.text-2xl { font-size: 20px !important; }
+
+            /* Tables - improve readability */
+            table { font-size: 11px !important; }
+            table th { padding: 8px 6px !important; font-size: 9px !important; white-space: nowrap; }
+            table td { padding: 8px 6px !important; }
+
+            /* Mobile card view for tesserati (JS-generated) */
+            .mobile-card-list { display: flex; flex-direction: column; gap: 12px; }
+            .mobile-card-item {
+                background: #1a1a1a;
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 8px;
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .mobile-card-item .card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .mobile-card-item .card-name {
+                font-weight: 700;
+                font-size: 14px;
+                text-transform: uppercase;
+            }
+            .mobile-card-item .card-details {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .mobile-card-item .card-detail {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+            }
+            .mobile-card-item .card-detail-label {
+                font-size: 10px;
+                color: #6b7280;
+                text-transform: uppercase;
+                font-family: 'Orbitron', sans-serif;
+            }
+            .mobile-card-item .card-detail-value {
+                font-size: 12px;
+                font-family: monospace;
+                text-transform: uppercase;
+            }
+            .mobile-card-item .card-actions {
+                display: flex;
+                justify-content: flex-end;
+                padding-top: 8px;
+                border-top: 1px solid rgba(255,255,255,0.05);
+            }
+            .mobile-card-item .card-actions button {
+                min-height: 44px;
+                padding: 8px 16px;
+                font-size: 11px;
+            }
+
+            /* Hide desktop table, show mobile cards */
+            .mobile-table-hidden { display: none !important; }
+            .mobile-card-list.desktop-hidden { display: none; }
+
+            /* Forms - larger inputs */
+            .brutalist-input, 
+            input[type="text"].brutalist-input,
+            input[type="date"].brutalist-input,
+            input[type="email"].brutalist-input,
+            input[type="password"].brutalist-input,
+            select.brutalist-input {
+                min-height: 48px !important;
+                font-size: 14px !important;
+                padding: 12px 16px !important;
+            }
+
+            /* Form labels readable */
+            label[class*="text-[9px]"] { font-size: 11px !important; }
+
+            /* Profile grid - stack on mobile */
+            #panel-user_profilo .lg\:col-span-1,
+            #panel-user_profilo .lg\:col-span-2,
+            #panel-user_certificato .lg\:col-span-1,
+            #panel-user_certificato .lg\:col-span-2 {
+                grid-column: 1 / -1 !important;
+            }
+
+            /* Buttons - larger touch targets */
+            button[type="submit"], 
+            .tab-panel button[class*="bg-white"],
+            .tab-panel button[class*="bg-primary"],
+            .tab-panel a[class*="bg-white"],
+            .tab-panel a[class*="bg-primary"] {
+                min-height: 48px !important;
+                font-size: 12px !important;
+            }
+
+            /* Modals - full screen on mobile */
+            .fixed.inset-0 > div[class*="max-w-"] {
+                max-width: 100% !important;
+                width: 100% !important;
+                height: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* Search bar in tesserati - stack */
+            #panel-tesserati > div:nth-child(1) { 
+                flex-direction: column !important; 
+                gap: 12px !important; 
+            }
+            #panel-tesserati > div:nth-child(1) button[class*="bg-primary"] { 
+                width: 100%; 
+                justify-content: center; 
+            }
+
+            /* CSEN widget - always hidden on mobile (already xl:flex) */
+
+            /* Panoramica user widgets - 1 column on mobile */
+            #user-panoramica-widgets .grid { grid-template-columns: 1fr !important; }
+
+            /* Alert board text more readable */
+            #board-alert-board li { font-size: 11px !important; line-height: 1.6; }
+
+            /* Bottom Nav Bar */
+            #mobile-bottom-nav {
+                display: flex !important;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 50;
+                background: #0e0e0e;
+                border-top: 1px solid rgba(255,255,255,0.1);
+                padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)) 0;
+                justify-content: space-around;
+                align-items: center;
+            }
+            #mobile-bottom-nav button {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                padding: 6px 12px;
+                min-width: 56px;
+                min-height: 48px;
+                background: none;
+                border: none;
+                color: #6b7280;
+                font-family: 'Manrope', sans-serif;
+                font-size: 9px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                cursor: pointer;
+                transition: color 0.2s;
+                -webkit-tap-highlight-color: transparent;
+            }
+            #mobile-bottom-nav button .material-symbols-outlined { font-size: 22px; }
+            #mobile-bottom-nav button.active { color: #df293e; }
+            #mobile-bottom-nav button.active .material-symbols-outlined {
+                font-variation-settings: 'FILL' 1;
+            }
+
+            /* Hamburger menu button */
+            #mobile-hamburger-btn {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                background: none;
+                border: 1px solid rgba(255,255,255,0.1);
+                color: white;
+                cursor: pointer;
+                border-radius: 4px;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            /* Hamburger overlay */
+            #mobile-menu-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 60;
+                background: rgba(0,0,0,0.85);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                display: flex;
+                flex-direction: column;
+                transition: opacity 0.3s, visibility 0.3s;
+            }
+            #mobile-menu-overlay.menu-hidden {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+            }
+            #mobile-menu-overlay .menu-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            #mobile-menu-overlay .menu-body {
+                flex: 1;
+                overflow-y: auto;
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            #mobile-menu-overlay .menu-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px 16px;
+                border: none;
+                background: none;
+                color: #9ca3af;
+                font-family: 'Orbitron', sans-serif;
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                width: 100%;
+                text-align: left;
+                cursor: pointer;
+                border-radius: 8px;
+                transition: all 0.2s;
+                min-height: 48px;
+                -webkit-tap-highlight-color: transparent;
+            }
+            #mobile-menu-overlay .menu-item:hover,
+            #mobile-menu-overlay .menu-item:active { background: rgba(255,255,255,0.05); color: white; }
+            #mobile-menu-overlay .menu-item.active { background: rgba(223,41,62,0.1); color: white; border: 1px solid rgba(223,41,62,0.3); }
+            #mobile-menu-overlay .menu-item .material-symbols-outlined { font-size: 20px; color: #df293e; }
+            #mobile-menu-overlay .menu-close {
+                width: 44px;
+                height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: 1px solid rgba(255,255,255,0.2);
+                color: white;
+                cursor: pointer;
+                border-radius: 4px;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            /* User summary cards - more readable */
+            #user-panoramica-widgets .space-y-2 .flex.justify-between span {
+                font-size: 12px !important;
+            }
+
+            /* Download links more tappable */
+            #user-panoramica-widgets li { padding: 12px 0 !important; }
+            #user-panoramica-widgets a { min-height: 44px; display: inline-flex; align-items: center; }
+        }
+
+        /* Hide mobile elements on desktop */
+        @media (min-width: 1024px) {
+            #mobile-bottom-nav { display: none !important; }
+            #mobile-hamburger-btn { display: none !important; }
+            #mobile-menu-overlay { display: none !important; }
+            .mobile-card-list { display: none !important; }
+        }
     </style>
     <link rel="stylesheet" href="../output.css">
 </head>
@@ -122,7 +433,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.81</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.82</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -140,9 +451,52 @@
                 <button class="border border-white/10 hover:border-primary/50 text-gray-400 hover:text-white px-3 py-1.5 text-xs font-headline uppercase tracking-wider transition-all" id="auto-dashboard-click-1">
                     LOGOUT
                 </button>
+                <button id="mobile-hamburger-btn" style="display:none;" onclick="document.getElementById('mobile-menu-overlay').classList.remove('menu-hidden');">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
             </div>
         </div>
     </header>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav id="mobile-bottom-nav" style="display:none;">
+        <button class="active" data-tab="panoramica" onclick="mobileNavSwitch('panoramica')">
+            <span class="material-symbols-outlined">dashboard</span>
+            Home
+        </button>
+        <button data-tab="user_profilo" onclick="mobileNavSwitch('user_profilo')">
+            <span class="material-symbols-outlined">person</span>
+            Profilo
+        </button>
+        <button data-tab="user_certificato" onclick="mobileNavSwitch('user_certificato')">
+            <span class="material-symbols-outlined">medical_services</span>
+            Certificato
+        </button>
+        <button data-tab="user_corsi" onclick="mobileNavSwitch('user_corsi')">
+            <span class="material-symbols-outlined">fitness_center</span>
+            Corsi
+        </button>
+        <button data-tab="user_pagamenti" onclick="mobileNavSwitch('user_pagamenti')">
+            <span class="material-symbols-outlined">receipt_long</span>
+            Pagamenti
+        </button>
+    </nav>
+
+    <!-- Mobile Full-Screen Menu Overlay -->
+    <div id="mobile-menu-overlay" class="menu-hidden">
+        <div class="menu-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <img src="../assets/logo_icon.png" alt="Icon" style="height:28px;width:auto;">
+                <span style="font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;color:#df293e;text-transform:uppercase;letter-spacing:0.1em;">Menu</span>
+            </div>
+            <button class="menu-close" onclick="document.getElementById('mobile-menu-overlay').classList.add('menu-hidden');">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="menu-body" id="mobile-menu-body">
+            <!-- Populated dynamically by JS based on user role -->
+        </div>
+    </div>
 
     <!-- Main Content Area -->
     <main class="flex-grow max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -879,7 +1233,7 @@
                                 <th class="p-4">Titolo</th>
                                 <th class="p-4">Luogo</th>
                                 <th class="p-4" id="col-orari-header">Orari Settimanali</th>
-                                <th class="p-4">Istruttori</th>
+                                <th class="p-4" id="col-istruttori-header">Istruttori</th>
                                 <th class="p-4 text-center">N. Iscritti</th>
                                 <th class="p-4 text-right">Azioni</th>
                             </tr>
@@ -1708,6 +2062,21 @@
                     <p class="text-[8px] text-gray-500 uppercase mt-1">Se non selezionato, sarà visibile anche ai "Solo Soci".</p>
                 </div>
 
+
+                <!-- Data e Ora (solo per tipo = 'evento') -->
+                <div id="modal-evento-data-container" class="group hidden">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA EVENTO *</label>
+                            <input type="date" id="modal-evento-data" class="w-full brutalist-input bg-black text-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORA EVENTO *</label>
+                            <input type="time" id="modal-evento-ora" class="w-full brutalist-input bg-black text-white font-mono">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Orari settimanali (solo per tipo = 'corso') -->
                 <div id="modal-corso-orari-container" class="group">
                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">ORARI SETTIMANALI (SELEZIONA GIORNI E ORA)</label>
@@ -1744,6 +2113,31 @@
                     ANNULLA
                 </button>
                 <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" id="auto-dashboard-click-61">
+                    SALVA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal per Assegnazione Responsabili Eventi -->
+    <div id="modal-assegna-responsabili" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">ASSEGNA RESPONSABILI</h3>
+            <p id="modal-assegna-responsabili-subtitle" class="text-xs text-gray-400 uppercase">SELEZIONA I RESPONSABILI DA ASSEGNARE ALL'EVENTO</p>
+            <div class="space-y-3">
+                <input type="hidden" id="modal-assegna-resp-evento-id">
+                <div class="group">
+                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">SOCI DISPONIBILI</label>
+                    <div id="assegna-responsabili-list" class="flex flex-col gap-2 p-3 bg-black border border-white/20 max-h-60 overflow-y-auto">
+                        <!-- Inseriti dinamicamente -->
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-4 pt-2">
+                <button class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all" onclick="closeModalAssegnaResponsabili()">
+                    ANNULLA
+                </button>
+                <button class="flex-1 bg-white text-black font-headline font-bold py-2 text-xs uppercase hover:bg-primary hover:text-white transition-all" onclick="submitAssegnaResponsabili()">
                     SALVA
                 </button>
             </div>
@@ -1826,7 +2220,126 @@
     <!-- App Logic -->
     <script src="dashboard.js"></script>
 
+    <!-- Mobile Navigation Logic -->
+    <script>
+    (function() {
+        'use strict';
 
+        // Mobile nav switch - called by bottom nav buttons
+        window.mobileNavSwitch = function(tabId) {
+            // Use the existing switchTab function from dashboard.js
+            if (typeof switchTab === 'function') {
+                switchTab(tabId);
+            }
+            // Update bottom nav active states
+            updateMobileNavActive(tabId);
+            // Scroll to top
+            window.scrollTo(0, 0);
+        };
+
+        // Update bottom nav button active state
+        function updateMobileNavActive(activeTab) {
+            const nav = document.getElementById('mobile-bottom-nav');
+            if (!nav) return;
+            nav.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-tab') === activeTab) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Mobile menu item click
+        window.mobileMenuSwitch = function(tabId) {
+            if (typeof switchTab === 'function') {
+                switchTab(tabId);
+            }
+            updateMobileNavActive(tabId);
+            // Update menu item active states
+            const menuBody = document.getElementById('mobile-menu-body');
+            if (menuBody) {
+                menuBody.querySelectorAll('.menu-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.getAttribute('data-tab') === tabId) {
+                        item.classList.add('active');
+                    }
+                });
+            }
+            // Close menu
+            document.getElementById('mobile-menu-overlay').classList.add('menu-hidden');
+            window.scrollTo(0, 0);
+        };
+
+        // Populate mobile hamburger menu based on visible sidebar buttons
+        function populateMobileMenu() {
+            const menuBody = document.getElementById('mobile-menu-body');
+            if (!menuBody) return;
+
+            // Map of tab IDs to icon names and labels
+            const tabConfig = {
+                'panoramica': { icon: 'dashboard', label: 'Panoramica' },
+                'user_profilo': { icon: 'person', label: 'Il Mio Profilo' },
+                'user_certificato': { icon: 'medical_services', label: 'Certificato Medico' },
+                'user_corsi': { icon: 'fitness_center', label: 'Corsi' },
+                'user_eventi': { icon: 'event', label: 'Eventi' },
+                'user_pagamenti': { icon: 'receipt_long', label: 'Pagamenti e Ricevute' },
+                'instructor_corsi': { icon: 'school', label: 'Corsi Seguiti' },
+                'volunteer_eventi': { icon: 'event_available', label: 'Gestione Eventi' },
+                'approvazioni': { icon: 'rule', label: 'Registro Approvazioni' },
+                'soci': { icon: 'group', label: 'Registro Soci' },
+                'tesserati': { icon: 'sports_kabaddi', label: 'Registro Tesserati' },
+                'quote': { icon: 'payments', label: 'Quote e Cassa' },
+                'gestione_corsi': { icon: 'fitness_center', label: 'Gestione Corsi' },
+                'contabilita': { icon: 'calculate', label: 'Contabilità' },
+                'direttivo': { icon: 'shield_person', label: 'Gestione Direttivo' },
+                'verbali': { icon: 'gavel', label: 'Verbali Direttivo' },
+                'verbali_assemblea': { icon: 'groups', label: 'Verbali Assemblea' },
+                'bilanci': { icon: 'account_balance_wallet', label: 'Bilanci e Rendiconti' }
+            };
+
+            // Read visible sidebar buttons
+            const sidebarButtons = document.querySelectorAll('aside button[id^="tab-btn-"]');
+            menuBody.innerHTML = '';
+
+            sidebarButtons.forEach(btn => {
+                if (btn.classList.contains('hidden')) return;
+                const tabId = btn.id.replace('tab-btn-', '');
+                const config = tabConfig[tabId];
+                if (!config) return;
+
+                const menuItem = document.createElement('button');
+                menuItem.className = 'menu-item' + (btn.classList.contains('bg-primary/10') ? ' active' : '');
+                menuItem.setAttribute('data-tab', tabId);
+                menuItem.onclick = function() { mobileMenuSwitch(tabId); };
+                menuItem.innerHTML = `<span class="material-symbols-outlined">${config.icon}</span> ${config.label}`;
+                menuBody.appendChild(menuItem);
+            });
+        }
+
+        // Override the original switchTab to also update mobile nav
+        const _origSwitchTab = window.switchTab;
+        if (typeof _origSwitchTab === 'function') {
+            window.switchTab = function(tabId) {
+                _origSwitchTab(tabId);
+                updateMobileNavActive(tabId);
+            };
+        }
+
+        // Initialize mobile menu when DOM is ready and sidebar is populated
+        // The sidebar gets populated by dashboard.js after auth check, so we observe
+        const observer = new MutationObserver(function(mutations) {
+            populateMobileMenu();
+        });
+        const sidebar = document.querySelector('aside');
+        if (sidebar) {
+            observer.observe(sidebar, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Also populate after a delay to catch initial load
+        setTimeout(populateMobileMenu, 2000);
+        setTimeout(populateMobileMenu, 5000);
+    })();
+    </script>
 
 </body></html>
 

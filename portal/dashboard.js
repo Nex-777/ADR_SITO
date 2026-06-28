@@ -1427,7 +1427,135 @@
                 }
                 body.appendChild(row);
             });
+
+            // === MOBILE CARD VIEW RENDERING ===
+            renderTesseratiMobileCards(filteredData);
         }
+
+        function renderTesseratiMobileCards(filteredData) {
+            // Find or create mobile card container
+            let cardContainer = document.getElementById('tesserati-mobile-cards');
+            if (!cardContainer) {
+                // Create the container and insert it after the table wrapper
+                const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+                if (!tableWrapper) return;
+                cardContainer = document.createElement('div');
+                cardContainer.id = 'tesserati-mobile-cards';
+                cardContainer.className = 'mobile-card-list';
+                tableWrapper.parentNode.insertBefore(cardContainer, tableWrapper.nextSibling);
+                // Add class to table wrapper for mobile hiding
+                tableWrapper.classList.add('mobile-table-hidden-target');
+            }
+            cardContainer.innerHTML = '';
+
+            // On desktop, hide the card container
+            if (window.innerWidth >= 1024) {
+                cardContainer.style.display = 'none';
+                const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+                if (tableWrapper) tableWrapper.style.display = '';
+                return;
+            }
+
+            // On mobile, hide table and show cards
+            const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+            if (tableWrapper) tableWrapper.style.display = 'none';
+            cardContainer.style.display = '';
+
+            if (filteredData.length === 0) {
+                cardContainer.innerHTML = '<div style="text-align:center;padding:24px;color:#6b7280;text-transform:uppercase;font-size:12px;">Nessun tesseramento trovato.</div>';
+                return;
+            }
+
+            filteredData.forEach(tess => {
+                const nomeComp = tess.anagrafiche ? `${tess.anagrafiche.nome} ${tess.anagrafiche.cognome}` : 'N/D';
+                const cf = tess.anagrafiche ? tess.anagrafiche.codice_fiscale : 'N/D';
+                const certInfo = getCertInfo(tess.anagrafiche);
+
+                // Certificate status
+                let certStatus = 'MANCANTE';
+                let certColor = '#df293e';
+                if (certInfo) {
+                    const scaduto = new Date(certInfo.data_scadenza) < new Date();
+                    if (certInfo.stato_validazione === 'VERDE' && !scaduto) {
+                        certStatus = 'VALIDO';
+                        certColor = '#22c55e';
+                    } else if (certInfo.stato_validazione === 'GIALLO') {
+                        certStatus = 'DA VERIFICARE';
+                        certColor = '#eab308';
+                    } else if (certInfo.stato_validazione === 'ROSSO') {
+                        certStatus = 'RIFIUTATO';
+                        certColor = '#df293e';
+                    } else if (certInfo.stato_validazione === 'IN_ATTESA') {
+                        certStatus = 'IN ATTESA';
+                        certColor = '#9ca3af';
+                    } else if (scaduto) {
+                        certStatus = 'SCADUTO';
+                        certColor = '#df293e';
+                    } else {
+                        certStatus = 'VALIDATO';
+                        certColor = '#22c55e';
+                    }
+                }
+
+                // Tesseramento badge
+                let tessColor = '#eab308';
+                if (tess.stato_tesseramento === 'ATTIVO') tessColor = '#22c55e';
+                if (tess.stato_tesseramento === 'SOSPESO') tessColor = '#df293e';
+
+                // Action button
+                let actionHtml = '';
+                const isCertVerde = certInfo && certInfo.stato_validazione === 'VERDE' && new Date(certInfo.data_scadenza) >= new Date();
+                if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                    if (isCertVerde) {
+                        actionHtml = `<button onclick="attivaTesseramento(${tess.id_tesserato})" style="background:#fff;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">ATTIVA</button>`;
+                    } else if (certInfo && certInfo.stato_validazione === 'GIALLO') {
+                        actionHtml = `<button onclick="if(confirm('Approvare il certificato?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">APPROVA CERT.</button>`;
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = 'mobile-card-item';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-name">${escapeHtml(nomeComp)}</span>
+                        <span style="padding:4px 10px;border:1px solid ${tessColor}33;background:${tessColor}1a;color:${tessColor};font-size:10px;font-weight:700;text-transform:uppercase;border-radius:4px;font-family:'Orbitron',sans-serif;">${escapeHtml(tess.stato_tesseramento)}</span>
+                    </div>
+                    <div class="card-details">
+                        <div class="card-detail">
+                            <span class="card-detail-label">C.F.</span>
+                            <span class="card-detail-value" style="font-size:11px;">${escapeHtml(cf)}</span>
+                        </div>
+                        <div class="card-detail">
+                            <span class="card-detail-label">Tessera CSEN</span>
+                            <span class="card-detail-value">${escapeHtml(tess.numero_tessera_csen || 'ASSEGNAZIONE...')}</span>
+                        </div>
+                        <div class="card-detail">
+                            <span class="card-detail-label">Copertura</span>
+                            <span class="card-detail-value">${escapeHtml(tess.livello_copertura)}</span>
+                        </div>
+                        <div class="card-detail">
+                            <span class="card-detail-label">Certificato</span>
+                            <span class="card-detail-value" style="color:${certColor};font-weight:700;">${certStatus}</span>
+                        </div>
+                    </div>
+                    ${actionHtml ? `<div class="card-actions">${actionHtml}</div>` : ''}
+                `;
+                cardContainer.appendChild(card);
+            });
+        }
+
+        // Re-render mobile cards on resize (desktop <-> mobile switch)
+        window.addEventListener('resize', function() {
+            const cardContainer = document.getElementById('tesserati-mobile-cards');
+            const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+            if (window.innerWidth >= 1024) {
+                if (cardContainer) cardContainer.style.display = 'none';
+                if (tableWrapper) tableWrapper.style.display = '';
+            } else {
+                if (cardContainer) cardContainer.style.display = '';
+                if (tableWrapper) tableWrapper.style.display = 'none';
+            }
+        });
 
         // Caricamento Tabella Quote Associative
         async function loadQuote() {
@@ -3055,15 +3183,18 @@
             const corsiBtn = document.getElementById('subtab-btn-corsi');
             const eventiBtn = document.getElementById('subtab-btn-eventi');
             const orariHeader = document.getElementById('col-orari-header');
+            const istruttoriHeader = document.getElementById('col-istruttori-header');
             
             if (tipo === 'corso') {
                 if (corsiBtn) corsiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide";
                 if (eventiBtn) eventiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide";
                 if (orariHeader) orariHeader.classList.remove('hidden');
+                if (istruttoriHeader) istruttoriHeader.textContent = 'ISTRUTTORI';
             } else {
                 if (corsiBtn) corsiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide";
                 if (eventiBtn) eventiBtn.className = "pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide";
                 if (orariHeader) orariHeader.classList.add('hidden');
+                if (istruttoriHeader) istruttoriHeader.textContent = 'RESPONSABILI';
             }
             await loadGestioneCorsi();
         }
@@ -3087,11 +3218,21 @@
                     return;
                 }
 
-                // Per visualizzare istruttori ed iscritti facciamo fetch di supporto
-                const { data: istruttori, error: errIst } = await supabaseClient
-                    .from('istruttori_eventi')
-                    .select('*, utenti(id, nome, cognome)');
-                if (errIst) throw errIst;
+                // Per visualizzare istruttori/responsabili ed iscritti facciamo fetch di supporto
+                let istruttori = [];
+                if (currentCorsiSubTab === 'corso') {
+                    const { data: istrData, error: errIst } = await supabaseClient
+                        .from('istruttori_eventi')
+                        .select('*, utenti(id, nome, cognome)');
+                    if (errIst) throw errIst;
+                    istruttori = istrData || [];
+                } else {
+                    const { data: respData, error: errResp } = await supabaseClient
+                        .from('responsabili_eventi')
+                        .select('*, utenti(id, nome, cognome)');
+                    if (errResp) throw errResp;
+                    istruttori = respData || [];
+                }
 
                 const { data: iscrizioni, error: errIsc } = await supabaseClient
                     .from('iscrizioni_eventi')
@@ -3100,7 +3241,7 @@
 
                 tbody.innerHTML = '';
                 eventi.forEach(evt => {
-                    // Trova istruttori assegnati a questo evento
+                    // Trova istruttori/responsabili assegnati a questo evento
                     const assegnati = istruttori
                         .filter(ie => ie.evento_id === evt.id && ie.utenti)
                         .map(ie => `${ie.utenti.nome} ${ie.utenti.cognome}`.toUpperCase());
@@ -3135,9 +3276,15 @@
                         <td class="p-4 text-center font-bold text-white">${nIscritti}</td>
                         <td class="p-4 text-right">
                             <div class="flex justify-end gap-2">
+                                ${currentCorsiSubTab === 'corso' ? `
                                 <button onclick="openModalAssegnaIstruttori('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" class="border border-primary/30 bg-primary/10 text-primary px-3 py-1 font-headline font-bold text-[10px] hover:bg-primary hover:text-white transition-all uppercase">
                                     Istruttori
                                 </button>
+                                ` : `
+                                <button onclick="openModalAssegnaResponsabili('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" class="border border-primary/30 bg-primary/10 text-primary px-3 py-1 font-headline font-bold text-[10px] hover:bg-primary hover:text-white transition-all uppercase">
+                                    Responsabili
+                                </button>
+                                `}
                                 <button onclick="editCorso('${evt.id}')" class="border border-white/20 hover:border-white text-gray-400 hover:text-white px-3 py-1 font-headline font-bold text-[10px] transition-all uppercase">
                                     Modifica
                                 </button>
@@ -3169,6 +3316,11 @@
             document.getElementById('modal-corso-stripe-id').value = '';
             document.getElementById('modal-corso-is-sportivo').checked = true; // Default sportivo
             
+            // Reset data/ora evento
+            const dataEventoCont = document.getElementById('modal-evento-data-container');
+            document.getElementById('modal-evento-data').value = '';
+            document.getElementById('modal-evento-ora').value = '';
+
             // Reset checkbox giorni
             const checkboxes = document.querySelectorAll('.giorno-checkbox');
             checkboxes.forEach(c => c.checked = false);
@@ -3183,9 +3335,11 @@
             if (tipo === 'corso') {
                 if (orariCont) orariCont.classList.remove('hidden');
                 if (pianiCont) pianiCont.classList.remove('hidden');
+                if (dataEventoCont) dataEventoCont.classList.add('hidden');
             } else {
                 if (orariCont) orariCont.classList.add('hidden');
                 if (pianiCont) pianiCont.classList.add('hidden');
+                if (dataEventoCont) dataEventoCont.classList.remove('hidden');
             }
 
             document.getElementById('modal-corso').classList.remove('hidden');
@@ -3230,6 +3384,7 @@
 
                 const orariCont = document.getElementById('modal-corso-orari-container');
                 const pianiCont = document.getElementById('modal-corso-piani-container');
+                const dataEventoCont = document.getElementById('modal-evento-data-container');
 
                 // Reset checkbox giorni
                 const checkboxes = document.querySelectorAll('.giorno-checkbox');
@@ -3242,6 +3397,7 @@
                 if (evt.tipo === 'corso') {
                     if (orariCont) orariCont.classList.remove('hidden');
                     if (pianiCont) pianiCont.classList.remove('hidden');
+                    if (dataEventoCont) dataEventoCont.classList.add('hidden');
 
                     // Popola orari
                     if (evt.orari_settimanali) {
@@ -3275,6 +3431,10 @@
                 } else {
                     if (orariCont) orariCont.classList.add('hidden');
                     if (pianiCont) pianiCont.classList.add('hidden');
+                    if (dataEventoCont) dataEventoCont.classList.remove('hidden');
+                    
+                    document.getElementById('modal-evento-data').value = evt.data_evento || '';
+                    document.getElementById('modal-evento-ora').value = evt.ora_evento || '';
                 }
 
                 document.getElementById('modal-corso').classList.remove('hidden');
@@ -3331,6 +3491,17 @@
                 }
             }
 
+            let data_evento = null;
+            let ora_evento = null;
+            if (tipo === 'evento') {
+                data_evento = document.getElementById('modal-evento-data').value;
+                ora_evento = document.getElementById('modal-evento-ora').value || null;
+                if (!data_evento) {
+                    alert("Data evento è obbligatoria per gli eventi.");
+                    return;
+                }
+            }
+
             const payload = {
                 titolo,
                 descrizione,
@@ -3341,7 +3512,9 @@
                 stripe_price_id: stripePriceId || null,
                 orari_settimanali,
                 piani_abbonamento,
-                is_sportivo
+                is_sportivo,
+                data_evento,
+                ora_evento
             };
 
             try {
@@ -3488,6 +3661,107 @@
                 await loadGestioneCorsi();
             } catch (err) {
                 alert("Errore salvataggio assegnazione istruttori: " + err.message);
+            }
+        }
+
+        async function openModalAssegnaResponsabili(eventoId, eventoTitolo) {
+            document.getElementById('modal-assegna-resp-evento-id').value = eventoId;
+            document.getElementById('modal-assegna-responsabili-subtitle').textContent = `EVENTO: ${eventoTitolo.toUpperCase()}`;
+            
+            const container = document.getElementById('assegna-responsabili-list');
+            container.innerHTML = '<p class="text-xs text-gray-500">Caricamento soci...</p>';
+            
+            try {
+                const { data: utenti, error: errUtenti } = await supabaseClient
+                    .from('utenti')
+                    .select('id, nome, cognome, ruolo')
+                    .contains('ruolo', ['socio_approvato']);
+                
+                if (errUtenti) throw errUtenti;
+                
+                const soci = utenti || [];
+
+                if (soci.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-gray-500">Nessun utente con ruolo Socio Approvato trovato.</p>';
+                    document.getElementById('modal-assegna-responsabili').classList.remove('hidden');
+                    return;
+                }
+
+                const { data: assegnazioni, error: errAssegna } = await supabaseClient
+                    .from('responsabili_eventi')
+                    .select('utente_id')
+                    .eq('evento_id', eventoId);
+                
+                if (errAssegna) throw errAssegna;
+
+                const assegnatiIds = assegnazioni.map(a => a.utente_id);
+
+                container.innerHTML = '';
+                soci.forEach(soc => {
+                    const isChecked = assegnatiIds.includes(soc.id) ? 'checked' : '';
+                    const label = document.createElement('label');
+                    label.className = "flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:text-white transition-all";
+                    label.innerHTML = `
+                        <input type="checkbox" value="${soc.id}" ${isChecked} class="responsabile-checkbox bg-black border-white/20 text-primary focus:ring-primary">
+                        <span>${soc.nome.toUpperCase()} ${soc.cognome.toUpperCase()}</span>
+                    `;
+                    container.appendChild(label);
+                });
+
+                document.getElementById('modal-assegna-responsabili').classList.remove('hidden');
+            } catch (err) {
+                alert("Errore caricamento modale responsabili: " + err.message);
+            }
+        }
+
+        function closeModalAssegnaResponsabili() {
+            document.getElementById('modal-assegna-responsabili').classList.add('hidden');
+        }
+
+        async function submitAssegnaResponsabili() {
+            const eventoId = document.getElementById('modal-assegna-resp-evento-id').value;
+            const checkBoxes = document.querySelectorAll('.responsabile-checkbox');
+            const selectedIds = Array.from(checkBoxes).filter(cb => cb.checked).map(cb => cb.value);
+
+            try {
+                const { data: assegnazioni, error: errAssegna } = await supabaseClient
+                    .from('responsabili_eventi')
+                    .select('utente_id')
+                    .eq('evento_id', eventoId);
+                
+                if (errAssegna) throw errAssegna;
+
+                const currentIds = assegnazioni.map(a => a.utente_id);
+
+                const daAggiungere = selectedIds.filter(id => !currentIds.includes(id));
+                const daRimuovere = currentIds.filter(id => !selectedIds.includes(id));
+
+                if (daAggiungere.length > 0) {
+                    const inserts = daAggiungere.map(uId => ({
+                        evento_id: eventoId,
+                        utente_id: uId
+                    }));
+                    const { error } = await supabaseClient
+                        .from('responsabili_eventi')
+                        .insert(inserts);
+                    if (error) throw error;
+                }
+
+                if (daRimuovere.length > 0) {
+                    const { error } = await supabaseClient
+                        .from('responsabili_eventi')
+                        .delete()
+                        .eq('evento_id', eventoId)
+                        .in('utente_id', daRimuovere);
+                    if (error) throw error;
+                }
+
+                await scriviAuditLog("ASSEGNAZIONE_RESPONSABILI", "responsabili_eventi", eventoId, { aggiunti: daAggiungere, rimossi: daRimuovere });
+                alert("Assegnazione responsabili salvata con successo!");
+                closeModalAssegnaResponsabili();
+                await loadGestioneCorsi();
+            } catch (err) {
+                alert("Errore salvataggio assegnazione responsabili: " + err.message);
             }
         }
 

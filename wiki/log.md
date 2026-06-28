@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] fix | Eventi e Responsabili (v1.00.82)
+- Risolto errore 'not-null constraint' in fase di creazione di un nuovo evento su `data_evento` aggiungendo i campi mancanti Data/Ora nella UI `dashboard.html`.
+- Creata la tabella `responsabili_eventi` in Supabase per assegnare i soci come responsabili degli eventi.
+- Modificato `dashboard.js` per gestire l'assegnazione dei responsabili e visualizzarli in tabella qualora si scelga la sub-tab 'Eventi In Programma'.
+- Bumped application version to `1.00.82`.
+
 ## [2026-06-28] fix | Stripe checkout automatic_payment_methods error (v1.00.81)
 - Removed `automatic_payment_methods` parameter from `checkout.sessions.create` which was throwing a Stripe validation error (unknown parameter).
 - Enabled automatic payment methods natively by omitting `payment_method_types` entirely per Stripe documentation.
