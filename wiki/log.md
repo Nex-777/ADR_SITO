@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-28] fix | Stripe checkout automatic_payment_methods error (v1.00.81)
+- Removed `automatic_payment_methods` parameter from `checkout.sessions.create` which was throwing a Stripe validation error (unknown parameter).
+- Enabled automatic payment methods natively by omitting `payment_method_types` entirely per Stripe documentation.
+- Bumped application version to `1.00.81` across config files and HTML headers.
+
 ## [2026-06-28] ingest | Stripe Multi-Method & Management Fee (v1.00.80)
 - Configured dynamic payment methods (`automatic_payment_methods`) to support Klarna (BNPL), PayPal, and SEPA.
 - Added automatic 2% administrative/management fee calculation and line item to all Stripe Checkout API sessions.

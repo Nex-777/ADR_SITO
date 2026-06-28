@@ -109,9 +109,6 @@ export default async function handler(req, res) {
         const origin = req.headers.origin || 'https://portal.adrenalinaclub.it';
         
         const session = await stripe.checkout.sessions.create({
-            automatic_payment_methods: {
-                enabled: true,
-            },
             line_items: [
                 {
                     price_data: {
