@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-29] fix | Responsabili Load and Save Fixes (v1.00.84)
+- Corretto il recupero dei soci nel dropdown multi-selezione responsabili: modificato il recupero del numero telefonico (colonna `cellulare` anziché `telefono` non esistente nella tabella `utenti`) e allineati i filtri al ruolo `socio_approvato` anziché `tipo_adesione`.
+- Corretto il salvataggio dei responsabili associati all'evento: mappato `utente_id` anziché `socio_id` nella chiamata insert a `responsabili_eventi`.
+
 ## [2026-06-28] feat | Corsi & Eventi Redesign (v1.00.83)
 - Rinominata la voce del menu da "GESTIONE CORSI" a "CORSI & EVENTI".
 - Supporto per giornate multiple negli eventi: rimosso il singolo input data/ora e inserita gestione ad array JSON in `dashboard.js`. Modificato schema DB consigliato con nuova colonna `giornate` di tipo JSONB in `eventi`.

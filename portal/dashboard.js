@@ -3432,12 +3432,12 @@
             selectEl.innerHTML = '<option value="" disabled>Caricamento soci...</option>';
             
             try {
-                // Prendi tutti i soci attivi
+                // Prendi tutti i soci attivi (con ruolo socio_approvato)
                 if (sociDisponibiliList.length === 0) {
                     const { data: sociData, error } = await supabaseClient
                         .from('utenti')
-                        .select('id, nome, cognome, telefono, email')
-                        .in('tipo_adesione', ['Socio', 'Atleta/Socio']);
+                        .select('id, nome, cognome, cellulare, email, ruolo')
+                        .contains('ruolo', ['socio_approvato']);
                     if (error) throw error;
                     sociDisponibiliList = sociData || [];
                 }
@@ -3446,10 +3446,10 @@
                 if (eventoId) {
                     const { data: rel, error: relErr } = await supabaseClient
                         .from('responsabili_eventi')
-                        .select('socio_id')
+                        .select('utente_id')
                         .eq('evento_id', eventoId);
                     if (!relErr && rel) {
-                        assignedIds = rel.map(r => r.socio_id);
+                        assignedIds = rel.map(r => r.utente_id);
                     }
                 }
                 
@@ -3458,7 +3458,7 @@
                     const opt = document.createElement('option');
                     opt.value = s.id;
                     opt.text = `${s.nome} ${s.cognome}`;
-                    opt.setAttribute('data-tel', s.telefono || '');
+                    opt.setAttribute('data-tel', s.cellulare || '');
                     opt.setAttribute('data-email', s.email || '');
                     if (assignedIds.includes(s.id)) opt.selected = true;
                     selectEl.appendChild(opt);
@@ -3721,7 +3721,7 @@
                     if (responsabili_selezionati.length > 0) {
                         const relPayload = responsabili_selezionati.map(socio_id => ({
                             evento_id: savedId,
-                            socio_id: socio_id
+                            utente_id: socio_id
                         }));
                         const { error: relErr } = await supabaseClient.from('responsabili_eventi').insert(relPayload);
                         if (relErr) {
