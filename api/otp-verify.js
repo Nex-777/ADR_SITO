@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from './resend-mail.js';
+import { PDFDocument, rgb } from 'pdf-lib';
+import fs from 'fs';
+import path from 'path';
 
 let supabase;
 
@@ -137,7 +140,7 @@ export default async function handler(req, res) {
         // Fetch user data from public.utenti
         const { data: profile, error: profileError } = await supabase
             .from('utenti')
-            .select('id, codice_fiscale, indirizzo, nome, cognome, data_nascita, luogo_nascita_provincia, luogo_nascita_comune, provincia, comune, cap, cellulare, email, certificato_medico_url, certificato_data_emissione, certificato_tipologia, tipo_adesione, tipo_tessera')
+            .select('id, codice_fiscale, indirizzo, nome, cognome, data_nascita, luogo_nascita_provincia, luogo_nascita_comune, provincia, comune, cap, cellulare, email, certificato_medico_url, certificato_data_emissione, certificato_tipologia, tipo_adesione, tipo_tessera, documento_identita_url')
             .eq('id', utenteId)
             .maybeSingle();
             
@@ -261,6 +264,19 @@ export default async function handler(req, res) {
             }
         }
 
+        // C3. Insert into public.documenti_identita if present
+        if (profile.documento_identita_url) {
+            await supabase.from('documenti_identita').delete().eq('anagrafica_id', anagraficaId);
+            const { error: idDocError } = await supabase
+                .from('documenti_identita')
+                .insert({
+                    anagrafica_id: anagraficaId,
+                    file_url: profile.documento_identita_url,
+                    tipologia: 'FRONTE_RETRO'
+                });
+            if (idDocError) console.error("Errore inserimento documento identita:", idDocError);
+        }
+
         // D. Split Flow Decision Logic (Casistica 1, 2, 3)
         const adesione = profile.tipo_adesione; // socio, tesserato, socio_tesserato
         const tType = profile.tipo_tessera; // tessera_base_silver, tessera_base_gold, tessera_integrativa_a, tessera_integrativa_b
@@ -339,11 +355,91 @@ export default async function handler(req, res) {
             `;
         }
 
+        let emailAttachments = [];
+        let urlPdfInformativa = null;
+        let urlPdfIscrizione = null;
+
+        try {
+            // Setup coordinates and fonts
+            const csenPath1 = path.join(process.cwd(), 'CSEN_moduli', 'INFORMATIVA PER SINGOLI TESSERATI (1).pdf');
+            const csenPath2 = path.join(process.cwd(), 'CSEN_moduli', 'Modulo_Iscrizione_2024(1)(1) - aggiornato silver e gold (2).pdf');
+
+            if (fs.existsSync(csenPath1) && fs.existsSync(csenPath2)) {
+                const pdfInformativaBytes = fs.readFileSync(csenPath1);
+                const pdfIscrizioneBytes = fs.readFileSync(csenPath2);
+
+                const doc1 = await PDFDocument.load(pdfInformativaBytes);
+                const doc2 = await PDFDocument.load(pdfIscrizioneBytes);
+                
+                const pages1 = doc1.getPages();
+                const page1 = pages1[0];
+
+                const pages2 = doc2.getPages();
+                const page2 = pages2[0];
+                const page2b = pages2[1];
+
+                const signTimestamp = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+                const signatureText = `Firmato Digitalmente (OTP: ${otp} | IP: ${clientIp} | Data: ${signTimestamp})`;
+                const signatureColor = rgb(0.8, 0, 0); // Red signature stamp
+
+                // Fill INFORMATIVA (doc1)
+                // Coordinate stimate, richiederà fine-tuning
+                page1.drawText(`${profile.nome} ${profile.cognome}`, { x: 150, y: 650, size: 10 });
+                page1.drawText(cf, { x: 150, y: 630, size: 10 });
+                page1.drawText(`${profile.luogo_nascita_comune} (${profile.luogo_nascita_provincia})`, { x: 150, y: 610, size: 10 });
+                // Signature
+                page1.drawText(signatureText, { x: 100, y: 150, size: 8, color: signatureColor });
+
+                // Fill ISCRIZIONE (doc2)
+                page2.drawText(profile.nome, { x: 150, y: 600, size: 10 });
+                page2.drawText(profile.cognome, { x: 150, y: 580, size: 10 });
+                page2.drawText(cf, { x: 150, y: 560, size: 10 });
+                page2.drawText(streetName, { x: 150, y: 540, size: 10 });
+                page2.drawText(profile.comune, { x: 150, y: 520, size: 10 });
+                page2.drawText(profile.provincia, { x: 450, y: 520, size: 10 });
+                page2.drawText(profile.cellulare || '', { x: 150, y: 500, size: 10 });
+                page2.drawText(profile.email || '', { x: 150, y: 480, size: 10 });
+                
+                // Signatures
+                page2.drawText(signatureText, { x: 100, y: 150, size: 8, color: signatureColor });
+                if (page2b) {
+                    page2b.drawText(signatureText, { x: 100, y: 150, size: 8, color: signatureColor });
+                }
+
+                const out1Bytes = await doc1.save();
+                const out2Bytes = await doc2.save();
+
+                // Upload to Supabase Storage
+                const pathInformativa = `${utenteId}/csen_informativa_${Date.now()}.pdf`;
+                const pathIscrizione = `${utenteId}/csen_iscrizione_${Date.now()}.pdf`;
+
+                await supabase.storage.from('documenti_adesione').upload(pathInformativa, out1Bytes, { contentType: 'application/pdf', upsert: true });
+                await supabase.storage.from('documenti_adesione').upload(pathIscrizione, out2Bytes, { contentType: 'application/pdf', upsert: true });
+
+                const { data: url1 } = await supabase.storage.from('documenti_adesione').createSignedUrl(pathInformativa, 315360000); // 10 years valid for admin view
+                const { data: url2 } = await supabase.storage.from('documenti_adesione').createSignedUrl(pathIscrizione, 315360000);
+
+                if (url1) urlPdfInformativa = url1.signedUrl;
+                if (url2) urlPdfIscrizione = url2.signedUrl;
+
+                // Attach to email
+                emailAttachments.push(
+                    { filename: 'Informativa_CSEN.pdf', content: Buffer.from(out1Bytes) },
+                    { filename: 'Iscrizione_CSEN.pdf', content: Buffer.from(out2Bytes) }
+                );
+            } else {
+                console.warn('CSEN forms not found in the filesystem for compilation.');
+            }
+        } catch (pdfErr) {
+            console.error('Error generating CSEN PDFs:', pdfErr);
+        }
+
         // Send confirmation email
         await sendEmail({
             to: profile.email,
             subject: emailSubject,
-            html: emailHtml
+            html: emailHtml,
+            attachments: emailAttachments
         });
 
         // 7. Update pending sign document state
@@ -357,6 +453,8 @@ export default async function handler(req, res) {
                 updateData.url_pdf_generato = req.body.url_pdf_generato;
             }
         }
+        if (urlPdfInformativa) updateData.url_pdf_csen_informativa = urlPdfInformativa;
+        if (urlPdfIscrizione) updateData.url_pdf_csen_iscrizione = urlPdfIscrizione;
         await supabase
             .from('atti_adesione')
             .update(updateData)

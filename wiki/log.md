@@ -4,6 +4,18 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-29] feature | ID Document and CSEN PDFs (v1.00.78)
+- Added ID Document upload logic to registration step 1 (mandatory).
+- Created `documenti_identita` table and secured storage bucket.
+- Integrated `pdf-lib` in `api/otp-verify.js` to automatically fill and sign official CSEN PDF forms upon OTP validation.
+- Attached signed CSEN PDFs to the user's confirmation email.
+- Updated dashboard approvals list to allow Board members to view the ID document and the signed CSEN forms.
+
+## [2026-06-29] fix | Eventi Columns Database Sync (v1.00.90)
+- Eseguita migrazione DDL su Supabase per inserire le colonne mancanti `giornate` (jsonb), `link_sito` (text) e `contatti` (text) nella tabella `eventi`.
+- Questo risolve l'errore "Could not find the 'contatti' column of 'eventi' in the schema cache" in fase di inserimento e aggiornamento degli eventi.
+- Allineato il numero di versione a `1.00.90` su `dashboard.html`.
+
 ## [2026-06-29] fix | Redesign version styling, event titles, and cookie banner logic (v1.00.89)
 - Allineato il badge della versione nella testata della home page allo stile degli altri badge del portale (testo bianco/70, bordo bianco/20, sfondo bianco/5).
 - Risolto l'errore del titolo "undefined" negli eventi in Homepage, mappando la colonna corretta `titolo` (e mantenendo fallback intelligenti).

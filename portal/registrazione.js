@@ -283,6 +283,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
         let selectedAdesione = "";
         let selectedTessera = "";
         let uploadedCertificatoFile = null;
+        let uploadedDocumentoIdentitaFile = null;
 
         const inputAdesione = document.getElementById('tipo_adesione');
         const inputTessera = document.getElementById('tipo_tessera');
@@ -465,6 +466,37 @@ function togglePasswordVisibility(inputId, buttonEl) {
             fileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
         });
 
+        // ID Document Selection handling
+        const identitaFileInput = document.getElementById('documento_identita_file');
+        const identitaFileNameLabel = document.getElementById('documento-identita-file-name');
+        const identitaFileStatusLabel = document.getElementById('documento-identita-file-status');
+
+        identitaFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                uploadedDocumentoIdentitaFile = null;
+                identitaFileNameLabel.textContent = "SELEZIONA O TRASCINA IL DOCUMENTO";
+                identitaFileStatusLabel.textContent = "Nessun file selezionato";
+                identitaFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Il documento non deve superare i 5MB di dimensione.");
+                identitaFileInput.value = "";
+                uploadedDocumentoIdentitaFile = null;
+                identitaFileNameLabel.textContent = "SELEZIONA O TRASCINA IL DOCUMENTO";
+                identitaFileStatusLabel.textContent = "Errore: File troppo grande (>5MB)";
+                identitaFileStatusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                return;
+            }
+
+            uploadedDocumentoIdentitaFile = file;
+            identitaFileNameLabel.textContent = file.name.toUpperCase();
+            identitaFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            identitaFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+        });
+
         // Initialize rates download
         fetchTariffe();
 
@@ -625,6 +657,12 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 // Check Membership type
                 if (!selectedAdesione) {
                     alert("Seleziona un tipo di adesione cliccando su una delle tre card.");
+                    return false;
+                }
+
+                // Check Identity Document (Mandatory for all)
+                if (!uploadedDocumentoIdentitaFile) {
+                    alert("Devi selezionare e caricare un documento di riconoscimento prima di procedere.");
                     return false;
                 }
 
@@ -1239,6 +1277,28 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     console.log("Certificato medico caricato con successo.");
                 }
 
+                // 1.5 Upload Identity Document
+                let documentoIdentitaUrl = "";
+                const idFileExt = uploadedDocumentoIdentitaFile.name.split('.').pop();
+                const idFilePath = `${userId}/documento_${Date.now()}.${idFileExt}`;
+                updateOtpButtonStatus("CARICAMENTO DOCUMENTO IDENTITÀ...");
+                
+                const { data: idUploadData, error: idUploadError } = await supabaseClient.storage
+                    .from('documenti_identita')
+                    .upload(idFilePath, uploadedDocumentoIdentitaFile, {
+                        contentType: uploadedDocumentoIdentitaFile.type,
+                        upsert: true
+                    });
+                    
+                if (idUploadError) throw idUploadError;
+                
+                const { data: idUrlData, error: idSignedUrlError } = await supabaseClient.storage
+                    .from('documenti_identita')
+                    .createSignedUrl(idFilePath, 300);
+                if (idSignedUrlError) throw idSignedUrlError;
+                documentoIdentitaUrl = idUrlData.signedUrl;
+                console.log("Documento d'identità caricato con successo.");
+
                 // 2. Generate PDF with jsPDF
                 updateOtpButtonStatus("GENERAZIONE CONTRATTO...");
                 const { jsPDF } = window.jspdf;
@@ -1352,7 +1412,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     console.log("Documento tutore caricato con successo.");
                 }
 
-                if (certificatoMedicoUrl || tutoreDocumentoUrl) {
+                if (certificatoMedicoUrl || tutoreDocumentoUrl || documentoIdentitaUrl) {
                     updateOtpButtonStatus("AGGIORNAMENTO PROFILO...");
                     const updatePayload = {};
                     if (certificatoMedicoUrl) {
@@ -1361,6 +1421,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione').value;
                     }
                     if (tutoreDocumentoUrl) updatePayload.tutore_documento_url = tutoreDocumentoUrl;
+                    if (documentoIdentitaUrl) updatePayload.documento_identita_url = documentoIdentitaUrl;
 
                     const { error: utentiUpdateError } = await supabaseClient
                         .from('utenti')
@@ -1500,6 +1561,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) {
         el.addEventListener('click', function(event) {
             document.getElementById('tutore_documento_file').click()
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-registrazione-click-identita');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            document.getElementById('documento_identita_file').click()
         });
     }
 });

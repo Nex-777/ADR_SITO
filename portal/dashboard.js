@@ -958,6 +958,7 @@
                         motivo_rifiuto,
                         anagrafiche (
                             id,
+                            utente_id,
                             nome,
                             cognome,
                             codice_fiscale,
@@ -973,6 +974,11 @@
                                 file_url,
                                 stato_validazione,
                                 note_ai
+                            ),
+                            documenti_identita (
+                                id,
+                                tipologia,
+                                file_url
                             )
                         )
                     `)
@@ -1010,6 +1016,23 @@
         };
 
                 if (error) throw error;
+                
+                // Fetch atti_adesione per ottenere i PDF CSEN
+                const utenteIds = (data || []).map(x => x.anagrafiche?.utente_id).filter(Boolean);
+                if (utenteIds.length > 0) {
+                    const { data: attiData } = await supabaseClient
+                        .from('atti_adesione')
+                        .select('utente_id, url_pdf_csen_informativa, url_pdf_csen_iscrizione')
+                        .in('utente_id', utenteIds);
+                    if (attiData) {
+                        data.forEach(item => {
+                            if (item.anagrafiche?.utente_id) {
+                                item.atti_adesione = attiData.find(a => a.utente_id === item.anagrafiche.utente_id);
+                            }
+                        });
+                    }
+                }
+
                 approvazioniData = data || [];
                 renderApprovazioniTables();
             } catch (err) {
@@ -1073,6 +1096,30 @@
                     const certInfo = getCertInfo(anag);
                     let certHtml = '<span class="text-primary font-bold">MANCANTE</span>';
                     let isCertVerde = false;
+                    let docIdHtml = '<span class="text-gray-500 font-bold text-[9px]">-</span>';
+                    if (anag.documenti_identita && anag.documenti_identita.length > 0) {
+                        const docId = anag.documenti_identita[0];
+                        docIdHtml = `
+                            <div class="mt-2 text-center border-t border-white/10 pt-2">
+                                <a href="#" data-file-url="${escapeHtml(docId.file_url)}" class="approvazioni-view-id-btn underline text-blue-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">badge</span>DOC. IDENTITÀ</a>
+                            </div>
+                        `;
+                    }
+
+                    let csenFormsHtml = '';
+                    if (item.atti_adesione) {
+                        const urlInfo = item.atti_adesione.url_pdf_csen_informativa;
+                        const urlIscr = item.atti_adesione.url_pdf_csen_iscrizione;
+                        if (urlInfo || urlIscr) {
+                            csenFormsHtml = `
+                                <div class="mt-2 flex flex-col items-center gap-1 border-t border-white/10 pt-2">
+                                    ${urlInfo ? `<a href="${urlInfo}" target="_blank" class="underline text-purple-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">description</span>INFORMATIVA CSEN</a>` : ''}
+                                    ${urlIscr ? `<a href="${urlIscr}" target="_blank" class="underline text-purple-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">description</span>ISCRIZIONE CSEN</a>` : ''}
+                                </div>
+                            `;
+                        }
+                    }
+
                     if (certInfo) {
                         const scaduto = new Date(certInfo.data_scadenza) < new Date();
                         isCertVerde = certInfo.stato_validazione === 'VERDE' && !scaduto;
@@ -1091,11 +1138,13 @@
                             statusLabel = '<span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">VALIDATO</span>';
                         }
                         certHtml = `
-                            <div class="flex flex-col items-center gap-1">
+                            <div class="flex flex-col items-center gap-1 pb-2">
                                 <a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="approvazioni-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>
                                 ${statusLabel}
                                 <span class="text-[9px] text-gray-500 font-mono">Scad: ${escapeHtml(certInfo.data_scadenza)}</span>
                             </div>
+                            ${docIdHtml}
+                            ${csenFormsHtml}
                         `;
                     }
 
@@ -1134,6 +1183,14 @@
                             e.preventDefault();
                             const url = e.currentTarget.getAttribute('data-file-url');
                             openSignedFile('certificati_medici', url);
+                        });
+                    }
+                    const viewIdBtn = row.querySelector('.approvazioni-view-id-btn');
+                    if (viewIdBtn) {
+                        viewIdBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const url = e.currentTarget.getAttribute('data-file-url');
+                            openSignedFile('documenti_identita', url);
                         });
                     }
                     tessBody.appendChild(row);

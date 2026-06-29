@@ -1,10 +1,11 @@
 {
   "name": "adr-sito",
-  "version": "1.00.75",
+  "version": "1.00.78",
   "type": "module",
   "dependencies": {
     "@google/genai": "^2.7.0",
     "@supabase/supabase-js": "^2.108.2",
+    "pdf-lib": "^1.17.1",
     "playwright": "^1.61.0",
     "resend": "^6.12.4",
     "stripe": "^15.12.0"

@@ -155,7 +155,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.89</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.78</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -384,6 +384,20 @@
                                     <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI EMISSIONE *</label>
                                     <input type="date" id="certificato_data_emissione" class="w-full brutalist-input bg-black text-white text-xs p-2">
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Sezione Caricamento Documento d'Identità (Obbligatorio per tutti) -->
+                        <div id="documento_identita_container" class="space-y-4 border border-white/10 p-4 bg-black/25 mt-4">
+                            <div class="flex justify-between items-center">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">DOCUMENTO DI RICONOSCIMENTO (OBBLIGATORIO)</label>
+                                <span class="text-[9px] text-gray-400">Fronte/Retro (PDF, PNG, JPG - MAX 5MB)</span>
+                            </div>
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-registrazione-click-identita">
+                                <input type="file" id="documento_identita_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                <p class="text-xs text-white uppercase font-bold" id="documento-identita-file-name">SELEZIONA O TRASCINA IL DOCUMENTO</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="documento-identita-file-status">Nessun file selezionato</p>
                             </div>
                         </div>
 
