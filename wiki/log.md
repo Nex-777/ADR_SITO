@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-29] fix | Redesign version styling, event titles, and cookie banner logic (v1.00.89)
+- Allineato il badge della versione nella testata della home page allo stile degli altri badge del portale (testo bianco/70, bordo bianco/20, sfondo bianco/5).
+- Risolto l'errore del titolo "undefined" negli eventi in Homepage, mappando la colonna corretta `titolo` (e mantenendo fallback intelligenti).
+- Reso effettivo il banner dei cookie: ora imposta un cookie reale `cookie-consent-choice` ed elimina preventivamente tutti i cookie non essenziali (marketing/analytics) se l'utente sceglie "Solo Necessari".
+
 ## [2026-06-29] fix | Homepage events, registration CSP & GDPR compliance (v1.00.88)
 - Risolto l'errore di caricamento dei comuni nella registrazione: scaricato il dataset `comuni.json` in locale per rispettare la Content Security Policy ed evitare blocchi della rete.
 - Corretto l'endpoint `/api/events` per utilizzare la chiave corretta `SUPABASE_SERVICE_ROLE_KEY` e abilitato il supporto CORS.
