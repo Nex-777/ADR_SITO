@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-29] feat | Redesign Home Page (v1.00.87)
+- Ottimizzata l'esperienza utente nella landing page `index.html` portando l'Accesso e Registrazione in evidenza nella Hero Section per migliorare la fruibilità da mobile.
+- Rivista la sezione Discipline (Palestra/Functional Training, Strongman, Allenamento Ibrido, SCAB) con stili premium ispirati alle eccellenze del settore.
+- Aggiunta la sezione Eventi imminenti prima dei contatti, con fetch dinamico degli eventi via API pubblica (`/api/events`).
+- Spostata e ridisegnata la sezione Contatti a fondo pagina per renderla più elegante.
+- Aggiunto un semplice endpoint serverless `/api/events` per esporre gli eventi correnti dalla tabella `eventi`.
+
 ## [2026-06-29] feat | UI/UX Redesign Landing & Mobile Portal (v1.00.86)
 - Riprogettata la landing page (`index.html`) per desktop: introdotta la Hero a due colonne con pannello grafico, spostate le discipline su griglia a 4 colonne, e allineato l'About su 2 colonne.
 - Ottimizzato il portale mobile (`portal/dashboard.html`): introdotta veste grafica glassmorphism per widget statistiche, card tesserati, e form di input.
