@@ -63,8 +63,8 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
         async function loadItalianComuni() {
             try {
-                // Fetch direct from matteocontrini github raw dataset
-                const res = await fetch('https://raw.githubusercontent.com/matteocontrini/comuni-json/master/comuni.json');
+                // Fetch from local comuni.json dataset to respect Content Security Policy
+                const res = await fetch('./comuni.json');
                 comuniData = await res.json();
                 
                 // Map unique provinces

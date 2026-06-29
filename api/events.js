@@ -1,24 +1,47 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    const allowedOrigins = [
+        'https://adrenalinaclub.it',
+        'https://www.adrenalinaclub.it',
+        'https://portal.adrenalinaclub.it',
+        'https://nex-777.github.io',
+        'https://adr-sito.vercel.app',
+        'http://localhost:3000'
+    ];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
     try {
-        const supabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY
-        );
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-        // Prelevare solo eventi in programmazione (da oggi in poi) e ordinati per data
-        const today = new Date().toISOString();
-        
+        if (!supabaseUrl || !supabaseServiceKey) {
+            return res.status(500).json({ error: 'Configuration Error' });
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
         const { data, error } = await supabase
             .from('eventi')
             .select('*')
             .eq('tipo', 'evento')
-            //.gte('data_evento', today) // da implementare in un secondo momento se le date sono uniformi
             .order('data_evento', { ascending: true })
             .limit(3);
 

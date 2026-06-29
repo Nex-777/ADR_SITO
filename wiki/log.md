@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-29] fix | Homepage events, registration CSP & GDPR compliance (v1.00.88)
+- Risolto l'errore di caricamento dei comuni nella registrazione: scaricato il dataset `comuni.json` in locale per rispettare la Content Security Policy ed evitare blocchi della rete.
+- Corretto l'endpoint `/api/events` per utilizzare la chiave corretta `SUPABASE_SERVICE_ROLE_KEY` e abilitato il supporto CORS.
+- Aggiunto il badge della versione anche nel footer della Home per garantirne la massima visibilità in ogni scenario di caching.
+- Create le pagine `privacy.html` e `legal.html` precompilate con i dati legali corretti dell'Associazione (CSEN, CF/P.IVA, ecc.).
+- Implementato un banner conforme per la gestione del consenso dei Cookie sulla Homepage, con persistenza in LocalStorage.
+
 ## [2026-06-29] feat | Redesign Home Page (v1.00.87)
 - Ottimizzata l'esperienza utente nella landing page `index.html` portando l'Accesso e Registrazione in evidenza nella Hero Section per migliorare la fruibilità da mobile.
 - Rivista la sezione Discipline (Palestra/Functional Training, Strongman, Allenamento Ibrido, SCAB) con stili premium ispirati alle eccellenze del settore.

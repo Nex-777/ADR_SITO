@@ -80,7 +80,7 @@
             <img src="assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
             <img src="assets/logo.png" alt="ADRENALINA" class="h-4 w-auto object-contain">
         </a>
-        <span class="text-[9px] font-mono font-bold tracking-widest text-primary border border-primary/30 px-2 py-0.5 rounded-sm uppercase">Vs. 1.00.87</span>
+        <span class="text-[9px] font-mono font-bold tracking-widest text-primary border border-primary/30 px-2 py-0.5 rounded-sm uppercase">Vs. 1.00.88</span>
     </nav>
 
     <main class="pt-16">
@@ -369,7 +369,8 @@
                 <a href="privacy.html" class="hover:text-primary transition-colors">Privacy Policy</a>
                 <a href="#contact" class="hover:text-primary transition-colors">Contatti</a>
             </div>
-            <p class="text-[8px] text-gray-700 font-black tracking-[0.3em]">POWERED BY ADRENALINA CORE</p>
+            <p class="text-[8px] text-gray-700 font-black tracking-[0.3em] mb-2">POWERED BY ADRENALINA CORE</p>
+            <span class="text-[8px] font-mono font-bold tracking-widest text-gray-600 border border-white/10 px-2 py-0.5 rounded-sm uppercase">Vs. 1.00.88</span>
         </div>
     </footer>
 
@@ -458,7 +459,58 @@
         }
         
         // Inizializza al caricamento
-        document.addEventListener('DOMContentLoaded', loadEvents);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEvents();
+            initCookieBanner();
+        });
+
+        // Cookie Consent Banner Logic
+        function initCookieBanner() {
+            if (localStorage.getItem('cookie-consent-choice')) {
+                return; // Già espresso la scelta
+            }
+
+            // Create Banner Element
+            const banner = document.createElement('div');
+            banner.id = 'cookie-consent-banner';
+            banner.className = 'fixed bottom-24 md:bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md z-[100] bg-[#0c0c0c]/95 border border-white/10 p-6 rounded-xl shadow-2xl backdrop-blur-md translate-y-10 opacity-0 transition-all duration-500 flex flex-col gap-4';
+            banner.innerHTML = `
+                <div class="space-y-2">
+                    <h4 class="font-headline font-black text-white text-base tracking-wide uppercase">GESTIONE CONSENSO COOKIE</h4>
+                    <p class="font-body text-xs text-gray-400 leading-relaxed font-light uppercase">
+                        Utilizziamo cookie tecnici per far funzionare il portale e, previo tuo consenso, cookie di marketing per ottimizzare l'esperienza. Consulta la <a href="privacy.html" class="text-primary underline">Privacy Policy</a>.
+                    </p>
+                </div>
+                <div class="flex gap-3 text-[10px] font-headline font-black">
+                    <button id="btn-cookie-accept-all" class="flex-1 bg-white text-black py-2.5 uppercase hover:bg-primary hover:text-white transition-colors">ACCETTA TUTTI</button>
+                    <button id="btn-cookie-refuse" class="flex-1 border border-white/20 text-white py-2.5 uppercase hover:bg-white/5 transition-colors">SOLO NECESSARI</button>
+                </div>
+            `;
+            document.body.appendChild(banner);
+
+            // Animate In
+            setTimeout(() => {
+                banner.classList.remove('translate-y-10', 'opacity-0');
+            }, 100);
+
+            // Event Listeners
+            document.getElementById('btn-cookie-accept-all').addEventListener('click', () => {
+                localStorage.setItem('cookie-consent-choice', 'all');
+                hideBanner();
+            });
+
+            document.getElementById('btn-cookie-refuse').addEventListener('click', () => {
+                localStorage.setItem('cookie-consent-choice', 'necessary');
+                hideBanner();
+            });
+
+            function hideBanner() {
+                banner.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => {
+                    banner.remove();
+                }, 500);
+            }
+        }
     </script>
 </body>
 </html>
