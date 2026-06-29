@@ -4,6 +4,18 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-29] feat | UI/UX Redesign Landing & Mobile Portal (v1.00.86)
+- Riprogettata la landing page (`index.html`) per desktop: introdotta la Hero a due colonne con pannello grafico, spostate le discipline su griglia a 4 colonne, e allineato l'About su 2 colonne.
+- Ottimizzato il portale mobile (`portal/dashboard.html`): introdotta veste grafica glassmorphism per widget statistiche, card tesserati, e form di input.
+- Perfezionata la barra di navigazione mobile (`mobile-bottom-nav`) con indicatore animato della tab attiva (linea colorata) e sfocatura dello sfondo.
+- Ricompilato `output.css` con Tailwind v4.
+
+## [2026-06-29] feat | Responsabili Dinamici (v1.00.85)
+- Sostituito il dropdown a selezione multipla `<select multiple>` con un sistema a righe dinamiche (simile alle giornate dell'evento).
+- Consente l'aggiunta di molteplici responsabili in modo intuitivo tramite pulsante "+ AGGIUNGI RESPONSABILE" e comodi singoli dropdown, eliminando la necessità di premere CTRL.
+- Mantenuto l'autocompilamento in tempo reale del box "Contatti" all'aggiunta o variazione dei singoli responsabili.
+- Bumped application version to `1.00.85`.
+
 ## [2026-06-29] fix | Responsabili Load and Save Fixes (v1.00.84)
 - Corretto il recupero dei soci nel dropdown multi-selezione responsabili: modificato il recupero del numero telefonico (colonna `cellulare` anziché `telefono` non esistente nella tabella `utenti`) e allineati i filtri al ruolo `socio_approvato` anziché `tipo_adesione`.
 - Corretto il salvataggio dei responsabili associati all'evento: mappato `utente_id` anziché `socio_id` nella chiamata insert a `responsabili_eventi`.

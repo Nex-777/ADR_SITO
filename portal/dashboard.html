@@ -145,44 +145,59 @@
             }
 
             /* Panel titles - more readable */
-            .tab-panel h2 { font-size: 16px !important; }
+            .tab-panel h2 { font-size: 16px !important; font-weight: 800 !important; tracking-wide: 0.05em !important; }
             .tab-panel h3 { font-size: 13px !important; }
-
-            /* Stats grid - 2 columns on mobile */
+ 
+            /* Stats grid - 2 columns on mobile with glassmorphic cards */
             #board-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
-            #board-stats-grid > div { padding: 12px !important; }
-            #board-stats-grid p.text-2xl { font-size: 20px !important; }
-
+            #board-stats-grid > div {
+                background: rgba(255, 255, 255, 0.02) !important;
+                border: 1px solid rgba(255, 255, 255, 0.06) !important;
+                border-radius: 12px !important;
+                padding: 14px !important;
+                backdrop-filter: blur(10px) !important;
+                -webkit-backdrop-filter: blur(10px) !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+            }
+            #board-stats-grid p.text-2xl { font-size: 22px !important; font-weight: 800 !important; color: #fff !important; }
+ 
             /* Tables - improve readability */
             table { font-size: 11px !important; }
             table th { padding: 8px 6px !important; font-size: 9px !important; white-space: nowrap; }
             table td { padding: 8px 6px !important; }
-
+ 
             /* Mobile card view for tesserati (JS-generated) */
-            .mobile-card-list { display: flex; flex-direction: column; gap: 12px; }
+            .mobile-card-list { display: flex; flex-direction: column; gap: 14px; }
             .mobile-card-item {
-                background: #1a1a1a;
-                border: 1px solid rgba(255,255,255,0.1);
-                border-radius: 8px;
-                padding: 16px;
+                background: rgba(255, 255, 255, 0.02) !important;
+                border: 1px solid rgba(255, 255, 255, 0.06) !important;
+                border-radius: 14px !important;
+                padding: 18px !important;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 12px;
+                backdrop-filter: blur(10px) !important;
+                -webkit-backdrop-filter: blur(10px) !important;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
             }
             .mobile-card-item .card-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                border-bottom: 1px solid rgba(255,255,255,0.06);
+                padding-bottom: 8px;
             }
             .mobile-card-item .card-name {
-                font-weight: 700;
-                font-size: 14px;
+                font-weight: 800;
+                font-size: 15px;
                 text-transform: uppercase;
+                letter-spacing: 0.02em;
+                color: #fff;
             }
             .mobile-card-item .card-details {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 8px;
+                gap: 10px;
             }
             .mobile-card-item .card-detail {
                 display: flex;
@@ -190,32 +205,34 @@
                 gap: 2px;
             }
             .mobile-card-item .card-detail-label {
-                font-size: 10px;
-                color: #6b7280;
+                font-size: 9px;
+                color: #9ca3af;
                 text-transform: uppercase;
                 font-family: 'Orbitron', sans-serif;
+                letter-spacing: 0.05em;
             }
             .mobile-card-item .card-detail-value {
                 font-size: 12px;
                 font-family: monospace;
                 text-transform: uppercase;
+                color: #e5e7eb;
             }
             .mobile-card-item .card-actions {
                 display: flex;
                 justify-content: flex-end;
-                padding-top: 8px;
-                border-top: 1px solid rgba(255,255,255,0.05);
+                padding-top: 10px;
+                border-top: 1px solid rgba(255,255,255,0.06);
             }
             .mobile-card-item .card-actions button {
                 min-height: 44px;
                 padding: 8px 16px;
                 font-size: 11px;
             }
-
+ 
             /* Hide desktop table, show mobile cards */
             .mobile-table-hidden { display: none !important; }
             .mobile-card-list.desktop-hidden { display: none; }
-
+ 
             /* Forms - larger inputs */
             .brutalist-input, 
             input[type="text"].brutalist-input,
@@ -226,11 +243,14 @@
                 min-height: 48px !important;
                 font-size: 14px !important;
                 padding: 12px 16px !important;
+                background: rgba(255, 255, 255, 0.02) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                border-radius: 8px !important;
             }
-
+ 
             /* Form labels readable */
             label[class*="text-[9px]"] { font-size: 11px !important; }
-
+ 
             /* Profile grid - stack on mobile */
             #panel-user_profilo .lg\:col-span-1,
             #panel-user_profilo .lg\:col-span-2,
@@ -238,7 +258,7 @@
             #panel-user_certificato .lg\:col-span-2 {
                 grid-column: 1 / -1 !important;
             }
-
+ 
             /* Buttons - larger touch targets */
             button[type="submit"], 
             .tab-panel button[class*="bg-white"],
@@ -248,7 +268,9 @@
                 min-height: 48px !important;
                 font-size: 12px !important;
             }
-
+ 
+            #user-panoramica-widgets .grid { grid-template-columns: 1fr !important; }
+ 
             /* Modals - full screen on mobile */
             .fixed.inset-0 > div[class*="max-w-"] {
                 max-width: 100% !important;
@@ -258,7 +280,7 @@
                 border-radius: 0 !important;
                 margin: 0 !important;
             }
-
+ 
             /* Search bar in tesserati - stack */
             #panel-tesserati > div:nth-child(1) { 
                 flex-direction: column !important; 
@@ -268,16 +290,11 @@
                 width: 100%; 
                 justify-content: center; 
             }
-
-            /* CSEN widget - always hidden on mobile (already xl:flex) */
-
-            /* Panoramica user widgets - 1 column on mobile */
-            #user-panoramica-widgets .grid { grid-template-columns: 1fr !important; }
-
+ 
             /* Alert board text more readable */
             #board-alert-board li { font-size: 11px !important; line-height: 1.6; }
-
-            /* Bottom Nav Bar */
+ 
+            /* Bottom Nav Bar - Premium Glassmorphism */
             #mobile-bottom-nav {
                 display: flex !important;
                 position: fixed;
@@ -285,11 +302,14 @@
                 left: 0;
                 right: 0;
                 z-index: 50;
-                background: #0e0e0e;
-                border-top: 1px solid rgba(255,255,255,0.1);
-                padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px)) 0;
+                background: rgba(10, 10, 10, 0.85) !important;
+                backdrop-filter: blur(16px) !important;
+                -webkit-backdrop-filter: blur(16px) !important;
+                border-top: 1px solid rgba(255, 255, 255, 0.08);
+                padding: 4px 0 calc(4px + env(safe-area-inset-bottom, 0px)) 0;
                 justify-content: space-around;
                 align-items: center;
+                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
             }
             #mobile-bottom-nav button {
                 display: flex;
@@ -301,20 +321,34 @@
                 min-height: 48px;
                 background: none;
                 border: none;
-                color: #6b7280;
+                color: #8e8e93;
                 font-family: 'Manrope', sans-serif;
                 font-size: 9px;
                 font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
                 cursor: pointer;
-                transition: color 0.2s;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                 -webkit-tap-highlight-color: transparent;
+                position: relative;
             }
-            #mobile-bottom-nav button .material-symbols-outlined { font-size: 22px; }
-            #mobile-bottom-nav button.active { color: #df293e; }
-            #mobile-bottom-nav button.active .material-symbols-outlined {
-                font-variation-settings: 'FILL' 1;
+            #mobile-bottom-nav button::after {
+                content: '';
+                position: absolute;
+                top: -4px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 0;
+                height: 2px;
+                background: #df293e;
+                transition: width 0.25s ease;
+                box-shadow: 0 0 8px #df293e;
+            }
+            #mobile-bottom-nav button.active {
+                color: #df293e;
+            }
+            #mobile-bottom-nav button.active::after {
+                width: 24px;
             }
 
             /* Hamburger menu button */
@@ -433,7 +467,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.84</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.00.86</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -2082,11 +2116,16 @@
 
                 <!-- Assegnazione Responsabili e Contatti -->
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="group">
-                        <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">RESPONSABILI (Tieni premuto CTRL per multi-selezione)</label>
-                        <select id="modal-corso-responsabili" multiple class="w-full brutalist-input bg-black text-white h-24 text-xs">
-                            <!-- Popolato da JS -->
-                        </select>
+                    <div class="group flex flex-col justify-between">
+                        <div>
+                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">RESPONSABILI</label>
+                            <div id="modal-evento-responsabili-list" class="space-y-2 max-h-36 overflow-y-auto pr-1">
+                                <!-- Righe dei responsabili inserite dinamicamente da JS -->
+                            </div>
+                        </div>
+                        <button type="button" id="btn-add-responsabile" class="mt-2 w-full border border-primary/40 text-primary hover:bg-primary hover:text-white text-[10px] font-bold uppercase py-1.5 transition-colors">
+                            + AGGIUNGI RESPONSABILE
+                        </button>
                     </div>
                     <div class="group">
                         <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">CONTATTI (Telefono/Email)</label>

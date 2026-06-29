@@ -3416,23 +3416,77 @@
             container.appendChild(div);
         }
         
-        // Add listener for + AGGIUNGI GIORNATA button
+        // --- NEW LOGIC FOR RESPONSABILI EVENTO ---
+        function addResponsabileRow(selectedId = null) {
+            const container = document.getElementById('modal-evento-responsabili-list');
+            if (!container) return;
+
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center responsabile-row bg-white/5 p-1 border border-white/10 rounded-sm mt-1";
+            
+            // Build options
+            let optionsHtml = '<option value="">SELEZIONA RESPONSABILE</option>';
+            sociDisponibiliList.forEach(s => {
+                const isSelected = s.id === selectedId ? 'selected' : '';
+                optionsHtml += `<option value="${s.id}" data-tel="${s.cellulare || ''}" data-email="${s.email || ''}" ${isSelected}>${(s.nome + ' ' + s.cognome).toUpperCase()}</option>`;
+            });
+
+            div.innerHTML = `
+                <select class="flex-1 bg-black border border-white/20 text-white p-1 text-[11px] font-mono resp-select">
+                    ${optionsHtml}
+                </select>
+                <button type="button" onclick="this.parentElement.remove(); updateContattiFromResponsabili();" class="text-red-500 hover:text-red-400 font-bold px-2 text-xs" title="Rimuovi Responsabile">X</button>
+            `;
+
+            container.appendChild(div);
+
+            // Add change listener to newly created select
+            const selectEl = div.querySelector('.resp-select');
+            selectEl.addEventListener('change', updateContattiFromResponsabili);
+        }
+
+        window.updateContattiFromResponsabili = function() {
+            const contattiEl = document.getElementById('modal-corso-contatti');
+            if (!contattiEl) return;
+            
+            const selects = document.querySelectorAll('.resp-select');
+            let text = '';
+            selects.forEach(selectEl => {
+                if (selectEl.selectedIndex > 0) {
+                    const opt = selectEl.options[selectEl.selectedIndex];
+                    const tel = opt.getAttribute('data-tel');
+                    const email = opt.getAttribute('data-email');
+                    if (tel || email) {
+                        text += `${opt.text}: ${tel ? tel : ''} ${email ? '('+email+')' : ''}\n`;
+                    }
+                }
+            });
+            if (text) {
+                contattiEl.value = text.trim();
+            }
+        };
+
+        // Add listeners for + buttons
         setTimeout(() => {
             const btnAdd = document.getElementById('btn-add-giornata');
             if (btnAdd) {
                 btnAdd.addEventListener('click', () => addGiornataInput());
+            }
+            const btnAddResp = document.getElementById('btn-add-responsabile');
+            if (btnAddResp) {
+                btnAddResp.addEventListener('click', () => addResponsabileRow());
             }
         }, 1000);
         
         // Load Soci for Responsabili Multi-select
         let sociDisponibiliList = [];
         async function loadResponsabiliSelect(eventoId = null) {
-            const selectEl = document.getElementById('modal-corso-responsabili');
-            if (!selectEl) return;
-            selectEl.innerHTML = '<option value="" disabled>Caricamento soci...</option>';
+            const container = document.getElementById('modal-evento-responsabili-list');
+            if (!container) return;
+            container.innerHTML = '<p class="text-xs text-gray-500">Caricamento soci...</p>';
             
             try {
-                // Prendi tutti i soci attivi (con ruolo socio_approvato)
+                // Prendi tutti i soci attivi
                 if (sociDisponibiliList.length === 0) {
                     const { data: sociData, error } = await supabaseClient
                         .from('utenti')
@@ -3440,6 +3494,7 @@
                         .contains('ruolo', ['socio_approvato']);
                     if (error) throw error;
                     sociDisponibiliList = sociData || [];
+                    sociDisponibiliList.sort((a,b) => (a.cognome||'').localeCompare(b.cognome||''));
                 }
                 
                 let assignedIds = [];
@@ -3453,43 +3508,18 @@
                     }
                 }
                 
-                selectEl.innerHTML = '';
-                sociDisponibiliList.sort((a,b) => (a.cognome||'').localeCompare(b.cognome||'')).forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.id;
-                    opt.text = `${s.nome} ${s.cognome}`;
-                    opt.setAttribute('data-tel', s.cellulare || '');
-                    opt.setAttribute('data-email', s.email || '');
-                    if (assignedIds.includes(s.id)) opt.selected = true;
-                    selectEl.appendChild(opt);
-                });
+                container.innerHTML = '';
+                if (assignedIds.length > 0) {
+                    assignedIds.forEach(id => addResponsabileRow(id));
+                } else {
+                    addResponsabileRow();
+                }
                 
             } catch (err) {
                 console.error("Errore caricamento soci per responsabili:", err);
-                selectEl.innerHTML = '<option value="" disabled>Errore caricamento</option>';
+                container.innerHTML = '<p class="text-xs text-red-500">Errore caricamento</p>';
             }
         }
-        
-        // Auto-fill contatti when responsabili selection changes
-        setTimeout(() => {
-            const selectEl = document.getElementById('modal-corso-responsabili');
-            const contattiEl = document.getElementById('modal-corso-contatti');
-            if (selectEl && contattiEl) {
-                selectEl.addEventListener('change', () => {
-                    let text = '';
-                    Array.from(selectEl.selectedOptions).forEach(opt => {
-                        const tel = opt.getAttribute('data-tel');
-                        const email = opt.getAttribute('data-email');
-                        if (tel || email) {
-                            text += `${opt.text}: ${tel ? tel : ''} ${email ? '('+email+')' : ''}\n`;
-                        }
-                    });
-                    if (text) {
-                        contattiEl.value = text.trim();
-                    }
-                });
-            }
-        }, 1000);
 
         async function editCorso(id) {
             try {
@@ -3667,10 +3697,15 @@
                 ora_evento = giornate[0].ora_inizio || null;
             }
             
+            const responsabili_selezionati = [];
+            document.querySelectorAll('.resp-select').forEach(sel => {
+                if (sel.value) {
+                    responsabili_selezionati.push(sel.value);
+                }
+            });
+
             const link_sito = document.getElementById('modal-corso-link') ? document.getElementById('modal-corso-link').value.trim() : null;
             const contatti = document.getElementById('modal-corso-contatti') ? document.getElementById('modal-corso-contatti').value.trim() : null;
-            const responsabiliSelect = document.getElementById('modal-corso-responsabili');
-            const responsabili_selezionati = responsabiliSelect ? Array.from(responsabiliSelect.selectedOptions).map(o => o.value) : [];
 
             const payload = {
                 titolo,
