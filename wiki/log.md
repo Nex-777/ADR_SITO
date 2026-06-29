@@ -4,7 +4,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
-## [2026-06-29] feature | ID Document and CSEN PDFs (v1.00.78)
+## [2026-06-29] feature | ID Document and CSEN PDFs (v1.00.91)
 - Added ID Document upload logic to registration step 1 (mandatory).
 - Created `documenti_identita` table and secured storage bucket.
 - Integrated `pdf-lib` in `api/otp-verify.js` to automatically fill and sign official CSEN PDF forms upon OTP validation.
