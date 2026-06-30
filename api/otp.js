@@ -119,7 +119,7 @@ export default async function handler(req, res) {
         }
         
         // 7. Send email via Resend
-        await resend.emails.send({
+        const { data: emailData, error: emailError } = await resend.emails.send({
             from: 'Adrenalina Club <noreply@adrenalinaclub.it>',
             to: email,
             subject: 'Codice OTP Firma Elettronica - Neuroportal',
@@ -131,12 +131,16 @@ export default async function handler(req, res) {
                     <div style="background-color: #1a1a1a; border-bottom: 4px solid #df293e; display: inline-block; padding: 15px 30px; font-size: 36px; font-weight: bold; letter-spacing: 6px; color: #ffffff; margin-bottom: 30px; font-family: monospace;">
                         ${otpCode}
                     </div>
-                    <p style="font-size: 12px; color: #666666;">Questo codice scadrà tra 5 minuti. Se non hai richiesto questo codice, ignora questa email.</p>
+                    <p style="font-size: 12px; color: #666666;">Questo codice scadrà tra 15 minuti. Se non hai richiesto questo codice, ignora questa email.</p>
                 </div>
             `
         });
         
-        // Save the raw OTP in memory or db for mock validation (or return success and let verification run on matching hash)
+        if (emailError) {
+            console.error("Resend API Error details:", emailError);
+            throw new Error(`Resend API Error: ${emailError.message} (status: ${emailError.status || 'unknown'})`);
+        }
+        
         return res.status(200).json({ success: true });
         
     } catch (error) {

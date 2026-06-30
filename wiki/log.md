@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Correct OTP Expiration Text (v1.00.92)
+- Updated the OTP email template text in `api/otp.js` to state "15 minuti" instead of "5 minuti", aligning it with the actual system expiration.
+- Updated local `.env` with the new Resend API key and fixed API error handling for Resend to prevent silent failures.
+
 ## [2026-06-29] feature | ID Document and CSEN PDFs (v1.00.91)
 - Added ID Document upload logic to registration step 1 (mandatory).
 - Created `documenti_identita` table and secured storage bucket.
