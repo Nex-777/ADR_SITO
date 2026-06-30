@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Use Absolute Paths for Payment Login Links (v1.00.99)
+- Modificato il file `portal/pagamento.html` per utilizzare percorsi assoluti (`/portal/...`) per il link di login e la query di reindirizzamento. Questo risolve possibili problemi di risoluzione relativi dei percorsi all'interno delle Webview dei dispositivi mobili (es. client email come Gmail, Mail iOS, ecc.) che impedivano il corretto caricamento della schermata di login.
+- Incrementata versione a Vs. 1.00.99.
+
+
 ## [2026-06-30] fix | Add Login Redirect Parameter for Payments (v1.00.98)
 - Aggiunto il parametro di query `redirect` al link di login in `portal/pagamento.html` e implementato il relativo reindirizzamento in `portal/login.js`. Questo permette agli utenti non autenticati che cliccano sul link di pagamento via email di effettuare il login e poi essere rimandati automaticamente e direttamente alla schermata di checkout.
 - Incrementata versione a Vs. 1.00.98.
