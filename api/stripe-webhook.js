@@ -164,6 +164,57 @@ export default async function handler(req, res) {
                 if (updateError) {
                     throw new Error("Errore azzeramento quota utente: " + updateError.message);
                 }
+
+                // --- Automatic activation on payment completion ---
+                try {
+                    const { data: anag, error: anagErr } = await supabase
+                        .from('anagrafiche')
+                        .select('id')
+                        .eq('utente_id', utenteId)
+                        .maybeSingle();
+
+                    if (!anagErr && anag) {
+                        const anagraficaId = anag.id;
+
+                        // Fetch the pending registration that is in 'IN_ATTESA_PAGAMENTO'
+                        const { data: appRecord } = await supabase
+                            .from('registro_approvazioni')
+                            .select('*')
+                            .eq('anagrafica_id', anagraficaId)
+                            .eq('stato', 'IN_ATTESA_PAGAMENTO')
+                            .maybeSingle();
+
+                        if (appRecord) {
+                            console.log(`[PAYMENT WEBHOOK] Trovata richiesta in attesa pagamento di tipo: ${appRecord.tipo}`);
+                            if (appRecord.tipo === 'TESSERATO' || appRecord.tipo === 'SOCIO_TESSERATO') {
+                                const { error: rpcErr } = await supabase.rpc('approva_tesserato', {
+                                    p_anagrafica_id: anagraficaId,
+                                    p_deciso_da: utenteId
+                                });
+                                if (rpcErr) {
+                                    console.error("[PAYMENT WEBHOOK] Errore rpc approva_tesserato:", rpcErr);
+                                } else {
+                                    console.log(`[PAYMENT WEBHOOK] Tesseramento attivato automaticamente per anagrafica ${anagraficaId}`);
+                                }
+                            } else if (appRecord.tipo === 'SOCIO') {
+                                const { error: updErr } = await supabase
+                                    .from('registro_approvazioni')
+                                    .update({
+                                        stato: 'APPROVATO',
+                                        data_decisione: new Date().toISOString().split('T')[0]
+                                    })
+                                    .eq('id', appRecord.id);
+                                if (updErr) {
+                                    console.error("[PAYMENT WEBHOOK] Errore aggiornamento stato approvazione SOCIO:", updErr);
+                                } else {
+                                    console.log(`[PAYMENT WEBHOOK] Richiesta SOCIO marcata come APPROVATO per anagrafica ${anagraficaId}`);
+                                }
+                            }
+                        }
+                    }
+                } catch (actErr) {
+                    console.error("[PAYMENT WEBHOOK] Errore durante l'attivazione automatica:", actErr);
+                }
             }
 
             // 4. Scrivi l'audit log

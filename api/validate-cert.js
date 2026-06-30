@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import { GoogleGenAI } from '@google/genai';
+import { sendEmail } from './resend-mail.js';
 
 export default async function handler(req, res) {
     // --- CORS ---
@@ -51,18 +50,13 @@ export default async function handler(req, res) {
 
     try {
         // --- Authentication ---
-        // Two modes: 
-        // 1. Internal server-to-server call via x-internal-secret header (from otp-verify.js)
-        // 2. External call via Bearer token (from dashboard, must be board member)
         const internalSecret = req.headers['x-internal-secret'];
         const cronSecret = process.env.CRON_SECRET;
         let isInternalCall = false;
 
         if (internalSecret && cronSecret && internalSecret === cronSecret) {
-            // Trusted internal call — no further auth needed
             isInternalCall = true;
         } else {
-            // External call — require Bearer token + board member role
             const authHeader = req.headers.authorization;
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
                 return res.status(401).json({ error: 'Richiesta non autorizzata: token mancante.' });
@@ -99,8 +93,8 @@ export default async function handler(req, res) {
             const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 'unknown';
             const { data: allowed } = await supabase.rpc('check_rate_limit', {
                 p_key: `validate-cert:${clientIp}`,
-                p_max_requests: 5,
-                p_window_seconds: 300
+                p_max_requests: 15,
+                p_window_seconds: 60
             });
             if (allowed === false) {
                 return res.status(429).json({ error: 'Troppe richieste. Riprova tra qualche minuto.' });
@@ -108,38 +102,77 @@ export default async function handler(req, res) {
         }
 
         // --- Input validation ---
-        const { anagrafica_id, file_url } = req.body;
+        const { anagrafica_id, cert_id, file_url, is_manual, nuovo_stato, note } = req.body;
 
-        if (!anagrafica_id || !file_url) {
-            return res.status(400).json({ error: 'Parametri mancanti.' });
+        let targetAnagraficaId = anagrafica_id;
+
+        if (is_manual && cert_id && !targetAnagraficaId) {
+            const { data: certObj } = await supabase
+                .from('certificati_medici')
+                .select('anagrafica_id')
+                .eq('id', cert_id)
+                .maybeSingle();
+            if (certObj) {
+                targetAnagraficaId = certObj.anagrafica_id;
+            }
         }
 
-        // --- Anti-SSRF: validate file_url is a Supabase storage URL ---
-        const allowedUrlPrefix = `${supabaseUrl}/storage/v1/`;
-        if (!file_url.startsWith(allowedUrlPrefix)) {
-            console.error(`[AI VALIDATION] SSRF attempt blocked. URL: ${file_url}`);
-            return res.status(400).json({ error: 'URL del file non valido.' });
+        if (!targetAnagraficaId) {
+            return res.status(400).json({ error: 'Parametri mancanti: anagrafica_id o cert_id non validi.' });
         }
 
-        console.log(`[AI VALIDATION] Starting validation for anagrafica_id: ${anagrafica_id}`);
+        let finalStatus = 'GIALLO';
+        let finalNotes = '';
+        let finalRelease = null;
+        let finalExpiry = null;
+        let finalType = 'NON_AGONISTICO';
 
-        // 1. Download the image from the signed URL
-        const imageResponse = await fetch(file_url);
-        if (!imageResponse.ok) {
-            console.error(`[AI VALIDATION] Failed to fetch image: ${imageResponse.status}`);
-            throw new Error('Impossibile scaricare il file.');
-        }
-        
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
-        
-        // Convert to base64 for Gemini API
-        const base64Data = buffer.toString('base64');
+        if (is_manual) {
+            // Manual path: validation done by President/Segretaria
+            if (!nuovo_stato || !['VERDE', 'GIALLO', 'ROSSO'].includes(nuovo_stato)) {
+                return res.status(400).json({ error: 'Stato manuale non valido.' });
+            }
+            finalStatus = nuovo_stato;
+            finalNotes = note || 'Approvazione manuale del direttivo.';
 
-        // 2. Call Gemini API
-        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-        const prompt = `
+            // Get current certificate values to preserve dates
+            const { data: currentCert } = await supabase
+                .from('certificati_medici')
+                .select('*')
+                .eq('anagrafica_id', targetAnagraficaId)
+                .maybeSingle();
+
+            if (currentCert) {
+                finalRelease = currentCert.data_rilascio;
+                finalExpiry = currentCert.data_scadenza;
+                finalType = currentCert.tipologia;
+            }
+        } else {
+            // Automated AI path
+            if (!file_url) {
+                return res.status(400).json({ error: 'Parametri mancanti: file_url per AI.' });
+            }
+            const allowedUrlPrefix = `${supabaseUrl}/storage/v1/`;
+            if (!file_url.startsWith(allowedUrlPrefix)) {
+                console.error(`[AI VALIDATION] SSRF attempt blocked. URL: ${file_url}`);
+                return res.status(400).json({ error: 'URL del file non valido.' });
+            }
+
+            console.log(`[AI VALIDATION] Starting validation for anagrafica_id: ${targetAnagraficaId}`);
+
+            const imageResponse = await fetch(file_url);
+            if (!imageResponse.ok) {
+                console.error(`[AI VALIDATION] Failed to fetch image: ${imageResponse.status}`);
+                throw new Error('Impossibile scaricare il file.');
+            }
+            
+            const arrayBuffer = await imageResponse.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+            const base64Data = buffer.toString('base64');
+
+            const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+            const prompt = `
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
 Sto per fornirti un'immagine di un certificato medico.
 Devi estrarre le seguenti informazioni in formato JSON STRICT:
@@ -151,67 +184,126 @@ Devi estrarre le seguenti informazioni in formato JSON STRICT:
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 {"data_emissione": "2023-10-15", "data_scadenza": "2024-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato valido e leggibile."}
-        `;
+            `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: [
-                {
-                    role: 'user',
-                    parts: [
-                        { inlineData: { data: base64Data, mimeType: mimeType } },
-                        { text: prompt }
-                    ]
-                }
-            ]
-        });
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [
+                            { inlineData: { data: base64Data, mimeType: mimeType } },
+                            { text: prompt }
+                        ]
+                    }
+                ]
+            });
 
-        let responseText = (typeof response.text === 'function' ? response.text() : response.text).trim();
-        // Remove markdown formatting if the model still outputs it
-        if (responseText.startsWith('```json')) {
-            responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+            let responseText = (typeof response.text === 'function' ? response.text() : response.text).trim();
+            if (responseText.startsWith('```json')) {
+                responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+            }
+
+            console.log('[AI VALIDATION] Gemini response received, length:', responseText.length);
+            const aiResult = JSON.parse(responseText);
+
+            finalStatus = aiResult.stato || 'GIALLO';
+            finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
+            finalRelease = aiResult.data_emissione || null;
+            finalExpiry = aiResult.data_scadenza || null;
+            finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
         }
 
-        console.log('[AI VALIDATION] Gemini response received, length:', responseText.length);
-
-        const aiResult = JSON.parse(responseText);
-
-        // 3. Update the database
+        // --- Database Update ---
         const updatePayload = {
-            stato_validazione: aiResult.stato || 'GIALLO',
-            note_ai: aiResult.note || 'Impossibile interpretare la risposta AI',
-            data_rilascio: aiResult.data_emissione || null,
-            data_scadenza: aiResult.data_scadenza || null,
-            tipologia: aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO'
+            stato_validazione: finalStatus,
+            note_ai: finalNotes,
+            data_rilascio: finalRelease,
+            data_scadenza: finalExpiry,
+            tipologia: finalType
         };
 
         const { error: updateError } = await supabase
             .from('certificati_medici')
             .update(updatePayload)
-            .eq('anagrafica_id', anagrafica_id);
+            .eq('anagrafica_id', targetAnagraficaId);
 
-        if (updateError) {
-            throw updateError;
+        if (updateError) throw updateError;
+        console.log(`[VALIDATION] Successfully updated certificati_medici for anagrafica_id: ${targetAnagraficaId}`);
+
+        // --- Post-Validation Actions & Notifications ---
+        // Fetch user/anagrafica details for emails and checkout checks
+        const { data: profile, error: profileErr } = await supabase
+            .from('anagrafiche')
+            .select('nome, cognome, utente_id, utenti(email, quota_totale)')
+            .eq('id', targetAnagraficaId)
+            .single();
+
+        if (!profileErr && profile) {
+            const userEmail = profile.utenti?.email;
+            const nomeUtente = profile.nome;
+            const quota = parseFloat(profile.utenti?.quota_totale || 0);
+
+            // Fetch registration approval record to see if it transitioned to IN_ATTESA_PAGAMENTO
+            const { data: approvazione } = await supabase
+                .from('registro_approvazioni')
+                .select('stato')
+                .eq('anagrafica_id', targetAnagraficaId)
+                .maybeSingle();
+
+            if (finalStatus === 'VERDE') {
+                if (approvazione && approvazione.stato === 'IN_ATTESA_PAGAMENTO' && userEmail) {
+                    // Send approval payment email
+                    const checkoutLink = 'https://portal.adrenalinaclub.it/portal/pagamento.html';
+                    const emailSubject = 'Certificato Medico Approvato - Procedi al pagamento';
+                    const emailHtml = `
+                        <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
+                            <h1 style="color: #df293e; font-size: 22px;">ADRENALINA CLUB</h1>
+                            <p style="color: #ccc;">Ciao ${nomeUtente}, il tuo certificato medico è stato approvato con successo!</p>
+                            <p style="color: #aaa; font-size: 13px;">Puoi ora procedere al pagamento della quota associativa di <strong>€${quota.toFixed(2)}</strong> per completare la tua iscrizione ed attivare la tua copertura assicurativa:</p>
+                            <a href="${checkoutLink}" style="background-color: #df293e; color: #fff; padding: 12px 24px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; border-radius: 4px;">PAGA ORA LA QUOTA</a>
+                        </div>
+                    `;
+                    await sendEmail({ to: userEmail, subject: emailSubject, html: emailHtml });
+                    console.log(`[VALIDATION] Sent confirmation & checkout email to: ${userEmail}`);
+                }
+            } else if (finalStatus === 'ROSSO') {
+                if (userEmail) {
+                    // Send certificate rejection email
+                    const emailSubject = 'Problema con il tuo Certificato Medico - Richiesta di ricaricamento';
+                    const emailHtml = `
+                        <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
+                            <h1 style="color: #df293e; font-size: 22px;">ADRENALINA CLUB</h1>
+                            <p style="color: #ccc;">Ciao ${nomeUtente}, ti informiamo che il certificato medico da te caricato è stato rifiutato.</p>
+                            <p style="color: #aaa; font-size: 13px;">Motivazione: <strong>${finalNotes}</strong></p>
+                            <p style="color: #aaa; font-size: 13px;">Per completare il tesseramento sportivo, è obbligatorio caricare un certificato medico in corso di validità. Clicca sul link sottostante per ricaricare il certificato:</p>
+                            <a href="https://portal.adrenalinaclub.it/portal/dashboard.html" style="background-color: #df293e; color: #fff; padding: 12px 24px; text-decoration: none; font-weight: bold; display: inline-block; margin-top: 15px; border-radius: 4px;">RICARICA CERTIFICATO MEDICO</a>
+                        </div>
+                    `;
+                    await sendEmail({ to: userEmail, subject: emailSubject, html: emailHtml });
+                    console.log(`[VALIDATION] Sent rejection email to: ${userEmail}`);
+                }
+            }
         }
 
-        console.log(`[AI VALIDATION] Successfully updated anagrafica_id: ${anagrafica_id}`);
         return res.status(200).json({ success: true, result: updatePayload });
 
     } catch (error) {
-        console.error('[AI VALIDATION] Error:', error);
+        console.error('[VALIDATION] Error:', error);
         
-        // If it fails, set to GIALLO so human reviews it — do NOT write error.message to DB
-        if (req.body?.anagrafica_id) {
+        if (req.body?.anagrafica_id && !req.body.is_manual) {
             try {
                 await supabase.from('certificati_medici').update({
                     stato_validazione: 'GIALLO',
                     note_ai: 'Elaborazione automatica AI non riuscita. Richiesta revisione manuale.'
                 }).eq('anagrafica_id', req.body.anagrafica_id);
             } catch (dbErr) {
-                console.error('[AI VALIDATION] Failed to set GIALLO fallback:', dbErr);
+                console.error('[VALIDATION] Failed to set GIALLO fallback:', dbErr);
             }
         }
 
         return res.status(500).json({ error: 'Si è verificato un errore durante la validazione. Riprova più tardi.' });
     }
 }
+
+

@@ -4,6 +4,16 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] ingest | Flusso Email e Nuova Dashboard Pagamenti (v1.00.96)
+- Implementato flusso a 3 step per le email di tesseramento e verifica certificati medici.
+- Spostato il link di pagamento dall'email di prima registrazione a una mail dedicata inviata solo a validazione avvenuta.
+- Creato trigger nel DB Supabase per aggiornare lo stato di `registro_approvazioni` a `IN_ATTESA_PAGAMENTO` al superamento dei controlli.
+- Modificato Stripe webhook per attivare automaticamente il tesseramento/iscrizione al saldo della quota.
+- Aggiunta sezione "Tesserati e Soci in attesa di pagamento" tra i tesserati pendenti e le registrazioni incomplete nella dashboard.
+- Risolto e corretto disallineamento della stored procedure `salva_verbale_relazionale` ripristinando la firma a 18 parametri sicura.
+- Incrementata versione del portale a Vs. 1.00.96.
+
+
 ## [2026-06-30] feature | Add Password Requirements Label to Registration (v1.00.95)
 - Added visual helper text under the password field in `portal/registrazione.html` detailing requirements: minimum 8 characters, one uppercase, one lowercase, and one number.
 

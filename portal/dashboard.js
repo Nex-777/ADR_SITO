@@ -973,6 +973,9 @@
                             data_nascita,
                             comune_nascita,
                             provincia_nascita,
+                            utenti (
+                                quota_totale
+                            ),
                             certificati_medici (
                                 id,
                                 tipologia,
@@ -1051,17 +1054,20 @@
         async function renderApprovazioniTables() {
             const sociBody = document.getElementById('approvazioni-soci-list');
             const tessBody = document.getElementById('approvazioni-tesserati-list');
+            const pagBody = document.getElementById('approvazioni-pagamenti-list');
             const storicoBody = document.getElementById('approvazioni-storico-list');
 
             if (!sociBody || !tessBody || !storicoBody) return;
 
             sociBody.innerHTML = '';
             tessBody.innerHTML = '';
+            if (pagBody) pagBody.innerHTML = '';
             storicoBody.innerHTML = '';
 
             const pendingSoci = approvazioniData.filter(x => x.stato === 'IN_ATTESA' && (x.tipo === 'SOCIO' || x.tipo === 'SOCIO_TESSERATO'));
             const pendingTess = approvazioniData.filter(x => x.stato === 'IN_ATTESA' && (x.tipo === 'TESSERATO' || x.tipo === 'SOCIO_TESSERATO'));
-            const storico = approvazioniData.filter(x => x.stato !== 'IN_ATTESA');
+            const pendingPag = approvazioniData.filter(x => x.stato === 'IN_ATTESA_PAGAMENTO');
+            const storico = approvazioniData.filter(x => x.stato !== 'IN_ATTESA' && x.stato !== 'IN_ATTESA_PAGAMENTO');
 
             // Render Pending Soci
             if (pendingSoci.length === 0) {
@@ -1203,6 +1209,39 @@
                     }
                     tessBody.appendChild(row);
                 });
+            }
+
+            // Render Pending Payments
+            if (pagBody) {
+                if (pendingPag.length === 0) {
+                    pagBody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-500">Nessun utente in attesa di pagamento.</td></tr>';
+                } else {
+                    pendingPag.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b border-white/5 hover:bg-white/5 transition-colors';
+                        const anag = item.anagrafiche || {};
+                        const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
+                        const cf = escapeHtml(anag.codice_fiscale || '');
+                        
+                        let quotaStr = '€0.00';
+                        if (anag.utenti) {
+                            const quota = parseFloat(anag.utenti.quota_totale) || 0;
+                            quotaStr = `€${quota.toFixed(2)}`;
+                        }
+                        
+                        row.innerHTML = `
+                            <td class="p-3 font-bold text-white">${nome}</td>
+                            <td class="p-3 text-gray-400 font-mono">${cf}</td>
+                            <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
+                            <td class="p-3 text-yellow-500 font-bold">${quotaStr}</td>
+                            <td class="p-3 text-gray-400">${escapeHtml(item.data_decisione || item.data_richiesta)}</td>
+                            <td class="p-3 text-right">
+                                <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase text-yellow-500 bg-yellow-500/10 border-yellow-500/30">ATTESA PAGAMENTO</span>
+                            </td>
+                        `;
+                        pagBody.appendChild(row);
+                    });
+                }
             }
 
             // Render Registrazioni Incomplete
@@ -1355,15 +1394,32 @@
             }
 
             try {
-                const { error } = await supabaseClient
-                    .from('certificati_medici')
-                    .update({
-                        stato_validazione: nuovoStato,
-                        note_ai: note
-                    })
-                    .eq('id', certId);
+                const { data: sessionData } = await supabaseClient.auth.getSession();
+                const session = sessionData?.session;
+                const token = session?.access_token;
+                
+                if (!token) {
+                    throw new Error("Sessione scaduta o non valida.");
+                }
 
-                if (error) throw error;
+                const response = await fetch(`${APP_CONFIG.API_BASE_URL}/api/validate-cert`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        cert_id: certId,
+                        is_manual: true,
+                        nuovo_stato: nuovoStato,
+                        note: note
+                    })
+                });
+
+                const resData = await response.json();
+                if (!response.ok) {
+                    throw new Error(resData.error || "Errore durante la validazione manuale.");
+                }
 
                 // Scrivi audit log
                 await scriviAuditLog('DELIBERA_CERTIFICATO_MEDICO', 'certificati_medici', certId, {
