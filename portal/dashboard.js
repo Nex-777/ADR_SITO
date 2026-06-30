@@ -85,7 +85,7 @@
         let contabilitaData = [];
 
         let sociSort = { field: 'id_socio', direction: 'asc' };
-        let tesseratiSort = { field: 'id_tesserato', direction: 'asc' };
+        let tesseratiSort = { field: 'id_tesserato', direction: 'desc' };
         let quoteSort = { field: 'nominativo', direction: 'asc' };
         let direttivoSort = { field: 'nominativo', direction: 'asc' };
         let bilanciSort = { field: 'anno', direction: 'desc' };
@@ -234,10 +234,11 @@
         }
 
         // Configurazione delle Viste e dei Pulsanti a seconda del Ruolo
-        let currentViewContext = 'athlete';
+        let currentViewContext = localStorage.getItem('currentViewContext') || 'athlete';
         
         function switchContext(view) {
             currentViewContext = view;
+            localStorage.setItem('currentViewContext', view);
             renderContextUI();
         }
 
@@ -405,6 +406,7 @@
                     else if (isVolunteer) currentViewContext = 'volunteer';
                     else currentViewContext = 'athlete';
                 }
+                localStorage.setItem('currentViewContext', currentViewContext);
                 switcher.value = currentViewContext;
             }
 

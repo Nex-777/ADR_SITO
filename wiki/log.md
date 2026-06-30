@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Persist Switcher View Context and Default Sort Members Registry (v1.01.01)
+- Implementata la persistenza del contesto della vista nel selettore di ruolo del portale (`currentViewContext` salvato in `localStorage`), in modo che aggiornando la pagina (F5) l'utente non venga riportato alla vista Tesserato ma rimanga in quella attiva (es. Direttivo).
+- Modificato l'ordinamento predefinito del Registro Tesserati in modalità decrescente (`direction: 'desc'` su `id_tesserato`), in modo da mostrare per primi gli ultimi tesserati inseriti.
+
 ## [2026-06-30] fix | Fix Stored Procedure Permissions and Improve Payment UX (v1.01.00)
 - Risolto un problema di autorizzazione e corrispondenza dello stato nella stored procedure `public.approva_tesserato` che ne impediva l'esecuzione automatica da parte dello Stripe webhook (poiché la transazione del webhook non ha una sessione client `auth.uid()` attiva, e lo stato nel database era già passato a `IN_ATTESA_PAGAMENTO`).
 - Aggiornato manualmente il profilo di Andrea Alessandrini sul database pubblico portandolo in stato `APPROVATO` nel registro approvazioni e attivando correttamente la sua iscrizione in `registro_tesserati`.
