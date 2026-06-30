@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Add Login Redirect Parameter for Payments (v1.00.98)
+- Aggiunto il parametro di query `redirect` al link di login in `portal/pagamento.html` e implementato il relativo reindirizzamento in `portal/login.js`. Questo permette agli utenti non autenticati che cliccano sul link di pagamento via email di effettuare il login e poi essere rimandati automaticamente e direttamente alla schermata di checkout.
+- Incrementata versione a Vs. 1.00.98.
+
+
 ## [2026-06-30] fix | Fix Validate Cert Imports and Add Dashboard Reject Button (v1.00.97)
 - Ripristinati gli import di `createClient` e `GoogleGenAI` rimossi erroneamente in `api/validate-cert.js`, risolvendo l'errore 500 durante la validazione manuale/AI.
 - Aggiunto il bottone "RIFIUTA CERT." all'interno della tabella "Tesserati in Attesa di Attivazione" in `portal/dashboard.js`, permettendo al Presidente di respingere direttamente i certificati medici non validi.

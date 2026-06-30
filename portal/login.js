@@ -75,8 +75,14 @@ if (form) {
 
             const ruolo = profile.ruolo;
 
-            // Reindirizzamento alla dashboard per visualizzare lo status
-            window.location.href = "dashboard.html";
+            // Reindirizzamento alla dashboard o alla pagina richiesta
+            const params = new URLSearchParams(window.location.search);
+            const redirect = params.get('redirect');
+            if (redirect) {
+                window.location.href = redirect;
+            } else {
+                window.location.href = "dashboard.html";
+            }
 
         } catch (err) {
             console.error("Login error:", err);
