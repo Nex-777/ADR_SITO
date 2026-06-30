@@ -901,6 +901,7 @@
                         stato_tesseramento,
                         livello_copertura,
                         data_richiesta_tesseramento,
+                        sync_csen_status,
                         anagrafiche (
                             id,
                             utente_id,
@@ -996,6 +997,37 @@
                         )
                     `)
                     .order('created_at', { ascending: false });
+
+        window.triggerCsenSync = async () => {
+            const btn = document.getElementById('btn-sync-csen');
+            const icon = document.getElementById('btn-sync-csen-icon');
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('animate-spin');
+
+            try {
+                const { data: sessionData } = await supabaseClient.auth.getSession();
+                const token = sessionData?.session?.access_token;
+                
+                if (!token) throw new Error("Sessione scaduta.");
+
+                const res = await fetch(`${APP_CONFIG.API_BASE_URL}/api/trigger-csen-sync`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(`Errore API: ${res.status} ${errText}`);
+                }
+
+                alert("Sincronizzazione avviata! Il sistema elaborerà gli atleti in background. Controlla tra pochi minuti ricaricando la pagina.");
+            } catch (err) {
+                alert("Errore nell'avvio della sincronizzazione: " + err.message);
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('animate-spin');
+            }
+        };
 
         window.attivaTesseramentoApprovazioni = async (anagraficaId) => {
             if (!confirm("Confermi l'attivazione immediata di questo Tesserato?")) return;
@@ -1462,6 +1494,21 @@
             const counterEl = document.getElementById('tesserati-search-count');
             if (counterEl) {
                 counterEl.textContent = `${filteredData.length} RISULTATI`;
+            }
+
+            // Update CSEN pending counter
+            const pendingCount = tesseratiData.filter(t => t.sync_csen_status === 'PENDING' && t.stato_tesseramento === 'ATTIVO').length;
+            const btnSync = document.getElementById('btn-sync-csen');
+            const spanSyncCount = document.getElementById('csen-pending-count');
+            if (btnSync && spanSyncCount) {
+                spanSyncCount.textContent = pendingCount;
+                if (pendingCount > 0) {
+                    btnSync.disabled = false;
+                    btnSync.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    btnSync.disabled = true;
+                    btnSync.classList.add('opacity-50', 'cursor-not-allowed');
+                }
             }
 
             if (filteredData.length === 0) {

@@ -4,6 +4,20 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] feature | Integrated 2Captcha Solver for CSEN Sync (v1.01.03)
+- Integrated 2Captcha API to solve the Agenzia delle Entrate CAPTCHA dynamically in `csen_sync_active.js` and `test_runner_csen.js`.
+- Fixed the HTML parser regex in `csen_reconciliation.js` to correctly match alphanumeric CSEN membership numbers (e.g., `26B3268874`).
+- Updated the `.env` configuration file to support the `CAPTCHA_API_KEY` parameter.
+- Corrected the birthplace drop-down selector mapping logic to dynamically resolve case-insensitive option values.
+
+## [2026-06-30] feature | CSEN Active Sync (v1.01.02)
+- Added `sync_csen_status` and `sync_csen_log` columns to `registro_tesserati` in Supabase.
+- Modified `approva_tesserato` RPC to stop generating fake CSEN codes and set sync status to PENDING.
+- Created `scripts/csen_sync_active.js` (Playwright) to perform headless authentication and auto-fill athlete data on the CSEN portal.
+- Implemented a JS bypass to overcome the CSEN Captcha requirement on the client-side.
+- Created GitHub Workflow (`.github/workflows/csen_sync.yml`) and Vercel API endpoint (`api/trigger-csen-sync.js`) for on-demand execution.
+- Added "Sincronizza CSEN" button and pending counter in `portal/dashboard.html`.
+
 ## [2026-06-30] fix | Persist Switcher View Context and Default Sort Members Registry (v1.01.01)
 - Implementata la persistenza del contesto della vista nel selettore di ruolo del portale (`currentViewContext` salvato in `localStorage`), in modo che aggiornando la pagina (F5) l'utente non venga riportato alla vista Tesserato ma rimanga in quella attiva (es. Direttivo).
 - Modificato l'ordinamento predefinito del Registro Tesserati in modalità decrescente (`direction: 'desc'` su `id_tesserato`), in modo da mostrare per primi gli ultimi tesserati inseriti.
