@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+import { GoogleGenAI } from '@google/genai';
 import { sendEmail } from './resend-mail.js';
 
 export default async function handler(req, res) {

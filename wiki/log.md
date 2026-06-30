@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Fix Validate Cert Imports and Add Dashboard Reject Button (v1.00.97)
+- Ripristinati gli import di `createClient` e `GoogleGenAI` rimossi erroneamente in `api/validate-cert.js`, risolvendo l'errore 500 durante la validazione manuale/AI.
+- Aggiunto il bottone "RIFIUTA CERT." all'interno della tabella "Tesserati in Attesa di Attivazione" in `portal/dashboard.js`, permettendo al Presidente di respingere direttamente i certificati medici non validi.
+- Incrementata versione a Vs. 1.00.97.
+
+
 ## [2026-06-30] ingest | Flusso Email e Nuova Dashboard Pagamenti (v1.00.96)
 - Implementato flusso a 3 step per le email di tesseramento e verifica certificati medici.
 - Spostato il link di pagamento dall'email di prima registrazione a una mail dedicata inviata solo a validazione avvenuta.
