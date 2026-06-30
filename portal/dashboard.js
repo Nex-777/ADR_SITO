@@ -14,7 +14,15 @@
         // Security override for window.alert to prevent raw database/exception leak
         const _originalAlert = window.alert;
         window.alert = function(message) {
-            if (typeof message === 'string' && (message.toLowerCase().includes('errore') || message.toLowerCase().includes('exception') || message.toLowerCase().includes('failed') || message.toLowerCase().includes('supabase'))) {
+            if (typeof message === 'string' && (
+                message.toLowerCase().includes('exception') || 
+                message.toLowerCase().includes('supabase') ||
+                message.toLowerCase().includes('postgres') ||
+                message.toLowerCase().includes('db_') ||
+                message.toLowerCase().includes('database') ||
+                message.toLowerCase().includes('relation "') ||
+                message.toLowerCase().includes('column "')
+            )) {
                 console.error("Technical error alert intercepted:", message);
                 _originalAlert("Si è verificato un errore durante l'operazione. Riprova più tardi o contatta il direttivo per assistenza.");
             } else {

@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Refine Security Alert Interception on Client Side (v1.00.94)
+- Updated `window.alert` override in `portal/registrazione.js` and `portal/dashboard.js` to only intercept technical/database related keywords (e.g., supabase, postgres, exception, database) instead of the common word "errore", resolving a bad UX where password requirements or validation errors were masked as general system errors.
+
+
 ## [2026-06-30] fix | Authorize Document Buckets and Fix Manual Certificate Approval (v1.00.93)
 - Authorized `documenti_identita`, `documenti_tutori`, and `documenti_adesione` buckets in `openSignedFile` dashboard function to resolve permission alert.
 - Updated `renderApprovazioniTables` in `dashboard.js` to allow the President to manually approve certificates in all states that are not yet green (e.g. `IN_ATTESA` or `ROSSO`), preventing bottlenecks.
