@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] feature | Add Password Requirements Label to Registration (v1.00.95)
+- Added visual helper text under the password field in `portal/registrazione.html` detailing requirements: minimum 8 characters, one uppercase, one lowercase, and one number.
+
+
 ## [2026-06-30] fix | Refine Security Alert Interception on Client Side (v1.00.94)
 - Updated `window.alert` override in `portal/registrazione.js` and `portal/dashboard.js` to only intercept technical/database related keywords (e.g., supabase, postgres, exception, database) instead of the common word "errore", resolving a bad UX where password requirements or validation errors were masked as general system errors.
 
