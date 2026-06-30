@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Fix Stored Procedure Permissions and Improve Payment UX (v1.01.00)
+- Risolto un problema di autorizzazione e corrispondenza dello stato nella stored procedure `public.approva_tesserato` che ne impediva l'esecuzione automatica da parte dello Stripe webhook (poiché la transazione del webhook non ha una sessione client `auth.uid()` attiva, e lo stato nel database era già passato a `IN_ATTESA_PAGAMENTO`).
+- Aggiornato manualmente il profilo di Andrea Alessandrini sul database pubblico portandolo in stato `APPROVATO` nel registro approvazioni e attivando correttamente la sua iscrizione in `registro_tesserati`.
+- Semplificato il testo della schermata di login per i pagamenti in `portal/pagamento.html` e `portal/pagamento.js` rimuovendo diciture allarmanti come "errore caricamento" e "sessione scaduta".
+- Incrementata versione a Vs. 1.01.00.
+
+
 ## [2026-06-30] fix | Use Absolute Paths for Payment Login Links (v1.00.99)
 - Modificato il file `portal/pagamento.html` per utilizzare percorsi assoluti (`/portal/...`) per il link di login e la query di reindirizzamento. Questo risolve possibili problemi di risoluzione relativi dei percorsi all'interno delle Webview dei dispositivi mobili (es. client email come Gmail, Mail iOS, ecc.) che impedivano il corretto caricamento della schermata di login.
 - Incrementata versione a Vs. 1.00.99.

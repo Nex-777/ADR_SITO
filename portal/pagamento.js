@@ -28,7 +28,7 @@
             // Check active session first
             const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
             if (sessionError || !session) {
-                showError("Sessione scaduta o non valida. Effettua nuovamente il login per accedere al pagamento.");
+                showError("Effettua il login per accedere al pagamento.");
                 return;
             }
 
