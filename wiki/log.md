@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-06-30] fix | Authorize Document Buckets and Fix Manual Certificate Approval (v1.00.93)
+- Authorized `documenti_identita`, `documenti_tutori`, and `documenti_adesione` buckets in `openSignedFile` dashboard function to resolve permission alert.
+- Updated `renderApprovazioniTables` in `dashboard.js` to allow the President to manually approve certificates in all states that are not yet green (e.g. `IN_ATTESA` or `ROSSO`), preventing bottlenecks.
+
 ## [2026-06-30] fix | Correct OTP Expiration Text (v1.00.92)
 - Updated the OTP email template text in `api/otp.js` to state "15 minuti" instead of "5 minuti", aligning it with the actual system expiration.
 - Updated local `.env` with the new Resend API key and fixed API error handling for Resend to prevent silent failures.

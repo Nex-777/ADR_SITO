@@ -44,8 +44,8 @@
                     alert("Percorso file non valido.");
                     return;
                 }
-                // Verify bucket is safe
-                if (bucket !== 'certificati_medici') {
+                const allowedBuckets = ['certificati_medici', 'documenti_identita', 'documenti_tutori', 'documenti_adesione'];
+                if (!allowedBuckets.includes(bucket)) {
                     alert("Bucket non autorizzato.");
                     return;
                 }
@@ -1153,7 +1153,7 @@
                         let mainBtn = '';
                         if (isCertVerde) {
                             mainBtn = `<button onclick="attivaTesseramentoApprovazioni('${item.anagrafica_id}')" class="bg-white text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
-                        } else if (certInfo && certInfo.stato_validazione === 'GIALLO') {
+                        } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
                             mainBtn = `<button onclick="if(confirm('Procedere con l\\'approvazione manuale del certificato medico?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" class="bg-yellow-500 text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-500 hover:text-white transition-all uppercase">APPROVA CERT.</button>`;
                         } else {
                             mainBtn = `<button disabled class="bg-gray-800 text-gray-500 font-headline text-[9px] font-bold px-3 py-1 cursor-not-allowed uppercase" title="Richiede Certificato Medico VERDE per l'attivazione">ATTIVA</button>`;

@@ -1,6 +1,6 @@
 {
   "name": "adr-sito",
-  "version": "1.00.92",
+  "version": "1.00.93",
   "type": "module",
   "dependencies": {
     "@google/genai": "^2.7.0",
