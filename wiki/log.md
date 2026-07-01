@@ -4,6 +4,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-01] feature | Ordinamento di default Contabilità (v1.01.09)
+- Set default sort order for Prima Nota/Contabilità to be by Receipt Details (dettagli) descending (highest receipt number first).
+
 ## [2026-07-01] feature | Ordinamento colonna Dettagli Ricevuta (v1.01.08)
 - Made the "Dettagli Ricevuta/Audit" column sortable in Prima Nota.
 - Configured sorting by parsed numerical receipt number (from lowest to highest and vice versa).

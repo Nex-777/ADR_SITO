@@ -89,7 +89,7 @@
         let quoteSort = { field: 'nominativo', direction: 'asc' };
         let direttivoSort = { field: 'nominativo', direction: 'asc' };
         let bilanciSort = { field: 'anno', direction: 'desc' };
-        let contabilitaSort = { field: 'data', direction: 'desc' };
+        let contabilitaSort = { field: 'dettagli', direction: 'desc' };
 
         // Helper per la scrittura dei log di audit (Tracciabilità RUNTS - DM 2/2026)
         async function scriviAuditLog(azione, tabellaTarget, recordTargetId, dettagli = {}) {
