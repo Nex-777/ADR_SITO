@@ -86,7 +86,7 @@
 
         let sociSort = { field: 'id_socio', direction: 'asc' };
         let tesseratiSort = { field: 'id_tesserato', direction: 'desc' };
-        let quoteSort = { field: 'nominativo', direction: 'asc' };
+        let quoteSort = { field: 'stato', direction: 'desc' };
         let direttivoSort = { field: 'nominativo', direction: 'asc' };
         let bilanciSort = { field: 'anno', direction: 'desc' };
         let contabilitaSort = { field: 'dettagli', direction: 'desc' };
@@ -655,8 +655,12 @@
                     valA = a.tipo_adesione || '';
                     valB = b.tipo_adesione || '';
                 } else if (field === 'stato') {
-                    valA = String(a.stato || '') || '';
-                    valB = String(b.stato || '') || '';
+                    const numA = a.userReceipt ? (parseInt(a.userReceipt.numero_ricevuta) || 0) : -1;
+                    const numB = b.userReceipt ? (parseInt(b.userReceipt.numero_ricevuta) || 0) : -1;
+                    if (numA !== numB) {
+                        return (numA - numB) * dir;
+                    }
+                    return (a.stato - b.stato) * dir;
                 } else if (field === 'email') {
                     valA = a.email || '';
                     valB = b.email || '';

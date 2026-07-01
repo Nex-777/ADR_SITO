@@ -4,6 +4,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-01] feature | Ordinamento di default Quote e Cassa (v1.01.10)
+- Set default sort order for "Quote e Cassa" table to sort by Receipt Number descending (highest receipt number first).
+
 ## [2026-07-01] feature | Ordinamento di default Contabilità (v1.01.09)
 - Set default sort order for Prima Nota/Contabilità to be by Receipt Details (dettagli) descending (highest receipt number first).
 
