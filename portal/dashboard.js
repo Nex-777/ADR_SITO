@@ -1554,7 +1554,7 @@
 
                 let csenTextColor = 'text-primary';
                 let csenTextStr = 'DA COMUNICARE';
-                if (tess.numero_tessera_csen) {
+                if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
                     csenTextColor = 'text-green-500';
                     csenTextStr = tess.numero_tessera_csen;
                 } else if (tess.sync_csen_status === 'SYNCED') {
@@ -1691,7 +1691,7 @@
                 // CSEN badge logic
                 let csenTextColorHex = '#df293e'; // primary red
                 let csenTextStr = 'DA COMUNICARE';
-                if (tess.numero_tessera_csen) {
+                if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
                     csenTextColorHex = '#22c55e'; // green-500
                     csenTextStr = tess.numero_tessera_csen;
                 } else if (tess.sync_csen_status === 'SYNCED') {
@@ -6805,11 +6805,13 @@ function generaTemplateRicevutaHTML(r) {
     return `
     <div class='ricevuta-container' style='page-break-after: always; max-width: 800px; margin: 0 auto; font-family: sans-serif; padding: 40px; color: #000; background: #fff;'>
         <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px;'>
-            <div>
-                <h1 style='margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase;'>ADRENALINA CLUB A.S.D.</h1>
-                <p style='margin: 5px 0 0 0; font-size: 14px;'>Via del Mare, 123 - 00100 Roma (RM)</p>
-                <p style='margin: 2px 0 0 0; font-size: 14px;'>C.F. / P.IVA: 01234567890</p>
-                <p style='margin: 2px 0 0 0; font-size: 14px;'>Cod. Affiliazione CSEN: 123456</p>
+            <div style='display: flex; align-items: center; gap: 15px;'>
+                <img src='../assets/logo_icon.png' alt='Logo' style='height: 60px; width: auto;' />
+                <div>
+                    <h1 style='margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase;'>ASD ADRENALINA CLUB APS</h1>
+                    <p style='margin: 5px 0 0 0; font-size: 14px;'>Via A. Rigantè 44<br>63100 Ascoli Piceno (AP)</p>
+                    <p style='margin: 5px 0 0 0; font-size: 14px;'>CF: 92042260445 | PI: 02014060442 | SDI: J6URRTW</p>
+                </div>
             </div>
             <div style='text-align: right;'>
                 <h2 style='margin: 0; font-size: 20px; color: #df293e;'>RICEVUTA N. ${numRic} / ${annoFis}</h2>
@@ -6834,15 +6836,6 @@ function generaTemplateRicevutaHTML(r) {
         <div style='margin-bottom: 40px;'>
             <p style='margin: 0; font-size: 14px;'>Metodo di pagamento: ${escapeHtml(r.metodo_pagamento || 'N/A')}</p>
             ${r.codice_transazione ? `<p style='margin: 2px 0 0 0; font-size: 12px; color: #666;'>Rif. Transazione: ${escapeHtml(r.codice_transazione)}</p>` : ''}
-        </div>
-        
-        <div style='margin-top: 50px; text-align: right;'>
-            <p style='margin: 0 0 40px 0; font-size: 14px;'>Il Presidente / Il Tesoriere</p>
-            <p style='margin: 0; font-size: 14px; border-top: 1px solid #000; display: inline-block; padding-top: 5px; width: 200px; text-align: center;'>Firma</p>
-        </div>
-        
-        <div style='margin-top: 40px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 10px;'>
-            Documento privo di valenza fiscale ai sensi dell'art. 2, comma 1, lett. oo) del D.P.R. 696/1996 e s.m.i.
         </div>
     </div>`;
 }
@@ -6959,7 +6952,7 @@ async function apriDossierSocio(utente_id) {
         if (ut.documento_identita_url) {
             idContainer.innerHTML = `
                 <span class="text-white text-xs">Documento d'Identità salvato</span>
-                <button onclick="openSignedFile('identita', '${escapeHtml(ut.documento_identita_url)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
+                <button onclick="openSignedFile('documenti_identita', '${escapeHtml(ut.documento_identita_url)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
             `;
         } else {
             idContainer.innerHTML = `<span class="text-gray-500 text-xs italic">Nessun documento caricato</span>`;
@@ -6978,14 +6971,14 @@ async function apriDossierSocio(utente_id) {
                 modHtml += `
                     <div class="flex items-center justify-between border-b border-white/5 pb-2">
                         <span class="text-white text-xs">Modulo Iscrizione CSEN</span>
-                        <button onclick="openSignedFile('adesioni_csen', '${escapeHtml(atti.url_pdf_csen_iscrizione)}')" class="bg-gray-700 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-gray-600 transition-all uppercase">VEDI FILE</button>
+                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_iscrizione)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
                     </div>`;
             }
             if (atti.url_pdf_csen_informativa) {
                 modHtml += `
                     <div class="flex items-center justify-between">
                         <span class="text-white text-xs">Informativa CSEN</span>
-                        <button onclick="openSignedFile('adesioni_csen', '${escapeHtml(atti.url_pdf_csen_informativa)}')" class="bg-gray-700 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-gray-600 transition-all uppercase">VEDI FILE</button>
+                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_informativa)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
                     </div>`;
             }
         }
@@ -7014,7 +7007,7 @@ async function apriDossierSocio(utente_id) {
                                 ${statusStr}
                                 <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${c.data_scadenza}</div>
                             </div>
-                            <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-gray-700 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-gray-600 transition-all uppercase">VEDI FILE</button>
+                            <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
                         </div>`;
                 });
             }

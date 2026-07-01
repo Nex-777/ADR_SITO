@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-01] fix | UI e formattazione PDF Ricevute (v1.01.06)
+- Fixed CSEN badge correctly handling '0' as invalid code.
+- Fixed correct bucket names in Dossier Socio (documenti_identita and documenti_adesione).
+- Fixed styling for the medical certificate button in Dossier Socio.
+- Updated receipt PDF template with the official association details and logo.
+
 ## [2026-07-01] feature | Stampa Ricevute e Dossier Socio (v1.01.05)
 - Added clickable receipt numbers in `Prima Nota` to view and print single receipts using a dynamically generated HTML template.
 - Added `ESPORTA RICEVUTE` modal for bulk exporting receipts by Date or Number.
