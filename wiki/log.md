@@ -4,6 +4,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-01] fix | Layout contabilità (v1.01.07)
+- Fixed missing closing `</div>` in panel-contabilita header causing layout breaking.
+
 ## [2026-07-01] fix | UI e formattazione PDF Ricevute (v1.01.06)
 - Fixed CSEN badge correctly handling '0' as invalid code.
 - Fixed correct bucket names in Dossier Socio (documenti_identita and documenti_adesione).
