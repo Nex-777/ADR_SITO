@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-01] feature | Add csen scraper to nightly workflow (v1.01.12)
+- Added `scripts/scraper_csen.js` execution to the scheduled nightly GitHub Actions workflow `.github/workflows/csen_sync.yml` to automatically refresh the remaining card credits database.
+- Aligned version badges to Vs. 1.01.12 across index.html, dashboard.html, login.html, pagamento.html, and registrazione.html.
+
 ## [2026-07-01] feature | Add reconciliation script to nightly workflow (v1.01.11)
 - Added `scripts/csen_reconciliation.js` execution to the scheduled GitHub Actions nightly workflow `.github/workflows/csen_sync.yml`.
 - Aligned version badges to Vs. 1.01.11 across index.html, dashboard.html, login.html, pagamento.html, and registrazione.html.

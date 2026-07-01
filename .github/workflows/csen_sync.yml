@@ -42,3 +42,11 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/csen_reconciliation.js
+
+      - name: Aggiorna Tessere Residue
+        env:
+          CSEN_USER: ${{ secrets.CSEN_USER }}
+          CSEN_PASS: ${{ secrets.CSEN_PASS }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/scraper_csen.js
