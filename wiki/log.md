@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-01] feature | Ordinamento colonna Dettagli Ricevuta (v1.01.08)
+- Made the "Dettagli Ricevuta/Audit" column sortable in Prima Nota.
+- Configured sorting by parsed numerical receipt number (from lowest to highest and vice versa).
+
 ## [2026-07-01] fix | Layout contabilità (v1.01.07)
 - Fixed missing closing `</div>` in panel-contabilita header causing layout breaking.
 

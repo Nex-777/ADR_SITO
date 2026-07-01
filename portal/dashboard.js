@@ -678,6 +678,8 @@
                 } else if (field === 'data') {
                     valA = a.data || '';
                     valB = b.data || '';
+                } else if (field === 'dettagli') {
+                    return ((a.sortDettagli || 0) - (b.sortDettagli || 0)) * dir;
                 }
 
                 if (valA < valB) return -1 * dir;
@@ -1905,7 +1907,8 @@
                         soggetto: sogg,
                         importo: parseFloat(e.importo) || 0,
                         dettagli: `<a href="#" onclick="stampaRicevuta('${e.id}'); return false;" class="underline hover:text-white transition-all font-bold">Ricevuta n. ${e.numero_ricevuta}/${e.anno_fiscale}</a>`,
-                        isHtmlDettagli: true
+                        isHtmlDettagli: true,
+                        sortDettagli: parseInt(e.numero_ricevuta) || 0
                     });
                 });
 
@@ -1918,7 +1921,8 @@
                         causale: `[${u.categoria}] ${u.titolo}`,
                         soggetto: sogg,
                         importo: parseFloat(u.importo) || 0,
-                        dettagli: 'Spesa registrata'
+                        dettagli: 'Spesa registrata',
+                        sortDettagli: 0
                     });
                 });
 
@@ -6387,6 +6391,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) {
         el.addEventListener('click', function(event) {
             sortContabilita('importo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('auto-dashboard-click-66');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            sortContabilita('dettagli')
         });
     }
 });
