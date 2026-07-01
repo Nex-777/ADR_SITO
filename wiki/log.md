@@ -4,6 +4,17 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-01] feature | Stampa Ricevute e Dossier Socio (v1.01.05)
+- Added clickable receipt numbers in `Prima Nota` to view and print single receipts using a dynamically generated HTML template.
+- Added `ESPORTA RICEVUTE` modal for bulk exporting receipts by Date or Number.
+- Added `Dossier Socio` modal in `Registro Tesserati` to view identity documents, medical certificates, signed forms, and individual receipts for a specific user.
+- Bumped version to 1.01.05.
+
+## [2026-07-01] feature | Visual Indicators for CSEN Sync Status (v1.01.04)
+- Added color-coded feedback to the "Tessera CSEN" column in the dashboard (both desktop and mobile views).
+- Green: Code is present. Yellow: `sync_csen_status` is 'SYNCED' (in waiting). Red: Code is missing and not synced.
+- Version bumped to 1.01.04.
+
 ## [2026-06-30] feature | Integrated 2Captcha Solver for CSEN Sync (v1.01.03)
 - Integrated 2Captcha API to solve the Agenzia delle Entrate CAPTCHA dynamically in `csen_sync_active.js` and `test_runner_csen.js`.
 - Fixed the HTML parser regex in `csen_reconciliation.js` to correctly match alphanumeric CSEN membership numbers (e.g., `26B3268874`).

@@ -467,7 +467,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.03</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.05</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1222,10 +1222,14 @@
                         <h2 class="font-headline text-lg font-bold uppercase">Prima Nota e Contabilità</h2>
                         <p class="text-xs text-gray-500 uppercase">Tracciabilità in tempo reale di entrate (ricevute) e uscite (spese)</p>
                     </div>
-                    <button id="btn-nuova-spesa-toggle" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
-                        REGISTRA SPESA / USCITA
-                    </button>
-                </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('modal-esporta-ricevute').classList.remove('hidden')" class="bg-transparent border border-white text-white font-headline text-xs font-bold px-4 py-2 hover:bg-white hover:text-black transition-all uppercase">
+                            ESPORTA RICEVUTE
+                        </button>
+                        <button id="btn-nuova-spesa-toggle" class="hidden bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase">
+                            REGISTRA SPESA / USCITA
+                        </button>
+                    </div>
 
                 <!-- Contabilità Totali -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -2305,6 +2309,116 @@
             <span>© 2026 ASD ADRENALINA CLUB APS - AREA RISERVATA DIRETTIVO.</span>
         </div>
     </footer>
+
+    <!-- Modale Esporta Ricevute -->
+    <div id="modal-esporta-ricevute" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-[#0f0f0f] border border-white/10 p-6 max-w-lg w-full flex flex-col h-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="font-headline text-lg font-bold uppercase text-white">Esporta Ricevute</h2>
+                <button onclick="document.getElementById('modal-esporta-ricevute').classList.add('hidden')" class="text-gray-500 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex gap-4 border-b border-white/10 pb-2">
+                    <label class="flex items-center gap-2 text-xs font-headline cursor-pointer">
+                        <input type="radio" name="export-type" value="date" checked onchange="document.getElementById('export-date-fields').classList.remove('hidden'); document.getElementById('export-num-fields').classList.add('hidden');">
+                        PER DATA
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-headline cursor-pointer">
+                        <input type="radio" name="export-type" value="number" onchange="document.getElementById('export-date-fields').classList.add('hidden'); document.getElementById('export-num-fields').classList.remove('hidden');">
+                        PER NUMERO
+                    </label>
+                </div>
+
+                <div id="export-date-fields" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block font-headline text-[9px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Da Data</label>
+                            <input type="date" id="export-date-start" class="w-full brutalist-input bg-black text-white h-10 text-xs">
+                        </div>
+                        <div>
+                            <label class="block font-headline text-[9px] font-bold text-gray-500 mb-1 uppercase tracking-wider">A Data</label>
+                            <input type="date" id="export-date-end" class="w-full brutalist-input bg-black text-white h-10 text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="export-num-fields" class="space-y-4 hidden">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="col-span-1">
+                            <label class="block font-headline text-[9px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Anno Fiscale</label>
+                            <input type="number" id="export-num-anno" class="w-full brutalist-input bg-black text-white h-10 text-xs" min="2020">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block font-headline text-[9px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Da N°</label>
+                            <input type="number" id="export-num-start" class="w-full brutalist-input bg-black text-white h-10 text-xs" min="1">
+                        </div>
+                        <div class="col-span-1">
+                            <label class="block font-headline text-[9px] font-bold text-gray-500 mb-1 uppercase tracking-wider">A N°</label>
+                            <input type="number" id="export-num-end" class="w-full brutalist-input bg-black text-white h-10 text-xs" min="1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end pt-4 border-t border-white/10 gap-3 mt-4">
+                    <button onclick="document.getElementById('modal-esporta-ricevute').classList.add('hidden')" class="px-4 py-2 border border-white/20 text-white font-headline text-xs font-bold uppercase hover:bg-white/10 transition-colors">ANNULLA</button>
+                    <button onclick="generaExportRicevute()" class="px-6 py-2 bg-white text-black font-headline text-xs font-bold uppercase hover:bg-gray-200 transition-colors">GENERA PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Dossier Socio -->
+    <div id="modal-dossier-socio" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-[#0f0f0f] border border-white/10 p-6 max-w-3xl w-full flex flex-col h-auto max-h-[90vh]">
+            <div class="flex justify-between items-center mb-6 sticky top-0 bg-[#0f0f0f] z-10 pb-2 border-b border-white/10">
+                <h2 class="font-headline text-lg font-bold uppercase text-white">Dossier Socio <span id="dossier-nome" class="text-primary ml-2"></span></h2>
+                <button onclick="document.getElementById('modal-dossier-socio').classList.add('hidden')" class="text-gray-500 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="overflow-y-auto flex-grow pr-2 space-y-8" id="dossier-content">
+                <!-- Sezione Documento d'Identità -->
+                <div>
+                    <h3 class="font-headline text-sm font-bold uppercase text-white/70 mb-3 border-l-2 border-primary pl-2">1. Documento d'Identità</h3>
+                    <div id="dossier-identita-container" class="bg-white/5 p-4 border border-white/10 flex items-center justify-between">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <!-- Sezione Modulistica -->
+                <div>
+                    <h3 class="font-headline text-sm font-bold uppercase text-white/70 mb-3 border-l-2 border-primary pl-2">2. Modulistica e Adesione</h3>
+                    <div id="dossier-modulistica-container" class="bg-white/5 p-4 border border-white/10 flex flex-col gap-3">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <!-- Sezione Certificato Medico -->
+                <div>
+                    <h3 class="font-headline text-sm font-bold uppercase text-white/70 mb-3 border-l-2 border-primary pl-2">3. Certificati Medici (Storico)</h3>
+                    <div id="dossier-certificati-container" class="bg-white/5 p-4 border border-white/10 flex flex-col gap-3">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <!-- Sezione Ricevute di Pagamento -->
+                <div>
+                    <h3 class="font-headline text-sm font-bold uppercase text-white/70 mb-3 border-l-2 border-primary pl-2">4. Ricevute di Pagamento</h3>
+                    <div id="dossier-ricevute-container" class="bg-white/5 p-4 border border-white/10 flex flex-col gap-3">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end pt-4 border-t border-white/10 gap-3 mt-6 sticky bottom-0 bg-[#0f0f0f]">
+                <button onclick="document.getElementById('modal-dossier-socio').classList.add('hidden')" class="px-6 py-2 bg-white text-black font-headline text-xs font-bold uppercase hover:bg-gray-200 transition-colors">CHIUDI DOSSIER</button>
+            </div>
+        </div>
+    </div>
 
     <!-- App Logic -->
     <script src="dashboard.js"></script>

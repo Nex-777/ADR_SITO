@@ -1552,6 +1552,16 @@
                 if (tess.stato_tesseramento === 'ATTIVO') badgeColor = 'text-green-500 bg-green-500/10 border-green-500/30';
                 if (tess.stato_tesseramento === 'SOSPESO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
 
+                let csenTextColor = 'text-primary';
+                let csenTextStr = 'DA COMUNICARE';
+                if (tess.numero_tessera_csen) {
+                    csenTextColor = 'text-green-500';
+                    csenTextStr = tess.numero_tessera_csen;
+                } else if (tess.sync_csen_status === 'SYNCED') {
+                    csenTextColor = 'text-yellow-500';
+                    csenTextStr = 'IN ATTESA DI CODICE';
+                }
+
                 let actionBtn = '';
                 if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                     if (isCertVerde) {
@@ -1569,6 +1579,7 @@
                     const actionContent = actionBtn === '-' ? '' : actionBtn;
                     actionBtn = `<div class="flex items-center justify-end gap-2">
                         ${actionContent}
+                        <button onclick="apriDossierSocio('${tess.anagrafiche.utente_id}')" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase" title="Dossier Socio">DOSSIER</button>
                         <button onclick="eliminaUtente('${tess.anagrafiche.id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase">ELIMINA</button>
                     </div>`;
                 }
@@ -1580,9 +1591,9 @@
                         <div class="text-[10px] text-gray-400 mt-0.5">CF: ${cf}</div>
                         <div class="text-[10px] text-gray-500 mt-0.5">Nascita: ${birthInfo}</div>
                     </td>
-                    <td class="p-4 text-gray-400 font-mono">
-                        ${escapeHtml(tess.numero_tessera_csen || 'ASSEGNAZIONE IN CORSO')}<br>
-                        <span class="text-[10px] text-gray-500">Richiesta: ${escapeHtml(tess.data_richiesta_tesseramento)}</span>
+                    <td class="p-4 font-mono font-bold ${csenTextColor}">
+                        ${escapeHtml(csenTextStr)}<br>
+                        <span class="text-[10px] text-gray-500 font-normal">Richiesta: ${escapeHtml(tess.data_richiesta_tesseramento)}</span>
                     </td>
                     <td class="p-4 text-gray-400">${escapeHtml(tess.livello_copertura)}</td>
                     <td class="p-4">${certHtml}</td>
@@ -1677,15 +1688,30 @@
                 if (tess.stato_tesseramento === 'ATTIVO') tessColor = '#22c55e';
                 if (tess.stato_tesseramento === 'SOSPESO') tessColor = '#df293e';
 
+                // CSEN badge logic
+                let csenTextColorHex = '#df293e'; // primary red
+                let csenTextStr = 'DA COMUNICARE';
+                if (tess.numero_tessera_csen) {
+                    csenTextColorHex = '#22c55e'; // green-500
+                    csenTextStr = tess.numero_tessera_csen;
+                } else if (tess.sync_csen_status === 'SYNCED') {
+                    csenTextColorHex = '#eab308'; // yellow-500
+                    csenTextStr = 'IN ATTESA DI CODICE';
+                }
+
                 // Action button
                 let actionHtml = '';
                 const isCertVerde = certInfo && certInfo.stato_validazione === 'VERDE' && new Date(certInfo.data_scadenza) >= new Date();
                 if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                     if (isCertVerde) {
-                        actionHtml = `<button onclick="attivaTesseramento(${tess.id_tesserato})" style="background:#fff;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">ATTIVA</button>`;
+                        actionHtml += `<button onclick="attivaTesseramento(${tess.id_tesserato})" style="background:#fff;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">ATTIVA</button>`;
                     } else if (certInfo && certInfo.stato_validazione === 'GIALLO') {
-                        actionHtml = `<button onclick="if(confirm('Approvare il certificato?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">APPROVA CERT.</button>`;
+                        actionHtml += `<button onclick="if(confirm('Approvare il certificato?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">APPROVA CERT.</button>`;
                     }
+                }
+                
+                if (typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente'].includes(r)) && tess.anagrafiche) {
+                    actionHtml += `<button onclick="apriDossierSocio('${tess.anagrafiche.utente_id}')" style="background:rgba(37,99,235,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-left:8px;">DOSSIER</button>`;
                 }
 
                 const card = document.createElement('div');
@@ -1702,7 +1728,7 @@
                         </div>
                         <div class="card-detail">
                             <span class="card-detail-label">Tessera CSEN</span>
-                            <span class="card-detail-value">${escapeHtml(tess.numero_tessera_csen || 'ASSEGNAZIONE...')}</span>
+                            <span class="card-detail-value" style="color: ${csenTextColorHex}; font-weight: 700;">${escapeHtml(csenTextStr)}</span>
                         </div>
                         <div class="card-detail">
                             <span class="card-detail-label">Copertura</span>
@@ -1878,7 +1904,8 @@
                         causale: e.causale,
                         soggetto: sogg,
                         importo: parseFloat(e.importo) || 0,
-                        dettagli: `Ricevuta n. ${e.numero_ricevuta}/${e.anno_fiscale}`
+                        dettagli: `<a href="#" onclick="stampaRicevuta('${e.id}'); return false;" class="underline hover:text-white transition-all font-bold">Ricevuta n. ${e.numero_ricevuta}/${e.anno_fiscale}</a>`,
+                        isHtmlDettagli: true
                     });
                 });
 
@@ -1942,7 +1969,7 @@
                     <td class="p-4 text-white">${escapeHtml(item.causale)}</td>
                     <td class="p-4 text-gray-400 font-bold">${escapeHtml(item.soggetto)}</td>
                     <td class="p-4 font-bold ${impColor}">${impPrefix}€${item.importo.toFixed(2)}</td>
-                    <td class="p-4 text-gray-500 text-[10px]">${escapeHtml(item.dettagli)}</td>
+                    <td class="p-4 text-gray-500 text-[10px]">${item.isHtmlDettagli ? item.dettagli : escapeHtml(item.dettagli)}</td>
                 `;
                 body.appendChild(row);
             });
@@ -6761,4 +6788,275 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// --- GESTIONE STAMPA RICEVUTE ---
+
+function formattaValuta(valore) {
+    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(valore);
+}
+
+function generaTemplateRicevutaHTML(r) {
+    const utente = r.utenti || {};
+    const dataPag = r.data_pagamento ? new Date(r.data_pagamento).toLocaleDateString('it-IT') : 'N/D';
+    const numRic = r.numero_ricevuta || 'N/D';
+    const annoFis = r.anno_fiscale || new Date().getFullYear();
+    const imp = parseFloat(r.importo) || 0;
+    
+    return `
+    <div class='ricevuta-container' style='page-break-after: always; max-width: 800px; margin: 0 auto; font-family: sans-serif; padding: 40px; color: #000; background: #fff;'>
+        <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px;'>
+            <div>
+                <h1 style='margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase;'>ADRENALINA CLUB A.S.D.</h1>
+                <p style='margin: 5px 0 0 0; font-size: 14px;'>Via del Mare, 123 - 00100 Roma (RM)</p>
+                <p style='margin: 2px 0 0 0; font-size: 14px;'>C.F. / P.IVA: 01234567890</p>
+                <p style='margin: 2px 0 0 0; font-size: 14px;'>Cod. Affiliazione CSEN: 123456</p>
+            </div>
+            <div style='text-align: right;'>
+                <h2 style='margin: 0; font-size: 20px; color: #df293e;'>RICEVUTA N. ${numRic} / ${annoFis}</h2>
+                <p style='margin: 5px 0 0 0; font-size: 14px;'>Data: <strong>${dataPag}</strong></p>
+            </div>
+        </div>
+        
+        <div style='margin-bottom: 30px;'>
+            <p style='margin: 0 0 10px 0; font-size: 16px;'>L'Associazione <strong>ADRENALINA CLUB A.S.D.</strong> dichiara di aver ricevuto da:</p>
+            <div style='background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 4px;'>
+                <p style='margin: 0 0 5px 0; font-size: 16px;'><strong>${escapeHtml(utente.nome || '')} ${escapeHtml(utente.cognome || '')}</strong></p>
+                <p style='margin: 0 0 5px 0; font-size: 14px;'>C.F.: ${escapeHtml(utente.codice_fiscale || 'Non specificato')}</p>
+                <p style='margin: 0; font-size: 14px;'>Residente in: ${escapeHtml(utente.indirizzo || '')}, ${escapeHtml(utente.cap || '')} ${escapeHtml(utente.comune || '')} (${escapeHtml(utente.provincia || '')})</p>
+            </div>
+        </div>
+        
+        <div style='margin-bottom: 30px;'>
+            <p style='margin: 0 0 10px 0; font-size: 16px;'>La somma di: <strong style='font-size: 18px;'>${formattaValuta(imp)}</strong></p>
+            <p style='margin: 0; font-size: 16px;'>Per la seguente causale: <strong>${escapeHtml(r.causale || '')}</strong></p>
+        </div>
+        
+        <div style='margin-bottom: 40px;'>
+            <p style='margin: 0; font-size: 14px;'>Metodo di pagamento: ${escapeHtml(r.metodo_pagamento || 'N/A')}</p>
+            ${r.codice_transazione ? `<p style='margin: 2px 0 0 0; font-size: 12px; color: #666;'>Rif. Transazione: ${escapeHtml(r.codice_transazione)}</p>` : ''}
+        </div>
+        
+        <div style='margin-top: 50px; text-align: right;'>
+            <p style='margin: 0 0 40px 0; font-size: 14px;'>Il Presidente / Il Tesoriere</p>
+            <p style='margin: 0; font-size: 14px; border-top: 1px solid #000; display: inline-block; padding-top: 5px; width: 200px; text-align: center;'>Firma</p>
+        </div>
+        
+        <div style='margin-top: 40px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 10px;'>
+            Documento privo di valenza fiscale ai sensi dell'art. 2, comma 1, lett. oo) del D.P.R. 696/1996 e s.m.i.
+        </div>
+    </div>`;
+}
+
+async function stampaRicevuta(id) {
+    try {
+        const { data: r, error } = await supabaseClient
+            .from('ricevute_pagamenti')
+            .select('*, utenti (nome, cognome, codice_fiscale, indirizzo, comune, provincia, cap)')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        if (!r) throw new Error("Ricevuta non trovata");
+
+        const html = generaTemplateRicevutaHTML(r);
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Per favore abilita i popup per visualizzare la ricevuta.");
+            return;
+        }
+        printWindow.document.write("<!DOCTYPE html><html><head><title>Ricevuta N. " + r.numero_ricevuta + "</title>");
+        printWindow.document.write("<style>@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .ricevuta-container { page-break-after: always; } }</style>");
+        printWindow.document.write("</head><body style='margin:0; padding:0; background: #fff;'>");
+        printWindow.document.write(html);
+        printWindow.document.write("</body></html>");
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); }, 500);
+    } catch (err) {
+        console.error(err);
+        alert("Errore durante l'apertura della ricevuta: " + err.message);
+    }
+}
+
+async function generaExportRicevute() {
+    const type = document.querySelector('input[name="export-type"]:checked').value;
+    let query = supabaseClient.from('ricevute_pagamenti').select('*, utenti (nome, cognome, codice_fiscale, indirizzo, comune, provincia, cap)');
+
+    if (type === 'date') {
+        const startDate = document.getElementById('export-date-start').value;
+        const endDate = document.getElementById('export-date-end').value;
+        if (!startDate || !endDate) {
+            alert("Inserisci entrambe le date.");
+            return;
+        }
+        query = query.gte('data_pagamento', startDate).lte('data_pagamento', endDate).order('data_pagamento', { ascending: true }).order('numero_ricevuta', { ascending: true });
+    } else {
+        const anno = document.getElementById('export-num-anno').value || new Date().getFullYear();
+        const startNum = document.getElementById('export-num-start').value;
+        const endNum = document.getElementById('export-num-end').value;
+        if (!startNum || !endNum) {
+            alert("Inserisci il numero di partenza e di fine.");
+            return;
+        }
+        query = query.eq('anno_fiscale', anno).gte('numero_ricevuta', parseInt(startNum)).lte('numero_ricevuta', parseInt(endNum)).order('numero_ricevuta', { ascending: true });
+    }
+
+    try {
+        const { data: ricevute, error } = await query;
+        if (error) throw error;
+
+        if (!ricevute || ricevute.length === 0) {
+            alert("Nessuna ricevuta trovata per i criteri selezionati.");
+            return;
+        }
+
+        let fullHtml = "";
+        ricevute.forEach(r => {
+            fullHtml += generaTemplateRicevutaHTML(r);
+        });
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            alert("Abilita i popup per visualizzare l'esportazione.");
+            return;
+        }
+        printWindow.document.write("<!DOCTYPE html><html><head><title>Esportazione Ricevute</title>");
+        printWindow.document.write("<style>@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .ricevuta-container { page-break-after: always; } }</style>");
+        printWindow.document.write("</head><body style='margin:0; padding:0; background: #fff;'>");
+        printWindow.document.write(fullHtml);
+        printWindow.document.write("</body></html>");
+        printWindow.document.close();
+        printWindow.focus();
+        
+        document.getElementById('modal-esporta-ricevute').classList.add('hidden');
+
+        setTimeout(() => { printWindow.print(); }, 1000);
+    } catch (err) {
+        console.error(err);
+        alert("Errore durante l'esportazione: " + err.message);
+    }
+}
+
+// --- DOSSIER SOCIO ---
+
+async function apriDossierSocio(utente_id) {
+    if (!utente_id) {
+        alert("ID Utente non valido.");
+        return;
+    }
+
+    try {
+        const { data: ut, error: errUt } = await supabaseClient
+            .from('utenti')
+            .select('nome, cognome, documento_identita_url')
+            .eq('id', utente_id)
+            .single();
+        if (errUt) throw errUt;
+
+        document.getElementById('dossier-nome').textContent = `${ut.nome} ${ut.cognome}`;
+
+        const idContainer = document.getElementById('dossier-identita-container');
+        if (ut.documento_identita_url) {
+            idContainer.innerHTML = `
+                <span class="text-white text-xs">Documento d'Identità salvato</span>
+                <button onclick="openSignedFile('identita', '${escapeHtml(ut.documento_identita_url)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
+            `;
+        } else {
+            idContainer.innerHTML = `<span class="text-gray-500 text-xs italic">Nessun documento caricato</span>`;
+        }
+
+        const modContainer = document.getElementById('dossier-modulistica-container');
+        const { data: atti, error: errAtti } = await supabaseClient
+            .from('atti_adesione')
+            .select('*')
+            .eq('utente_id', utente_id)
+            .single();
+        
+        let modHtml = '';
+        if (atti) {
+            if (atti.url_pdf_csen_iscrizione) {
+                modHtml += `
+                    <div class="flex items-center justify-between border-b border-white/5 pb-2">
+                        <span class="text-white text-xs">Modulo Iscrizione CSEN</span>
+                        <button onclick="openSignedFile('adesioni_csen', '${escapeHtml(atti.url_pdf_csen_iscrizione)}')" class="bg-gray-700 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-gray-600 transition-all uppercase">VEDI FILE</button>
+                    </div>`;
+            }
+            if (atti.url_pdf_csen_informativa) {
+                modHtml += `
+                    <div class="flex items-center justify-between">
+                        <span class="text-white text-xs">Informativa CSEN</span>
+                        <button onclick="openSignedFile('adesioni_csen', '${escapeHtml(atti.url_pdf_csen_informativa)}')" class="bg-gray-700 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-gray-600 transition-all uppercase">VEDI FILE</button>
+                    </div>`;
+            }
+        }
+        if (!modHtml) modHtml = `<span class="text-gray-500 text-xs italic">Nessuna modulistica firmata digitalmente trovata</span>`;
+        modContainer.innerHTML = modHtml;
+
+        const certContainer = document.getElementById('dossier-certificati-container');
+        const { data: ana, error: errAna } = await supabaseClient.from('anagrafiche').select('id').eq('utente_id', utente_id).maybeSingle();
+        
+        let certHtml = '';
+        if (ana) {
+            const { data: certs, error: errCerts } = await supabaseClient
+                .from('certificati_medici')
+                .select('*')
+                .eq('anagrafica_id', ana.id)
+                .order('data_scadenza', { ascending: false });
+            
+            if (certs && certs.length > 0) {
+                certs.forEach(c => {
+                    const scaduto = new Date(c.data_scadenza) < new Date();
+                    const statusStr = scaduto ? '<span class="text-primary font-bold ml-2">(SCADUTO)</span>' : '<span class="text-green-500 font-bold ml-2">(ATTIVO)</span>';
+                    certHtml += `
+                        <div class="flex items-center justify-between border-b border-white/5 pb-2">
+                            <div>
+                                <span class="text-white text-xs">${escapeHtml(c.tipologia)}</span>
+                                ${statusStr}
+                                <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${c.data_scadenza}</div>
+                            </div>
+                            <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-gray-700 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-gray-600 transition-all uppercase">VEDI FILE</button>
+                        </div>`;
+                });
+            }
+        }
+        if (!certHtml) certHtml = `<span class="text-gray-500 text-xs italic">Nessun certificato medico caricato</span>`;
+        certContainer.innerHTML = certHtml;
+
+        const ricContainer = document.getElementById('dossier-ricevute-container');
+        const { data: ricevute, error: errRic } = await supabaseClient
+            .from('ricevute_pagamenti')
+            .select('*')
+            .eq('utente_id', utente_id)
+            .order('data_pagamento', { ascending: false });
+            
+        let ricHtml = '';
+        if (ricevute && ricevute.length > 0) {
+            ricevute.forEach(r => {
+                ricHtml += `
+                    <div class="flex items-center justify-between border-b border-white/5 pb-2">
+                        <div>
+                            <span class="text-white text-xs font-bold">Ricevuta n. ${r.numero_ricevuta}/${r.anno_fiscale}</span>
+                            <span class="text-gray-400 text-[10px] ml-2">(${r.data_pagamento})</span>
+                            <div class="text-[10px] text-gray-400 mt-1">Causale: ${escapeHtml(r.causale)}</div>
+                            <div class="text-[11px] text-green-500 font-bold mt-1">€${parseFloat(r.importo).toFixed(2)}</div>
+                        </div>
+                        <button onclick="stampaRicevuta('${r.id}')" class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-gray-200 transition-all uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[14px]">print</span>
+                            STAMPA
+                        </button>
+                    </div>`;
+            });
+        }
+        if (!ricHtml) ricHtml = `<span class="text-gray-500 text-xs italic">Nessuna ricevuta trovata</span>`;
+        ricContainer.innerHTML = ricHtml;
+
+        document.getElementById('modal-dossier-socio').classList.remove('hidden');
+
+    } catch (err) {
+        console.error("Errore apertura dossier:", err);
+        alert("Errore nell'apertura del dossier: " + err.message);
+    }
+}
+
+
 
