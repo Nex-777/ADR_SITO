@@ -473,7 +473,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.19</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.20</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -592,6 +592,14 @@
                 
                 <button id="tab-btn-tesserati" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
                     <span class="material-symbols-outlined text-sm">sports_kabaddi</span> REGISTRO TESSERATI
+                </button>
+
+                <button id="tab-btn-registro_istruttori" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">badge</span> REGISTRO ISTRUTTORI
+                </button>
+
+                <button id="tab-btn-registro_volontari" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">volunteer_activism</span> REGISTRO VOLONTARI
                 </button>
 
                 <button id="tab-btn-quote" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
@@ -1323,6 +1331,70 @@
                         <tbody id="corsi-list-body" class="divide-y divide-white/5 uppercase font-mono">
                             <tr>
                                 <td colspan="6" class="p-4 text-center text-gray-500">Caricamento corsi...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: REGISTRO ISTRUTTORI -->
+            <div id="panel-registro_istruttori" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Registro Istruttori CSEN</h2>
+                        <p class="text-xs text-gray-500 uppercase">Elenco degli istruttori registrati ufficialmente allo CSEN.</p>
+                    </div>
+                    <button id="btn-aggiungi-istruttore-registro" onclick="openModalNuovoIstruttoreRegistro()" class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase hidden">
+                        Aggiungi Istruttore
+                    </button>
+                </div>
+                
+                <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                            <tr>
+                                <th class="p-4">Nominativo</th>
+                                <th class="p-4">Codice Fiscale</th>
+                                <th class="p-4">Tipo</th>
+                                <th class="p-4">Data Iscrizione CSEN</th>
+                                <th class="p-4 text-right action-col-istruttori hidden">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registro-istruttori-body" class="divide-y divide-white/5 uppercase font-mono">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-gray-500">Caricamento istruttori...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: REGISTRO VOLONTARI -->
+            <div id="panel-registro_volontari" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Registro Volontari CSEN</h2>
+                        <p class="text-xs text-gray-500 uppercase">Elenco dei volontari registrati ufficialmente allo CSEN.</p>
+                    </div>
+                    <button id="btn-aggiungi-volontario-registro" onclick="openModalNuovoVolontarioRegistro()" class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase hidden">
+                        Aggiungi Volontario
+                    </button>
+                </div>
+                
+                <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                            <tr>
+                                <th class="p-4">Nominativo</th>
+                                <th class="p-4">Codice Fiscale</th>
+                                <th class="p-4">Tipo</th>
+                                <th class="p-4">Data Iscrizione CSEN</th>
+                                <th class="p-4 text-right action-col-volontari hidden">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registro-volontari-body" class="divide-y divide-white/5 uppercase font-mono">
+                            <tr>
+                                <td colspan="5" class="p-4 text-center text-gray-500">Caricamento volontari...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -2437,6 +2509,61 @@
                     <button onclick="document.getElementById('modal-esporta-ricevute').classList.add('hidden')" class="px-4 py-2 border border-white/20 text-white font-headline text-xs font-bold uppercase hover:bg-white/10 transition-colors">ANNULLA</button>
                     <button onclick="generaExportRicevute()" class="px-6 py-2 bg-white text-black font-headline text-xs font-bold uppercase hover:bg-gray-200 transition-colors">GENERA PDF</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Nuovo Istruttore/Volontario nel Registro -->
+    <div id="modal-registro-nominativo" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-[#0b0b0b] border border-white/10 p-6 w-full max-w-md space-y-6">
+            <h3 id="modal-registro-nominativo-title" class="font-headline text-sm font-bold uppercase tracking-wider text-primary">AGGIUNGI A REGISTRO</h3>
+            <input type="hidden" id="modal-registro-nominativo-tipo">
+            
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">SOGGETTO</label>
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" id="modal-registro-is-esterno" onchange="onToggleSoggettoEsterno()" class="form-checkbox bg-black border-white/20 text-primary focus:ring-primary focus:ring-offset-0">
+                        <label for="modal-registro-is-esterno" class="text-[10px] text-gray-300 font-mono uppercase cursor-pointer">Soggetto Esterno (Non Tesserato)</label>
+                    </div>
+                </div>
+
+                <!-- Dropdown per tesserati interni -->
+                <div id="modal-registro-interno-container" class="space-y-1">
+                    <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">SELEZIONA DA TESSERATI</label>
+                    <select id="modal-registro-tesserati-select" onchange="onSelectInternalTesserato()" class="w-full brutalist-input bg-black text-white h-10 text-xs uppercase font-mono">
+                        <option value="">-- Seleziona un tesserato --</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">NOME</label>
+                    <input type="text" id="modal-registro-nome" class="w-full brutalist-input bg-black text-white uppercase font-mono text-xs" required>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">COGNOME</label>
+                    <input type="text" id="modal-registro-cognome" class="w-full brutalist-input bg-black text-white uppercase font-mono text-xs" required>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">CODICE FISCALE</label>
+                    <input type="text" id="modal-registro-cf" class="w-full brutalist-input bg-black text-white uppercase font-mono text-xs" required>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-headline text-[9px] font-bold text-gray-400 uppercase">DATA ISCRIZIONE CSEN</label>
+                    <input type="date" id="modal-registro-data-csen" class="w-full brutalist-input bg-black text-white font-mono text-xs" required>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeModalRegistroNominativo()" class="border border-white/20 hover:bg-white/5 text-gray-400 hover:text-white px-4 py-2 font-headline text-xs font-bold uppercase transition-all">
+                    Annulla
+                </button>
+                <button onclick="submitRegistroNominativo()" class="bg-white text-black hover:bg-primary hover:text-white px-6 py-2 font-headline text-xs font-bold uppercase transition-all">
+                    Salva
+                </button>
             </div>
         </div>
     </div>

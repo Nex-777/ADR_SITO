@@ -389,6 +389,8 @@
                 document.getElementById('tab-btn-approvazioni').classList.remove('hidden');
                 document.getElementById('tab-btn-soci').classList.remove('hidden');
                 document.getElementById('tab-btn-tesserati').classList.remove('hidden');
+                document.getElementById('tab-btn-registro_istruttori').classList.remove('hidden');
+                document.getElementById('tab-btn-registro_volontari').classList.remove('hidden');
                 document.getElementById('tab-btn-quote').classList.remove('hidden');
                 document.getElementById('tab-btn-contabilita').classList.remove('hidden');
                 
@@ -4724,6 +4726,10 @@
                 loadGestioneCorsi();
             } else if (tabId === 'instructor_corsi') {
                 loadInstructorCorsi();
+            } else if (tabId === 'registro_istruttori') {
+                loadRegistroIstruttori();
+            } else if (tabId === 'registro_volontari') {
+                loadRegistroVolontari();
             } else if (tabId === 'user_corsi' || tabId === 'user_eventi') {
                 loadUserEventi();
             } else if (tabId === 'logiche') {
@@ -6087,6 +6093,24 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-registro_istruttori');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('registro_istruttori')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-registro_volontari');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('registro_volontari')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('tab-btn-quote');
     if (el) {
         el.addEventListener('click', function(event) {
@@ -7240,6 +7264,374 @@ async function apriDossierSocio(utente_id) {
         alert("Errore nell'apertura del dossier: " + err.message);
     }
 }
+
+        async function popolaSelectTesserati() {
+            const select = document.getElementById('modal-registro-tesserati-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Seleziona un tesserato --</option>';
+            try {
+                const { data, error } = await supabaseClient
+                    .from('anagrafiche')
+                    .select('id, nome, cognome, codice_fiscale')
+                    .order('cognome', { ascending: true });
+                if (error) throw error;
+                (data || []).forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.id;
+                    opt.dataset.nome = a.nome;
+                    opt.dataset.cognome = a.cognome;
+                    opt.dataset.cf = a.codice_fiscale;
+                    opt.textContent = `${a.cognome.toUpperCase()} ${a.nome.toUpperCase()} (${a.codice_fiscale})`;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Errore popolaSelectTesserati:", err);
+            }
+        }
+
+        window.onToggleSoggettoEsterno = function() {
+            const isEsterno = document.getElementById('modal-registro-is-esterno').checked;
+            const selectContainer = document.getElementById('modal-registro-interno-container');
+            const nomeInput = document.getElementById('modal-registro-nome');
+            const cognomeInput = document.getElementById('modal-registro-cognome');
+            const cfInput = document.getElementById('modal-registro-cf');
+
+            if (isEsterno) {
+                if (selectContainer) selectContainer.classList.add('hidden');
+                nomeInput.value = '';
+                cognomeInput.value = '';
+                cfInput.value = '';
+                nomeInput.removeAttribute('disabled');
+                cognomeInput.removeAttribute('disabled');
+                cfInput.removeAttribute('disabled');
+            } else {
+                if (selectContainer) selectContainer.classList.remove('hidden');
+                nomeInput.value = '';
+                cognomeInput.value = '';
+                cfInput.value = '';
+                nomeInput.setAttribute('disabled', 'true');
+                cognomeInput.setAttribute('disabled', 'true');
+                cfInput.setAttribute('disabled', 'true');
+                document.getElementById('modal-registro-tesserati-select').value = '';
+            }
+        };
+
+        window.onSelectInternalTesserato = function() {
+            const select = document.getElementById('modal-registro-tesserati-select');
+            const selectedOpt = select.options[select.selectedIndex];
+            
+            const nomeInput = document.getElementById('modal-registro-nome');
+            const cognomeInput = document.getElementById('modal-registro-cognome');
+            const cfInput = document.getElementById('modal-registro-cf');
+
+            if (selectedOpt && selectedOpt.value) {
+                nomeInput.value = selectedOpt.dataset.nome || '';
+                cognomeInput.value = selectedOpt.dataset.cognome || '';
+                cfInput.value = selectedOpt.dataset.cf || '';
+            } else {
+                nomeInput.value = '';
+                cognomeInput.value = '';
+                cfInput.value = '';
+            }
+        };
+
+        window.openModalNuovoIstruttoreRegistro = async function() {
+            document.getElementById('modal-registro-nominativo-title').textContent = 'AGGIUNGI ISTRUTTORE A REGISTRO CSEN';
+            document.getElementById('modal-registro-nominativo-tipo').value = 'istruttore';
+            resetFormModalRegistro();
+            await popolaSelectTesserati();
+            document.getElementById('modal-registro-nominativo').classList.remove('hidden');
+        };
+
+        window.openModalNuovoVolontarioRegistro = async function() {
+            document.getElementById('modal-registro-nominativo-title').textContent = 'AGGIUNGI VOLONTARIO A REGISTRO CSEN';
+            document.getElementById('modal-registro-nominativo-tipo').value = 'volontario';
+            resetFormModalRegistro();
+            await popolaSelectTesserati();
+            document.getElementById('modal-registro-nominativo').classList.remove('hidden');
+        };
+
+        window.closeModalRegistroNominativo = function() {
+            document.getElementById('modal-registro-nominativo').classList.add('hidden');
+        };
+
+        function resetFormModalRegistro() {
+            document.getElementById('modal-registro-is-esterno').checked = false;
+            document.getElementById('modal-registro-nome').value = '';
+            document.getElementById('modal-registro-cognome').value = '';
+            document.getElementById('modal-registro-cf').value = '';
+            document.getElementById('modal-registro-data-csen').value = new Date().toISOString().split('T')[0];
+            
+            const select = document.getElementById('modal-registro-tesserati-select');
+            if (select) select.value = '';
+
+            const selectContainer = document.getElementById('modal-registro-interno-container');
+            if (selectContainer) selectContainer.classList.remove('hidden');
+
+            document.getElementById('modal-registro-nome').setAttribute('disabled', 'true');
+            document.getElementById('modal-registro-cognome').setAttribute('disabled', 'true');
+            document.getElementById('modal-registro-cf').setAttribute('disabled', 'true');
+        }
+
+        window.submitRegistroNominativo = async function() {
+            const tipo = document.getElementById('modal-registro-nominativo-tipo').value;
+            const isEsterno = document.getElementById('modal-registro-is-esterno').checked;
+            const tesseratoId = isEsterno ? null : document.getElementById('modal-registro-tesserati-select').value;
+            const nome = document.getElementById('modal-registro-nome').value.trim();
+            const cognome = document.getElementById('modal-registro-cognome').value.trim();
+            const cf = document.getElementById('modal-registro-cf').value.trim();
+            const dataCsen = document.getElementById('modal-registro-data-csen').value;
+
+            if (!nome || !cognome || !cf || !dataCsen) {
+                alert("Compila tutti i campi obbligatori!");
+                return;
+            }
+            if (!isEsterno && !tesseratoId) {
+                alert("Seleziona un tesserato interno o spunta Soggetto Esterno!");
+                return;
+            }
+
+            try {
+                const table = tipo === 'istruttore' ? 'registro_istruttori' : 'registro_volontari';
+                const payload = {
+                    anagrafica_id: tesseratoId || null,
+                    nome: nome,
+                    cognome: cognome,
+                    codice_fiscale: cf,
+                    data_iscrizione_csen: dataCsen
+                };
+
+                const { data, error } = await supabaseClient
+                    .from(table)
+                    .insert([payload])
+                    .select();
+
+                if (error) throw error;
+
+                if (tesseratoId) {
+                    const { data: anag, error: errAnag } = await supabaseClient
+                        .from('anagrafiche')
+                        .select('utente_id')
+                        .eq('id', tesseratoId)
+                        .single();
+
+                    if (errAnag) throw errAnag;
+
+                    if (anag && anag.utente_id) {
+                        const { data: utente, error: errUt } = await supabaseClient
+                            .from('utenti')
+                            .select('ruolo')
+                            .eq('id', anag.utente_id)
+                            .single();
+                        if (errUt) throw errUt;
+
+                        let ruoli = utente.ruolo || [];
+                        const nuovoRuolo = tipo === 'istruttore' ? 'istruttore' : 'volontario';
+                        if (!ruoli.includes(nuovoRuolo)) {
+                            ruoli.push(nuovoRuolo);
+                            const { error: errUp } = await supabaseClient
+                                .from('utenti')
+                                .update({ ruolo: ruoli })
+                                .eq('id', anag.utente_id);
+                            if (errUp) throw errUp;
+                        }
+                    }
+                }
+
+                alert("Salvataggio completato con successo!");
+                closeModalRegistroNominativo();
+                
+                if (tipo === 'istruttore') {
+                    await loadRegistroIstruttori();
+                } else {
+                    await loadRegistroVolontari();
+                }
+            } catch (err) {
+                console.error("Errore salvataggio registro:", err);
+                alert("Errore durante il salvataggio: " + err.message);
+            }
+        };
+
+        async function loadRegistroIstruttori() {
+            const tbody = document.getElementById('registro-istruttori-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Caricamento istruttori...</td></tr>';
+
+            try {
+                const boardRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
+                const activeBoardRole = userRoles.find(r => boardRoles.includes(r));
+                const isPresidentOrVP = ['presidente', 'vice_presidente'].includes(activeBoardRole);
+
+                const btnAdd = document.getElementById('btn-aggiungi-istruttore-registro');
+                if (btnAdd) {
+                    if (isPresidentOrVP) btnAdd.classList.remove('hidden');
+                    else btnAdd.classList.add('hidden');
+                }
+                const actionHeaders = document.querySelectorAll('.action-col-istruttori');
+                actionHeaders.forEach(th => {
+                    if (isPresidentOrVP) th.classList.remove('hidden');
+                    else th.classList.add('hidden');
+                });
+
+                const { data, error } = await supabaseClient
+                    .from('registro_istruttori')
+                    .select('*')
+                    .order('cognome', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Nessun istruttore registrato.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                data.forEach(ist => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-white/5 transition-all";
+                    
+                    const tipoText = ist.anagrafica_id ? 'TESSERATO INTERNO' : 'SOGGETTO ESTERNO';
+                    const tipoClass = ist.anagrafica_id ? 'text-primary' : 'text-yellow-500';
+
+                    tr.innerHTML = `
+                        <td class="p-4 font-bold text-white">${ist.cognome.toUpperCase()} ${ist.nome.toUpperCase()}</td>
+                        <td class="p-4 text-gray-300 font-mono">${ist.codice_fiscale.toUpperCase()}</td>
+                        <td class="p-4"><span class="font-bold ${tipoClass}">${tipoText}</span></td>
+                        <td class="p-4 text-gray-400">${ist.data_iscrizione_csen}</td>
+                        ${isPresidentOrVP ? `
+                        <td class="p-4 text-right action-col-istruttori">
+                            <button onclick="eliminaRegistroNominativo('${ist.id}', 'istruttore', '${ist.anagrafica_id || ''}')" class="border border-red-500/30 hover:border-red-500 text-red-500 px-3 py-1 font-headline font-bold text-[10px] transition-all uppercase">
+                                Rimuovi
+                            </button>
+                        </td>
+                        ` : ''}
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error("Errore loadRegistroIstruttori:", err);
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Errore: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        async function loadRegistroVolontari() {
+            const tbody = document.getElementById('registro-volontari-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Caricamento volontari...</td></tr>';
+
+            try {
+                const boardRoles = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
+                const activeBoardRole = userRoles.find(r => boardRoles.includes(r));
+                const isPresidentOrVP = ['presidente', 'vice_presidente'].includes(activeBoardRole);
+
+                const btnAdd = document.getElementById('btn-aggiungi-volontario-registro');
+                if (btnAdd) {
+                    if (isPresidentOrVP) btnAdd.classList.remove('hidden');
+                    else btnAdd.classList.add('hidden');
+                }
+                const actionHeaders = document.querySelectorAll('.action-col-volontari');
+                actionHeaders.forEach(th => {
+                    if (isPresidentOrVP) th.classList.remove('hidden');
+                    else th.classList.add('hidden');
+                });
+
+                const { data, error } = await supabaseClient
+                    .from('registro_volontari')
+                    .select('*')
+                    .order('cognome', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Nessun volontario registrato.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                data.forEach(vol => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-white/5 transition-all";
+                    
+                    const tipoText = vol.anagrafica_id ? 'TESSERATO INTERNO' : 'SOGGETTO ESTERNO';
+                    const tipoClass = vol.anagrafica_id ? 'text-primary' : 'text-yellow-500';
+
+                    tr.innerHTML = `
+                        <td class="p-4 font-bold text-white">${vol.cognome.toUpperCase()} ${vol.nome.toUpperCase()}</td>
+                        <td class="p-4 text-gray-300 font-mono">${vol.codice_fiscale.toUpperCase()}</td>
+                        <td class="p-4"><span class="font-bold ${tipoClass}">${tipoText}</span></td>
+                        <td class="p-4 text-gray-400">${vol.data_iscrizione_csen}</td>
+                        ${isPresidentOrVP ? `
+                        <td class="p-4 text-right action-col-volontari">
+                            <button onclick="eliminaRegistroNominativo('${vol.id}', 'volontario', '${vol.anagrafica_id || ''}')" class="border border-red-500/30 hover:border-red-500 text-red-500 px-3 py-1 font-headline font-bold text-[10px] transition-all uppercase">
+                                Rimuovi
+                            </button>
+                        </td>
+                        ` : ''}
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (err) {
+                console.error("Errore loadRegistroVolontari:", err);
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Errore: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        window.eliminaRegistroNominativo = async function(id, tipo, anagraficaId) {
+            if (!confirm(`Sei sicuro di voler rimuovere questo nominativo dal registro ${tipo}?`)) return;
+
+            try {
+                const table = tipo === 'istruttore' ? 'registro_istruttori' : 'registro_volontari';
+                const { error } = await supabaseClient
+                    .from(table)
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                if (anagraficaId) {
+                    const { data: anag, error: errAnag } = await supabaseClient
+                        .from('anagrafiche')
+                        .select('utente_id')
+                        .eq('id', anagraficaId)
+                        .single();
+
+                    if (errAnag) throw errAnag;
+
+                    if (anag && anag.utente_id) {
+                        const { data: utente, error: errUt } = await supabaseClient
+                            .from('utenti')
+                            .select('ruolo')
+                            .eq('id', anag.utente_id)
+                            .single();
+                        if (errUt) throw errUt;
+
+                        let ruoli = utente.ruolo || [];
+                        const ruoloDaRimuovere = tipo === 'istruttore' ? 'istruttore' : 'volontario';
+                        const index = ruoli.indexOf(ruoloDaRimuovere);
+                        if (index > -1) {
+                            ruoli.splice(index, 1);
+                            const { error: errUp } = await supabaseClient
+                                .from('utenti')
+                                .update({ ruolo: ruoli })
+                                .eq('id', anag.utente_id);
+                            if (errUp) throw errUp;
+                        }
+                    }
+                }
+
+                alert("Rimozione completata con successo!");
+                if (tipo === 'istruttore') {
+                    await loadRegistroIstruttori();
+                } else {
+                    await loadRegistroVolontari();
+                }
+            } catch (err) {
+                console.error("Errore rimozione registro:", err);
+                alert("Errore durante la rimozione: " + err.message);
+            }
+        };
 
 window.openRegistroDaAdmin = function(eventoId, title, luogo, orariStr) {
     registryOpenedFromAdmin = true;

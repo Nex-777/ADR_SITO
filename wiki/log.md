@@ -715,3 +715,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Spostata la funzione di generazione barra di progresso a livello globale.
 - Rimossa la dicitura 'Med.: ...' dal Registro Tesserati e sostituita con la barra colorata di scadenza del certificato medico.
 - Bumped application version to 1.01.19.
+
+## [2026-07-02] feat | Registri CSEN Istruttori e Volontari (v1.01.20)
+- Creati i pannelli "Registro Istruttori" e "Registro Volontari" visibili a tutto il direttivo (in sola lettura per i non-admin).
+- Implementata la possibilità per presidente e vicepresidente di aggiungere o rimuovere istruttori/volontari, autocompilando i dettagli dei tesserati interni o inserendo soggetti esterni.
+- Configurato l'aggiornamento automatico dei ruoli utente in `utenti` quando vengono nominati o rimossi.
+- Prepopolati nel database i tre istruttori esistenti (Paoletti, Ciaralli, Mannocchi).
+- Bumped application version to 1.01.20.
