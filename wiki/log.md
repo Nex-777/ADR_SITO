@@ -697,3 +697,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-07-02] feat | Expiration Progress Bars for Instructor Dashboard (v1.01.15)
 - Implemented a 12-segment progress bar representing months remaining for course and medical certificate expirations in the instructor attendance register.
 - Bumped application version to 1.01.15 across all files.
+
+## [2026-07-02] fix | Mermaid diagram syntax (v1.01.16)
+- Wrapped node labels containing special characters in quotes to fix the syntax error in the System Logics diagram.
+- Bumped application version to 1.01.16.
