@@ -722,3 +722,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Configurato l'aggiornamento automatico dei ruoli utente in `utenti` quando vengono nominati o rimossi.
 - Prepopolati nel database i tre istruttori esistenti (Paoletti, Ciaralli, Mannocchi).
 - Bumped application version to 1.01.20.
+
+## [2026-07-02] fix | Resolve CSP Block on Domain Change (v1.01.21)
+- Risolto il blocco di sicurezza CSP (Content Security Policy) causato dal passaggio al dominio principale: modificati tutti i file javascript in `portal/` per utilizzare `window.location.origin` come base dell'API invece dell'indirizzo assoluto hardcoded `https://portal.adrenalinaclub.it`.
+- Questo permette di fare chiamate API relative che rispettano la direttiva `connect-src 'self'` del CSP su qualsiasi dominio/sottodominio attivo.
+- Bumped application version to 1.01.21.
