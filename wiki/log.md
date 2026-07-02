@@ -705,3 +705,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-07-02] fix | Expiration progress bar inline styling (v1.01.17)
 - Changed progress bar indicators to use inline style background-colors to fix missing CSS classes due to Tailwind CDN compilation limitations.
 - Bumped application version to 1.01.17.
+
+## [2026-07-02] feat | Tasto Partecipanti per Amministratori (v1.01.18)
+- Aggiunto il tasto "Partecipanti" nella lista dei corsi attivi per consentire al direttivo di visualizzare il registro iscritti e presenze con la stessa visualizzazione dell'istruttore.
+- Gestito il cambio di contesto dinamico con ritorno automatico alla schermata di gestione amministrativa.
+- Bumped application version to 1.01.18.

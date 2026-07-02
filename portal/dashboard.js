@@ -3506,6 +3506,9 @@
                         <td class="p-4 text-right">
                             <div class="flex justify-end gap-2">
                                 ${currentCorsiSubTab === 'corso' ? `
+                                <button onclick="openRegistroDaAdmin('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.luogo ? evt.luogo.replace(/'/g, "\\'") : ''}', '${orariStr.replace(/'/g, "\\'")}')" class="border border-green-500/30 bg-green-500/10 text-green-500 px-3 py-1 font-headline font-bold text-[10px] hover:bg-green-500 hover:text-white transition-all uppercase">
+                                    Partecipanti
+                                </button>
                                 <button onclick="openModalAssegnaIstruttori('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" class="border border-primary/30 bg-primary/10 text-primary px-3 py-1 font-headline font-bold text-[10px] hover:bg-primary hover:text-white transition-all uppercase">
                                     Istruttori
                                 </button>
@@ -4211,6 +4214,7 @@
         let instructorSelectedCourseId = null;
         let instructorStudentsData = [];
         let instructorPresencesData = {};
+        let registryOpenedFromAdmin = false;
 
         async function loadInstructorCorsi() {
             const grid = document.getElementById('instructor-courses-grid');
@@ -4309,6 +4313,15 @@
             document.getElementById('instructor-widget-courses').classList.add('hidden');
             document.getElementById('instructor-widget-registro').classList.remove('hidden');
 
+            const backBtn = document.getElementById('auto-dashboard-click-46');
+            if (backBtn) {
+                if (registryOpenedFromAdmin) {
+                    backBtn.innerHTML = `<span class="material-symbols-outlined text-xs">arrow_back</span> TORNA A GESTIONE CORSI`;
+                } else {
+                    backBtn.innerHTML = `<span class="material-symbols-outlined text-xs">arrow_back</span> TORNA AI MIEI CORSI`;
+                }
+            }
+
             document.getElementById('instructor-course-detail-title').textContent = title.toUpperCase();
             document.getElementById('instructor-course-detail-subtitle').textContent = `ORARIO: ${orariStr.toUpperCase()} | LUOGO: ${luogo.toUpperCase()}`;
 
@@ -4328,8 +4341,13 @@
         function closeRegistroCorso() {
             instructorSelectedCourseId = null;
             document.getElementById('instructor-widget-registro').classList.add('hidden');
-            document.getElementById('instructor-widget-courses').classList.remove('hidden');
-            loadInstructorCorsi();
+            if (registryOpenedFromAdmin) {
+                switchTab('gestione_corsi');
+                registryOpenedFromAdmin = false;
+            } else {
+                document.getElementById('instructor-widget-courses').classList.remove('hidden');
+                loadInstructorCorsi();
+            }
         }
 
         function toggleInstructorRegistroTab(tab) {
@@ -7221,6 +7239,12 @@ async function apriDossierSocio(utente_id) {
         alert("Errore nell'apertura del dossier: " + err.message);
     }
 }
+
+window.openRegistroDaAdmin = function(eventoId, title, luogo, orariStr) {
+    registryOpenedFromAdmin = true;
+    switchTab('instructor_corsi');
+    openRegistroCorso(eventoId, title, luogo, orariStr);
+};
 
 
 
