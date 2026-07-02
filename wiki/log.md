@@ -701,3 +701,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-07-02] fix | Mermaid diagram syntax (v1.01.16)
 - Wrapped node labels containing special characters in quotes to fix the syntax error in the System Logics diagram.
 - Bumped application version to 1.01.16.
+
+## [2026-07-02] fix | Expiration progress bar inline styling (v1.01.17)
+- Changed progress bar indicators to use inline style background-colors to fix missing CSS classes due to Tailwind CDN compilation limitations.
+- Bumped application version to 1.01.17.

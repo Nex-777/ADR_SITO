@@ -4379,7 +4379,7 @@
             if (!dateStr) {
                 let stepsHtml = '';
                 for (let i = 1; i <= 12; i++) {
-                    stepsHtml += `<div class="h-1 flex-grow bg-white/10" style="min-width: 4px;"></div>`;
+                    stepsHtml += `<div class="h-1 flex-grow" style="min-width: 4px; background-color: rgba(255, 255, 255, 0.1);"></div>`;
                 }
                 return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto">${stepsHtml}</div>`;
             }
@@ -4399,17 +4399,17 @@
 
             let stepsHtml = '';
             for (let i = 1; i <= 12; i++) {
-                let colorClass = 'bg-white/10';
+                let bgColor = 'rgba(255, 255, 255, 0.1)';
                 if (i <= monthsRemaining) {
                     if (i === 1) {
-                        colorClass = 'bg-red-500';
+                        bgColor = '#ef4444';
                     } else if (i === 2) {
-                        colorClass = 'bg-yellow-500';
+                        bgColor = '#eab308';
                     } else {
-                        colorClass = 'bg-green-500';
+                        bgColor = '#22c55e';
                     }
                 }
-                stepsHtml += `<div class="h-1 flex-grow ${colorClass}" style="min-width: 4px;"></div>`;
+                stepsHtml += `<div class="h-1 flex-grow" style="min-width: 4px; background-color: ${bgColor};"></div>`;
             }
             return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto" title="${monthsRemaining} mesi rimanenti">${stepsHtml}</div>`;
         }
@@ -7221,6 +7221,7 @@ async function apriDossierSocio(utente_id) {
         alert("Errore nell'apertura del dossier: " + err.message);
     }
 }
+
 
 
 
