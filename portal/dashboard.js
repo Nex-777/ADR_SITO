@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: "https://portal.adrenalinaclub.it",
-                VERSION: "1.00.75"
+                VERSION: "1.01.19"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -44,6 +44,45 @@
                 return anag.certificati_medici.length > 0 ? anag.certificati_medici[0] : null;
             }
             return anag.certificati_medici;
+        }
+
+        function generateProgressBarHtml(dateStr) {
+            if (!dateStr) {
+                let stepsHtml = '';
+                for (let i = 1; i <= 12; i++) {
+                    stepsHtml += `<div class="h-1 flex-grow" style="min-width: 4px; background-color: rgba(255, 255, 255, 0.1);"></div>`;
+                }
+                return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto">${stepsHtml}</div>`;
+            }
+
+            const expiry = new Date(dateStr);
+            const today = new Date();
+            expiry.setHours(0,0,0,0);
+            today.setHours(0,0,0,0);
+
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            let monthsRemaining = 0;
+            if (diffDays > 0) {
+                monthsRemaining = Math.min(12, Math.ceil(diffDays / 30));
+            }
+
+            let stepsHtml = '';
+            for (let i = 1; i <= 12; i++) {
+                let bgColor = 'rgba(255, 255, 255, 0.1)';
+                if (i <= monthsRemaining) {
+                    if (i === 1) {
+                        bgColor = '#ef4444';
+                    } else if (i === 2) {
+                        bgColor = '#eab308';
+                    } else {
+                        bgColor = '#22c55e';
+                    }
+                }
+                stepsHtml += `<div class="h-1 flex-grow" style="min-width: 4px; background-color: ${bgColor};"></div>`;
+            }
+            return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto" title="${monthsRemaining} mesi rimanenti">${stepsHtml}</div>`;
         }
 
         async function openSignedFile(bucket, filePath) {
@@ -1550,9 +1589,10 @@
                     } else {
                         statusLabel = '<br><span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">VALIDATO</span>';
                     }
+                    const certBarHtml = generateProgressBarHtml(certInfo.data_scadenza);
                     certHtml = `<a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="tess-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}<br>
-                                <span class="text-[10px] text-gray-400">Scadenza: ${escapeHtml(certInfo.data_scadenza)}</span><br>
-                                <span class="text-[9px] text-gray-500">Med.: ${escapeHtml(certInfo.medico_rilascio || 'N/D')}</span>`;
+                                <span class="text-[10px] text-gray-400">Scadenza: ${escapeHtml(certInfo.data_scadenza)}</span>
+                                ${certBarHtml}`;
                 }
 
                 let badgeColor = 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30';
@@ -4393,45 +4433,6 @@
             await loadRegistroIscritti();
         }
 
-        function generateProgressBarHtml(dateStr) {
-            if (!dateStr) {
-                let stepsHtml = '';
-                for (let i = 1; i <= 12; i++) {
-                    stepsHtml += `<div class="h-1 flex-grow" style="min-width: 4px; background-color: rgba(255, 255, 255, 0.1);"></div>`;
-                }
-                return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto">${stepsHtml}</div>`;
-            }
-
-            const expiry = new Date(dateStr);
-            const today = new Date();
-            expiry.setHours(0,0,0,0);
-            today.setHours(0,0,0,0);
-
-            const diffTime = expiry - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            let monthsRemaining = 0;
-            if (diffDays > 0) {
-                monthsRemaining = Math.min(12, Math.ceil(diffDays / 30));
-            }
-
-            let stepsHtml = '';
-            for (let i = 1; i <= 12; i++) {
-                let bgColor = 'rgba(255, 255, 255, 0.1)';
-                if (i <= monthsRemaining) {
-                    if (i === 1) {
-                        bgColor = '#ef4444';
-                    } else if (i === 2) {
-                        bgColor = '#eab308';
-                    } else {
-                        bgColor = '#22c55e';
-                    }
-                }
-                stepsHtml += `<div class="h-1 flex-grow" style="min-width: 4px; background-color: ${bgColor};"></div>`;
-            }
-            return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto" title="${monthsRemaining} mesi rimanenti">${stepsHtml}</div>`;
-        }
-
         async function loadRegistroIscritti() {
             if (!instructorSelectedCourseId) return;
 
@@ -7245,6 +7246,7 @@ window.openRegistroDaAdmin = function(eventoId, title, luogo, orariStr) {
     switchTab('instructor_corsi');
     openRegistroCorso(eventoId, title, luogo, orariStr);
 };
+
 
 
 
