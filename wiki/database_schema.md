@@ -214,6 +214,9 @@ Le seguenti tabelle, colonne e viste supportano il sistema di assegnazione istru
 
 ### 2. Colonne aggiuntive su `public.iscrizioni_eventi`
 - `orario_libero` (`boolean`): Specifica se l'atleta usufruisce del corso al di fuori degli orari previsti (orario libero, default `false`).
+- `data_inizio_corso` (`date`): Data di inizio dell'abbonamento al corso.
+- `data_scadenza_corso` (`date`): Data di scadenza dell'abbonamento al corso.
+- `scadenza_modificata_a_mano` (`boolean`): Flag che indica se la scadenza del corso è stata modificata a mano dall'istruttore.
 
 ### 3. Nuova tabella `public.istruttori_eventi`
 Mappa l'assegnazione molti-a-molti degli istruttori ai corsi.
@@ -239,7 +242,7 @@ Tiene traccia delle presenze degli atleti registrate dagli istruttori lezione pe
 | `created_at` | `timestamptz` | Timestamp creazione. |
 
 ### 5. Nuova vista `public.vw_stato_atleta_corso`
-Centralizza tutti i join relativi a tesseramento, quota annuale, quota corso, validità tessera CSEN e certificato medico (esponendo **solo** lo stato del semaforo e la scadenza per la tutela dei dati sensibili degli atleti).
+Centralizza tutti i join relativi a tesseramento, quota annuale, quota corso, certificato medico e date abbonamento corso (esponendo **solo** lo stato del semaforo e la scadenza per la tutela dei dati sensibili degli atleti).
 
 ```sql
 CREATE OR REPLACE VIEW public.vw_stato_atleta_corso AS
@@ -249,12 +252,14 @@ SELECT
     ie.utente_id,
     ie.stato_pagamento,
     ie.orario_libero,
+    ie.data_inizio_corso,
+    ie.data_scadenza_corso,
+    ie.scadenza_modificata_a_mano,
     u.nome,
     u.cognome,
     COALESCE(u.quota_totale, 0) AS quota_totale,
     CASE WHEN COALESCE(u.quota_totale, 0) <= 0 THEN true ELSE false END AS quota_annuale_ok,
     rs.quota_scadenza,
-    CASE WHEN rs.quota_scadenza >= CURRENT_DATE THEN true ELSE false END AS tessera_valida,
     rt.stato_tesseramento,
     cm.stato_validazione AS cert_stato,
     cm.data_scadenza AS cert_scadenza,

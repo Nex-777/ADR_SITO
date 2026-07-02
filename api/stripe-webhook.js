@@ -120,6 +120,29 @@ export default async function handler(req, res) {
             // 3. Gestisci logica specifica in base all'oggetto del pagamento
             if (eventId) {
                 const renew = session.metadata?.renew === 'true';
+                const nomePiano = session.metadata?.nomePiano;
+                const dataInizioCorso = session.metadata?.dataInizioCorso || new Date().toISOString().split('T')[0];
+                let dataScadenzaCorso = null;
+
+                if (nomePiano) {
+                    const { data: ev } = await supabase
+                        .from('eventi')
+                        .select('piani_abbonamento')
+                        .eq('id', eventId)
+                        .maybeSingle();
+
+                    if (ev && Array.isArray(ev.piani_abbonamento)) {
+                        const piano = ev.piani_abbonamento.find(p => p.nome.toLowerCase() === nomePiano.toLowerCase());
+                        // fallback to 1 month if duration is missing
+                        const durataMesi = piano && piano.durata_mesi ? parseInt(piano.durata_mesi) : 1; 
+                        const start = new Date(dataInizioCorso);
+                        const end = new Date(start);
+                        end.setMonth(start.getMonth() + durataMesi);
+                        end.setDate(end.getDate() - 1);
+                        dataScadenzaCorso = end.toISOString().split('T')[0];
+                    }
+                }
+
                 if (renew) {
                     // Aggiorna l'iscrizione esistente per rinnovo
                     const { error: eventRegError } = await supabase
@@ -127,7 +150,10 @@ export default async function handler(req, res) {
                         .update({
                             stato_pagamento: 'PAGATO',
                             codice_transazione: stripePaymentId,
-                            data_iscrizione: new Date().toISOString()
+                            data_iscrizione: new Date().toISOString(),
+                            data_inizio_corso: dataInizioCorso,
+                            data_scadenza_corso: dataScadenzaCorso,
+                            scadenza_modificata_a_mano: false
                         })
                         .eq('evento_id', eventId)
                         .eq('utente_id', utenteId);
@@ -135,7 +161,7 @@ export default async function handler(req, res) {
                     if (eventRegError) {
                         throw new Error("Errore aggiornamento iscrizione evento per rinnovo: " + eventRegError.message);
                     }
-                    console.log(`Rinnovato corso/evento ${eventId} per utente ${utenteId}`);
+                    console.log(`Rinnovato corso/evento ${eventId} per utente ${utenteId} (Inizio: ${dataInizioCorso}, Scadenza: ${dataScadenzaCorso})`);
                 } else {
                     // Iscrizione Corso/Evento: inserisci l'iscrizione
                     const { error: eventRegError } = await supabase
@@ -144,13 +170,15 @@ export default async function handler(req, res) {
                             evento_id: eventId,
                             utente_id: utenteId,
                             stato_pagamento: 'PAGATO',
-                            codice_transazione: stripePaymentId
+                            codice_transazione: stripePaymentId,
+                            data_inizio_corso: dataInizioCorso,
+                            data_scadenza_corso: dataScadenzaCorso
                         });
                     
                     if (eventRegError) {
                         throw new Error("Errore inserimento iscrizione evento: " + eventRegError.message);
                     }
-                    console.log(`Iscritto utente ${utenteId} all'evento ${eventId}`);
+                    console.log(`Iscritto utente ${utenteId} all'evento ${eventId} (Inizio: ${dataInizioCorso}, Scadenza: ${dataScadenzaCorso})`);
                 }
             } else {
                 // Quota Associativa: Salda la quota impostando a 0.00

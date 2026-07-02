@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-02] feature | System Logics Dashboard & Course Expiry Controls (v1.01.13)
+- Implemented "Logiche" tab section in President/VP dashboard rendering Mermaid system diagrams of Member (Socio) vs Cardholder (Tesserato) workflows.
+- Removed redundant "Tessera" status column from instructor courses view.
+- Implemented manual and automated "Scadenza Corso" (Course Expiry) controls in database (`public.iscrizioni_eventi`), frontend checkout flows (supporting calendar start date selector), and Stripe webhook.
+- Added visual hand indicator `✋` for manual overrides of course expiration dates by instructors.
+- Aligned version badges to Vs. 1.01.13 across index.html, dashboard.html, login.html, pagamento.html, and registrazione.html.
+
 ## [2026-07-01] feature | Add csen scraper to nightly workflow (v1.01.12)
 - Added `scripts/scraper_csen.js` execution to the scheduled nightly GitHub Actions workflow `.github/workflows/csen_sync.yml` to automatically refresh the remaining card credits database.
 - Aligned version badges to Vs. 1.01.12 across index.html, dashboard.html, login.html, pagamento.html, and registrazione.html.

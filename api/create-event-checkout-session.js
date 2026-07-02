@@ -54,10 +54,34 @@ export default async function handler(req, res) {
  
     try {
         const utenteId = user.id;
-        const { eventId, nomePiano, renew } = req.body;
+        const { eventId, nomePiano, renew, dataInizioCorso } = req.body;
 
         if (!eventId) {
             return res.status(400).json({ error: 'Identificativo evento mancante.' });
+        }
+
+        // Validate dataInizioCorso against tesseramento date
+        const { data: profileAnag, error: anagErr } = await supabase
+            .from('utenti')
+            .select('anagrafiche(id, registro_tesserati(data_richiesta_tesseramento, stato_tesseramento))')
+            .eq('id', utenteId)
+            .maybeSingle();
+
+        if (anagErr || !profileAnag?.anagrafiche) {
+            return res.status(400).json({ error: 'Profilo anagrafico non trovato.' });
+        }
+
+        const rt = profileAnag.anagrafiche.registro_tesserati;
+        if (!rt || rt.stato_tesseramento !== 'ATTIVO') {
+            return res.status(400).json({ error: 'Devi avere un tesseramento attivo per iscriverti a questo corso.' });
+        }
+
+        if (dataInizioCorso && rt.data_richiesta_tesseramento) {
+            const startD = new Date(dataInizioCorso);
+            const tessD = new Date(rt.data_richiesta_tesseramento);
+            if (startD < tessD) {
+                return res.status(400).json({ error: `La data di inizio corso (${dataInizioCorso}) non può essere antecedente alla data del tesseramento (${rt.data_richiesta_tesseramento}).` });
+            }
         }
  
         // Rate limiting check
@@ -138,7 +162,8 @@ export default async function handler(req, res) {
                 .insert({
                     evento_id: eventId,
                     utente_id: utenteId,
-                    stato_pagamento: 'GRATUITO'
+                    stato_pagamento: 'GRATUITO',
+                    data_inizio_corso: dataInizioCorso || new Date().toISOString().split('T')[0]
                 });
 
             if (insertError) {
@@ -191,7 +216,9 @@ export default async function handler(req, res) {
                 eventId: eventId,
                 importo: totalPrezzo,
                 causale: description,
-                renew: renew ? 'true' : 'false'
+                renew: renew ? 'true' : 'false',
+                nomePiano: nomePiano || '',
+                dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0]
             },
             success_url: `${reqOrigin}/portal/dashboard.html?event_payment=success&event_id=${eventId}`,
             cancel_url: `${reqOrigin}/portal/dashboard.html?event_payment=cancel`,

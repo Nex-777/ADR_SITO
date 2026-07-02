@@ -9,6 +9,7 @@ Welcome to the **Adrenalina Club (ADR_SITO)** LLM Wiki. This is a persistent kno
 ### 🗺️ System Overview
 *   **[Project Overview](project_overview.md)** – High-level goals, training disciplines, and technology stack of Adrenalina Club.
 *   **[Database Schema](database_schema.md)** – Database tables, views (e.g. `vw_registrazioni_incomplete`), RPCs (`elimina_utente_fantasma`), states, and RLS policies on Supabase.
+*   **[System Logics](logiche.md)** – Detailed rules and workflows for Member (Socio) vs Cardholder (Tesserato) interactions.
 
 ### 🎨 Frontend Architecture
 *   **[Frontend Architecture](frontend_architecture.md)** – Landing page structure, styling tokens, GSAP animations, and Lenis smooth scrolling.

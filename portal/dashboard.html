@@ -15,6 +15,12 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="sha384-d+vyQ0dYcymoP8ndq2hW7FGC50nqGdXUEgoOUGxbbkAJwZqL7h+jKN0GGgn9hFDS" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+        });
+    </script>
     <script src="config.js"></script>
     
     <!-- Fonts -->
@@ -467,7 +473,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.12</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.13</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -594,6 +600,10 @@
 
                 <button id="tab-btn-gestione_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
                     <span class="material-symbols-outlined text-sm">fitness_center</span> CORSI & EVENTI
+                </button>
+
+                <button id="tab-btn-logiche" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">schema</span> LOGICHE DI SISTEMA
                 </button>
 
                 <button id="tab-btn-contabilita" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
@@ -1319,6 +1329,67 @@
                 </div>
             </div>
 
+            <!-- TAB: LOGICHE (LOGICHE DI SISTEMA) -->
+            <div id="panel-logiche" class="tab-panel space-y-6 hidden">
+                <div>
+                    <h2 class="font-headline text-lg font-bold uppercase">Logiche di Sistema</h2>
+                    <p class="text-xs text-gray-500 uppercase">La Stella Polare del portale: flussi e regole organizzative del club</p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="border border-white/10 p-6 bg-black/40 space-y-6">
+                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">DIFFERENZA FRA SOCIO E TESSERATO</h3>
+                        <p class="text-[11px] text-gray-400 uppercase leading-relaxed font-mono">
+                            Il diagramma sottostante illustra le regole d'oro per i ruoli di Socio e Tesserato e le loro interazioni all'interno di Adrenalina Club.
+                        </p>
+                        
+                        <!-- Mermaid diagram container -->
+                        <div class="bg-black/60 p-6 border border-white/10 overflow-x-auto flex justify-center">
+                            <div class="mermaid w-full max-w-3xl">
+                                graph TD
+                                    U[Utente / Anagrafica] -->|Adesione Formale al Club| S(Diventa SOCIO)
+                                    U -->|Attività Sportiva / Corsi| T(Diventa TESSERATO)
+                                    
+                                    S -->|Quota Associativa Annuale| RS[Iscrizione Registro Soci<br/>Consiglio Approva a Verbale]
+                                    T -->|Quota Tesseramento CSEN| RT[Iscrizione Registro Tesserati<br/>Generazione Tessera CSEN]
+                                    
+                                    RS -->|Se desidera fare Sport| T
+                                    
+                                    classDef default fill:#111,stroke:#333,stroke-width:1px,color:#fff;
+                                    classDef socio fill:#103b1d,stroke:#28a745,stroke-width:2px,color:#28a745;
+                                    classDef tess fill:#003366,stroke:#007bff,stroke-width:2px,color:#007bff;
+                                    
+                                    class S,RS socio;
+                                    class T,RT tess;
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                            <div class="border border-white/5 p-4 bg-white/5 space-y-2 font-mono text-[11px] uppercase">
+                                <h4 class="font-headline text-xs font-bold text-green-500 tracking-wide">IL SOCIO</h4>
+                                <ul class="list-disc pl-4 space-y-1 text-gray-300">
+                                    <li>Paga la quota associativa annuale (Quota Annuale).</li>
+                                    <li>Viene iscritto nel registro soci dopo l'approvazione del verbale.</li>
+                                    <li>Ha diritto di voto in assemblea.</li>
+                                    <li>Non riceve automaticamente la tessera sportiva CSEN.</li>
+                                    <li>Può partecipare solo a eventi sociali non sportivi.</li>
+                                </ul>
+                            </div>
+                            <div class="border border-white/5 p-4 bg-white/5 space-y-2 font-mono text-[11px] uppercase">
+                                <h4 class="font-headline text-xs font-bold text-blue-500 tracking-wide">IL TESSERATO</h4>
+                                <ul class="list-disc pl-4 space-y-1 text-gray-300">
+                                    <li>Paga la tessera CSEN per essere coperto a livello assicurativo.</li>
+                                    <li>Viene iscritto nel registro tesserati (Active Sync con il portale CSEN).</li>
+                                    <li>Può frequentare i corsi sportivi del club.</li>
+                                    <li>Paga la quota di partecipazione al corso specifico (Mensile/Trimestrale).</li>
+                                    <li>Non è necessariamente un Socio del club.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- TAB 10: USER PROFILE (IL MIO PROFILO) -->
             <div id="panel-user_profilo" class="tab-panel space-y-6 hidden">
                 <div>
@@ -1598,8 +1669,8 @@
                                         <th class="p-4 text-center">Fruizione</th>
                                         <th class="p-4 text-center">Quota Corso</th>
                                         <th class="p-4 text-center">Quota Ann.</th>
-                                        <th class="p-4 text-center">Tessera</th>
                                         <th class="p-4 text-center">CSEN</th>
+                                        <th class="p-4 text-center">Scadenza Corso</th>
                                         <th class="p-4 text-center">Certificato Medico</th>
                                         <th class="p-4 text-center">Presenza</th>
                                     </tr>

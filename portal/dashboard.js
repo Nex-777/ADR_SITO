@@ -356,6 +356,7 @@
                 const isPresidentOrVP = userRoles.some(r => ['presidente', 'vice_presidente'].includes(r));
                 if (isPresidentOrVP) {
                     document.getElementById('tab-btn-gestione_corsi').classList.remove('hidden');
+                    document.getElementById('tab-btn-logiche').classList.remove('hidden');
                 }
 
                 document.getElementById('tab-btn-direttivo').classList.remove('hidden');
@@ -4352,6 +4353,24 @@
             }
         }
 
+        window.modificaScadenzaCorso = async function(iscrizioneId, nuovaData) {
+            try {
+                const { error } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .update({
+                        data_scadenza_corso: nuovaData || null,
+                        scadenza_modificata_a_mano: true
+                    })
+                    .eq('id', iscrizioneId);
+
+                if (error) throw error;
+                await loadRegistroIscritti();
+            } catch (err) {
+                console.error("Errore aggiornamento scadenza:", err);
+                alert("Errore durante l'aggiornamento: " + err.message);
+            }
+        };
+
         async function onPresenceDateChange() {
             await loadRegistroIscritti();
         }
@@ -4419,17 +4438,25 @@
                         ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">PAGATO</span>'
                         : (atl.stato_pagamento === 'GRATUITO' ? '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">GRATUITO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA PAGARE</span>');
 
-                    const badgeQuotaAnn = atl.quota_annuale_ok
-                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">IN REGOLA</span>'
-                        : `<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA COPRIRE (€${atl.quota_totale})</span>`;
-
-                    const badgeTessera = atl.tessera_valida
-                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">ATTIVA</span>'
-                        : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">SCADUTA</span>';
+                    const badgeQuotaAnn = atl.quota_scadenza
+                        ? (atl.quota_annuale_ok
+                            ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">IN REGOLA</span>'
+                            : `<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA COPRIRE (€${atl.quota_totale})</span>`)
+                        : '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">N/D (NON SOCIO)</span>';
 
                     const badgeCsen = atl.stato_tesseramento === 'ATTIVO'
                         ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">ATTIVO</span>'
                         : (atl.stato_tesseramento === 'SOSPESO' ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold">SOSPESO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">SCADUTO</span>');
+
+                    // Scadenza corso editabile per istruttore
+                    const scadenzaVal = atl.data_scadenza_corso || '';
+                    const handIcon = atl.scadenza_modificata_a_mano ? ' ✋' : '';
+                    const scadenzaHtml = `
+                        <div class="flex items-center justify-center gap-1">
+                            <input type="date" value="${scadenzaVal}" onchange="modificaScadenzaCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
+                            <span title="Modificata a mano" class="text-xs font-sans">${handIcon}</span>
+                        </div>
+                    `;
 
                     // Certificato Semaforo
                     let semaforoCert = '';
@@ -4464,8 +4491,8 @@
                         <td class="p-4 text-center">${badgeOrario}</td>
                         <td class="p-4 text-center">${badgeQuotaCorso}</td>
                         <td class="p-4 text-center">${badgeQuotaAnn}</td>
-                        <td class="p-4 text-center">${badgeTessera}</td>
                         <td class="p-4 text-center">${badgeCsen}</td>
+                        <td class="p-4 text-center">${scadenzaHtml}</td>
                         <td class="p-4 text-center font-mono text-[11px]">${semaforoCert}</td>
                         <td class="p-4 text-center">
                             <input type="checkbox" ${checked} onchange="updatePresenceCount()" class="presence-toggle-chk form-checkbox h-4 w-4 bg-black border-white/20 text-primary focus:ring-primary">
@@ -4627,6 +4654,16 @@
                 loadInstructorCorsi();
             } else if (tabId === 'user_corsi' || tabId === 'user_eventi') {
                 loadUserEventi();
+            } else if (tabId === 'logiche') {
+                setTimeout(() => {
+                    if (window.mermaid) {
+                        try {
+                            window.mermaid.init(undefined, ".mermaid");
+                        } catch (e) {
+                            console.error("Mermaid render error:", e);
+                        }
+                    }
+                }, 50);
             }
 
             // Reset stile bottoni navigation
@@ -5366,12 +5403,17 @@
                         const firstPiano = ev.piani_abbonamento[0];
                         prezzo = parseFloat(firstPiano.prezzo) || 0;
 
+                        const todayStr = new Date().toISOString().split('T')[0];
                         selectHtml = `
                             <div class="mt-2 flex flex-col space-y-1">
                                 <label class="text-[8px] text-gray-500 font-mono uppercase tracking-wider">PIANO ABBONAMENTO</label>
                                 <select id="plan-select-${ev.id}" onchange="aggiornaPrezzoCard('${ev.id}')" class="w-full bg-black text-white text-[11px] p-2 border border-white/20 font-mono uppercase focus:outline-none focus:border-primary rounded-none">
                                     ${ev.piani_abbonamento.map(p => `<option value="${p.nome}" data-price="${p.prezzo}">${p.nome} - €${p.prezzo}</option>`).join('')}
                                 </select>
+                            </div>
+                            <div class="mt-2 flex flex-col space-y-1">
+                                <label class="text-[8px] text-gray-500 font-mono uppercase tracking-wider">DATA INIZIO CORSO</label>
+                                <input type="date" id="course-start-${ev.id}" value="${todayStr}" class="w-full bg-black text-white text-[11px] p-2 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
                             </div>
                         `;
                     }
@@ -5433,11 +5475,24 @@
                         containerCorsiIscr.innerHTML = activeCorsiIscr.map(iscr => {
                             const ev = iscr.eventi;
                             if (!ev) return '';
-                            const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                            const currentExpiry = iscr.data_scadenza_corso;
+                            let nextStartStr = '';
+                            if (currentExpiry) {
+                                const d = new Date(currentExpiry);
+                                d.setDate(d.getDate() + 1);
+                                nextStartStr = d.toISOString().split('T')[0];
+                            } else {
+                                nextStartStr = new Date().toISOString().split('T')[0];
+                            }
+
+                            const scadenzaLabel = currentExpiry 
+                                ? new Date(currentExpiry).toLocaleDateString('it-IT')
+                                : 'DA DEFINIRE';
+
                             return `
                                 <div class="border-l-4 border-green-500 bg-white/5 p-4 space-y-2 uppercase font-mono">
                                     <div class="flex justify-between items-center text-[10px]">
-                                        <span class="text-gray-400 font-bold">${dataFormat}</span>
+                                        <span class="text-gray-400 font-bold">Scadenza: ${scadenzaLabel}</span>
                                         <span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>
                                     </div>
                                     <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>
@@ -5446,6 +5501,10 @@
                                         <input type="checkbox" onchange="toggleOrarioLibero('${ev.id}', this.checked)" ${iscr.orario_libero ? 'checked' : ''} class="bg-black border-white/20 text-primary focus:ring-primary">
                                         <span>Orario Libero (svolgo il programma fuori orario)</span>
                                     </label>
+                                    <div class="mt-2 flex flex-col space-y-1">
+                                        <label class="text-[8px] text-gray-500 font-mono uppercase tracking-wider">DATA INIZIO RINNOVO</label>
+                                        <input type="date" id="course-start-renew-${ev.id}" value="${nextStartStr}" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
+                                    </div>
                                     <div class="mt-4 flex gap-2 pt-2 border-t border-white/5">
                                         <button onclick="iscrivitiEvento('${ev.id}', ${parseFloat(ev.prezzo) || 0}, true)" class="flex-1 bg-white text-black text-[9px] font-headline font-bold py-1.5 uppercase hover:bg-green-500 hover:text-white transition-all tracking-wider">RINNOVA</button>
                                         <button onclick="disiscriviCorso('${iscr.id}', '${escapeHtml(ev.titolo).replace(/'/g, "\\'")}')" class="flex-1 bg-primary/10 border border-primary/30 text-primary text-[9px] font-headline font-bold py-1.5 uppercase hover:bg-primary hover:text-white transition-all tracking-wider">CANCELLATI</button>
@@ -5522,6 +5581,10 @@
                     prezzoCorrente = parseFloat(selectedOption.getAttribute('data-price')) || 0;
                 }
 
+                // Get the start date input value (either for renewal or new registration)
+                const dateInput = document.getElementById(renew ? `course-start-renew-${eventoId}` : `course-start-${eventoId}`);
+                const dataInizioCorso = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+
                 if (prezzoCorrente === 0) {
                     if (!confirm("Confermi l'iscrizione a questo corso/evento gratuito?")) return;
                 }
@@ -5532,13 +5595,38 @@
                     return;
                 }
 
+                // If a date input was present, it's a course, so let's validate against tesseramento date
+                if (dateInput) {
+                    // Fetch user's profile and tesseramento details
+                    const { data: profile } = await supabaseClient
+                        .from('utenti')
+                        .select('anagrafiche(id, registro_tesserati(data_richiesta_tesseramento, stato_tesseramento))')
+                        .eq('id', currentUser.id)
+                        .maybeSingle();
+
+                    const rt = profile?.anagrafiche?.registro_tesserati;
+                    if (!rt || rt.stato_tesseramento !== 'ATTIVO') {
+                        alert("Devi avere un tesseramento attivo per iscriverti a questo corso.");
+                        return;
+                    }
+
+                    if (rt.data_richiesta_tesseramento) {
+                        const startD = new Date(dataInizioCorso);
+                        const tessD = new Date(rt.data_richiesta_tesseramento);
+                        if (startD < tessD) {
+                            alert(`La data di inizio corso (${dataInizioCorso}) non può essere antecedente alla data del tesseramento (${rt.data_richiesta_tesseramento}).`);
+                            return;
+                        }
+                    }
+                }
+
                 const res = await fetch(`${APP_CONFIG.API_BASE_URL || ""}/api/create-event-checkout-session`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ eventId: eventoId, nomePiano: nomePiano, renew: renew })
+                    body: JSON.stringify({ eventId: eventoId, nomePiano: nomePiano, renew: renew, dataInizioCorso: dataInizioCorso })
                 });
 
                 const data = await res.json();
