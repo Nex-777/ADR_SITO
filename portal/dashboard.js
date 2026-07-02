@@ -4438,12 +4438,6 @@
                         ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">PAGATO</span>'
                         : (atl.stato_pagamento === 'GRATUITO' ? '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">GRATUITO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA PAGARE</span>');
 
-                    const badgeQuotaAnn = atl.quota_scadenza
-                        ? (atl.quota_annuale_ok
-                            ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">IN REGOLA</span>'
-                            : `<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA COPRIRE (€${atl.quota_totale})</span>`)
-                        : '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">N/D (NON SOCIO)</span>';
-
                     const badgeCsen = atl.stato_tesseramento === 'ATTIVO'
                         ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">ATTIVO</span>'
                         : (atl.stato_tesseramento === 'SOSPESO' ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold">SOSPESO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">SCADUTO</span>');
@@ -4490,7 +4484,6 @@
                         </td>
                         <td class="p-4 text-center">${badgeOrario}</td>
                         <td class="p-4 text-center">${badgeQuotaCorso}</td>
-                        <td class="p-4 text-center">${badgeQuotaAnn}</td>
                         <td class="p-4 text-center">${badgeCsen}</td>
                         <td class="p-4 text-center">${scadenzaHtml}</td>
                         <td class="p-4 text-center font-mono text-[11px]">${semaforoCert}</td>
@@ -5597,25 +5590,29 @@
 
                 // If a date input was present, it's a course, so let's validate against tesseramento date
                 if (dateInput) {
-                    // Fetch user's profile and tesseramento details
-                    const { data: profile } = await supabaseClient
-                        .from('utenti')
-                        .select('anagrafiche(id, registro_tesserati(data_richiesta_tesseramento, stato_tesseramento))')
-                        .eq('id', currentUser.id)
-                        .maybeSingle();
+                    const isBoard = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere'].includes(r));
+                    if (!isBoard) {
+                        // Fetch user's profile and tesseramento details
+                        const { data: profile } = await supabaseClient
+                            .from('utenti')
+                            .select('anagrafiche(id, registro_tesserati(data_richiesta_tesseramento, stato_tesseramento))')
+                            .eq('id', currentUser.id)
+                            .maybeSingle();
 
-                    const rt = profile?.anagrafiche?.registro_tesserati;
-                    if (!rt || rt.stato_tesseramento !== 'ATTIVO') {
-                        alert("Devi avere un tesseramento attivo per iscriverti a questo corso.");
-                        return;
-                    }
-
-                    if (rt.data_richiesta_tesseramento) {
-                        const startD = new Date(dataInizioCorso);
-                        const tessD = new Date(rt.data_richiesta_tesseramento);
-                        if (startD < tessD) {
-                            alert(`La data di inizio corso (${dataInizioCorso}) non può essere antecedente alla data del tesseramento (${rt.data_richiesta_tesseramento}).`);
+                        const anag = Array.isArray(profile?.anagrafiche) ? profile.anagrafiche[0] : profile?.anagrafiche;
+                        const rt = anag?.registro_tesserati;
+                        if (!rt || rt.stato_tesseramento !== 'ATTIVO') {
+                            alert("Devi avere un tesseramento attivo per iscriverti a questo corso.");
                             return;
+                        }
+
+                        if (rt.data_richiesta_tesseramento) {
+                            const startD = new Date(dataInizioCorso);
+                            const tessD = new Date(rt.data_richiesta_tesseramento);
+                            if (startD < tessD) {
+                                alert(`La data di inizio corso (${dataInizioCorso}) non può essere antecedente alla data del tesseramento (${rt.data_richiesta_tesseramento}).`);
+                                return;
+                            }
                         }
                     }
                 }
@@ -6069,6 +6066,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) {
         el.addEventListener('click', function(event) {
             switchTab('bilanci')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-logiche');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('logiche')
         });
     }
 });

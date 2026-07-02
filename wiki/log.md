@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-02] fix | Spostamento Logiche, Rimozione Quota Ann. e Bypass Presidente (v1.01.14)
+- Rimossa la colonna "Quota Ann." dalla tabella e dai cicli di rendering dei corsi sia in dashboard.html che in dashboard.js per semplificare la vista.
+- Risolto il problema del clic inerte sul tab "Logiche di Sistema" aggiungendo l'event listener DOM mancante e spostando il pulsante a fondo barra di navigazione (dopo i bilanci).
+- Risolto il bug di lettura dell'anagrafica (struttura array di Supabase) sul controllo tesserati e introdotto il bypass per i membri del direttivo (Presidente, VP, Segretario, Tesoriere) consentendo loro l'iscrizione a corsi ed eventi anche in assenza di tesseramento attivo.
+- Aligned version badges to Vs. 1.01.14 across index.html, dashboard.html, login.html, pagamento.html, and registrazione.html.
+
 ## [2026-07-02] feature | System Logics Dashboard & Course Expiry Controls (v1.01.13)
 - Implemented "Logiche" tab section in President/VP dashboard rendering Mermaid system diagrams of Member (Socio) vs Cardholder (Tesserato) workflows.
 - Removed redundant "Tessera" status column from instructor courses view.

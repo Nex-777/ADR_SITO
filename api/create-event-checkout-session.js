@@ -63,24 +63,29 @@ export default async function handler(req, res) {
         // Validate dataInizioCorso against tesseramento date
         const { data: profileAnag, error: anagErr } = await supabase
             .from('utenti')
-            .select('anagrafiche(id, registro_tesserati(data_richiesta_tesseramento, stato_tesseramento))')
+            .select('ruolo, anagrafiche(id, registro_tesserati(data_richiesta_tesseramento, stato_tesseramento))')
             .eq('id', utenteId)
             .maybeSingle();
 
-        if (anagErr || !profileAnag?.anagrafiche) {
-            return res.status(400).json({ error: 'Profilo anagrafico non trovato.' });
+        if (anagErr || !profileAnag) {
+            return res.status(400).json({ error: 'Profilo utente non trovato.' });
         }
 
-        const rt = profileAnag.anagrafiche.registro_tesserati;
-        if (!rt || rt.stato_tesseramento !== 'ATTIVO') {
-            return res.status(400).json({ error: 'Devi avere un tesseramento attivo per iscriverti a questo corso.' });
-        }
+        const isBoard = profileAnag.ruolo && profileAnag.ruolo.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere'].includes(r));
 
-        if (dataInizioCorso && rt.data_richiesta_tesseramento) {
-            const startD = new Date(dataInizioCorso);
-            const tessD = new Date(rt.data_richiesta_tesseramento);
-            if (startD < tessD) {
-                return res.status(400).json({ error: `La data di inizio corso (${dataInizioCorso}) non può essere antecedente alla data del tesseramento (${rt.data_richiesta_tesseramento}).` });
+        if (!isBoard) {
+            const anag = Array.isArray(profileAnag.anagrafiche) ? profileAnag.anagrafiche[0] : profileAnag.anagrafiche;
+            const rt = anag?.registro_tesserati;
+            if (!rt || rt.stato_tesseramento !== 'ATTIVO') {
+                return res.status(400).json({ error: 'Devi avere un tesseramento attivo per iscriverti a questo corso.' });
+            }
+
+            if (dataInizioCorso && rt.data_richiesta_tesseramento) {
+                const startD = new Date(dataInizioCorso);
+                const tessD = new Date(rt.data_richiesta_tesseramento);
+                if (startD < tessD) {
+                    return res.status(400).json({ error: `La data di inizio corso (${dataInizioCorso}) non può essere antecedente alla data del tesseramento (${rt.data_richiesta_tesseramento}).` });
+                }
             }
         }
  
