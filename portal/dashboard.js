@@ -4375,6 +4375,45 @@
             await loadRegistroIscritti();
         }
 
+        function generateProgressBarHtml(dateStr) {
+            if (!dateStr) {
+                let stepsHtml = '';
+                for (let i = 1; i <= 12; i++) {
+                    stepsHtml += `<div class="h-1 flex-grow bg-white/10" style="min-width: 4px;"></div>`;
+                }
+                return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto">${stepsHtml}</div>`;
+            }
+
+            const expiry = new Date(dateStr);
+            const today = new Date();
+            expiry.setHours(0,0,0,0);
+            today.setHours(0,0,0,0);
+
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            let monthsRemaining = 0;
+            if (diffDays > 0) {
+                monthsRemaining = Math.min(12, Math.ceil(diffDays / 30));
+            }
+
+            let stepsHtml = '';
+            for (let i = 1; i <= 12; i++) {
+                let colorClass = 'bg-white/10';
+                if (i <= monthsRemaining) {
+                    if (i === 1) {
+                        colorClass = 'bg-red-500';
+                    } else if (i === 2) {
+                        colorClass = 'bg-yellow-500';
+                    } else {
+                        colorClass = 'bg-green-500';
+                    }
+                }
+                stepsHtml += `<div class="h-1 flex-grow ${colorClass}" style="min-width: 4px;"></div>`;
+            }
+            return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto" title="${monthsRemaining} mesi rimanenti">${stepsHtml}</div>`;
+        }
+
         async function loadRegistroIscritti() {
             if (!instructorSelectedCourseId) return;
 
@@ -4445,10 +4484,14 @@
                     // Scadenza corso editabile per istruttore
                     const scadenzaVal = atl.data_scadenza_corso || '';
                     const handIcon = atl.scadenza_modificata_a_mano ? ' ✋' : '';
+                    const courseBarHtml = generateProgressBarHtml(scadenzaVal);
                     const scadenzaHtml = `
-                        <div class="flex items-center justify-center gap-1">
-                            <input type="date" value="${scadenzaVal}" onchange="modificaScadenzaCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
-                            <span title="Modificata a mano" class="text-xs font-sans">${handIcon}</span>
+                        <div class="flex flex-col items-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <input type="date" value="${scadenzaVal}" onchange="modificaScadenzaCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
+                                <span title="Modificata a mano" class="text-xs font-sans">${handIcon}</span>
+                            </div>
+                            ${courseBarHtml}
                         </div>
                     `;
 
@@ -4464,12 +4507,29 @@
                         }
                     }
                     
+                    const certBarHtml = generateProgressBarHtml(atl.cert_scadenza);
+
                     if (atl.cert_stato === 'VERDE' && atl.cert_valido) {
-                        semaforoCert = `<span class="text-green-500 font-bold" title="VALIDO">🟢 ${testoScadenza}</span>`;
+                        semaforoCert = `
+                            <div class="flex flex-col items-center">
+                                <span class="text-green-500 font-bold" title="VALIDO">🟢 ${testoScadenza}</span>
+                                ${certBarHtml}
+                            </div>
+                        `;
                     } else if (atl.cert_stato === 'GIALLO' || atl.cert_stato === 'IN_ATTESA') {
-                        semaforoCert = `<span class="text-yellow-500 font-bold" title="IN VALIDAZIONE / SOSPESO">🟡 ${testoScadenza}</span>`;
+                        semaforoCert = `
+                            <div class="flex flex-col items-center">
+                                <span class="text-yellow-500 font-bold" title="IN VALIDAZIONE / SOSPESO">🟡 ${testoScadenza}</span>
+                                ${certBarHtml}
+                            </div>
+                        `;
                     } else {
-                        semaforoCert = `<span class="text-red-500 font-bold" title="SCADUTO O MANCANTE">🔴 ${testoScadenza}</span>`;
+                        semaforoCert = `
+                            <div class="flex flex-col items-center">
+                                <span class="text-red-500 font-bold" title="SCADUTO O MANCANTE">🔴 ${testoScadenza}</span>
+                                ${certBarHtml}
+                            </div>
+                        `;
                     }
 
                     const checked = isPresente ? 'checked' : '';
@@ -7161,6 +7221,7 @@ async function apriDossierSocio(utente_id) {
         alert("Errore nell'apertura del dossier: " + err.message);
     }
 }
+
 
 
 

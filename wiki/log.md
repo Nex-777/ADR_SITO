@@ -693,3 +693,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-06-28] style | Fix Version Badge Legibility & Cache-Control (v1.00.75)
 - Fixed a regex replacement error that skipped HTML files in the previous version bump.
 - Bumped application version to 1.00.75 across all HTML and JS files.
+
+## [2026-07-02] feat | Expiration Progress Bars for Instructor Dashboard (v1.01.15)
+- Implemented a 12-segment progress bar representing months remaining for course and medical certificate expirations in the instructor attendance register.
+- Bumped application version to 1.01.15 across all files.
