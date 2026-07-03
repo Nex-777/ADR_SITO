@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from './resend-mail.js';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
 
@@ -380,33 +380,32 @@ export default async function handler(req, res) {
 
                 const defaults = {
                     informativa: {
-                        nome_cognome: { x: 100, y: 715, font_size: 10, pagina: 3 },
-                        codice_fiscale: { x: 100, y: 705, font_size: 10, pagina: 3 },
-                        nascita: { x: 250, y: 705, font_size: 10, pagina: 3 },
-                        firma: { x: 130, y: 246, font_size: 7, pagina: 0 }
+                        nome_cognome:       { x: 100, y: 715, font_size: 10, pagina: 3 },
+                        codice_fiscale:     { x: 100, y: 705, font_size: 10, pagina: 3 },
+                        firma:              { x: 130, y: 246, font_size: 7,  pagina: 0 },
+                        crocetta_acconsento:{ x: 177, y: 390, font_size: 10, pagina: 3 }
                     },
                     iscrizione: {
-                        cognome: { x: 100, y: 735, font_size: 10 },
-                        nome: { x: 320, y: 735, font_size: 10 },
-                        nato_a: { x: 100, y: 710, font_size: 10 },
-                        prov_nascita: { x: 345, y: 710, font_size: 10 },
-                        data_nascita: { x: 415, y: 710, font_size: 10 },
-                        residente_via: { x: 100, y: 685, font_size: 10 },
-                        civico: { x: 450, y: 685, font_size: 10 },
-                        comune: { x: 100, y: 660, font_size: 10 },
-                        provincia: { x: 450, y: 660, font_size: 10 },
-                        cap: { x: 100, y: 635, font_size: 10 },
-                        telefono: { x: 100, y: 610, font_size: 10 },
-                        cellulare: { x: 320, y: 610, font_size: 10 },
-                        email: { x: 100, y: 585, font_size: 10 },
-                        firma_1: { x: 370, y: 130, font_size: 7 },
-                        firma_2: { x: 370, y: 195, font_size: 7 }
+                        cognome:                    { x: 100, y: 735, font_size: 10, pagina: 0 },
+                        nome:                       { x: 320, y: 735, font_size: 10, pagina: 0 },
+                        nato_a:                     { x: 100, y: 710, font_size: 10, pagina: 0 },
+                        prov_nascita:               { x: 345, y: 710, font_size: 10, pagina: 0 },
+                        data_nascita:               { x: 415, y: 710, font_size: 10, pagina: 0 },
+                        residente_via:              { x: 100, y: 685, font_size: 10, pagina: 0 },
+                        civico:                     { x: 450, y: 685, font_size: 10, pagina: 0 },
+                        comune:                     { x: 100, y: 660, font_size: 10, pagina: 0 },
+                        provincia:                  { x: 450, y: 660, font_size: 10, pagina: 0 },
+                        cap:                        { x: 100, y: 635, font_size: 10, pagina: 0 },
+                        telefono:                   { x: 100, y: 610, font_size: 10, pagina: 0 },
+                        cellulare:                  { x: 320, y: 610, font_size: 10, pagina: 0 },
+                        email:                      { x: 100, y: 585, font_size: 10, pagina: 0 },
+                        firma_1:                    { x: 370, y: 130, font_size: 7,  pagina: 0 },
+                        firma_2:                    { x: 370, y: 195, font_size: 7,  pagina: 1 },
+                        crocetta_iscritto_dichiara: { x: 62,  y: 430, font_size: 12, pagina: 0 }
                     }
                 };
 
-                const getCoord = (modulo, campo) => {
-                    return coords[modulo]?.[campo] || defaults[modulo]?.[campo];
-                };
+                const getVal = (m, c) => coords[m]?.[c] || defaults[m]?.[c];
 
                 const pdfInformativaBytes = fs.readFileSync(csenPath1);
                 const pdfIscrizioneBytes = fs.readFileSync(csenPath2);
@@ -415,53 +414,64 @@ export default async function handler(req, res) {
                 const doc2 = await PDFDocument.load(pdfIscrizioneBytes);
                 
                 const pages1 = doc1.getPages();
-                const page1 = pages1[0];
-
                 const pages2 = doc2.getPages();
-                const page2 = pages2[0];
-                const page2b = pages2[1];
 
                 const signTimestamp = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
                 const signatureText = `Firmato Digitalmente (OTP: ${otp} | IP: ${clientIp} | Data: ${signTimestamp})`;
-                const signatureColor = rgb(0.8, 0, 0); // Red signature stamp
+                const signatureColor = rgb(0.8, 0, 0); 
 
-                // Fill INFORMATIVA (doc1)
-                const cInfNome = getCoord('informativa', 'nome_cognome');
-                const cInfCF = getCoord('informativa', 'codice_fiscale');
-                const cInfNascita = getCoord('informativa', 'nascita');
-                const cInfFirma = getCoord('informativa', 'firma');
+                // ── FILL INFORMATIVA (doc1) ─────────────────────────────────
+                const infNome = getVal('informativa', 'nome_cognome');
+                const infCF   = getVal('informativa', 'codice_fiscale');
+                const infFirma= getVal('informativa', 'firma');
+                const infCons = getVal('informativa', 'crocetta_acconsento');
 
-                // Personal details go to the configured page (defaults to index 3, i.e. 4th page)
-                const targetPageNome = pages1[cInfNome.pagina] || pages1[3] || pages1[pages1.length - 1];
-                targetPageNome.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: cInfNome.x, y: cInfNome.y, size: cInfNome.font_size });
+                // Dati anagrafici sulla pagina configurata (default: pagina 4, indice 3)
+                const pgNome = pages1[infNome.pagina] ?? pages1[pages1.length - 1];
+                pgNome.drawText(
+                    `${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`,
+                    { x: infNome.x, y: infNome.y, size: infNome.font_size }
+                );
 
-                const targetPageCF = pages1[cInfCF.pagina] || pages1[3] || pages1[pages1.length - 1];
-                targetPageCF.drawText(cf, { x: cInfCF.x, y: cInfCF.y, size: cInfCF.font_size });
+                const pgCF = pages1[infCF.pagina] ?? pages1[pages1.length - 1];
+                pgCF.drawText(cf, { x: infCF.x, y: infCF.y, size: infCF.font_size });
 
-                const targetPageNascita = pages1[cInfNascita.pagina] || pages1[3] || pages1[pages1.length - 1];
-                targetPageNascita.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: cInfNascita.x, y: cInfNascita.y, size: cInfNascita.font_size });
+                // X nella casella "Acconsento" (consenso marketing)
+                const pgCons = pages1[infCons.pagina] ?? pages1[pages1.length - 1];
+                pgCons.drawText('X', { x: infCons.x, y: infCons.y, size: infCons.font_size, color: rgb(0,0,0) });
 
-                // Draw digital signature on EVERY single page of the document
+                // Font corsivo per il nome nella sezione firma
+                const italicFont1 = await doc1.embedFont(StandardFonts.HelveticaOblique);
+
+                // Timbro digitale su tutte le pagine + nome corsivo sotto la firma
                 pages1.forEach(p => {
-                    p.drawText(signatureText, { x: cInfFirma.x, y: cInfFirma.y, size: cInfFirma.font_size, color: signatureColor });
+                    p.drawText(signatureText, { x: infFirma.x, y: infFirma.y, size: infFirma.font_size, color: signatureColor });
+                    p.drawText(
+                        `${profile.nome} ${profile.cognome}`,
+                        { x: infFirma.x, y: infFirma.y - 14, size: infFirma.font_size + 2, font: italicFont1, color: signatureColor }
+                    );
                 });
 
-                // Fill ISCRIZIONE (doc2)
-                const cIscrCognome = getCoord('iscrizione', 'cognome');
-                const cIscrNome = getCoord('iscrizione', 'nome');
-                const cIscrNatoA = getCoord('iscrizione', 'nato_a');
-                const cIscrProvNasc = getCoord('iscrizione', 'prov_nascita');
-                const cIscrDataNasc = getCoord('iscrizione', 'data_nascita');
-                const cIscrVia = getCoord('iscrizione', 'residente_via');
-                const cIscrCivico = getCoord('iscrizione', 'civico');
-                const cIscrComune = getCoord('iscrizione', 'comune');
-                const cIscrProv = getCoord('iscrizione', 'provincia');
-                const cIscrCap = getCoord('iscrizione', 'cap');
-                const cIscrTel = getCoord('iscrizione', 'telefono');
-                const cIscrCell = getCoord('iscrizione', 'cellulare');
-                const cIscrEmail = getCoord('iscrizione', 'email');
-                const cIscrFirma1 = getCoord('iscrizione', 'firma_1');
-                const cIscrFirma2 = getCoord('iscrizione', 'firma_2');
+                // ── FILL ISCRIZIONE (doc2) ─────────────────────────────────
+                const cIscrCognome = getVal('iscrizione', 'cognome');
+                const cIscrNome    = getVal('iscrizione', 'nome');
+                const cIscrNatoA   = getVal('iscrizione', 'nato_a');
+                const cIscrProvNasc= getVal('iscrizione', 'prov_nascita');
+                const cIscrDataNasc= getVal('iscrizione', 'data_nascita');
+                const cIscrVia     = getVal('iscrizione', 'residente_via');
+                const cIscrCivico  = getVal('iscrizione', 'civico');
+                const cIscrComune  = getVal('iscrizione', 'comune');
+                const cIscrProv    = getVal('iscrizione', 'provincia');
+                const cIscrCap     = getVal('iscrizione', 'cap');
+                const cIscrTel     = getVal('iscrizione', 'telefono');
+                const cIscrCell    = getVal('iscrizione', 'cellulare');
+                const cIscrEmail   = getVal('iscrizione', 'email');
+                const cIscrFirma1  = getVal('iscrizione', 'firma_1');
+                const cIscrFirma2  = getVal('iscrizione', 'firma_2');
+                const cIscrDich    = getVal('iscrizione', 'crocetta_iscritto_dichiara');
+
+                const page2  = pages2[0];
+                const page2b = pages2[1];
 
                 let dataNascitaFormatted = profile.data_nascita || '';
                 if (profile.data_nascita && profile.data_nascita.includes('-')) {
@@ -470,20 +480,25 @@ export default async function handler(req, res) {
                 }
 
                 page2.drawText(profile.cognome.toUpperCase(), { x: cIscrCognome.x, y: cIscrCognome.y, size: cIscrCognome.font_size });
-                page2.drawText(profile.nome.toUpperCase(), { x: cIscrNome.x, y: cIscrNome.y, size: cIscrNome.font_size });
-                page2.drawText(profile.luogo_nascita_comune.toUpperCase(), { x: cIscrNatoA.x, y: cIscrNatoA.y, size: cIscrNatoA.font_size });
-                page2.drawText(profile.luogo_nascita_provincia.toUpperCase(), { x: cIscrProvNasc.x, y: cIscrProvNasc.y, size: cIscrProvNasc.font_size });
+                page2.drawText(profile.nome.toUpperCase(),    { x: cIscrNome.x,    y: cIscrNome.y,    size: cIscrNome.font_size });
+                page2.drawText(profile.luogo_nascita_comune.toUpperCase(),    { x: cIscrNatoA.x,    y: cIscrNatoA.y,    size: cIscrNatoA.font_size });
+                page2.drawText(profile.luogo_nascita_provincia.toUpperCase(), { x: cIscrProvNasc.x,  y: cIscrProvNasc.y,  size: cIscrProvNasc.font_size });
                 page2.drawText(dataNascitaFormatted, { x: cIscrDataNasc.x, y: cIscrDataNasc.y, size: cIscrDataNasc.font_size });
-                page2.drawText(streetName.toUpperCase(), { x: cIscrVia.x, y: cIscrVia.y, size: cIscrVia.font_size });
-                page2.drawText(streetNumber.toUpperCase(), { x: cIscrCivico.x, y: cIscrCivico.y, size: cIscrCivico.font_size });
-                page2.drawText(profile.comune.toUpperCase(), { x: cIscrComune.x, y: cIscrComune.y, size: cIscrComune.font_size });
-                page2.drawText(profile.provincia.toUpperCase(), { x: cIscrProv.x, y: cIscrProv.y, size: cIscrProv.font_size });
-                page2.drawText(profile.cap, { x: cIscrCap.x, y: cIscrCap.y, size: cIscrCap.font_size });
-                page2.drawText(profile.telefono || '', { x: cIscrTel.x, y: cIscrTel.y, size: cIscrTel.font_size });
-                page2.drawText(profile.cellulare || '', { x: cIscrCell.x, y: cIscrCell.y, size: cIscrCell.font_size });
-                page2.drawText(profile.email || '', { x: cIscrEmail.x, y: cIscrEmail.y, size: cIscrEmail.font_size });
-                
-                // Signatures
+                page2.drawText(streetName.toUpperCase(), { x: cIscrVia.x,    y: cIscrVia.y,    size: cIscrVia.font_size });
+                page2.drawText(streetNumber.toUpperCase(),{ x: cIscrCivico.x, y: cIscrCivico.y, size: cIscrCivico.font_size });
+                page2.drawText(profile.comune.toUpperCase(),    { x: cIscrComune.x,  y: cIscrComune.y,  size: cIscrComune.font_size });
+                page2.drawText(profile.provincia.toUpperCase(), { x: cIscrProv.x,    y: cIscrProv.y,    size: cIscrProv.font_size });
+                page2.drawText(profile.cap,                     { x: cIscrCap.x,     y: cIscrCap.y,     size: cIscrCap.font_size });
+                page2.drawText(profile.telefono  || '', { x: cIscrTel.x,   y: cIscrTel.y,   size: cIscrTel.font_size });
+                page2.drawText(profile.cellulare || '', { x: cIscrCell.x,  y: cIscrCell.y,  size: cIscrCell.font_size });
+                page2.drawText(profile.email     || '', { x: cIscrEmail.x, y: cIscrEmail.y, size: cIscrEmail.font_size });
+
+                // X nella casella "L'iscritto dichiara"
+                if (cIscrDich) {
+                    page2.drawText('X', { x: cIscrDich.x, y: cIscrDich.y, size: cIscrDich.font_size, color: rgb(0,0,0) });
+                }
+
+                // Firme digitali
                 page2.drawText(signatureText, { x: cIscrFirma1.x, y: cIscrFirma1.y, size: cIscrFirma1.font_size, color: signatureColor });
                 if (page2b) {
                     page2b.drawText(signatureText, { x: cIscrFirma2.x, y: cIscrFirma2.y, size: cIscrFirma2.font_size, color: signatureColor });

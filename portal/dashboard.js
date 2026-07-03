@@ -7678,27 +7678,28 @@ let cachedPdfs = {};
 
 const tunerDefaults = {
     informativa: {
-        nome_cognome: { x: 100, y: 715, font_size: 10, pagina: 3 },
-        codice_fiscale: { x: 100, y: 705, font_size: 10, pagina: 3 },
-        nascita: { x: 250, y: 705, font_size: 10, pagina: 3 },
-        firma: { x: 130, y: 246, font_size: 7, pagina: 0 }
+        nome_cognome:        { x: 100, y: 715, font_size: 10, pagina: 3 },
+        codice_fiscale:      { x: 100, y: 705, font_size: 10, pagina: 3 },
+        firma:               { x: 130, y: 246, font_size: 7,  pagina: 0 },
+        crocetta_acconsento: { x: 177, y: 390, font_size: 10, pagina: 3 }
     },
     iscrizione: {
-        cognome: { x: 100, y: 735, font_size: 10, pagina: 0 },
-        nome: { x: 320, y: 735, font_size: 10, pagina: 0 },
-        nato_a: { x: 100, y: 710, font_size: 10, pagina: 0 },
-        prov_nascita: { x: 345, y: 710, font_size: 10, pagina: 0 },
-        data_nascita: { x: 415, y: 710, font_size: 10, pagina: 0 },
-        residente_via: { x: 100, y: 685, font_size: 10, pagina: 0 },
-        civico: { x: 450, y: 685, font_size: 10, pagina: 0 },
-        comune: { x: 100, y: 660, font_size: 10, pagina: 0 },
-        provincia: { x: 450, y: 660, font_size: 10, pagina: 0 },
-        cap: { x: 100, y: 635, font_size: 10, pagina: 0 },
-        telefono: { x: 100, y: 610, font_size: 10, pagina: 0 },
-        cellulare: { x: 320, y: 610, font_size: 10, pagina: 0 },
-        email: { x: 100, y: 585, font_size: 10, pagina: 0 },
-        firma_1: { x: 370, y: 130, font_size: 7, pagina: 0 },
-        firma_2: { x: 370, y: 195, font_size: 7, pagina: 1 }
+        cognome:                    { x: 100, y: 735, font_size: 10, pagina: 0 },
+        nome:                       { x: 320, y: 735, font_size: 10, pagina: 0 },
+        nato_a:                     { x: 100, y: 710, font_size: 10, pagina: 0 },
+        prov_nascita:               { x: 345, y: 710, font_size: 10, pagina: 0 },
+        data_nascita:               { x: 415, y: 710, font_size: 10, pagina: 0 },
+        residente_via:              { x: 100, y: 685, font_size: 10, pagina: 0 },
+        civico:                     { x: 450, y: 685, font_size: 10, pagina: 0 },
+        comune:                     { x: 100, y: 660, font_size: 10, pagina: 0 },
+        provincia:                  { x: 450, y: 660, font_size: 10, pagina: 0 },
+        cap:                        { x: 100, y: 635, font_size: 10, pagina: 0 },
+        telefono:                   { x: 100, y: 610, font_size: 10, pagina: 0 },
+        cellulare:                  { x: 320, y: 610, font_size: 10, pagina: 0 },
+        email:                      { x: 100, y: 585, font_size: 10, pagina: 0 },
+        firma_1:                    { x: 370, y: 130, font_size: 7,  pagina: 0 },
+        firma_2:                    { x: 370, y: 195, font_size: 7,  pagina: 1 },
+        crocetta_iscritto_dichiara: { x: 62,  y: 430, font_size: 12, pagina: 0 }
     }
 };
 
@@ -7753,25 +7754,26 @@ window.cambiaModuloTuner = function() {
     
     // Mappa le chiavi dei campi a testi amichevoli per l'utente
     const labelsMap = {
-        nome_cognome: "NOME COMPLETO",
-        codice_fiscale: "CODICE FISCALE",
-        nascita: "DATI NASCITA",
-        firma: "FIRMA DIGITALE",
-        cognome: "COGNOME",
-        nome: "NOME",
-        nato_a: "NATO A (COMUNE)",
-        prov_nascita: "PROVINCIA NASCITA",
-        data_nascita: "DATA NASCITA (GG/MM/AAAA)",
-        residente_via: "VIA/PIAZZA RESIDENZA",
-        civico: "NUMERO CIVICO",
-        comune: "COMUNE RESIDENZA",
-        provincia: "PROVINCIA RESIDENZA",
-        cap: "C.A.P. RESIDENZA",
-        telefono: "TELEFONO ABITAZIONE",
-        cellulare: "CELLULARE",
-        email: "E-MAIL",
-        firma_1: "FIRMA PAGINA 1",
-        firma_2: "FIRMA PAGINA 2"
+        nome_cognome:               "NOME COMPLETO",
+        codice_fiscale:             "CODICE FISCALE",
+        firma:                      "FIRMA DIGITALE",
+        crocetta_acconsento:        "X CASELLA ACCONSENTO",
+        cognome:                    "COGNOME",
+        nome:                       "NOME",
+        nato_a:                     "NATO A (COMUNE)",
+        prov_nascita:               "PROVINCIA NASCITA",
+        data_nascita:               "DATA NASCITA (GG/MM/AAAA)",
+        residente_via:              "VIA/PIAZZA RESIDENZA",
+        civico:          "NUMERO CIVICO",
+        comune:          "COMUNE RESIDENZA",
+        provincia:       "PROVINCIA RESIDENZA",
+        cap:             "C.A.P. RESIDENZA",
+        telefono:        "TELEFONO ABITAZIONE",
+        cellulare:       "CELLULARE",
+        email:           "E-MAIL",
+        firma_1:         "FIRMA PAGINA 1",
+        firma_2:         "FIRMA PAGINA 2",
+        crocetta_iscritto_dichiara: "X CASELLA L'ISCRITTO DICHIARA"
     };
 
     Object.keys(defaultFields).forEach(fieldKey => {
@@ -7891,24 +7893,30 @@ window.aggiornaAnteprimaPdf = async function() {
         };
 
         if (modulo === 'informativa') {
-            const n = getVal('nome_cognome');
-            const c = getVal('codice_fiscale');
-            const nas = getVal('nascita');
-            const f = getVal('firma');
+            const infNome = getVal('nome_cognome');
+            const infCF   = getVal('codice_fiscale');
+            const infFirma= getVal('firma');
+            const infCons = getVal('crocetta_acconsento');
 
-            // Write personal info to the configured page (defaults to index 3, 4th page)
-            const targetPageNome = pages[n.pagina] || pages[3] || pages[pages.length - 1];
-            targetPageNome.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: n.x, y: n.y, size: n.font_size });
+            // Dati anagrafici sulla pagina configurata (default: pagina 4, indice 3)
+            const pgNome = pages[infNome.pagina] ?? pages[pages.length - 1];
+            pgNome.drawText(
+                `${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`,
+                { x: infNome.x, y: infNome.y, size: infNome.font_size }
+            );
 
-            const targetPageCF = pages[c.pagina] || pages[3] || pages[pages.length - 1];
-            targetPageCF.drawText(cf, { x: c.x, y: c.y, size: c.font_size });
+            const pgCF = pages[infCF.pagina] ?? pages[pages.length - 1];
+            pgCF.drawText(cf, { x: infCF.x, y: infCF.y, size: infCF.font_size });
 
-            const targetPageNascita = pages[nas.pagina] || pages[3] || pages[pages.length - 1];
-            targetPageNascita.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: nas.x, y: nas.y, size: nas.font_size });
+            // X nella casella "Acconsento"
+            if (infCons) {
+                const pgCons = pages[infCons.pagina] ?? pages[pages.length - 1];
+                pgCons.drawText('X', { x: infCons.x, y: infCons.y, size: infCons.font_size, color: PDFLib.rgb(0,0,0) });
+            }
 
-            // Replicate signature digital stamp on EVERY single page of the document
+            // Timbro digitale su tutte le pagine
             pages.forEach(p => {
-                p.drawText(signatureText, { x: f.x, y: f.y, size: f.font_size, color: signatureColor });
+                p.drawText(signatureText, { x: infFirma.x, y: infFirma.y, size: infFirma.font_size, color: signatureColor });
             });
         } else {
             const p1 = pages[0];
@@ -7947,6 +7955,12 @@ window.aggiornaAnteprimaPdf = async function() {
                 
                 page.drawText(values[f], opt);
             });
+
+            // X nella casella "L'iscritto dichiara"
+            const dich = getVal('crocetta_iscritto_dichiara');
+            if (dich && p1) {
+                p1.drawText('X', { x: dich.x, y: dich.y, size: dich.font_size, color: PDFLib.rgb(0,0,0) });
+            }
         }
 
         const pdfBytes = await doc.save();
