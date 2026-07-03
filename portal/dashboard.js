@@ -7901,7 +7901,7 @@ window.aggiornaAnteprimaPdf = async function() {
 
         const pdfBytes = await doc.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob) + '#toolbar=0&navpanes=0&scrollbar=1&view=FitH';
         document.getElementById('pdf-tuner-preview-frame').src = url;
     } catch (err) {
         console.error("Errore aggiornamento anteprima PDF:", err);

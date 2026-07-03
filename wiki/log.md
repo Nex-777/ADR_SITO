@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] fix | Enlarge PDF tuner iframe and disable native toolbar margins (v1.01.27)
+- Increased PDF tuner preview iframe height from 580px to 850px in `portal/dashboard.html` for better visibility.
+- Appended PDF viewer options hash (`#toolbar=0&navpanes=0&scrollbar=1&view=FitH`) to the Blob URL in `portal/dashboard.js` to strip native margins and maximize page width rendering.
+- Bumped application version to Vs. 1.01.27.
+
 ## [2026-07-03] fix | Adjust CSP for Blob PDF rendering and add iframe debugging (v1.01.26)
 - Modified `vercel.json` Content-Security-Policy header to allow `blob:` and `data:` schemes in `frame-src` directive, allowing the PDF Blob preview in the dashboard iframe.
 - Added structured try/catch logic to both `getPdfBuffer` and `aggiornaAnteprimaPdf` in `portal/dashboard.js`, printing clear error alerts inside the iframe if resource fetching or compilation fails.
