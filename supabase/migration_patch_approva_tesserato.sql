@@ -9,14 +9,16 @@ DECLARE
     v_livello VARCHAR;
     v_caller_roles public.ruolo_utente[];
 BEGIN
-    -- Check permissions
-    SELECT ruolo INTO v_caller_roles FROM public.utenti WHERE id = auth.uid();
-    IF v_caller_roles IS NULL OR NOT (
-        'presidente' = ANY(v_caller_roles) OR 
-        'vice_presidente' = ANY(v_caller_roles) OR 
-        'segretario' = ANY(v_caller_roles)
-    ) THEN
-        RAISE EXCEPTION 'Non autorizzato ad approvare tesseramenti';
+    -- Check permissions (only check if auth.uid() is not null, indicating a client call. Webhooks/service role will have auth.uid() = null)
+    IF auth.uid() IS NOT NULL THEN
+        SELECT ruolo INTO v_caller_roles FROM public.utenti WHERE id = auth.uid();
+        IF v_caller_roles IS NULL OR NOT (
+            'presidente' = ANY(v_caller_roles) OR 
+            'vice_presidente' = ANY(v_caller_roles) OR 
+            'segretario' = ANY(v_caller_roles)
+        ) THEN
+            RAISE EXCEPTION 'Non autorizzato ad approvare tesseramenti';
+        END IF;
     END IF;
 
     -- Check if certificate exists and is VERDE
@@ -31,7 +33,9 @@ BEGIN
     -- Fetch request details from approvazioni
     SELECT livello_copertura INTO v_livello
     FROM public.registro_approvazioni
-    WHERE anagrafica_id = p_anagrafica_id AND (tipo = 'TESSERATO' OR tipo = 'SOCIO_TESSERATO') AND stato = 'IN_ATTESA'
+    WHERE anagrafica_id = p_anagrafica_id 
+      AND (tipo = 'TESSERATO' OR tipo = 'SOCIO_TESSERATO') 
+      AND (stato = 'IN_ATTESA' OR stato = 'IN_ATTESA_PAGAMENTO')
     LIMIT 1;
 
     -- Default if not found (direct activation fallback)
@@ -63,7 +67,9 @@ BEGIN
     SET stato = 'APPROVATO',
         data_decisione = CURRENT_DATE,
         deciso_da = p_deciso_da
-    WHERE anagrafica_id = p_anagrafica_id AND (tipo = 'TESSERATO' OR tipo = 'SOCIO_TESSERATO') AND stato = 'IN_ATTESA';
+    WHERE anagrafica_id = p_anagrafica_id 
+      AND (tipo = 'TESSERATO' OR tipo = 'SOCIO_TESSERATO') 
+      AND (stato = 'IN_ATTESA' OR stato = 'IN_ATTESA_PAGAMENTO');
 
     RETURN TRUE;
 END;

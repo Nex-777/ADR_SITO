@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] fix | Fix Stored Procedure Overwrite and Activate Loris Benedetti (v1.01.24)
+- Corretto il file `supabase/migration_patch_approva_tesserato.sql` per integrare stabilmente la logica di bypass dei controlli di sicurezza `auth.uid()` (necessaria per consentire le chiamate dal server tramite Stripe Webhook) e il corretto allineamento per lo stato `IN_ATTESA_PAGAMENTO`.
+- Applicato l'aggiornamento SQL direttamente al database Supabase ed eseguito manualmente l'attivazione (`approva_tesserato`) per Loris Benedetti, inserendolo regolarmente nel Libro Tesserati come attivo.
+- Incrementata la versione globale dell'applicazione a Vs. 1.01.24.
+
+
 ## [2026-07-03] feature | Custom Causale for Tesseramenti (v1.01.23)
 - Changed payment description/causale for users under tesseramento/tesserato_esterno from "Quota associativa annuale - tesserato" to "Quota tesseramento annuale - [ livello_copertura ]" (e.g. "Quota tesseramento annuale - INTEGRATIVA B").
 - Applied custom causale dynamically in both api/create-checkout-session.js and portal/dashboard.js.
