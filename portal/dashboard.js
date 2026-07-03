@@ -339,6 +339,8 @@
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
                 document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
                 document.getElementById('tab-btn-bilanci').classList.remove('hidden');
+                document.getElementById('tab-btn-tesserati').classList.remove('hidden');
+                document.getElementById('tab-btn-registro_istruttori').classList.remove('hidden');
 
                 switchTab('user_profilo');
             } else if (currentViewContext === 'instructor') {
@@ -393,11 +395,11 @@
                 document.getElementById('tab-btn-registro_volontari').classList.remove('hidden');
                 document.getElementById('tab-btn-quote').classList.remove('hidden');
                 document.getElementById('tab-btn-contabilita').classList.remove('hidden');
+                document.getElementById('tab-btn-logiche').classList.remove('hidden');
                 
                 const isPresidentOrVP = userRoles.some(r => ['presidente', 'vice_presidente'].includes(r));
                 if (isPresidentOrVP) {
                     document.getElementById('tab-btn-gestione_corsi').classList.remove('hidden');
-                    document.getElementById('tab-btn-logiche').classList.remove('hidden');
                 }
 
                 document.getElementById('tab-btn-direttivo').classList.remove('hidden');

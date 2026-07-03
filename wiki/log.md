@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] feature | Registri visibility, Logiche context and Foto Profilo block (v1.01.22)
+- Enabled "Registro Istruttori" and "Registro Tesserati" in Member context (Area Socio) while keeping them hidden from Athlete context (Tesserati).
+- Made "Logiche di Sistema" tab visible to the entire Board (Direttivo) rather than just President/VP.
+- Disabled "Foto Profilo" file uploads with an amber alert notice "SERVIZIO NON ANCORA ATTIVO" to avoid cluttering database.
+- Aligned version badges to Vs. 1.01.22 across index.html, legal.html, privacy.html, dashboard.html, and other portal pages.
+
 ## [2026-07-02] fix | Spostamento Logiche, Rimozione Quota Ann. e Bypass Presidente (v1.01.14)
 - Rimossa la colonna "Quota Ann." dalla tabella e dai cicli di rendering dei corsi sia in dashboard.html che in dashboard.js per semplificare la vista.
 - Risolto il problema del clic inerte sul tab "Logiche di Sistema" aggiungendo l'event listener DOM mancante e spostando il pulsante a fondo barra di navigazione (dopo i bilanci).
