@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] fix | Enforce explicit block styling and 950px height on PDF iframe (v1.01.28)
+- Removed `flex` wrapping from the PDF preview container to prevent browsers from squishing the iframe height.
+- Styled the iframe with explicit `display: block; height: 950px; min-height: 950px;` to ensure full height page visualization.
+- Bumped application version to Vs. 1.01.28.
+
 ## [2026-07-03] fix | Enlarge PDF tuner iframe and disable native toolbar margins (v1.01.27)
 - Increased PDF tuner preview iframe height from 580px to 850px in `portal/dashboard.html` for better visibility.
 - Appended PDF viewer options hash (`#toolbar=0&navpanes=0&scrollbar=1&view=FitH`) to the Blob URL in `portal/dashboard.js` to strip native margins and maximize page width rendering.
