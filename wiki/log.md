@@ -4,6 +4,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] feature | Live PDF Tuner & Configurable PDF Coordinates (v1.01.25)
+- Implemented `public.configurazioni_pdf` table in database to dynamically store coordinate values for PDF template text drawing.
+- Updated `api/otp-verify.js` to load coordinates from the database and compile PDFs dynamically based on these settings.
+- Formatted `data_nascita` and translated text values to uppercase for correct rendering.
+- Created interactive **Taratura Moduli PDF** panel in the President's Dashboard displaying inputs for X, Y, and Size alongside a live-updating iframe preview of the compiled PDF.
+- Integrated `pdf-lib` script directly on the frontend for instant browser-side compilation.
+- Aligned version badges to Vs. 1.01.25 across all application files.
+
 ## [2026-07-03] fix | Fix Stored Procedure Overwrite and Activate Loris Benedetti (v1.01.24)
 - Corretto il file `supabase/migration_patch_approva_tesserato.sql` per integrare stabilmente la logica di bypass dei controlli di sicurezza `auth.uid()` (necessaria per consentire le chiamate dal server tramite Stripe Webhook) e il corretto allineamento per lo stato `IN_ATTESA_PAGAMENTO`.
 - Applicato l'aggiornamento SQL direttamente al database Supabase ed eseguito manualmente l'attivazione (`approva_tesserato`) per Loris Benedetti, inserendolo regolarmente nel Libro Tesserati come attivo.

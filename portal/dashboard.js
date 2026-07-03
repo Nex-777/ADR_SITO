@@ -295,7 +295,7 @@
                 const tabs = [
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
                     'instructor_corsi', 'volunteer_eventi',
-                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi'
+                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf'
                 ];
                 tabs.forEach(tab => {
                     const el = document.getElementById(`tab-btn-${tab}`);
@@ -400,6 +400,7 @@
                 const isPresidentOrVP = userRoles.some(r => ['presidente', 'vice_presidente'].includes(r));
                 if (isPresidentOrVP) {
                     document.getElementById('tab-btn-gestione_corsi').classList.remove('hidden');
+                    document.getElementById('tab-btn-taratura_pdf').classList.remove('hidden');
                 }
 
                 document.getElementById('tab-btn-direttivo').classList.remove('hidden');
@@ -6205,6 +6206,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-taratura_pdf');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('taratura_pdf');
+            initTunerPDF();
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('auto-dashboard-click-2');
     if (el) {
         el.addEventListener('click', function(event) {
@@ -7659,6 +7670,269 @@ window.openRegistroDaAdmin = function(eventoId, title, luogo, orariStr) {
     registryOpenedFromAdmin = true;
     switchTab('instructor_corsi');
     openRegistroCorso(eventoId, title, luogo, orariStr);
+};
+
+// PDF TUNER CALIBRATION PANEL LOGIC
+let tunerCoords = {};
+let cachedPdfs = {};
+
+const tunerDefaults = {
+    informativa: {
+        nome_cognome: { x: 100, y: 715, font_size: 10, pagina: 0 },
+        codice_fiscale: { x: 100, y: 705, font_size: 10, pagina: 0 },
+        nascita: { x: 250, y: 705, font_size: 10, pagina: 0 },
+        firma: { x: 130, y: 246, font_size: 7, pagina: 0 }
+    },
+    iscrizione: {
+        cognome: { x: 100, y: 735, font_size: 10, pagina: 0 },
+        nome: { x: 320, y: 735, font_size: 10, pagina: 0 },
+        nato_a: { x: 100, y: 710, font_size: 10, pagina: 0 },
+        prov_nascita: { x: 345, y: 710, font_size: 10, pagina: 0 },
+        data_nascita: { x: 415, y: 710, font_size: 10, pagina: 0 },
+        residente_via: { x: 100, y: 685, font_size: 10, pagina: 0 },
+        civico: { x: 450, y: 685, font_size: 10, pagina: 0 },
+        comune: { x: 100, y: 660, font_size: 10, pagina: 0 },
+        provincia: { x: 450, y: 660, font_size: 10, pagina: 0 },
+        cap: { x: 100, y: 635, font_size: 10, pagina: 0 },
+        telefono: { x: 100, y: 610, font_size: 10, pagina: 0 },
+        cellulare: { x: 320, y: 610, font_size: 10, pagina: 0 },
+        email: { x: 100, y: 585, font_size: 10, pagina: 0 },
+        firma_1: { x: 370, y: 130, font_size: 7, pagina: 0 },
+        firma_2: { x: 370, y: 195, font_size: 7, pagina: 1 }
+    }
+};
+
+async function getPdfBuffer(modulo) {
+    if (cachedPdfs[modulo]) return cachedPdfs[modulo];
+    const path = modulo === 'informativa' 
+        ? '/CSEN_moduli/INFORMATIVA PER SINGOLI TESSERATI (1).pdf'
+        : '/CSEN_moduli/Modulo_Iscrizione_2024(1)(1) - aggiornato silver e gold (2).pdf';
+    const res = await fetch(path);
+    const buf = await res.arrayBuffer();
+    cachedPdfs[modulo] = buf;
+    return buf;
+}
+
+window.initTunerPDF = async function() {
+    showLoader();
+    try {
+        const { data: rows, error } = await supabaseClient
+            .from('configurazioni_pdf')
+            .select('modulo, campo, x, y, font_size, pagina');
+        
+        if (error) throw error;
+
+        tunerCoords = {};
+        if (rows) {
+            rows.forEach(r => {
+                if (!tunerCoords[r.modulo]) tunerCoords[r.modulo] = {};
+                tunerCoords[r.modulo][r.campo] = { x: r.x, y: r.y, font_size: r.font_size, pagina: r.pagina };
+            });
+        }
+
+        cambiaModuloTuner();
+    } catch (err) {
+        console.error("Errore init tuner:", err);
+        alert("Errore nel caricamento delle coordinate: " + err.message);
+    } finally {
+        hideLoader();
+    }
+};
+
+window.cambiaModuloTuner = function() {
+    const modulo = document.getElementById('tuner-select-modulo').value;
+    const container = document.getElementById('pdf-tuner-controls-container');
+    container.innerHTML = '';
+
+    const defaultFields = tunerDefaults[modulo];
+    
+    // Mappa le chiavi dei campi a testi amichevoli per l'utente
+    const labelsMap = {
+        nome_cognome: "NOME COMPLETO",
+        codice_fiscale: "CODICE FISCALE",
+        nascita: "DATI NASCITA",
+        firma: "FIRMA DIGITALE",
+        cognome: "COGNOME",
+        nome: "NOME",
+        nato_a: "NATO A (COMUNE)",
+        prov_nascita: "PROVINCIA NASCITA",
+        data_nascita: "DATA NASCITA (GG/MM/AAAA)",
+        residente_via: "VIA/PIAZZA RESIDENZA",
+        civico: "NUMERO CIVICO",
+        comune: "COMUNE RESIDENZA",
+        provincia: "PROVINCIA RESIDENZA",
+        cap: "C.A.P. RESIDENZA",
+        telefono: "TELEFONO ABITAZIONE",
+        cellulare: "CELLULARE",
+        email: "E-MAIL",
+        firma_1: "FIRMA PAGINA 1",
+        firma_2: "FIRMA PAGINA 2"
+    };
+
+    Object.keys(defaultFields).forEach(fieldKey => {
+        const currentVal = tunerCoords[modulo]?.[fieldKey] || defaultFields[fieldKey];
+        
+        const card = document.createElement('div');
+        card.className = "border border-white/5 bg-white/5 p-3 space-y-2";
+        card.innerHTML = `
+            <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                <span class="text-[10px] font-headline font-bold text-gray-300 uppercase">${labelsMap[fieldKey] || fieldKey.replace(/_/g, ' ')}</span>
+                <span class="text-[8px] text-gray-500 font-mono">PAGINA: ${currentVal.pagina + 1}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="block text-[8px] text-gray-500 font-mono">COOR X</label>
+                    <input type="number" value="${currentVal.x}" oninput="updateFieldCoord('${modulo}', '${fieldKey}', 'x', this.value)" class="w-full bg-black text-white text-xs border border-white/10 p-1 font-mono focus:outline-none focus:border-primary" />
+                </div>
+                <div>
+                    <label class="block text-[8px] text-gray-500 font-mono">COOR Y</label>
+                    <input type="number" value="${currentVal.y}" oninput="updateFieldCoord('${modulo}', '${fieldKey}', 'y', this.value)" class="w-full bg-black text-white text-xs border border-white/10 p-1 font-mono focus:outline-none focus:border-primary" />
+                </div>
+                <div>
+                    <label class="block text-[8px] text-gray-500 font-mono">FONT SIZE</label>
+                    <input type="number" value="${currentVal.font_size}" oninput="updateFieldCoord('${modulo}', '${fieldKey}', 'font_size', this.value)" class="w-full bg-black text-white text-xs border border-white/10 p-1 font-mono focus:outline-none focus:border-primary" />
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    aggiornaAnteprimaPdf();
+};
+
+window.updateFieldCoord = function(modulo, campo, asse, valore) {
+    const valInt = parseInt(valore) || 0;
+    if (!tunerCoords[modulo]) tunerCoords[modulo] = {};
+    if (!tunerCoords[modulo][campo]) {
+        tunerCoords[modulo][campo] = { ...tunerDefaults[modulo][campo] };
+    }
+    tunerCoords[modulo][campo][asse] = valInt;
+    
+    // Aggiorna l'anteprima in tempo reale
+    aggiornaAnteprimaPdf();
+};
+
+window.aggiornaAnteprimaPdf = async function() {
+    const modulo = document.getElementById('tuner-select-modulo').value;
+    const buf = await getPdfBuffer(modulo);
+    const doc = await PDFLib.PDFDocument.load(buf);
+    const pages = doc.getPages();
+    
+    // Dati fittizi di test
+    const profile = {
+        nome: "Loris",
+        cognome: "Benedetti",
+        comune: "Chiaravalle",
+        provincia: "AN",
+        cap: "60033",
+        data_nascita: "1977-05-19",
+        luogo_nascita_comune: "Chiaravalle",
+        luogo_nascita_provincia: "AN",
+        cellulare: "3382576434",
+        email: "benexloris@gmail.com"
+    };
+    const cf = "BNDLRS77P19E388O";
+    const streetName = "VIA PIETRO MASCAGNI";
+    const streetNumber = "5";
+    const otp = "491624";
+    const clientIp = "79.44.190.201";
+    const signatureText = `Firmato Digitalmente (OTP: ${otp} | IP: ${clientIp} | Data: 03/07/2026, 11:02:45)`;
+    const signatureColor = PDFLib.rgb(0.8, 0, 0);
+
+    const getVal = (field) => {
+        return tunerCoords[modulo]?.[field] || tunerDefaults[modulo][field];
+    };
+
+    if (modulo === 'informativa') {
+        const p1 = pages[0];
+        const n = getVal('nome_cognome');
+        const c = getVal('codice_fiscale');
+        const nas = getVal('nascita');
+        const f = getVal('firma');
+
+        p1.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: n.x, y: n.y, size: n.font_size });
+        p1.drawText(cf, { x: c.x, y: c.y, size: c.font_size });
+        p1.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: nas.x, y: nas.y, size: nas.font_size });
+        p1.drawText(signatureText, { x: f.x, y: f.y, size: f.font_size, color: signatureColor });
+    } else {
+        const p1 = pages[0];
+        const p2 = pages[1];
+
+        const fields = ['cognome', 'nome', 'nato_a', 'prov_nascita', 'data_nascita', 'residente_via', 'civico', 'comune', 'provincia', 'cap', 'telefono', 'cellulare', 'email', 'firma_1', 'firma_2'];
+        
+        let dataNascitaFormatted = "19/05/1977";
+
+        const values = {
+            cognome: profile.cognome.toUpperCase(),
+            nome: profile.nome.toUpperCase(),
+            nato_a: profile.luogo_nascita_comune.toUpperCase(),
+            prov_nascita: profile.luogo_nascita_provincia.toUpperCase(),
+            data_nascita: dataNascitaFormatted,
+            residente_via: streetName.toUpperCase(),
+            civico: streetNumber.toUpperCase(),
+            comune: profile.comune.toUpperCase(),
+            provincia: profile.provincia.toUpperCase(),
+            cap: profile.cap,
+            telefono: profile.telefono || '',
+            cellulare: profile.cellulare || '',
+            email: profile.email || '',
+            firma_1: signatureText,
+            firma_2: signatureText
+        };
+
+        fields.forEach(f => {
+            const cfg = getVal(f);
+            if (!cfg) return;
+            const page = cfg.pagina === 1 ? p2 : p1;
+            if (!page) return;
+            
+            const opt = { x: cfg.x, y: cfg.y, size: cfg.font_size };
+            if (f === 'firma_1' || f === 'firma_2') opt.color = signatureColor;
+            
+            page.drawText(values[f], opt);
+        });
+    }
+
+    const pdfBytes = await doc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    document.getElementById('pdf-tuner-preview-frame').src = url;
+};
+
+window.salvaTaraturaPDF = async function() {
+    const modulo = document.getElementById('tuner-select-modulo').value;
+    const currentCoords = tunerCoords[modulo];
+    if (!currentCoords) {
+        alert("Nessuna modifica da salvare per questo modulo.");
+        return;
+    }
+
+    showLoader();
+    try {
+        const promises = Object.keys(currentCoords).map(async (campo) => {
+            const val = currentCoords[campo];
+            const { error } = await supabaseClient
+                .from('configurazioni_pdf')
+                .upsert({
+                    modulo: modulo,
+                    campo: campo,
+                    x: val.x,
+                    y: val.y,
+                    font_size: val.font_size,
+                    pagina: val.pagina
+                }, { onConflict: 'modulo, campo' });
+            
+            if (error) throw error;
+        });
+
+        await Promise.all(promises);
+        alert("Configurazione taratura PDF salvata con successo!");
+    } catch (err) {
+        console.error("Errore salvataggio taratura:", err);
+        alert("Errore durante il salvataggio della taratura: " + err.message);
+    } finally {
+        hideLoader();
+    }
 };
 
 

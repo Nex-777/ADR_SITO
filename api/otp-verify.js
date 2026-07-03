@@ -363,6 +363,51 @@ export default async function handler(req, res) {
             const csenPath2 = path.join(process.cwd(), 'CSEN_moduli', 'Modulo_Iscrizione_2024(1)(1) - aggiornato silver e gold (2).pdf');
 
             if (fs.existsSync(csenPath1) && fs.existsSync(csenPath2)) {
+                const supabase = createClient(supabaseUrl, supabaseServiceKey);
+                
+                // Query dynamic coordinates from database
+                const { data: configRows } = await supabase
+                    .from('configurazioni_pdf')
+                    .select('modulo, campo, x, y, font_size, pagina');
+
+                const coords = {};
+                if (configRows) {
+                    configRows.forEach(row => {
+                        if (!coords[row.modulo]) coords[row.modulo] = {};
+                        coords[row.modulo][row.campo] = { x: row.x, y: row.y, font_size: row.font_size, pagina: row.pagina };
+                    });
+                }
+
+                const defaults = {
+                    informativa: {
+                        nome_cognome: { x: 100, y: 715, font_size: 10 },
+                        codice_fiscale: { x: 100, y: 705, font_size: 10 },
+                        nascita: { x: 250, y: 705, font_size: 10 },
+                        firma: { x: 130, y: 246, font_size: 7 }
+                    },
+                    iscrizione: {
+                        cognome: { x: 100, y: 735, font_size: 10 },
+                        nome: { x: 320, y: 735, font_size: 10 },
+                        nato_a: { x: 100, y: 710, font_size: 10 },
+                        prov_nascita: { x: 345, y: 710, font_size: 10 },
+                        data_nascita: { x: 415, y: 710, font_size: 10 },
+                        residente_via: { x: 100, y: 685, font_size: 10 },
+                        civico: { x: 450, y: 685, font_size: 10 },
+                        comune: { x: 100, y: 660, font_size: 10 },
+                        provincia: { x: 450, y: 660, font_size: 10 },
+                        cap: { x: 100, y: 635, font_size: 10 },
+                        telefono: { x: 100, y: 610, font_size: 10 },
+                        cellulare: { x: 320, y: 610, font_size: 10 },
+                        email: { x: 100, y: 585, font_size: 10 },
+                        firma_1: { x: 370, y: 130, font_size: 7 },
+                        firma_2: { x: 370, y: 195, font_size: 7 }
+                    }
+                };
+
+                const getCoord = (modulo, campo) => {
+                    return coords[modulo]?.[campo] || defaults[modulo]?.[campo];
+                };
+
                 const pdfInformativaBytes = fs.readFileSync(csenPath1);
                 const pdfIscrizioneBytes = fs.readFileSync(csenPath2);
 
@@ -381,27 +426,57 @@ export default async function handler(req, res) {
                 const signatureColor = rgb(0.8, 0, 0); // Red signature stamp
 
                 // Fill INFORMATIVA (doc1)
-                // Coordinate stimate, richiederà fine-tuning
-                page1.drawText(`${profile.nome} ${profile.cognome}`, { x: 150, y: 650, size: 10 });
-                page1.drawText(cf, { x: 150, y: 630, size: 10 });
-                page1.drawText(`${profile.luogo_nascita_comune} (${profile.luogo_nascita_provincia})`, { x: 150, y: 610, size: 10 });
-                // Signature
-                page1.drawText(signatureText, { x: 100, y: 150, size: 8, color: signatureColor });
+                const cInfNome = getCoord('informativa', 'nome_cognome');
+                const cInfCF = getCoord('informativa', 'codice_fiscale');
+                const cInfNascita = getCoord('informativa', 'nascita');
+                const cInfFirma = getCoord('informativa', 'firma');
+
+                page1.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: cInfNome.x, y: cInfNome.y, size: cInfNome.font_size });
+                page1.drawText(cf, { x: cInfCF.x, y: cInfCF.y, size: cInfCF.font_size });
+                page1.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: cInfNascita.x, y: cInfNascita.y, size: cInfNascita.font_size });
+                page1.drawText(signatureText, { x: cInfFirma.x, y: cInfFirma.y, size: cInfFirma.font_size, color: signatureColor });
 
                 // Fill ISCRIZIONE (doc2)
-                page2.drawText(profile.nome, { x: 150, y: 600, size: 10 });
-                page2.drawText(profile.cognome, { x: 150, y: 580, size: 10 });
-                page2.drawText(cf, { x: 150, y: 560, size: 10 });
-                page2.drawText(streetName, { x: 150, y: 540, size: 10 });
-                page2.drawText(profile.comune, { x: 150, y: 520, size: 10 });
-                page2.drawText(profile.provincia, { x: 450, y: 520, size: 10 });
-                page2.drawText(profile.cellulare || '', { x: 150, y: 500, size: 10 });
-                page2.drawText(profile.email || '', { x: 150, y: 480, size: 10 });
+                const cIscrCognome = getCoord('iscrizione', 'cognome');
+                const cIscrNome = getCoord('iscrizione', 'nome');
+                const cIscrNatoA = getCoord('iscrizione', 'nato_a');
+                const cIscrProvNasc = getCoord('iscrizione', 'prov_nascita');
+                const cIscrDataNasc = getCoord('iscrizione', 'data_nascita');
+                const cIscrVia = getCoord('iscrizione', 'residente_via');
+                const cIscrCivico = getCoord('iscrizione', 'civico');
+                const cIscrComune = getCoord('iscrizione', 'comune');
+                const cIscrProv = getCoord('iscrizione', 'provincia');
+                const cIscrCap = getCoord('iscrizione', 'cap');
+                const cIscrTel = getCoord('iscrizione', 'telefono');
+                const cIscrCell = getCoord('iscrizione', 'cellulare');
+                const cIscrEmail = getCoord('iscrizione', 'email');
+                const cIscrFirma1 = getCoord('iscrizione', 'firma_1');
+                const cIscrFirma2 = getCoord('iscrizione', 'firma_2');
+
+                let dataNascitaFormatted = profile.data_nascita || '';
+                if (profile.data_nascita && profile.data_nascita.includes('-')) {
+                    const p = profile.data_nascita.split('-');
+                    if (p.length === 3) dataNascitaFormatted = `${p[2]}/${p[1]}/${p[0]}`;
+                }
+
+                page2.drawText(profile.cognome.toUpperCase(), { x: cIscrCognome.x, y: cIscrCognome.y, size: cIscrCognome.font_size });
+                page2.drawText(profile.nome.toUpperCase(), { x: cIscrNome.x, y: cIscrNome.y, size: cIscrNome.font_size });
+                page2.drawText(profile.luogo_nascita_comune.toUpperCase(), { x: cIscrNatoA.x, y: cIscrNatoA.y, size: cIscrNatoA.font_size });
+                page2.drawText(profile.luogo_nascita_provincia.toUpperCase(), { x: cIscrProvNasc.x, y: cIscrProvNasc.y, size: cIscrProvNasc.font_size });
+                page2.drawText(dataNascitaFormatted, { x: cIscrDataNasc.x, y: cIscrDataNasc.y, size: cIscrDataNasc.font_size });
+                page2.drawText(streetName.toUpperCase(), { x: cIscrVia.x, y: cIscrVia.y, size: cIscrVia.font_size });
+                page2.drawText(streetNumber.toUpperCase(), { x: cIscrCivico.x, y: cIscrCivico.y, size: cIscrCivico.font_size });
+                page2.drawText(profile.comune.toUpperCase(), { x: cIscrComune.x, y: cIscrComune.y, size: cIscrComune.font_size });
+                page2.drawText(profile.provincia.toUpperCase(), { x: cIscrProv.x, y: cIscrProv.y, size: cIscrProv.font_size });
+                page2.drawText(profile.cap, { x: cIscrCap.x, y: cIscrCap.y, size: cIscrCap.font_size });
+                page2.drawText(profile.telefono || '', { x: cIscrTel.x, y: cIscrTel.y, size: cIscrTel.font_size });
+                page2.drawText(profile.cellulare || '', { x: cIscrCell.x, y: cIscrCell.y, size: cIscrCell.font_size });
+                page2.drawText(profile.email || '', { x: cIscrEmail.x, y: cIscrEmail.y, size: cIscrEmail.font_size });
                 
                 // Signatures
-                page2.drawText(signatureText, { x: 100, y: 150, size: 8, color: signatureColor });
+                page2.drawText(signatureText, { x: cIscrFirma1.x, y: cIscrFirma1.y, size: cIscrFirma1.font_size, color: signatureColor });
                 if (page2b) {
-                    page2b.drawText(signatureText, { x: 100, y: 150, size: 8, color: signatureColor });
+                    page2b.drawText(signatureText, { x: cIscrFirma2.x, y: cIscrFirma2.y, size: cIscrFirma2.font_size, color: signatureColor });
                 }
 
                 const out1Bytes = await doc1.save();

@@ -16,6 +16,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="sha384-d+vyQ0dYcymoP8ndq2hW7FGC50nqGdXUEgoOUGxbbkAJwZqL7h+jKN0GGgn9hFDS" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
@@ -473,7 +474,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.24</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.25</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -632,6 +633,10 @@
 
                 <button id="tab-btn-logiche" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
                     <span class="material-symbols-outlined text-sm">schema</span> LOGICHE DI SISTEMA
+                </button>
+
+                <button id="tab-btn-taratura_pdf" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">tune</span> TARATURA PDF MODULI
                 </button>
             </div>
 
@@ -1457,6 +1462,46 @@
                                     <li>Non è necessariamente un Socio del club.</li>
                                 </ul>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: TARATURA PDF MODULI -->
+            <div id="panel-taratura_pdf" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">Taratura Moduli PDF</h2>
+                        <p class="text-xs text-gray-500 uppercase">Regola in tempo reale il posizionamento dei testi sui moduli cartacei csen</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <select id="tuner-select-modulo" onchange="cambiaModuloTuner()" class="brutalist-input bg-black text-white h-10 text-xs uppercase font-mono px-3">
+                            <option value="iscrizione">Modulo Iscrizione 2024</option>
+                            <option value="informativa">Informativa Singoli Tesserati</option>
+                        </select>
+                        <button onclick="salvaTaraturaPDF()" class="bg-primary hover:bg-primary-dim text-white font-headline text-xs font-bold px-6 py-2 transition-all uppercase">
+                            Salva Configurazione
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Controlli a sinistra -->
+                    <div class="lg:col-span-5 border border-white/10 p-6 bg-black/40 space-y-4">
+                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/10 pb-2">Parametri Posizionamento</h3>
+                        <div id="pdf-tuner-controls-container" class="space-y-4 max-h-[550px] overflow-y-auto pr-2 custom-scrollbar">
+                            <!-- Generati dinamicamente via JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Anteprima a destra -->
+                    <div class="lg:col-span-7 border border-white/10 p-6 bg-black/40 space-y-4 flex flex-col">
+                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/10 pb-2 flex justify-between items-center">
+                            <span>Anteprima PDF Compilato</span>
+                            <span class="text-[9px] text-gray-500 font-mono">Dati Fittizi di Test (Loris Benedetti)</span>
+                        </h3>
+                        <div class="flex-grow w-full min-h-[580px] bg-black/80 flex items-center justify-center relative border border-white/5">
+                            <iframe id="pdf-tuner-preview-frame" class="w-full h-[580px] rounded-none border-none"></iframe>
                         </div>
                     </div>
                 </div>
