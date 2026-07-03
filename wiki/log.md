@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] fix | Adjust CSP for Blob PDF rendering and add iframe debugging (v1.01.26)
+- Modified `vercel.json` Content-Security-Policy header to allow `blob:` and `data:` schemes in `frame-src` directive, allowing the PDF Blob preview in the dashboard iframe.
+- Added structured try/catch logic to both `getPdfBuffer` and `aggiornaAnteprimaPdf` in `portal/dashboard.js`, printing clear error alerts inside the iframe if resource fetching or compilation fails.
+- Bumped version string to Vs. 1.01.26.
+
 ## [2026-07-03] feature | Live PDF Tuner & Configurable PDF Coordinates (v1.01.25)
 - Implemented `public.configurazioni_pdf` table in database to dynamically store coordinate values for PDF template text drawing.
 - Updated `api/otp-verify.js` to load coordinates from the database and compile PDFs dynamically based on these settings.

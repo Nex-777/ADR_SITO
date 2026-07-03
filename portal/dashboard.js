@@ -7707,7 +7707,12 @@ async function getPdfBuffer(modulo) {
     const path = modulo === 'informativa' 
         ? '/CSEN_moduli/INFORMATIVA PER SINGOLI TESSERATI (1).pdf'
         : '/CSEN_moduli/Modulo_Iscrizione_2024(1)(1) - aggiornato silver e gold (2).pdf';
+    
+    console.log("Fetching PDF from:", path);
     const res = await fetch(path);
+    if (!res.ok) {
+        throw new Error(`Impossibile caricare il template PDF (HTTP ${res.status}) da ${path}`);
+    }
     const buf = await res.arrayBuffer();
     cachedPdfs[modulo] = buf;
     return buf;
@@ -7813,90 +7818,104 @@ window.updateFieldCoord = function(modulo, campo, asse, valore) {
 };
 
 window.aggiornaAnteprimaPdf = async function() {
-    const modulo = document.getElementById('tuner-select-modulo').value;
-    const buf = await getPdfBuffer(modulo);
-    const doc = await PDFLib.PDFDocument.load(buf);
-    const pages = doc.getPages();
-    
-    // Dati fittizi di test
-    const profile = {
-        nome: "Loris",
-        cognome: "Benedetti",
-        comune: "Chiaravalle",
-        provincia: "AN",
-        cap: "60033",
-        data_nascita: "1977-05-19",
-        luogo_nascita_comune: "Chiaravalle",
-        luogo_nascita_provincia: "AN",
-        cellulare: "3382576434",
-        email: "benexloris@gmail.com"
-    };
-    const cf = "BNDLRS77P19E388O";
-    const streetName = "VIA PIETRO MASCAGNI";
-    const streetNumber = "5";
-    const otp = "491624";
-    const clientIp = "79.44.190.201";
-    const signatureText = `Firmato Digitalmente (OTP: ${otp} | IP: ${clientIp} | Data: 03/07/2026, 11:02:45)`;
-    const signatureColor = PDFLib.rgb(0.8, 0, 0);
-
-    const getVal = (field) => {
-        return tunerCoords[modulo]?.[field] || tunerDefaults[modulo][field];
-    };
-
-    if (modulo === 'informativa') {
-        const p1 = pages[0];
-        const n = getVal('nome_cognome');
-        const c = getVal('codice_fiscale');
-        const nas = getVal('nascita');
-        const f = getVal('firma');
-
-        p1.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: n.x, y: n.y, size: n.font_size });
-        p1.drawText(cf, { x: c.x, y: c.y, size: c.font_size });
-        p1.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: nas.x, y: nas.y, size: nas.font_size });
-        p1.drawText(signatureText, { x: f.x, y: f.y, size: f.font_size, color: signatureColor });
-    } else {
-        const p1 = pages[0];
-        const p2 = pages[1];
-
-        const fields = ['cognome', 'nome', 'nato_a', 'prov_nascita', 'data_nascita', 'residente_via', 'civico', 'comune', 'provincia', 'cap', 'telefono', 'cellulare', 'email', 'firma_1', 'firma_2'];
+    try {
+        const modulo = document.getElementById('tuner-select-modulo').value;
+        const buf = await getPdfBuffer(modulo);
+        const doc = await PDFLib.PDFDocument.load(buf);
+        const pages = doc.getPages();
         
-        let dataNascitaFormatted = "19/05/1977";
+        // Dati fittizi di test
+        const profile = {
+            nome: "Loris",
+            cognome: "Benedetti",
+            comune: "Chiaravalle",
+            provincia: "AN",
+            cap: "60033",
+            data_nascita: "1977-05-19",
+            luogo_nascita_comune: "Chiaravalle",
+            luogo_nascita_provincia: "AN",
+            cellulare: "3382576434",
+            email: "benexloris@gmail.com"
+        };
+        const cf = "BNDLRS77P19E388O";
+        const streetName = "VIA PIETRO MASCAGNI";
+        const streetNumber = "5";
+        const otp = "491624";
+        const clientIp = "79.44.190.201";
+        const signatureText = `Firmato Digitalmente (OTP: ${otp} | IP: ${clientIp} | Data: 03/07/2026, 11:02:45)`;
+        const signatureColor = PDFLib.rgb(0.8, 0, 0);
 
-        const values = {
-            cognome: profile.cognome.toUpperCase(),
-            nome: profile.nome.toUpperCase(),
-            nato_a: profile.luogo_nascita_comune.toUpperCase(),
-            prov_nascita: profile.luogo_nascita_provincia.toUpperCase(),
-            data_nascita: dataNascitaFormatted,
-            residente_via: streetName.toUpperCase(),
-            civico: streetNumber.toUpperCase(),
-            comune: profile.comune.toUpperCase(),
-            provincia: profile.provincia.toUpperCase(),
-            cap: profile.cap,
-            telefono: profile.telefono || '',
-            cellulare: profile.cellulare || '',
-            email: profile.email || '',
-            firma_1: signatureText,
-            firma_2: signatureText
+        const getVal = (field) => {
+            return tunerCoords[modulo]?.[field] || tunerDefaults[modulo][field];
         };
 
-        fields.forEach(f => {
-            const cfg = getVal(f);
-            if (!cfg) return;
-            const page = cfg.pagina === 1 ? p2 : p1;
-            if (!page) return;
-            
-            const opt = { x: cfg.x, y: cfg.y, size: cfg.font_size };
-            if (f === 'firma_1' || f === 'firma_2') opt.color = signatureColor;
-            
-            page.drawText(values[f], opt);
-        });
-    }
+        if (modulo === 'informativa') {
+            const p1 = pages[0];
+            const n = getVal('nome_cognome');
+            const c = getVal('codice_fiscale');
+            const nas = getVal('nascita');
+            const f = getVal('firma');
 
-    const pdfBytes = await doc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    document.getElementById('pdf-tuner-preview-frame').src = url;
+            p1.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: n.x, y: n.y, size: n.font_size });
+            p1.drawText(cf, { x: c.x, y: c.y, size: c.font_size });
+            p1.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: nas.x, y: nas.y, size: nas.font_size });
+            p1.drawText(signatureText, { x: f.x, y: f.y, size: f.font_size, color: signatureColor });
+        } else {
+            const p1 = pages[0];
+            const p2 = pages[1];
+
+            const fields = ['cognome', 'nome', 'nato_a', 'prov_nascita', 'data_nascita', 'residente_via', 'civico', 'comune', 'provincia', 'cap', 'telefono', 'cellulare', 'email', 'firma_1', 'firma_2'];
+            
+            let dataNascitaFormatted = "19/05/1977";
+
+            const values = {
+                cognome: profile.cognome.toUpperCase(),
+                nome: profile.nome.toUpperCase(),
+                nato_a: profile.luogo_nascita_comune.toUpperCase(),
+                prov_nascita: profile.luogo_nascita_provincia.toUpperCase(),
+                data_nascita: dataNascitaFormatted,
+                residente_via: streetName.toUpperCase(),
+                civico: streetNumber.toUpperCase(),
+                comune: profile.comune.toUpperCase(),
+                provincia: profile.provincia.toUpperCase(),
+                cap: profile.cap,
+                telefono: profile.telefono || '',
+                cellulare: profile.cellulare || '',
+                email: profile.email || '',
+                firma_1: signatureText,
+                firma_2: signatureText
+            };
+
+            fields.forEach(f => {
+                const cfg = getVal(f);
+                if (!cfg) return;
+                const page = cfg.pagina === 1 ? p2 : p1;
+                if (!page) return;
+                
+                const opt = { x: cfg.x, y: cfg.y, size: cfg.font_size };
+                if (f === 'firma_1' || f === 'firma_2') opt.color = signatureColor;
+                
+                page.drawText(values[f], opt);
+            });
+        }
+
+        const pdfBytes = await doc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        document.getElementById('pdf-tuner-preview-frame').src = url;
+    } catch (err) {
+        console.error("Errore aggiornamento anteprima PDF:", err);
+        const iframe = document.getElementById('pdf-tuner-preview-frame');
+        if (iframe) {
+            iframe.srcdoc = `
+                <div style="color: #df293e; background: #1a1a1a; padding: 20px; font-family: monospace; height: 100%; box-sizing: border-box; border: 1px solid #df293e;">
+                    <h3 style="margin-top:0;">❌ Errore Caricamento/Compilazione PDF</h3>
+                    <p style="font-size:12px;">${err.message}</p>
+                    <p style="color: #888; font-size: 11px;">Verifica la console del browser o la rete (Network) per maggiori dettagli.</p>
+                </div>
+            `;
+        }
+    }
 };
 
 window.salvaTaraturaPDF = async function() {
