@@ -380,28 +380,28 @@ export default async function handler(req, res) {
 
                 const defaults = {
                     informativa: {
-                        nome_cognome:       { x: 100, y: 715, font_size: 10, pagina: 3 },
-                        codice_fiscale:     { x: 100, y: 705, font_size: 10, pagina: 3 },
-                        firma:              { x: 130, y: 246, font_size: 7,  pagina: 0 },
-                        crocetta_acconsento:{ x: 177, y: 390, font_size: 10, pagina: 3 }
+                        nome_cognome:        { x: 110, y: 634, font_size: 11, pagina: 3 },
+                        codice_fiscale:      { x: 110, y: 320, font_size: 10, pagina: 3 },
+                        firma:               { x: 40,  y: 86,  font_size: 12, pagina: 0 },
+                        crocetta_acconsento: { x: 151, y: 520, font_size: 15, pagina: 3 }
                     },
                     iscrizione: {
-                        cognome:                    { x: 100, y: 735, font_size: 10, pagina: 0 },
-                        nome:                       { x: 320, y: 735, font_size: 10, pagina: 0 },
-                        nato_a:                     { x: 100, y: 710, font_size: 10, pagina: 0 },
-                        prov_nascita:               { x: 345, y: 710, font_size: 10, pagina: 0 },
-                        data_nascita:               { x: 415, y: 710, font_size: 10, pagina: 0 },
-                        residente_via:              { x: 100, y: 685, font_size: 10, pagina: 0 },
-                        civico:                     { x: 450, y: 685, font_size: 10, pagina: 0 },
-                        comune:                     { x: 100, y: 660, font_size: 10, pagina: 0 },
-                        provincia:                  { x: 450, y: 660, font_size: 10, pagina: 0 },
-                        cap:                        { x: 100, y: 635, font_size: 10, pagina: 0 },
-                        telefono:                   { x: 100, y: 610, font_size: 10, pagina: 0 },
-                        cellulare:                  { x: 320, y: 610, font_size: 10, pagina: 0 },
-                        email:                      { x: 100, y: 585, font_size: 10, pagina: 0 },
-                        firma_1:                    { x: 370, y: 130, font_size: 7,  pagina: 0 },
-                        firma_2:                    { x: 370, y: 195, font_size: 7,  pagina: 1 },
-                        crocetta_iscritto_dichiara: { x: 62,  y: 430, font_size: 12, pagina: 0 }
+                        cognome:                    { x: 120, y: 635, font_size: 10, pagina: 0 },
+                        nome:                       { x: 365, y: 635, font_size: 10, pagina: 0 },
+                        nato_a:                     { x: 120, y: 610, font_size: 10, pagina: 0 },
+                        prov_nascita:               { x: 345, y: 610, font_size: 10, pagina: 0 },
+                        data_nascita:               { x: 405, y: 610, font_size: 10, pagina: 0 },
+                        residente_via:              { x: 120, y: 585, font_size: 10, pagina: 0 },
+                        civico:                     { x: 290, y: 585, font_size: 10, pagina: 0 },
+                        comune:                     { x: 365, y: 585, font_size: 10, pagina: 0 },
+                        provincia:                  { x: 365, y: 565, font_size: 10, pagina: 0 },
+                        cap:                        { x: 120, y: 565, font_size: 10, pagina: 0 },
+                        telefono:                   { x: 120, y: 545, font_size: 10, pagina: 0 },
+                        cellulare:                  { x: 365, y: 545, font_size: 10, pagina: 0 },
+                        email:                      { x: 120, y: 520, font_size: 10, pagina: 0 },
+                        firma_1:                    { x: 40,  y: 86,  font_size: 12, pagina: 0 },
+                        firma_2:                    { x: 40,  y: 86,  font_size: 12, pagina: 1 },
+                        crocetta_iscritto_dichiara: { x: 61,  y: 233, font_size: 12, pagina: 0 }
                     }
                 };
 
