@@ -7805,6 +7805,7 @@ window.cambiaModuloTuner = function() {
     aggiornaAnteprimaPdf();
 };
 
+let autoSaveTimeout = null;
 window.updateFieldCoord = function(modulo, campo, asse, valore) {
     const valInt = parseInt(valore) || 0;
     if (!tunerCoords[modulo]) tunerCoords[modulo] = {};
@@ -7815,6 +7816,46 @@ window.updateFieldCoord = function(modulo, campo, asse, valore) {
     
     // Aggiorna l'anteprima in tempo reale
     aggiornaAnteprimaPdf();
+
+    // Mostra indicatore di salvataggio
+    let statusIndicator = document.getElementById('tuner-save-status');
+    if (!statusIndicator) {
+        statusIndicator = document.createElement('span');
+        statusIndicator.id = 'tuner-save-status';
+        statusIndicator.className = 'text-[10px] font-mono text-amber-400 animate-pulse uppercase ml-3';
+        // Inseriamo l'indicatore vicino al titolo del pannello
+        const headerContainer = document.querySelector('#panel-taratura_pdf h2');
+        if (headerContainer && headerContainer.parentElement) {
+            headerContainer.parentElement.appendChild(statusIndicator);
+        }
+    }
+    statusIndicator.innerText = "● Salvataggio automatico...";
+    statusIndicator.className = 'text-[10px] font-mono text-amber-400 animate-pulse uppercase ml-3';
+
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(async () => {
+        try {
+            const val = tunerCoords[modulo][campo];
+            const { error } = await supabaseClient
+                .from('configurazioni_pdf')
+                .upsert({
+                    modulo: modulo,
+                    campo: campo,
+                    x: val.x,
+                    y: val.y,
+                    font_size: val.font_size,
+                    pagina: val.pagina
+                }, { onConflict: 'modulo, campo' });
+
+            if (error) throw error;
+            statusIndicator.innerText = "● Coordinate Salvate ✓";
+            statusIndicator.className = 'text-[10px] font-mono text-emerald-400 uppercase ml-3';
+        } catch (err) {
+            console.error("Errore salvataggio automatico:", err);
+            statusIndicator.innerText = "● Errore di salvataggio ❌";
+            statusIndicator.className = 'text-[10px] font-mono text-red-500 uppercase ml-3';
+        }
+    }, 1000);
 };
 
 window.aggiornaAnteprimaPdf = async function() {

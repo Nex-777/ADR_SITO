@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] feature | Add debounced auto-save with live status feedback to PDF coordinates tuner (v1.01.31)
+- Implemented real-time debounced auto-saving inside `updateFieldCoord` in `portal/dashboard.js`.
+- Added a visual save indicator next to the panel title showing "Salvataggio automatico...", "Coordinate Salvate ✓", or "Errore di salvataggio ❌".
+- Bumped application version to Vs. 1.01.31.
+
 ## [2026-07-03] feature | Relocate informative PDF details to page 4 and duplicate signature on all pages (v1.01.29)
 - Moved default target page for `nome_cognome`, `codice_fiscale`, and `nascita` from page 1 to page 4 (index 3) on the "Informativa Singoli Tesserati" PDF in both database schema and code files.
 - Refactored `api/otp-verify.js` and `portal/dashboard.js` to draw the personal details dynamically on page 4 (target index 3) and replicate the digital signature stamp on every single page of the document.
