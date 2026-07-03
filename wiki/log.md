@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] feature | Custom Causale for Tesseramenti (v1.01.23)
+- Changed payment description/causale for users under tesseramento/tesserato_esterno from "Quota associativa annuale - tesserato" to "Quota tesseramento annuale - [ livello_copertura ]" (e.g. "Quota tesseramento annuale - INTEGRATIVA B").
+- Applied custom causale dynamically in both api/create-checkout-session.js and portal/dashboard.js.
+- Aligned version badges to Vs. 1.01.23 across index.html, legal.html, privacy.html, dashboard.html, and other portal pages.
+
 ## [2026-07-03] feature | Registri visibility, Logiche context and Foto Profilo block (v1.01.22)
 - Enabled "Registro Istruttori" and "Registro Tesserati" in Member context (Area Socio) while keeping them hidden from Athlete context (Tesserati).
 - Made "Logiche di Sistema" tab visible to the entire Board (Direttivo) rather than just President/VP.

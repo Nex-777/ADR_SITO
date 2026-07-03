@@ -2179,7 +2179,7 @@
                 // 1. Recupera dettagli dell'utente per la ricevuta
                 const { data: userProfile, error: userError } = await supabaseClient
                     .from('utenti')
-                    .select('nome, cognome, quota_totale, tipo_adesione')
+                    .select('nome, cognome, quota_totale, tipo_adesione, anagrafiche(id, registro_tesserati(livello_copertura), registro_approvazioni(livello_copertura))')
                     .eq('id', userId)
                     .single();
                 if (userError || !userProfile) throw new Error("Utente non trovato");
@@ -2200,6 +2200,26 @@
                     nextNum = maxReceipt[0].numero_ricevuta + 1;
                 }
 
+                // Determina la causale dinamica del tesseramento/adesione
+                let causale = `Quota associativa annuale - ${userProfile.tipo_adesione ? userProfile.tipo_adesione.replace(/_/g, ' ') : 'Socio'}`;
+                if (userProfile.tipo_adesione === 'tesserato' || userProfile.tipo_adesione === 'tesserato_esterno') {
+                    let livelloCopertura = 'BASE';
+                    const anag = Array.isArray(userProfile.anagrafiche) ? userProfile.anagrafiche[0] : userProfile.anagrafiche;
+                    if (anag) {
+                        const rt = Array.isArray(anag.registro_tesserati) ? anag.registro_tesserati[0] : anag.registro_tesserati;
+                        const ra = Array.isArray(anag.registro_approvazioni) ? anag.registro_approvazioni : [anag.registro_approvazioni];
+                        if (rt && rt.livello_copertura) {
+                            livelloCopertura = rt.livello_copertura;
+                        } else {
+                            const pendingTess = ra?.find(r => r && r.livello_copertura);
+                            if (pendingTess && pendingTess.livello_copertura) {
+                                livelloCopertura = pendingTess.livello_copertura;
+                            }
+                        }
+                    }
+                    causale = `Quota tesseramento annuale - ${livelloCopertura.replace(/_/g, ' ').toUpperCase()}`;
+                }
+
                 // 3. Inserisce la ricevuta nel database
                 const { data: recData, error: recError } = await supabaseClient
                     .from('ricevute_pagamenti')
@@ -2208,7 +2228,7 @@
                         anno_fiscale: annoFiscale,
                         utente_id: userId,
                         importo: importo,
-                        causale: `Quota associativa annuale - ${userProfile.tipo_adesione ? userProfile.tipo_adesione.replace(/_/g, ' ') : 'Socio'}`,
+                        causale: causale,
                         metodo_pagamento: 'BONIFICO'
                     })
                     .select()

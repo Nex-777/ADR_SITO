@@ -75,7 +75,7 @@ export default async function handler(req, res) {
         // 1. Recupera le informazioni del profilo utente da Supabase
         const { data: profile, error: profileError } = await supabase
             .from('utenti')
-            .select('nome, cognome, email, quota_totale, tipo_adesione')
+            .select('nome, cognome, email, quota_totale, tipo_adesione, anagrafiche(id, registro_tesserati(livello_copertura), registro_approvazioni(livello_copertura))')
             .eq('id', utenteId)
             .maybeSingle();
 
@@ -94,10 +94,29 @@ export default async function handler(req, res) {
         }
 
         // Determina la causale dinamica del tesseramento/adesione
-        const tipoAdesioneLabel = profile.tipo_adesione 
-            ? profile.tipo_adesione.replace(/_/g, ' ').toUpperCase()
-            : 'SOCIO';
-        const description = `Quota annuale 2026 - ${tipoAdesioneLabel} per ${profile.nome} ${profile.cognome}`;
+        let description = '';
+        if (profile.tipo_adesione === 'tesserato' || profile.tipo_adesione === 'tesserato_esterno') {
+            let livelloCopertura = 'BASE';
+            const anag = Array.isArray(profile.anagrafiche) ? profile.anagrafiche[0] : profile.anagrafiche;
+            if (anag) {
+                const rt = Array.isArray(anag.registro_tesserati) ? anag.registro_tesserati[0] : anag.registro_tesserati;
+                const ra = Array.isArray(anag.registro_approvazioni) ? anag.registro_approvazioni : [anag.registro_approvazioni];
+                if (rt && rt.livello_copertura) {
+                    livelloCopertura = rt.livello_copertura;
+                } else {
+                    const pendingTess = ra?.find(r => r && r.livello_copertura);
+                    if (pendingTess && pendingTess.livello_copertura) {
+                        livelloCopertura = pendingTess.livello_copertura;
+                    }
+                }
+            }
+            description = `Quota tesseramento annuale - ${livelloCopertura.replace(/_/g, ' ').toUpperCase()}`;
+        } else {
+            const tipoAdesioneLabel = profile.tipo_adesione 
+                ? profile.tipo_adesione.replace(/_/g, ' ').toUpperCase()
+                : 'SOCIO';
+            description = `Quota annuale 2026 - ${tipoAdesioneLabel} per ${profile.nome} ${profile.cognome}`;
+        }
 
         // Calcola la quota e la commissione del 2% per le spese di gestione
         const baseAmount = Math.round(quota * 100);
