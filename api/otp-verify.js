@@ -380,10 +380,10 @@ export default async function handler(req, res) {
 
                 const defaults = {
                     informativa: {
-                        nome_cognome: { x: 100, y: 715, font_size: 10 },
-                        codice_fiscale: { x: 100, y: 705, font_size: 10 },
-                        nascita: { x: 250, y: 705, font_size: 10 },
-                        firma: { x: 130, y: 246, font_size: 7 }
+                        nome_cognome: { x: 100, y: 715, font_size: 10, pagina: 3 },
+                        codice_fiscale: { x: 100, y: 705, font_size: 10, pagina: 3 },
+                        nascita: { x: 250, y: 705, font_size: 10, pagina: 3 },
+                        firma: { x: 130, y: 246, font_size: 7, pagina: 0 }
                     },
                     iscrizione: {
                         cognome: { x: 100, y: 735, font_size: 10 },
@@ -431,10 +431,20 @@ export default async function handler(req, res) {
                 const cInfNascita = getCoord('informativa', 'nascita');
                 const cInfFirma = getCoord('informativa', 'firma');
 
-                page1.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: cInfNome.x, y: cInfNome.y, size: cInfNome.font_size });
-                page1.drawText(cf, { x: cInfCF.x, y: cInfCF.y, size: cInfCF.font_size });
-                page1.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: cInfNascita.x, y: cInfNascita.y, size: cInfNascita.font_size });
-                page1.drawText(signatureText, { x: cInfFirma.x, y: cInfFirma.y, size: cInfFirma.font_size, color: signatureColor });
+                // Personal details go to the configured page (defaults to index 3, i.e. 4th page)
+                const targetPageNome = pages1[cInfNome.pagina] || pages1[3] || pages1[pages1.length - 1];
+                targetPageNome.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: cInfNome.x, y: cInfNome.y, size: cInfNome.font_size });
+
+                const targetPageCF = pages1[cInfCF.pagina] || pages1[3] || pages1[pages1.length - 1];
+                targetPageCF.drawText(cf, { x: cInfCF.x, y: cInfCF.y, size: cInfCF.font_size });
+
+                const targetPageNascita = pages1[cInfNascita.pagina] || pages1[3] || pages1[pages1.length - 1];
+                targetPageNascita.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: cInfNascita.x, y: cInfNascita.y, size: cInfNascita.font_size });
+
+                // Draw digital signature on EVERY single page of the document
+                pages1.forEach(p => {
+                    p.drawText(signatureText, { x: cInfFirma.x, y: cInfFirma.y, size: cInfFirma.font_size, color: signatureColor });
+                });
 
                 // Fill ISCRIZIONE (doc2)
                 const cIscrCognome = getCoord('iscrizione', 'cognome');

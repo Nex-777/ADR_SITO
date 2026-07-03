@@ -7678,9 +7678,9 @@ let cachedPdfs = {};
 
 const tunerDefaults = {
     informativa: {
-        nome_cognome: { x: 100, y: 715, font_size: 10, pagina: 0 },
-        codice_fiscale: { x: 100, y: 705, font_size: 10, pagina: 0 },
-        nascita: { x: 250, y: 705, font_size: 10, pagina: 0 },
+        nome_cognome: { x: 100, y: 715, font_size: 10, pagina: 3 },
+        codice_fiscale: { x: 100, y: 705, font_size: 10, pagina: 3 },
+        nascita: { x: 250, y: 705, font_size: 10, pagina: 3 },
         firma: { x: 130, y: 246, font_size: 7, pagina: 0 }
     },
     iscrizione: {
@@ -7850,16 +7850,25 @@ window.aggiornaAnteprimaPdf = async function() {
         };
 
         if (modulo === 'informativa') {
-            const p1 = pages[0];
             const n = getVal('nome_cognome');
             const c = getVal('codice_fiscale');
             const nas = getVal('nascita');
             const f = getVal('firma');
 
-            p1.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: n.x, y: n.y, size: n.font_size });
-            p1.drawText(cf, { x: c.x, y: c.y, size: c.font_size });
-            p1.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: nas.x, y: nas.y, size: nas.font_size });
-            p1.drawText(signatureText, { x: f.x, y: f.y, size: f.font_size, color: signatureColor });
+            // Write personal info to the configured page (defaults to index 3, 4th page)
+            const targetPageNome = pages[n.pagina] || pages[3] || pages[pages.length - 1];
+            targetPageNome.drawText(`${profile.nome.toUpperCase()} ${profile.cognome.toUpperCase()}`, { x: n.x, y: n.y, size: n.font_size });
+
+            const targetPageCF = pages[c.pagina] || pages[3] || pages[pages.length - 1];
+            targetPageCF.drawText(cf, { x: c.x, y: c.y, size: c.font_size });
+
+            const targetPageNascita = pages[nas.pagina] || pages[3] || pages[pages.length - 1];
+            targetPageNascita.drawText(`${profile.luogo_nascita_comune.toUpperCase()} (${profile.luogo_nascita_provincia.toUpperCase()})`, { x: nas.x, y: nas.y, size: nas.font_size });
+
+            // Replicate signature digital stamp on EVERY single page of the document
+            pages.forEach(p => {
+                p.drawText(signatureText, { x: f.x, y: f.y, size: f.font_size, color: signatureColor });
+            });
         } else {
             const p1 = pages[0];
             const p2 = pages[1];

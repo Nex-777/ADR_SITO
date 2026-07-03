@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-03] feature | Relocate informative PDF details to page 4 and duplicate signature on all pages (v1.01.29)
+- Moved default target page for `nome_cognome`, `codice_fiscale`, and `nascita` from page 1 to page 4 (index 3) on the "Informativa Singoli Tesserati" PDF in both database schema and code files.
+- Refactored `api/otp-verify.js` and `portal/dashboard.js` to draw the personal details dynamically on page 4 (target index 3) and replicate the digital signature stamp on every single page of the document.
+- Bumped application version to Vs. 1.01.29.
+
 ## [2026-07-03] fix | Enforce explicit block styling and 950px height on PDF iframe (v1.01.28)
 - Removed `flex` wrapping from the PDF preview container to prevent browsers from squishing the iframe height.
 - Styled the iframe with explicit `display: block; height: 950px; min-height: 950px;` to ensure full height page visualization.
