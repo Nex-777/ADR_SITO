@@ -55,7 +55,7 @@ export default async function handler(req, res) {
             .select('sync_csen_status')
             .in('stato_tesseramento', ['ATTIVO', 'SOSPESO']);
 
-        const counts = { PENDING: 0, SYNCED: 0, ERROR: 0, SYNCED_NO_NUM: 0, other: 0 };
+        const counts = { PENDING: 0, SYNCED: 0, SYNCED_NO_NUM: 0, RENEWAL_SUBMITTED: 0, ERROR: 0, other: 0 };
         (statusCounts || []).forEach(r => {
             if (counts[r.sync_csen_status] !== undefined) counts[r.sync_csen_status]++;
             else counts.other++;
@@ -86,7 +86,22 @@ export default async function handler(req, res) {
             .order('data_richiesta_tesseramento', { ascending: true })
             .limit(30);
 
-        // 4. PENDING ma con numero tessera già presente (bug legacy)
+        // 4. RENEWAL_SUBMITTED: rinnovo inviato, in attesa di nuovo numero da CSEN
+        const { data: renewalList } = await supabase
+            .from('registro_tesserati')
+            .select(`
+                id_tesserato,
+                livello_copertura,
+                data_richiesta_tesseramento,
+                sync_csen_log,
+                anagrafiche ( nome, cognome, codice_fiscale )
+            `)
+            .eq('sync_csen_status', 'RENEWAL_SUBMITTED')
+            .is('numero_tessera_csen', null)
+            .order('data_richiesta_tesseramento', { ascending: true })
+            .limit(30);
+
+        // 5. PENDING ma con numero tessera già presente (bug legacy)
         const { count: pendingConTessera } = await supabase
             .from('registro_tesserati')
             .select('id_tesserato', { count: 'exact', head: true })
@@ -98,6 +113,7 @@ export default async function handler(req, res) {
             counts,
             pendingConTessera: pendingConTessera || 0,
             pending_da_sincronizzare: pendingList || [],
+            renewal_submitted: renewalList || [],
             errori: (errors || []).map(e => ({
                 id: e.id_tesserato,
                 nome: `${e.anagrafiche?.nome} ${e.anagrafiche?.cognome}`,

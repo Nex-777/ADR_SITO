@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.35"
+                VERSION: "1.01.36"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1098,12 +1098,16 @@
                 if (!res.ok) throw new Error(`API error: ${res.status}`);
                 const data = await res.json();
 
-                const { counts, pending_da_sincronizzare, errori, pendingConTessera } = data;
+                const { counts, pending_da_sincronizzare, renewal_submitted, errori, pendingConTessera } = data;
                 const totalPending = pending_da_sincronizzare?.length || 0;
+                const totalRenewal = renewal_submitted?.length || 0;
                 const totalErrors = errori?.length || 0;
 
-                const statusColor = totalErrors > 0 ? '#df293e' : totalPending > 0 ? '#eab308' : '#22c55e';
-                const statusLabel = totalErrors > 0 ? '⚠️ ERRORI PRESENTI' : totalPending > 0 ? '🟡 IN ATTESA DI SYNC' : '✅ TUTTO SINCRONIZZATO';
+                const statusColor = totalErrors > 0 ? '#df293e' : (totalPending + totalRenewal) > 0 ? '#eab308' : '#22c55e';
+                const statusLabel = totalErrors > 0 ? '⚠️ ERRORI PRESENTI'
+                    : totalRenewal > 0 ? '🟠 RINNOVI IN ATTESA CONFERMA CSEN'
+                    : totalPending > 0 ? '🟡 IN ATTESA DI SYNC'
+                    : '✅ TUTTO SINCRONIZZATO';
 
                 const pendingRows = (pending_da_sincronizzare || []).map(p => `
                     <tr class="border-b border-white/5">
@@ -1111,6 +1115,15 @@
                         <td class="py-2 px-3 text-xs text-gray-400 font-mono">${escapeHtml(p.anagrafiche?.codice_fiscale || '')}</td>
                         <td class="py-2 px-3 text-xs text-primary">${escapeHtml(p.livello_copertura || '')}</td>
                         <td class="py-2 px-3 text-xs text-gray-500">${p.data_richiesta_tesseramento || ''}</td>
+                    </tr>
+                `).join('');
+
+                const renewalRows = (renewal_submitted || []).map(r => `
+                    <tr class="border-b border-white/5">
+                        <td class="py-2 px-3 text-xs text-orange-300 font-bold">${escapeHtml(r.anagrafiche?.nome || '')} ${escapeHtml(r.anagrafiche?.cognome || '')}</td>
+                        <td class="py-2 px-3 text-xs text-gray-400 font-mono">${escapeHtml(r.anagrafiche?.codice_fiscale || '')}</td>
+                        <td class="py-2 px-3 text-xs text-orange-400">${escapeHtml(r.livello_copertura || '')}</td>
+                        <td class="py-2 px-3 text-xs text-gray-500 max-w-xs" style="word-break:break-word">${escapeHtml(r.sync_csen_log || '')}</td>
                     </tr>
                 `).join('');
 
@@ -1124,31 +1137,51 @@
 
                 container.innerHTML = `
                     <div class="mb-4 flex flex-wrap gap-3">
-                        <div class="bg-black/40 border border-white/10 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                        <div class="bg-black/40 border border-green-500/30 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
                             <span class="text-2xl font-black text-green-400">${counts.SYNCED || 0}</span>
                             <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">SYNCED</span>
                         </div>
-                        <div class="bg-black/40 border border-white/10 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                        <div class="bg-black/40 border border-yellow-500/30 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
                             <span class="text-2xl font-black text-yellow-400">${totalPending}</span>
                             <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">DA SYNC</span>
                         </div>
-                        <div class="bg-black/40 border border-white/10 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                        <div class="bg-black/40 border border-orange-500/30 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                            <span class="text-2xl font-black text-orange-400">${totalRenewal}</span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">RINNOVI</span>
+                        </div>
+                        <div class="bg-black/40 border border-blue-500/30 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                            <span class="text-2xl font-black text-blue-400">${counts.SYNCED_NO_NUM || 0}</span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">SENZA N.</span>
+                        </div>
+                        <div class="bg-black/40 border border-red-500/30 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
                             <span class="text-2xl font-black text-red-400">${totalErrors}</span>
                             <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">ERRORI</span>
                         </div>
-                        ${pendingConTessera > 0 ? `
-                        <div class="bg-black/40 border border-orange-500/30 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
-                            <span class="text-2xl font-black text-orange-400">${pendingConTessera}</span>
-                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">LEGACY FIX</span>
-                        </div>` : ''}
                         <div class="flex-1 flex items-center justify-end">
                             <span class="font-headline text-xs font-bold px-3 py-1 rounded border" style="color:${statusColor};border-color:${statusColor}40;background:${statusColor}10">${statusLabel}</span>
                         </div>
                     </div>
 
+                    ${totalRenewal > 0 ? `
+                    <div class="mb-4 p-3 border border-orange-500/30 bg-orange-500/5 rounded">
+                        <h4 class="font-headline text-xs font-bold text-orange-400 uppercase tracking-widest mb-1">🟠 Rinnovi inviati su CSEN — In attesa di nuovo numero (${totalRenewal})</h4>
+                        <p class="text-[10px] text-gray-500 mb-3">Il sistema aggiornerà il numero tessera automaticamente stanotte alle 02:00 quando CSEN avrà elaborato il rinnovo.</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead><tr class="border-b border-white/10">
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Nome</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">CF</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Copertura</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Log</th>
+                                </tr></thead>
+                                <tbody>${renewalRows}</tbody>
+                            </table>
+                        </div>
+                    </div>` : ''}
+
                     ${totalPending > 0 ? `
                     <div class="mb-4">
-                        <h4 class="font-headline text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2">In attesa di sincronizzazione CSEN (${totalPending})</h4>
+                        <h4 class="font-headline text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2">🟡 In attesa di sincronizzazione CSEN (${totalPending})</h4>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead><tr class="border-b border-white/10">
@@ -1164,7 +1197,7 @@
 
                     ${totalErrors > 0 ? `
                     <div class="mb-4">
-                        <h4 class="font-headline text-xs font-bold text-red-400 uppercase tracking-widest mb-2">Errori di sincronizzazione (${totalErrors})</h4>
+                        <h4 class="font-headline text-xs font-bold text-red-400 uppercase tracking-widest mb-2">🔴 Errori di sincronizzazione (${totalErrors})</h4>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left">
                                 <thead><tr class="border-b border-white/10">
@@ -1654,8 +1687,11 @@
                 counterEl.textContent = `${filteredData.length} RISULTATI`;
             }
 
-            // Update CSEN pending counter
-            const pendingCount = tesseratiData.filter(t => t.sync_csen_status === 'PENDING' && t.stato_tesseramento === 'ATTIVO').length;
+            // Update CSEN pending counter (PENDING + RENEWAL_SUBMITTED = tessere ancora da completare)
+            const pendingCount = tesseratiData.filter(t =>
+                ['PENDING', 'RENEWAL_SUBMITTED'].includes(t.sync_csen_status) &&
+                t.stato_tesseramento === 'ATTIVO'
+            ).length;
             const btnSync = document.getElementById('btn-sync-csen');
             const spanSyncCount = document.getElementById('csen-pending-count');
             if (btnSync && spanSyncCount) {
@@ -1711,14 +1747,32 @@
                 if (tess.stato_tesseramento === 'ATTIVO') badgeColor = 'text-green-500 bg-green-500/10 border-green-500/30';
                 if (tess.stato_tesseramento === 'SOSPESO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
 
-                let csenTextColor = 'text-primary';
+                // ---- Colore e testo badge tessera CSEN (tabella) ----
+                let csenTextColor = 'text-yellow-500';  // PENDING default
                 let csenTextStr = 'DA COMUNICARE';
                 if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
+                    // Tessera assegnata → verde
                     csenTextColor = 'text-green-500';
                     csenTextStr = tess.numero_tessera_csen;
-                } else if (tess.sync_csen_status === 'SYNCED') {
-                    csenTextColor = 'text-yellow-500';
-                    csenTextStr = 'IN ATTESA DI CODICE';
+                } else {
+                    switch (tess.sync_csen_status) {
+                        case 'RENEWAL_SUBMITTED':
+                            csenTextColor = 'text-orange-400';
+                            csenTextStr = 'RINNOVO INVIATO';
+                            break;
+                        case 'SYNCED_NO_NUM':
+                            csenTextColor = 'text-blue-400';
+                            csenTextStr = 'IN ATTESA N. CSEN';
+                            break;
+                        case 'ERROR':
+                            csenTextColor = 'text-primary';
+                            csenTextStr = 'ERRORE SYNC';
+                            break;
+                        case 'PENDING':
+                        default:
+                            csenTextColor = 'text-yellow-500';
+                            csenTextStr = 'DA COMUNICARE';
+                    }
                 }
 
                 let actionBtn = '';
@@ -1847,15 +1901,31 @@
                 if (tess.stato_tesseramento === 'ATTIVO') tessColor = '#22c55e';
                 if (tess.stato_tesseramento === 'SOSPESO') tessColor = '#df293e';
 
-                // CSEN badge logic
-                let csenTextColorHex = '#df293e'; // primary red
+                // ---- Colore e testo badge tessera CSEN (card) ----
+                let csenTextColorHex = '#eab308'; // yellow — PENDING default
                 let csenTextStr = 'DA COMUNICARE';
                 if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
-                    csenTextColorHex = '#22c55e'; // green-500
+                    csenTextColorHex = '#22c55e'; // verde — tessera assegnata
                     csenTextStr = tess.numero_tessera_csen;
-                } else if (tess.sync_csen_status === 'SYNCED') {
-                    csenTextColorHex = '#eab308'; // yellow-500
-                    csenTextStr = 'IN ATTESA DI CODICE';
+                } else {
+                    switch (tess.sync_csen_status) {
+                        case 'RENEWAL_SUBMITTED':
+                            csenTextColorHex = '#f97316'; // orange
+                            csenTextStr = 'RINNOVO INVIATO';
+                            break;
+                        case 'SYNCED_NO_NUM':
+                            csenTextColorHex = '#3b82f6'; // blue
+                            csenTextStr = 'IN ATTESA N. CSEN';
+                            break;
+                        case 'ERROR':
+                            csenTextColorHex = '#df293e'; // red
+                            csenTextStr = 'ERRORE SYNC';
+                            break;
+                        case 'PENDING':
+                        default:
+                            csenTextColorHex = '#eab308'; // yellow
+                            csenTextStr = 'DA COMUNICARE';
+                    }
                 }
 
                 // Action button

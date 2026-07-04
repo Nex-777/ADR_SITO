@@ -39,8 +39,11 @@ async function runReconciliation() {
     // Pulisci mismatch precedenti (opzionale, ma mantiene la tabella pulita)
     await supabase.from('csen_mismatches').delete().neq('id', 0);
 
-    // Trova tutti i tesserati che hanno numero_tessera_csen = NULL e NON sono in stato PENDING
-    // (quelli in PENDING vengono gestiti da csen_sync_active.js)
+    // Trova tutti i tesserati con numero_tessera_csen = NULL e stato:
+    // - SYNCED_NO_NUM: registrati ma numero non ancora assegnato
+    // - RENEWAL_SUBMITTED: rinnovo inviato, in attesa nuovo numero CSEN
+    // - ERROR: tentativo di auto-recovery
+    // NON include PENDING (gestiti da csen_sync_active.js)
     const { data: atleti, error: fetchErr } = await supabase
         .from('registro_tesserati')
         .select(`
@@ -54,7 +57,7 @@ async function runReconciliation() {
             )
         `)
         .is('numero_tessera_csen', null)
-        .neq('sync_csen_status', 'PENDING');
+        .in('sync_csen_status', ['SYNCED_NO_NUM', 'RENEWAL_SUBMITTED', 'ERROR']);
 
     if (fetchErr) {
         console.error("Errore fetch da Supabase:", fetchErr);
@@ -114,25 +117,44 @@ async function runReconciliation() {
                     dettagli: { id_tesserato: tess.id_tesserato }
                 });
             } else {
+                // Controlla stato tessera: deve essere attiva (non scaduta) per l'anno corrente
+                const annoCorrente = new Date().getFullYear();
+                const scadMatch = html.match(/Scade\s+il:\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+                const annoScadenza = scadMatch ? parseInt(scadMatch[3], 10) : null;
+                const tesseraScaduta = html.includes('TESSERA SCADUTA') || html.includes('Clicca per rinnovare');
+                const esseraAttiva = annoScadenza !== null ? annoScadenza >= annoCorrente : !tesseraScaduta;
+
                 // Estrarre il numero tessera
                 const match = html.match(/N\.\s*Tessera:\s*(?:<[^>]+>)*([a-zA-Z0-9]+)/i);
-                if (match && match[1]) {
+                if (match && match[1] && match[1] !== '0') {
                     const numeroEstratto = match[1];
-                    console.log(`   - ✅ Trovato su CSEN! Numero Tessera: ${numeroEstratto}`);
-                    
-                    if (numeroEstratto !== '0') {
-                        // AUTO-HEALING!
+
+                    if (!esseraAttiva) {
+                        // Tessera scaduta: non aggiornare numero, ma segnala che va rinnovata
+                        console.log(`   - ⚠️ Trovato su CSEN ma tessera SCADUTA (anno ${annoScadenza}). Rimetto in PENDING per rinnovo.`);
                         await supabase
                             .from('registro_tesserati')
-                            .update({ numero_tessera_csen: numeroEstratto })
+                            .update({
+                                sync_csen_status: 'PENDING',
+                                sync_csen_log: `Riconciliazione: tessera trovata ma scaduta (anno ${annoScadenza}). Rimesso in PENDING per rinnovo.`
+                            })
                             .eq('id_tesserato', tess.id_tesserato);
-                        console.log(`   - 🏥 Auto-healing effettuato. Database aggiornato.`);
-                        sanati++;
                     } else {
-                        console.log(`   - ⚠️ Su CSEN il numero tessera è ancora 0!`);
+                        // TESSERA ATTIVA — AUTO-HEALING!
+                        console.log(`   - ✅ Trovato su CSEN! Tessera attiva: ${numeroEstratto} (scad. ${annoScadenza})`);
+                        await supabase
+                            .from('registro_tesserati')
+                            .update({
+                                numero_tessera_csen: numeroEstratto,
+                                sync_csen_status: 'SYNCED',
+                                sync_csen_log: `Auto-healing: tessera attiva ${numeroEstratto} (scad. ${annoScadenza}) recuperata da portale CSEN`
+                            })
+                            .eq('id_tesserato', tess.id_tesserato);
+                        console.log(`   - 🏥 Auto-healing effettuato. Stato: SYNCED.`);
+                        sanati++;
                     }
                 } else {
-                    console.log(`   - ⚠️ Trovato su CSEN ma impossibile estrarre il numero tessera.`);
+                    console.log(`   - ⚠️ Trovato su CSEN ma numero tessera non estraibile o ancora 0. Riproverò al prossimo run.`);
                 }
             }
         }
