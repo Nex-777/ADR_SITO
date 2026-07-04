@@ -5,48 +5,54 @@ on:
   repository_dispatch:
     types: [trigger-csen-sync]
   schedule:
-    - cron: '0 2 * * *' # Run every night at 2:00 AM as a fallback
+    - cron: '0 2 * * *' # Ogni notte alle 2:00 AM UTC
 
 jobs:
   sync_csen:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-        
-      - name: Esegui Sincronizzazione CSEN (Max 5 record)
+
+      - name: Esegui Sincronizzazione CSEN (nuovi tesserati)
         env:
           CSEN_USER: ${{ secrets.CSEN_USER }}
           CSEN_PASS: ${{ secrets.CSEN_PASS }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          CAPTCHA_API_KEY: ${{ secrets.CAPTCHA_API_KEY }}
         run: node scripts/csen_sync_active.js
 
       - name: Esegui Riconciliazione ed Auto-Healing
+        if: always()  # Esegue anche se il passo precedente ha fallito
         env:
           CSEN_USER: ${{ secrets.CSEN_USER }}
           CSEN_PASS: ${{ secrets.CSEN_PASS }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: node scripts/csen_reconciliation.js
 
-      - name: Aggiorna Tessere Residue
+      - name: Aggiorna Contatori Tessere Residue
+        if: always()
         env:
           CSEN_USER: ${{ secrets.CSEN_USER }}
           CSEN_PASS: ${{ secrets.CSEN_PASS }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: node scripts/scraper_csen.js

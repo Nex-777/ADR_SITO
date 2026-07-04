@@ -7,6 +7,24 @@ const CSEN_USER = process.env.CSEN_USER;
 const CSEN_PASS = process.env.CSEN_PASS;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
+async function sendAlertEmail(subject, htmlBody) {
+    if (!RESEND_API_KEY) return;
+    try {
+        await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                from: 'Adrenalina Club <noreply@adrenalinaclub.it>',
+                to: ['fabio.paoletti@adrenalinaclub.it'],
+                subject,
+                html: htmlBody,
+            }),
+        });
+    } catch (e) { console.warn('[ALERT] Invio email fallito:', e.message); }
+}
+
 
 async function runReconciliation() {
     console.log("Avvio Riconciliazione e Auto-Healing CSEN...");
@@ -21,7 +39,8 @@ async function runReconciliation() {
     // Pulisci mismatch precedenti (opzionale, ma mantiene la tabella pulita)
     await supabase.from('csen_mismatches').delete().neq('id', 0);
 
-    // Trova tutti i tesserati che hanno numero_tessera_csen = '0' o NULL
+    // Trova tutti i tesserati che hanno numero_tessera_csen = NULL e NON sono in stato PENDING
+    // (quelli in PENDING vengono gestiti da csen_sync_active.js)
     const { data: atleti, error: fetchErr } = await supabase
         .from('registro_tesserati')
         .select(`
@@ -34,8 +53,8 @@ async function runReconciliation() {
                 codice_fiscale
             )
         `)
-        .or('numero_tessera_csen.is.null,numero_tessera_csen.eq.0,numero_tessera_csen.eq.null')
-        // .neq('sync_csen_status', 'PENDING'); // Solo quelli già processati in passato
+        .is('numero_tessera_csen', null)
+        .neq('sync_csen_status', 'PENDING');
 
     if (fetchErr) {
         console.error("Errore fetch da Supabase:", fetchErr);
@@ -121,6 +140,18 @@ async function runReconciliation() {
         console.log(`\n✅ Riconciliazione completata.`);
         console.log(`   - Atleti sanati (Auto-Healed): ${sanati}`);
         console.log(`   - Atleti non trovati su CSEN: ${mancanti}`);
+
+        if (mancanti > 0) {
+            await sendAlertEmail(
+                `⚠️ CSEN Riconciliazione: ${mancanti} atleti non trovati su CSEN`,
+                `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:20px;border-left:5px solid #eab308">
+                    <h2 style="color:#eab308">CSEN - ATLETI MANCANTI</h2>
+                    <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+                    <p>${mancanti} atleti con numero tessera NULL sono risultati MANCANTI sul portale CSEN.</p>
+                    <p>Verificare i dettagli nella tabella <code>csen_mismatches</code> su Supabase o nella dashboard portale.</p>
+                </div>`
+            );
+        }
 
     } catch (err) {
         console.error("❌ Errore generale script:", err);

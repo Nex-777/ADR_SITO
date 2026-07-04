@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.21"
+                VERSION: "1.01.35"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1061,24 +1061,131 @@
                 
                 if (!token) throw new Error("Sessione scaduta.");
 
-                const res = await fetch(`${APP_CONFIG.API_BASE_URL}/api/trigger-csen-sync`, {
+                const res = await fetch(`${APP_CONFIG.API_BASE_URL}/api/trigger-csen`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
                 if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(`Errore API: ${res.status} ${errText}`);
+                    const errData = await res.json().catch(() => ({ error: res.statusText }));
+                    throw new Error(`Errore API: ${res.status} - ${errData.error || res.statusText}`);
                 }
 
-                alert("Sincronizzazione avviata! Il sistema elaborerà gli atleti in background. Controlla tra pochi minuti ricaricando la pagina.");
+                alert("✅ Sincronizzazione CSEN avviata! Il sistema elaborerà gli atleti in background. Controlla il pannello CSEN Status tra 10-15 minuti.");
+                setTimeout(() => window.loadCsenStatus && window.loadCsenStatus(), 5000);
             } catch (err) {
-                alert("Errore nell'avvio della sincronizzazione: " + err.message);
+                alert("❌ Errore nell'avvio della sincronizzazione: " + err.message);
             } finally {
                 if (btn) btn.disabled = false;
                 if (icon) icon.classList.remove('animate-spin');
             }
         };
+
+        window.loadCsenStatus = async () => {
+            const container = document.getElementById('csen-status-panel');
+            if (!container) return;
+
+            container.innerHTML = `<div class="text-gray-500 text-xs animate-pulse p-4">Caricamento stato CSEN...</div>`;
+
+            try {
+                const { data: sessionData } = await supabaseClient.auth.getSession();
+                const token = sessionData?.session?.access_token;
+                if (!token) throw new Error("Sessione scaduta.");
+
+                const res = await fetch(`${APP_CONFIG.API_BASE_URL}/api/csen-status`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error(`API error: ${res.status}`);
+                const data = await res.json();
+
+                const { counts, pending_da_sincronizzare, errori, pendingConTessera } = data;
+                const totalPending = pending_da_sincronizzare?.length || 0;
+                const totalErrors = errori?.length || 0;
+
+                const statusColor = totalErrors > 0 ? '#df293e' : totalPending > 0 ? '#eab308' : '#22c55e';
+                const statusLabel = totalErrors > 0 ? '⚠️ ERRORI PRESENTI' : totalPending > 0 ? '🟡 IN ATTESA DI SYNC' : '✅ TUTTO SINCRONIZZATO';
+
+                const pendingRows = (pending_da_sincronizzare || []).map(p => `
+                    <tr class="border-b border-white/5">
+                        <td class="py-2 px-3 text-xs text-white font-bold">${escapeHtml(p.anagrafiche?.nome || '')} ${escapeHtml(p.anagrafiche?.cognome || '')}</td>
+                        <td class="py-2 px-3 text-xs text-gray-400 font-mono">${escapeHtml(p.anagrafiche?.codice_fiscale || '')}</td>
+                        <td class="py-2 px-3 text-xs text-primary">${escapeHtml(p.livello_copertura || '')}</td>
+                        <td class="py-2 px-3 text-xs text-gray-500">${p.data_richiesta_tesseramento || ''}</td>
+                    </tr>
+                `).join('');
+
+                const errorRows = (errori || []).map(e => `
+                    <tr class="border-b border-white/5">
+                        <td class="py-2 px-3 text-xs text-red-400 font-bold">${escapeHtml(e.nome || '')}</td>
+                        <td class="py-2 px-3 text-xs text-gray-400 font-mono">${escapeHtml(e.cf || '')}</td>
+                        <td class="py-2 px-3 text-xs text-red-300" style="max-width:300px;word-break:break-word">${escapeHtml(e.log || 'Errore sconosciuto')}</td>
+                    </tr>
+                `).join('');
+
+                container.innerHTML = `
+                    <div class="mb-4 flex flex-wrap gap-3">
+                        <div class="bg-black/40 border border-white/10 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                            <span class="text-2xl font-black text-green-400">${counts.SYNCED || 0}</span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">SYNCED</span>
+                        </div>
+                        <div class="bg-black/40 border border-white/10 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                            <span class="text-2xl font-black text-yellow-400">${totalPending}</span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">DA SYNC</span>
+                        </div>
+                        <div class="bg-black/40 border border-white/10 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                            <span class="text-2xl font-black text-red-400">${totalErrors}</span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">ERRORI</span>
+                        </div>
+                        ${pendingConTessera > 0 ? `
+                        <div class="bg-black/40 border border-orange-500/30 px-4 py-3 rounded flex flex-col items-center min-w-[80px]">
+                            <span class="text-2xl font-black text-orange-400">${pendingConTessera}</span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">LEGACY FIX</span>
+                        </div>` : ''}
+                        <div class="flex-1 flex items-center justify-end">
+                            <span class="font-headline text-xs font-bold px-3 py-1 rounded border" style="color:${statusColor};border-color:${statusColor}40;background:${statusColor}10">${statusLabel}</span>
+                        </div>
+                    </div>
+
+                    ${totalPending > 0 ? `
+                    <div class="mb-4">
+                        <h4 class="font-headline text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2">In attesa di sincronizzazione CSEN (${totalPending})</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead><tr class="border-b border-white/10">
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Nome</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">CF</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Copertura</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Data</th>
+                                </tr></thead>
+                                <tbody>${pendingRows}</tbody>
+                            </table>
+                        </div>
+                    </div>` : ''}
+
+                    ${totalErrors > 0 ? `
+                    <div class="mb-4">
+                        <h4 class="font-headline text-xs font-bold text-red-400 uppercase tracking-widest mb-2">Errori di sincronizzazione (${totalErrors})</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead><tr class="border-b border-white/10">
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Nome</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">CF</th>
+                                    <th class="py-2 px-3 text-[10px] text-gray-500 uppercase tracking-wider">Errore</th>
+                                </tr></thead>
+                                <tbody>${errorRows}</tbody>
+                            </table>
+                        </div>
+                    </div>` : ''}
+
+                    <div class="text-right text-[10px] text-gray-600 mt-2">Aggiornato: ${new Date(data.timestamp).toLocaleString('it-IT')}</div>
+                `;
+
+            } catch (err) {
+                container.innerHTML = `<div class="text-red-400 text-xs p-4">Errore caricamento stato CSEN: ${escapeHtml(err.message)}</div>`;
+            }
+        };
+
+
 
         window.attivaTesseramentoApprovazioni = async (anagraficaId) => {
             if (!confirm("Confermi l'attivazione immediata di questo Tesserato?")) return;

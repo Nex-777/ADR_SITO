@@ -37,6 +37,16 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Integrated `pdf-lib` script directly on the frontend for instant browser-side compilation.
 - Aligned version badges to Vs. 1.01.25 across all application files.
 
+## [2026-07-04] fix | Fix CSEN Sync Pipeline and Add Monitoring System (v1.01.35)
+- **Bug critico risolto**: La stored procedure `approva_tesserato` era stata ripristinata a una versione precedente (bloccante per webhook/service role) da un file di migrazione SQL aggiornato. Risolto definitivamente.
+- **Bug CSEN Sync risolto**: `csen_sync_active.js` processava ogni notte i 60 record in stato `PENDING` anche se avevano già il numero tessera CSEN assegnato (causando re-elaborazioni inutili e timeout). Aggiunta logica di skip per i record con `numero_tessera_csen` già valorizzato, e correzione automatica dei record legacy (PENDING+numero_tessera → SYNCED).
+- **Sistema di allerta email**: Aggiunta funzione `sendAlertEmail` in `csen_sync_active.js` e `csen_reconciliation.js`. In caso di errori fatali (credenziali mancanti, login fallito, errore database, timeout) viene inviata una email di alert al presidente.
+- **Nuovo endpoint API**: Creato `api/csen-status.js` per esporre lo stato del sync CSEN (contatori per stato, lista atleti in attesa, errori) alla dashboard del direttivo.
+- **Pannello CSEN Status in Dashboard**: Aggiunto pannello visuale nel tab Registro Tesserati con contatori SYNCED/DA SYNC/ERRORI e tabelle dettagliate. Pulsante "Aggiorna" per refresh on demand.
+- **Workflow GitHub Actions migliorato**: `csen_sync.yml` usa `if: always()` per eseguire riconciliazione e scraper anche se il sync attivo fallisce. Aggiunto `RESEND_API_KEY` e `CAPTCHA_API_KEY` come secrets.
+- Versione allineata a **Vs. 1.01.35** su tutti i file del portale.
+
+
 ## [2026-07-03] fix | Fix Stored Procedure Overwrite and Activate Loris Benedetti (v1.01.24)
 - Corretto il file `supabase/migration_patch_approva_tesserato.sql` per integrare stabilmente la logica di bypass dei controlli di sicurezza `auth.uid()` (necessaria per consentire le chiamate dal server tramite Stripe Webhook) e il corretto allineamento per lo stato `IN_ATTESA_PAGAMENTO`.
 - Applicato l'aggiornamento SQL direttamente al database Supabase ed eseguito manualmente l'attivazione (`approva_tesserato`) per Loris Benedetti, inserendolo regolarmente nel Libro Tesserati come attivo.
