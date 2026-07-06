@@ -31,16 +31,31 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.38"
+        VERSION: "1.01.39"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
 
-// Controlla se siamo arrivati qui con un hash (token di recupero)
-window.addEventListener('DOMContentLoaded', () => {
+// Controlla se siamo arrivati qui con un hash (token di recupero), un code (PKCE) o una sessione attiva
+window.addEventListener('DOMContentLoaded', async () => {
     const hash = window.location.hash;
-    if (!hash || !hash.includes('access_token')) {
-        // Se non c'è token nell'url, l'utente è arrivato per sbaglio qui
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasAccessToken = hash && hash.includes('access_token');
+    const hasCode = urlParams.has('code');
+
+    // Controlliamo anche se c'è già una sessione attiva (es. se Supabase ha già elaborato il token)
+    let hasSession = false;
+    try {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data && data.session) {
+            hasSession = true;
+        }
+    } catch (e) {
+        console.error("Errore recupero sessione:", e);
+    }
+
+    if (!hasAccessToken && !hasCode && !hasSession) {
+        // Se non c'è token nell'url e nessuna sessione attiva, l'utente è arrivato per sbaglio qui
         const msgEl = document.getElementById('message');
         if (msgEl) {
             msgEl.textContent = 'LINK NON VALIDO O SCADUTO. RICHIEDI UN NUOVO RECUPERO.';

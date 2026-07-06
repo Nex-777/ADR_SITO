@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-06] fix | Fix password reset authentication check (v1.01.39)
+- Refactored `portal/reset-password.js` to support query string codes (`?code=`) and existing sessions alongside hash parameters (`#access_token=`).
+- This fixes the bug where users clicking the password recovery link on a mobile device were redirected to the normal login page because the email client or browser used the PKCE flow or established the session prior to DOM content load.
+- Aligned version badges to Vs. 1.01.39 across all portal files and `package.json`.
+
 ## [2026-07-03] feature | Add debounced auto-save with live status feedback to PDF coordinates tuner (v1.01.31)
 - Implemented real-time debounced auto-saving inside `updateFieldCoord` in `portal/dashboard.js`.
 - Added a visual save indicator next to the panel title showing "Salvataggio automatico...", "Coordinate Salvate ✓", or "Errore di salvataggio ❌".
