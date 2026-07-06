@@ -3,7 +3,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.39"
+        VERSION: "1.01.40"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
@@ -22,8 +22,21 @@ form.addEventListener('submit', async (e) => {
     btn.innerHTML = `ATTENDERE... <span class="material-symbols-outlined text-xl">hourglass_empty</span>`;
 
     const email = document.getElementById('email').value.trim();
-    // Build absolute URL for redirection
-    const resetUrl = window.location.origin + window.location.pathname.replace('forgot-password.html', 'reset-password.html');
+    // Costruiamo un URL assoluto robusto per il reindirizzamento (gestendo l'estensione .html opzionale su Vercel)
+    let resetUrl = window.location.origin + window.location.pathname;
+    if (resetUrl.includes('forgot-password.html')) {
+        resetUrl = resetUrl.replace('forgot-password.html', 'reset-password.html');
+    } else if (resetUrl.endsWith('forgot-password')) {
+        resetUrl = resetUrl.replace('forgot-password', 'reset-password.html');
+    } else if (resetUrl.endsWith('forgot-password/')) {
+        resetUrl = resetUrl.replace('forgot-password/', 'reset-password.html');
+    } else {
+        if (window.location.pathname.includes('/portal/')) {
+            resetUrl = window.location.origin + '/portal/reset-password.html';
+        } else {
+            resetUrl = window.location.origin + '/reset-password.html';
+        }
+    }
 
     try {
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {

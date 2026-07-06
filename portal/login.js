@@ -17,6 +17,21 @@ document.addEventListener('DOMContentLoaded', () => {
             togglePasswordVisibility('password', this);
         });
     }
+
+    // Gestione degli errori provenienti dai reindirizzamenti di Supabase Auth (es. link di recupero scaduti)
+    const errorEl = document.getElementById('error-message');
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('error') || params.has('error_description')) {
+        const errorCode = params.get('error_code');
+        let msg = "ERRORE DI AUTENTICAZIONE. IL LINK DI RECUPERO POTREBBE ESSERE SCADUTO.";
+        if (errorCode === 'otp_expired' || params.get('error_description')?.toLowerCase().includes('expired')) {
+            msg = "IL LINK DI RECUPERO PASSWORD È SCADUTO O GIÀ UTILIZZATO. RICHIEDI UN NUOVO RECUPERO DALLA SCHERMATA SOTTO.";
+        }
+        if (errorEl) {
+            errorEl.textContent = msg;
+            errorEl.classList.remove('hidden');
+        }
+    }
 });
 
 if (typeof APP_CONFIG === 'undefined') {
@@ -24,7 +39,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.39"
+        VERSION: "1.01.40"
     };
 }
 const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;

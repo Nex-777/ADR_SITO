@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-06] fix | Robust password reset redirect build and link expiration feedback (v1.01.40)
+- Refactored `portal/forgot-password.js` to build `resetUrl` dynamically and robustly, handling clean paths without `.html` extensions (typical in Vercel production environments) to prevent redirect mismatches that cause Supabase to fallback to the Site URL.
+- Added query parameter verification on `portal/login.js` DOMContentLoaded to intercept and display clear error messages when Supabase Auth redirects because of expired or already consumed tokens (`otp_expired`).
+- Aligned version badges to Vs. 1.01.40.
+
 ## [2026-07-06] fix | Fix password reset authentication check (v1.01.39)
 - Refactored `portal/reset-password.js` to support query string codes (`?code=`) and existing sessions alongside hash parameters (`#access_token=`).
 - This fixes the bug where users clicking the password recovery link on a mobile device were redirected to the normal login page because the email client or browser used the PKCE flow or established the session prior to DOM content load.
