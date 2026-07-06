@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-06] feature | Regenerate Debora De Gaetano CSEN PDFs and rename Dossier Socio to Dossier Tesserato (v1.01.43)
+- Wrote and executed a script `scratch/regenerate_debora_pdfs.js` to compile the signed CSEN informative and subscription PDFs for Debora De Gaetano using her profile registration metadata, uploaded them to the Supabase Storage bucket, and linked the signed URLs to her `public.atti_adesione` record.
+- Renamed the "Dossier Socio" UI heading, labels, comments, and JavaScript functions (`apriDossierSocio` -> `apriDossierTesserato`) to "Dossier Tesserato" across `portal/dashboard.html` and `portal/dashboard.js`.
+- Bumped application version to Vs. 1.01.43.
+
 ## [2026-07-06] fix | Deferred OTP token verification to prevent email scanner consumption (v1.01.42)
 - Modificato `portal/reset-password.js` per posticipare la chiamata a `verifyOtp` al momento dell'invio del modulo (submit). Questo impedisce agli scanner antivirus avanzati che caricano ed eseguono JavaScript di consumare prematuramente il token OTP monouso al solo caricamento della pagina.
 - Allineate tutte le versioni del portale a Vs. 1.01.42.

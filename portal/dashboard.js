@@ -1792,7 +1792,7 @@
                     const actionContent = actionBtn === '-' ? '' : actionBtn;
                     actionBtn = `<div class="flex items-center justify-end gap-2">
                         ${actionContent}
-                        <button onclick="apriDossierSocio('${tess.anagrafiche.utente_id}')" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase" title="Dossier Socio">DOSSIER</button>
+                        <button onclick="apriDossierTesserato('${tess.anagrafiche.utente_id}')" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase" title="Dossier Tesserato">DOSSIER</button>
                         <button onclick="eliminaUtente('${tess.anagrafiche.id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase">ELIMINA</button>
                     </div>`;
                 }
@@ -1940,7 +1940,7 @@
                 }
                 
                 if (typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente'].includes(r)) && tess.anagrafiche) {
-                    actionHtml += `<button onclick="apriDossierSocio('${tess.anagrafiche.utente_id}')" style="background:rgba(37,99,235,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-left:8px;">DOSSIER</button>`;
+                    actionHtml += `<button onclick="apriDossierTesserato('${tess.anagrafiche.utente_id}')" style="background:rgba(37,99,235,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-left:8px;">DOSSIER</button>`;
                 }
 
                 const card = document.createElement('div');
@@ -7354,9 +7354,9 @@ async function generaExportRicevute() {
     }
 }
 
-// --- DOSSIER SOCIO ---
+// --- DOSSIER TESSERATO ---
 
-async function apriDossierSocio(utente_id) {
+async function apriDossierTesserato(utente_id) {
     if (!utente_id) {
         alert("ID Utente non valido.");
         return;
