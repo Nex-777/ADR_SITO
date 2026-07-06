@@ -92,7 +92,7 @@ export default async function handler(req, res) {
         }
 
         // --- Trigger GitHub Actions workflow ---
-        const response = await fetch('https://api.github.com/repos/Nex-777/ADR_SITO/actions/workflows/csen.yml/dispatches', {
+        const response = await fetch('https://api.github.com/repos/Nex-777/ADR_SITO/actions/workflows/csen_sync.yml/dispatches', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${githubToken}`,

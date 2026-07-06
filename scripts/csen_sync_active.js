@@ -409,6 +409,14 @@ async function syncCsen() {
 
                     // ---- SCENARIO B2: TESSERA SCADUTA → ESEGUI RINNOVO ----
                     if (necessitaRinnovo) {
+                        // PROTEZIONE: se era in RENEWAL_SUBMITTED e CSEN ancora non ha processato,
+                        // NON ri-sottomettiamo il form. Aspettiamo il prossimo run.
+                        if (statoAttuale === 'RENEWAL_SUBMITTED') {
+                            console.log(`   🟡 Rinnovo già inviato precedentemente. CSEN non ha ancora elaborato. Attendo prossimo run.`);
+                            risultati.successi++;
+                            continue;
+                        }
+
                         console.log(`   - Scenario: RINNOVO TESSERA (scad. ${annoScadenza})`);
 
                         // Prima prova dal link diretto nella pagina risultati
@@ -417,10 +425,8 @@ async function syncCsen() {
                         // Se non trovato nella lista, entra nel dettaglio dell'atleta
                         if (!renewalLink) {
                             console.log('   - Link rinnovo non in lista, accedo al dettaglio...');
-                            // Cerca link INFO o nome atleta cliccabile
                             const infoLink = await page.$('a[href*="tesserati.asp?what=show&id"]');
                             if (!infoLink) {
-                                // Prova a cliccare sull'immagine INFO
                                 const infoImg = await page.$("img[src*='info']");
                                 if (infoImg) await infoImg.click();
                             } else {
@@ -431,7 +437,6 @@ async function syncCsen() {
                         }
 
                         if (!renewalLink) {
-                            // Ultima risorsa: cerca testo "rinnovare"
                             const renewalText = await page.$("a:has-text('rinnovare')");
                             if (renewalText) renewalLink = renewalText;
                         }
@@ -440,26 +445,54 @@ async function syncCsen() {
                             throw new Error(`Impossibile trovare link di rinnovo per ${nomeCompleto}. Tessera scaduta anno ${annoScadenza}. Verificare manualmente sul portale CSEN.`);
                         }
 
+                        // Clicca il link di rinnovo (CSEN mostra un confirm() dialog gestito dal page.on('dialog'))
                         await renewalLink.click();
                         await page.waitForLoadState('networkidle', { timeout: 20000 });
 
-                        // Selezione tipo tessera tramite funzione JS CSEN
+                        console.log('   - Pagina di rinnovo caricata. URL:', page.url());
+
+                        // === FLUSSO RINNOVO CSEN ===
+                        // La pagina di rinnovo ha:
+                        //   - <select id="tesseramento"> con opzioni: Base Silver, Base Gold, A (Integrativa A), B (Integrativa B)
+                        //   - <button type="button">Rinnova!</button>
+                        //   - Funzione JS Assegna() disponibile
+                        //   - NESSUN #mySubmit, NESSUN CAPTCHA
+
+                        // 1. Seleziona il tipo di tessera dal dropdown
                         const tipo = formattaTipoTesseramento(tess.livello_copertura);
+                        console.log(`   - Seleziono tipo tessera: ${tipo}`);
+
+                        const selectExists = await page.$('#tesseramento');
+                        if (selectExists) {
+                            await page.selectOption('#tesseramento', { value: tipo });
+                            console.log('   - ✅ Tipo tessera selezionato dal dropdown');
+                        }
+
+                        // 2. Chiama Assegna() se disponibile (sincronizza la selezione con il sistema CSEN)
                         await page.evaluate((t) => {
                             if (typeof Assegna === 'function') Assegna(t);
                         }, tipo).catch(() => { });
 
                         await page.waitForTimeout(800);
 
-                        // Sblocca e invia form di rinnovo
-                        await page.evaluate(() => {
-                            const btn = document.getElementById('mySubmit');
-                            if (btn) btn.disabled = false;
-                        });
-                        await page.click('#mySubmit', { force: true });
-                        await page.waitForLoadState('networkidle', { timeout: 20000 });
+                        // 3. Clicca il bottone "Rinnova!" (type="button", non submit)
+                        const renewBtn = await page.$('button');
+                        if (!renewBtn) {
+                            throw new Error(`Bottone "Rinnova!" non trovato nella pagina di rinnovo CSEN per ${nomeCompleto}.`);
+                        }
+                        const btnText = await renewBtn.innerText();
+                        console.log(`   - Clicco bottone: "${btnText}"`);
+                        await renewBtn.click();
 
-                        try { await page.click("input[value='CONFERMA']"); await page.waitForLoadState('networkidle', { timeout: 15000 }); } catch (e) { }
+                        // 4. Attendi il completamento (possibile redirect o aggiornamento pagina)
+                        await page.waitForLoadState('networkidle', { timeout: 20000 });
+                        await page.waitForTimeout(2000);
+
+                        // 5. Gestisci eventuale pagina di conferma
+                        try { 
+                            await page.click("input[value='CONFERMA']"); 
+                            await page.waitForLoadState('networkidle', { timeout: 15000 }); 
+                        } catch (e) { /* No conferma page, OK */ }
 
                         console.log('   - Form di rinnovo inviato. Verifico assegnazione nuovo numero...');
 

@@ -5,12 +5,12 @@ on:
   repository_dispatch:
     types: [trigger-csen-sync]
   schedule:
-    - cron: '0 2 * * *' # Ogni notte alle 2:00 AM UTC
+    - cron: '0 0 * * *' # Ogni notte alle 00:00 UTC (02:00 ora italiana CEST)
 
 jobs:
   sync_csen:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,16 +18,25 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Esegui Sincronizzazione CSEN (nuovi tesserati)
+      - name: Debug - Verifica ambiente
+        run: |
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "CSEN_USER set: ${{ secrets.CSEN_USER != '' }}"
+          echo "SUPABASE_URL set: ${{ secrets.SUPABASE_URL != '' }}"
+          echo "Playwright chromium check:"
+          npx playwright install --dry-run chromium || echo "Playwright check done"
+
+      - name: Esegui Sincronizzazione CSEN (nuovi tesserati + rinnovi)
         env:
           CSEN_USER: ${{ secrets.CSEN_USER }}
           CSEN_PASS: ${{ secrets.CSEN_PASS }}
@@ -38,7 +47,7 @@ jobs:
         run: node scripts/csen_sync_active.js
 
       - name: Esegui Riconciliazione ed Auto-Healing
-        if: always()  # Esegue anche se il passo precedente ha fallito
+        if: always()
         env:
           CSEN_USER: ${{ secrets.CSEN_USER }}
           CSEN_PASS: ${{ secrets.CSEN_PASS }}
