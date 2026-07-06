@@ -31,43 +31,71 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.40"
+        VERSION: "1.01.41"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
 
-// Controlla se siamo arrivati qui con un hash (token di recupero), un code (PKCE) o una sessione attiva
+// Controlla se siamo arrivati qui con un hash (token di recupero implicito), un code (PKCE da API Supabase),
+// oppure direttamente dal template email con token_hash (per cross-device/email scanners)
 window.addEventListener('DOMContentLoaded', async () => {
     const hash = window.location.hash;
     const urlParams = new URLSearchParams(window.location.search);
     const hasAccessToken = hash && hash.includes('access_token');
     const hasCode = urlParams.has('code');
+    const tokenHash = urlParams.get('token_hash');
+    const type = urlParams.get('type');
 
-    // Controlliamo anche se c'è già una sessione attiva (es. se Supabase ha già elaborato il token)
     let hasSession = false;
-    try {
-        const { data } = await supabaseClient.auth.getSession();
-        if (data && data.session) {
+
+    // Se l'URL contiene token_hash e type=recovery (nuovo approccio consigliato per evitare problemi cross-device e scanner email)
+    if (tokenHash && type === 'recovery') {
+        try {
+            const { data, error } = await supabaseClient.auth.verifyOtp({
+                token_hash: tokenHash,
+                type: 'recovery'
+            });
+            if (error) {
+                console.error("Errore verifica OTP:", error);
+                showErrorMessage('LINK NON VALIDO O SCADUTO. RICHIEDI UN NUOVO RECUPERO.');
+                return;
+            }
             hasSession = true;
+            // Rimuoviamo i parametri sensibili dall'URL per sicurezza
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (err) {
+            console.error("Eccezione verifica OTP:", err);
         }
-    } catch (e) {
-        console.error("Errore recupero sessione:", e);
+    } else {
+        // Fallback: controlliamo se c'è già una sessione attiva (es. se Supabase ha già elaborato il token via hash o code PKCE)
+        try {
+            const { data } = await supabaseClient.auth.getSession();
+            if (data && data.session) {
+                hasSession = true;
+            }
+        } catch (e) {
+            console.error("Errore recupero sessione:", e);
+        }
     }
 
     if (!hasAccessToken && !hasCode && !hasSession) {
-        // Se non c'è token nell'url e nessuna sessione attiva, l'utente è arrivato per sbaglio qui
-        const msgEl = document.getElementById('message');
-        if (msgEl) {
-            msgEl.textContent = 'LINK NON VALIDO O SCADUTO. RICHIEDI UN NUOVO RECUPERO.';
-            msgEl.className = 'text-xs text-primary font-bold uppercase block text-center mb-4';
-            msgEl.classList.remove('hidden');
-        }
-        const formEl = document.getElementById('reset-form');
-        if (formEl) {
-            formEl.style.display = 'none';
-        }
+        // Se non c'è token nell'url, nessun token_hash, e nessuna sessione attiva, l'utente è arrivato per sbaglio qui
+        showErrorMessage('LINK NON VALIDO O SCADUTO. RICHIEDI UN NUOVO RECUPERO.');
     }
 });
+
+function showErrorMessage(msg) {
+    const msgEl = document.getElementById('message');
+    if (msgEl) {
+        msgEl.textContent = msg;
+        msgEl.className = 'text-xs text-primary font-bold uppercase block text-center mb-4';
+        msgEl.classList.remove('hidden');
+    }
+    const formEl = document.getElementById('reset-form');
+    if (formEl) {
+        formEl.style.display = 'none';
+    }
+}
 
 const form = document.getElementById('reset-form');
 const messageEl = document.getElementById('message');

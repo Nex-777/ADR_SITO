@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-06] fix | Cross-device password reset and Email Scanner immunity (v1.01.41)
+- Aggiornato `portal/reset-password.js` per supportare il caricamento del `token_hash` direttamente dall'URL al fine di evitare il fallimento della validazione PKCE `code_verifier` su browser/dispositivi diversi da quelli in cui è stata fatta la richiesta.
+- Risolto il problema causato dagli scanner di sicurezza delle email e dalle anteprime mobile che consumavano il token monouso inviando richieste GET in background all'API di verifica di Supabase, causando redirect a `login.html`.
+- Nota per il gestore: È necessario modificare il template email "Reset Password" sulla Dashboard di Supabase in modo che punti al frontend (es. `<a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset Password</a>`) aggirando così l'endpoint GET dell'API.
+- Tutte le versioni del portale allineate a Vs. 1.01.41.
 ## [2026-07-06] fix | Robust password reset redirect build and link expiration feedback (v1.01.40)
 - Refactored `portal/forgot-password.js` to build `resetUrl` dynamically and robustly, handling clean paths without `.html` extensions (typical in Vercel production environments) to prevent redirect mismatches that cause Supabase to fallback to the Site URL.
 - Added query parameter verification on `portal/login.js` DOMContentLoaded to intercept and display clear error messages when Supabase Auth redirects because of expired or already consumed tokens (`otp_expired`).
