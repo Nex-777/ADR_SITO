@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-06] fix | Deferred OTP token verification to prevent email scanner consumption (v1.01.42)
+- Modificato `portal/reset-password.js` per posticipare la chiamata a `verifyOtp` al momento dell'invio del modulo (submit). Questo impedisce agli scanner antivirus avanzati che caricano ed eseguono JavaScript di consumare prematuramente il token OTP monouso al solo caricamento della pagina.
+- Allineate tutte le versioni del portale a Vs. 1.01.42.
+
 ## [2026-07-06] fix | Cross-device password reset and Email Scanner immunity (v1.01.41)
 - Aggiornato `portal/reset-password.js` per supportare il caricamento del `token_hash` direttamente dall'URL al fine di evitare il fallimento della validazione PKCE `code_verifier` su browser/dispositivi diversi da quelli in cui è stata fatta la richiesta.
 - Risolto il problema causato dagli scanner di sicurezza delle email e dalle anteprime mobile che consumavano il token monouso inviando richieste GET in background all'API di verifica di Supabase, causando redirect a `login.html`.

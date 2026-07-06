@@ -31,13 +31,12 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.41"
+        VERSION: "1.01.42"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
 
-// Controlla se siamo arrivati qui con un hash (token di recupero implicito), un code (PKCE da API Supabase),
-// oppure direttamente dal template email con token_hash (per cross-device/email scanners)
+// Controlla se siamo arrivati qui con i parametri giusti o con una sessione attiva
 window.addEventListener('DOMContentLoaded', async () => {
     const hash = window.location.hash;
     const urlParams = new URLSearchParams(window.location.search);
@@ -48,38 +47,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     let hasSession = false;
 
-    // Se l'URL contiene token_hash e type=recovery (nuovo approccio consigliato per evitare problemi cross-device e scanner email)
-    if (tokenHash && type === 'recovery') {
-        try {
-            const { data, error } = await supabaseClient.auth.verifyOtp({
-                token_hash: tokenHash,
-                type: 'recovery'
-            });
-            if (error) {
-                console.error("Errore verifica OTP:", error);
-                showErrorMessage('LINK NON VALIDO O SCADUTO. RICHIEDI UN NUOVO RECUPERO.');
-                return;
-            }
+    // Controlliamo se c'è già una sessione attiva (es. se Supabase ha già elaborato il token via hash o code PKCE)
+    try {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data && data.session) {
             hasSession = true;
-            // Rimuoviamo i parametri sensibili dall'URL per sicurezza
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (err) {
-            console.error("Eccezione verifica OTP:", err);
         }
-    } else {
-        // Fallback: controlliamo se c'è già una sessione attiva (es. se Supabase ha già elaborato il token via hash o code PKCE)
-        try {
-            const { data } = await supabaseClient.auth.getSession();
-            if (data && data.session) {
-                hasSession = true;
-            }
-        } catch (e) {
-            console.error("Errore recupero sessione:", e);
-        }
+    } catch (e) {
+        console.error("Errore recupero sessione:", e);
     }
 
-    if (!hasAccessToken && !hasCode && !hasSession) {
-        // Se non c'è token nell'url, nessun token_hash, e nessuna sessione attiva, l'utente è arrivato per sbaglio qui
+    // Se non abbiamo una sessione attiva e non ci sono parametri nell'URL, mostriamo l'errore
+    if (!hasAccessToken && !hasCode && !hasSession && !(tokenHash && type === 'recovery')) {
         showErrorMessage('LINK NON VALIDO O SCADUTO. RICHIEDI UN NUOVO RECUPERO.');
     }
 });
@@ -121,12 +100,28 @@ if (form) {
         btn.innerHTML = `ATTENDERE... <span class="material-symbols-outlined text-xl">hourglass_empty</span>`;
 
         try {
-            // Supabase ha già gestito la sessione grazie all'hash nell'URL
+            // Se siamo arrivati tramite token_hash (dal nuovo link email), dobbiamo prima effettuare il login/verifica OTP
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenHash = urlParams.get('token_hash');
+            const type = urlParams.get('type');
+
+            if (tokenHash && type === 'recovery') {
+                const { error: otpError } = await supabaseClient.auth.verifyOtp({
+                    token_hash: tokenHash,
+                    type: 'recovery'
+                });
+                if (otpError) throw new Error("IL LINK DI RECUPERO È SCADUTO O GIÀ UTILIZZATO.");
+            }
+
+            // Una volta verificato (o se c'era già una sessione attiva), aggiorniamo la password dell'utente
             const { data, error } = await supabaseClient.auth.updateUser({
                 password: p1
             });
 
             if (error) throw error;
+
+            // Rimuoviamo i parametri dall'URL per sicurezza
+            window.history.replaceState({}, document.title, window.location.pathname);
 
             messageEl.textContent = "PASSWORD AGGIORNATA CON SUCCESSO! REINDIRIZZAMENTO AL LOGIN...";
             messageEl.className = 'text-xs text-green-500 font-bold uppercase';
@@ -138,7 +133,8 @@ if (form) {
 
         } catch (err) {
             console.error("Update password error:", err);
-            messageEl.textContent = "ERRORE DURANTE L'AGGIORNAMENTO. IL LINK POTREBBE ESSERE SCADUTO.";
+            const friendlyMsg = err.message || "ERRORE DURANTE L'AGGIORNAMENTO. IL LINK POTREBBE ESSERE SCADUTO.";
+            messageEl.textContent = friendlyMsg.toUpperCase();
             messageEl.className = 'text-xs text-primary font-bold uppercase';
         } finally {
             messageEl.classList.remove('hidden');
