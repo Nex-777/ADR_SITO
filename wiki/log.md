@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-06] feature | Fix RLS policy on public.atti_adesione to allow board/council members to view all files (v1.01.44)
+- Added RLS Select Policy "Consiglio può visualizzare tutti gli atti" on `public.atti_adesione` to grant select privileges to users holding board/council roles (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`).
+- Created version-controlled SQL patch `supabase/migration_atti_adesione_rls_patch.sql`.
+- Bumped application version to Vs. 1.01.44.
+
 ## [2026-07-06] feature | Regenerate Debora De Gaetano CSEN PDFs and rename Dossier Socio to Dossier Tesserato (v1.01.43)
 - Wrote and executed a script `scratch/regenerate_debora_pdfs.js` to compile the signed CSEN informative and subscription PDFs for Debora De Gaetano using her profile registration metadata, uploaded them to the Supabase Storage bucket, and linked the signed URLs to her `public.atti_adesione` record.
 - Renamed the "Dossier Socio" UI heading, labels, comments, and JavaScript functions (`apriDossierSocio` -> `apriDossierTesserato`) to "Dossier Tesserato" across `portal/dashboard.html` and `portal/dashboard.js`.
