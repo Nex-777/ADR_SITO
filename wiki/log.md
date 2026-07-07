@@ -3,6 +3,11 @@
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
 ---
+
+## [2026-07-07] fix | Align all website and portal version badges (v1.01.50)
+- Allineate tutte le versioni dei file principali del sito (index.html, privacy.html, legal.html) e del portale (dashboard.html, login.html, registrazione.html, pagamento.html, forgot-password.html, reset-password.html e relativi JS) alla versione Vs. 1.01.50.
+- Risolto il disallineamento per cui la home e le pagine istituzionali mostravano ancora una versione precedente rispetto al portale.
+
 ## [2026-07-07] fix | Support Confirm Signup and Invite tokens for first-time password resets (v1.01.49)
 - Estesa la validazione dei token in portal/reset-password.js e nell'intercettore di portal/login.js per includere i tipi invite e signup.
 - Questo risolve il problema per cui i nuovi utenti (creati da admin) che richiedevano il reset password per la prima volta ricevevano un'email di 'Confirm Signup' invece di 'Reset Password', finendo reindirizzati al Site URL (login.html) a causa del diverso template email. Ora possono completare l'attivazione impostando direttamente la password.
