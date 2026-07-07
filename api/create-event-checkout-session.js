@@ -131,6 +131,9 @@ export default async function handler(req, res) {
         }
 
         let prezzo = parseFloat(evento.prezzo);
+        if (isNaN(prezzo)) {
+            prezzo = 0;
+        }
         let causaleDettaglio = '';
 
         if (evento.piani_abbonamento && Array.isArray(evento.piani_abbonamento) && evento.piani_abbonamento.length > 0) {

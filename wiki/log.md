@@ -3,6 +3,10 @@
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
 ---
+## [2026-07-07] fix | Fix Free Event Registration price validation error (v1.01.47)
+- Gestito il valore `null` nel prezzo di eventi/corsi in `api/create-event-checkout-session.js`. Se il prezzo dell'evento non è definito o è `null` nel database, viene impostato di default a `0` (evento gratuito), evitando che `parseFloat()` ritorni `NaN` e causi l'errore "Prezzo dell'evento non valido".
+- Allineate tutte le versioni del portale a Vs. 1.01.47.
+
 ## [2026-07-07] fix | Robust Fallback for Password Recovery Redirect (v1.01.46)
 - Aggiunto un intercettore nel DOMContentLoaded di portal/login.js. Qualora Supabase Auth fallisca la validazione del parametro 
 edirectTo e riporti erroneamente l'utente alla schermata di login, il nuovo script intercetta immediatamente i parametri 	oken_hash e 	ype=recovery e reindirizza in modo invisibile e automatico l'utente a 
