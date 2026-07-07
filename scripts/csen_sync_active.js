@@ -217,7 +217,10 @@ async function syncCsen() {
     // -------------------------------------------------------
     // STEP 3: Avvia browser Playwright
     // -------------------------------------------------------
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+    });
     const context = await browser.newContext();
     const page = await context.newPage();
 
