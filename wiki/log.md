@@ -3,6 +3,14 @@
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
 ---
+## [2026-07-07] fix | Robust Fallback for Password Recovery Redirect (v1.01.46)
+- Aggiunto un intercettore nel DOMContentLoaded di portal/login.js. Qualora Supabase Auth fallisca la validazione del parametro 
+edirectTo e riporti erroneamente l'utente alla schermata di login, il nuovo script intercetta immediatamente i parametri 	oken_hash e 	ype=recovery e reindirizza in modo invisibile e automatico l'utente a 
+eset-password.html.
+- Forzato il path assoluto nel template email di Supabase per eliminare le dipendenze dalle configurazioni Site URL di backend, rendendo il recupero 100% fail-safe per ogni dispositivo o connessione.
+- Rimossa la variabile duplicata const params introdotta erroneamente in login.js.
+- Allineate le versioni del portale a Vs. 1.01.46.
+
 
 ## [2026-07-06] feature | Fix RLS policy on public.atti_adesione to allow board/council members to view all files (v1.01.44)
 - Added RLS Select Policy "Consiglio può visualizzare tutti gli atti" on `public.atti_adesione` to grant select privileges to users holding board/council roles (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`).

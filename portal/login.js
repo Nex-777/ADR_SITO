@@ -18,9 +18,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // === FALLBACK ROBUSTO: Intercettazione token di recupero ===
+    // Se Supabase non ha rispettato il redirectTo e ha forzato il fallback al Site URL (login.html)
+    // intercettiamo il token_hash o il code e reindirizziamo manualmente l'utente alla pagina corretta.
+    const params = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+    const type = params.get('type');
+    
+    if (type === 'recovery' && tokenHash) {
+        window.location.href = `reset-password.html?token_hash=${tokenHash}&type=recovery`;
+        return; // Blocchiamo l'esecuzione del resto
+    }
+
     // Gestione degli errori provenienti dai reindirizzamenti di Supabase Auth (es. link di recupero scaduti)
     const errorEl = document.getElementById('error-message');
-    const params = new URLSearchParams(window.location.search);
     if (params.has('error') || params.has('error_description')) {
         const errorCode = params.get('error_code');
         let msg = "ERRORE DI AUTENTICAZIONE. IL LINK DI RECUPERO POTREBBE ESSERE SCADUTO.";
@@ -39,7 +50,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.45"
+        VERSION: "1.01.46"
     };
 }
 const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
