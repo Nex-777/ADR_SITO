@@ -3,6 +3,10 @@
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
 ---
+## [2026-07-07] fix | Add 60s cooldown to prevent OTP token invalidation on double requests (v1.01.48)
+- Modificato portal/forgot-password.js aggiungendo un cooldown di 60 secondi sul bottone di invio dopo una richiesta andata a buon fine. Questo risolve il problema lato UX dove gli utenti, non ricevendo l'email istantaneamente, cliccavano di nuovo su Invia Link, causando l'invalidazione immediata del primo token OTP generato (rendendo la prima email ricevuta inservibile) e il funzionamento esclusivo della seconda.
+- Allineate le versioni del portale a Vs. 1.01.48.
+
 ## [2026-07-07] fix | Fix Free Event Registration price validation error (v1.01.47)
 - Gestito il valore `null` nel prezzo di eventi/corsi in `api/create-event-checkout-session.js`. Se il prezzo dell'evento non è definito o è `null` nel database, viene impostato di default a `0` (evento gratuito), evitando che `parseFloat()` ritorni `NaN` e causi l'errore "Prezzo dell'evento non valido".
 - Allineate tutte le versioni del portale a Vs. 1.01.47.
