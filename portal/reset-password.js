@@ -31,7 +31,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.48"
+        VERSION: "1.01.49"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
@@ -58,7 +58,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Se non abbiamo una sessione attiva e non ci sono parametri nell'URL, mostriamo l'errore
-    if (!hasAccessToken && !hasCode && !hasSession && !(tokenHash && type === 'recovery')) {
+    if (!hasAccessToken && !hasCode && !hasSession && !(tokenHash && (type === 'recovery' || type === 'invite' || type === 'signup'))) {
         showErrorMessage('LINK NON VALIDO O SCADUTO. RICHIEDI UN NUOVO RECUPERO.');
     }
 });
@@ -105,12 +105,12 @@ if (form) {
             const tokenHash = urlParams.get('token_hash');
             const type = urlParams.get('type');
 
-            if (tokenHash && type === 'recovery') {
+            if (tokenHash && (type === 'recovery' || type === 'invite' || type === 'signup')) {
                 const { error: otpError } = await supabaseClient.auth.verifyOtp({
                     token_hash: tokenHash,
-                    type: 'recovery'
+                    type: type
                 });
-                if (otpError) throw new Error("IL LINK DI RECUPERO È SCADUTO O GIÀ UTILIZZATO.");
+                if (otpError) throw new Error("IL LINK È SCADUTO O GIÀ UTILIZZATO. RICHIEDINE UNO NUOVO.");
             }
 
             // Una volta verificato (o se c'era già una sessione attiva), aggiorniamo la password dell'utente

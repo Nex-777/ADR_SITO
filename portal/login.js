@@ -25,8 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tokenHash = params.get('token_hash');
     const type = params.get('type');
     
-    if (type === 'recovery' && tokenHash) {
-        window.location.href = `reset-password.html?token_hash=${tokenHash}&type=recovery`;
+    if ((type === 'recovery' || type === 'invite' || type === 'signup') && tokenHash) {
+        window.location.href = `reset-password.html?token_hash=${tokenHash}&type=${type}`;
         return; // Blocchiamo l'esecuzione del resto
     }
 
@@ -50,7 +50,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.01.48"
+        VERSION: "1.01.49"
     };
 }
 const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;

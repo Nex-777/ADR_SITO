@@ -3,6 +3,11 @@
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
 ---
+## [2026-07-07] fix | Support Confirm Signup and Invite tokens for first-time password resets (v1.01.49)
+- Estesa la validazione dei token in portal/reset-password.js e nell'intercettore di portal/login.js per includere i tipi invite e signup.
+- Questo risolve il problema per cui i nuovi utenti (creati da admin) che richiedevano il reset password per la prima volta ricevevano un'email di 'Confirm Signup' invece di 'Reset Password', finendo reindirizzati al Site URL (login.html) a causa del diverso template email. Ora possono completare l'attivazione impostando direttamente la password.
+- Allineate le versioni del portale a Vs. 1.01.49.
+
 ## [2026-07-07] fix | Add 60s cooldown to prevent OTP token invalidation on double requests (v1.01.48)
 - Modificato portal/forgot-password.js aggiungendo un cooldown di 60 secondi sul bottone di invio dopo una richiesta andata a buon fine. Questo risolve il problema lato UX dove gli utenti, non ricevendo l'email istantaneamente, cliccavano di nuovo su Invia Link, causando l'invalidazione immediata del primo token OTP generato (rendendo la prima email ricevuta inservibile) e il funzionamento esclusivo della seconda.
 - Allineate le versioni del portale a Vs. 1.01.48.
