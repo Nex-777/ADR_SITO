@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.50"
+                VERSION: "1.01.51"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -295,7 +295,8 @@
                 const tabs = [
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
                     'instructor_corsi', 'volunteer_eventi',
-                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf'
+                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf',
+                    'registro_istruttori', 'registro_volontari'
                 ];
                 tabs.forEach(tab => {
                     const el = document.getElementById(`tab-btn-${tab}`);
@@ -318,7 +319,6 @@
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
                 document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
                 document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
-                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
 
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
