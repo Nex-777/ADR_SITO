@@ -4,12 +4,32 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.52"
+                VERSION: "1.01.53"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Helper per formattare le date in GG/MM/AA
+        function formatToItalianDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+                const parts = cleanDate.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
+                }
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = String(d.getFullYear()).slice(-2);
+                return `${day}/${month}/${year}`;
+            } catch (e) {
+                return dateStr;
+            }
+        }
 
         // Security override for window.alert to prevent raw database/exception leak
         const _originalAlert = window.alert;
@@ -1311,7 +1331,7 @@
                             <span class="text-[9px] text-gray-500 font-light">Nascita: ${dataN} a ${escapeHtml(anag.comune_nascita || '')} (${escapeHtml(anag.provincia_nascita || '')})</span>
                         </td>
                         <td class="p-3 text-gray-400 font-mono">${cf}</td>
-                        <td class="p-3 text-gray-400">${escapeHtml(item.data_richiesta)}</td>
+                        <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_richiesta))}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
                         <td class="p-3 text-right">
                             <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase text-yellow-500 bg-yellow-500/10 border-yellow-500/30">IN ATTESA CD</span>
@@ -1380,7 +1400,7 @@
                             <div class="flex flex-col items-center gap-1 pb-2">
                                 <a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="approvazioni-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>
                                 ${statusLabel}
-                                <span class="text-[9px] text-gray-500 font-mono">Scad: ${escapeHtml(certInfo.data_scadenza)}</span>
+                                <span class="text-[9px] text-gray-500 font-mono">Scad: ${escapeHtml(formatToItalianDate(certInfo.data_scadenza))}</span>
                             </div>
                             ${docIdHtml}
                             ${csenFormsHtml}
@@ -1418,7 +1438,7 @@
                         <td class="p-3 text-gray-400 font-mono">${cf}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(item.livello_copertura || 'BASE')}</td>
                         <td class="p-3 text-center">${certHtml}</td>
-                        <td class="p-3 text-gray-400">${escapeHtml(item.data_richiesta)}</td>
+                        <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_richiesta))}</td>
                         <td class="p-3 text-right">${actionBtn}</td>
                     `;
                     const viewBtn = row.querySelector('.approvazioni-view-cert-btn');
@@ -1464,7 +1484,7 @@
                             <td class="p-3 text-gray-400 font-mono">${cf}</td>
                             <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
                             <td class="p-3 text-yellow-500 font-bold">${quotaStr}</td>
-                            <td class="p-3 text-gray-400">${escapeHtml(item.data_decisione || item.data_richiesta)}</td>
+                            <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_decisione || item.data_richiesta))}</td>
                             <td class="p-3 text-right">
                                 <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase text-yellow-500 bg-yellow-500/10 border-yellow-500/30">ATTESA PAGAMENTO</span>
                             </td>
@@ -1503,7 +1523,7 @@
                         <td class="p-3 font-bold text-red-400">${escapeHtml(ghost.nome)} ${escapeHtml(ghost.cognome)}</td>
                         <td class="p-3 text-gray-300 lowercase font-sans">${escapeHtml(ghost.email)}</td>
                         <td class="p-3 text-gray-400 font-mono">${escapeHtml(ghost.codice_fiscale)}</td>
-                        <td class="p-3 text-gray-500">${escapeHtml(ghost.data_creazione ? ghost.data_creazione.split('T')[0] : '')}</td>
+                        <td class="p-3 text-gray-500">${escapeHtml(formatToItalianDate(ghost.data_creazione))}</td>
                         <td class="p-3 text-right">${actionBtn}</td>
                     `;
                     incompleteBody.appendChild(row);
@@ -1529,7 +1549,7 @@
                     row.innerHTML = `
                         <td class="p-3 font-bold text-white">${nome}</td>
                         <td class="p-3 uppercase text-xs">${escapeHtml(item.tipo)}</td>
-                        <td class="p-3">${escapeHtml(item.data_decisione || '')}</td>
+                        <td class="p-3">${escapeHtml(formatToItalianDate(item.data_decisione))}</td>
                         <td class="p-3">
                             <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeClass}">${escapeHtml(item.stato)}</span>
                         </td>
