@@ -3,7 +3,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.54"
+                VERSION: "1.01.55"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -72,7 +72,9 @@
                         return;
                     }
                     const status = cert.stato_validazione;
-                    const scaduto = new Date(cert.data_scadenza) < new Date();
+                    const now = new Date();
+                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    const scaduto = cert.data_scadenza < todayStr;
                     
                     if (scaduto) {
                         showError("Il tuo certificato medico risulta scaduto. Accedi al portale atleti per caricare un certificato in corso di validità.");

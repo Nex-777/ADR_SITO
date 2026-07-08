@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.54"
+                VERSION: "1.01.55"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -29,6 +29,13 @@
             } catch (e) {
                 return dateStr;
             }
+        }
+
+        function isCertificatoScaduto(data_scadenza) {
+            if (!data_scadenza) return true;
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            return data_scadenza < todayStr;
         }
 
         // Security override for window.alert to prevent raw database/exception leak
@@ -525,7 +532,7 @@
                         form.classList.remove('hidden');
                     } else {
                         const status = cert.stato_validazione;
-                        const scaduto = new Date(cert.data_scadenza) < new Date();
+                        const scaduto = isCertificatoScaduto(cert.data_scadenza);
                         
                         if (scaduto) {
                             box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
@@ -1380,7 +1387,7 @@
                     }
 
                     if (certInfo) {
-                        const scaduto = new Date(certInfo.data_scadenza) < new Date();
+                        const scaduto = isCertificatoScaduto(certInfo.data_scadenza);
                         isCertVerde = certInfo.stato_validazione === 'VERDE' && !scaduto;
                         let color = scaduto ? 'text-primary' : 'text-green-500';
                         let statusLabel = '';
@@ -1741,7 +1748,7 @@
                 let certHtml = '<span class="text-primary font-bold">MANCANTE</span>';
                 let isCertVerde = false;
                 if (certInfo) {
-                    const scaduto = new Date(certInfo.data_scadenza) < new Date();
+                    const scaduto = isCertificatoScaduto(certInfo.data_scadenza);
                     isCertVerde = certInfo.stato_validazione === 'VERDE' && !scaduto;
                     let color = scaduto ? 'text-primary' : 'text-green-500';
                     let statusLabel = '';
@@ -1894,7 +1901,7 @@
                 let certStatus = 'MANCANTE';
                 let certColor = '#df293e';
                 if (certInfo) {
-                    const scaduto = new Date(certInfo.data_scadenza) < new Date();
+                    const scaduto = isCertificatoScaduto(certInfo.data_scadenza);
                     if (certInfo.stato_validazione === 'VERDE' && !scaduto) {
                         certStatus = 'VALIDO';
                         certColor = '#22c55e';
@@ -1950,7 +1957,7 @@
 
                 // Action button
                 let actionHtml = '';
-                const isCertVerde = certInfo && certInfo.stato_validazione === 'VERDE' && new Date(certInfo.data_scadenza) >= new Date();
+                const isCertVerde = certInfo && certInfo.stato_validazione === 'VERDE' && !isCertificatoScaduto(certInfo.data_scadenza);
                 if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                     if (isCertVerde) {
                         actionHtml += `<button onclick="attivaTesseramento(${tess.id_tesserato})" style="background:#fff;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">ATTIVA</button>`;
@@ -5510,7 +5517,7 @@
                     document.getElementById('user-cert-info-medico').textContent = '-';
                 } else {
                     const status = currentCert.stato_validazione;
-                    const scaduto = new Date(currentCert.data_scadenza) < new Date();
+                    const scaduto = isCertificatoScaduto(currentCert.data_scadenza);
                     
                     document.getElementById('user-cert-info-tipo').textContent = currentCert.tipologia;
                     document.getElementById('user-cert-info-scadenza').textContent = new Date(currentCert.data_scadenza).toLocaleDateString('it-IT');
@@ -7442,7 +7449,7 @@ async function apriDossierTesserato(utente_id) {
             
             if (certs && certs.length > 0) {
                 certs.forEach(c => {
-                    const scaduto = new Date(c.data_scadenza) < new Date();
+                    const scaduto = isCertificatoScaduto(c.data_scadenza);
                     const statusStr = scaduto ? '<span class="text-primary font-bold ml-2">(SCADUTO)</span>' : '<span class="text-green-500 font-bold ml-2">(ATTIVO)</span>';
                     certHtml += `
                         <div class="flex items-center justify-between border-b border-white/5 pb-2">
