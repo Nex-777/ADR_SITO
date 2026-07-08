@@ -3,7 +3,7 @@
   "version": "1.01.56",
   "type": "module",
   "dependencies": {
-    "@google/genai": "^2.7.0",
+    "@google/genai": "^2.10.0",
     "@supabase/supabase-js": "^2.108.2",
     "dotenv": "^17.4.2",
     "pdf-lib": "^1.17.1",
