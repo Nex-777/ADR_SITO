@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.55"
+                VERSION: "1.01.56"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1766,7 +1766,7 @@
                     }
                     const certBarHtml = generateProgressBarHtml(certInfo.data_scadenza);
                     certHtml = `<a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="tess-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}<br>
-                                <span class="text-[10px] text-gray-400">Scadenza: ${escapeHtml(certInfo.data_scadenza)}</span>
+                                <span class="text-[10px] text-gray-400">Scadenza: ${escapeHtml(formatToItalianDate(certInfo.data_scadenza))}</span>
                                 ${certBarHtml}`;
                 }
 

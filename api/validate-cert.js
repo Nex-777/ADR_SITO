@@ -189,14 +189,17 @@ export default async function handler(req, res) {
             const base64Data = buffer.toString('base64');
 
             const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+            const todayStr = new Date().toISOString().split('T')[0];
             const prompt = `
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
 Sto per fornirti un'immagine di un certificato medico.
+IMPORTANTE: La data odierna è il ${todayStr}. Utilizzala come punto di riferimento per verificare se il certificato è scaduto, valido o post-datato.
+
 Devi estrarre le seguenti informazioni in formato JSON STRICT:
 1. data_emissione (formato YYYY-MM-DD, se non la trovi stima in base alla firma o metti null)
 2. data_scadenza (formato YYYY-MM-DD, spesso è 1 anno dalla data di emissione)
 3. agonistico (booleano: true se c'è scritto "agonistico" o fa riferimento al D.M. 18/02/1982, false se "non agonistico" o D.M. 24/04/2013)
-4. stato (stringa: "VERDE" se il certificato è chiaramente leggibile, firmato e in corso di validità; "GIALLO" se c'è qualcosa di ambiguo, non si legge bene, o manca il timbro/firma; "ROSSO" se è chiaramente scaduto, palesemente falso, o non è un certificato medico).
+4. stato (stringa: "VERDE" se il certificato è chiaramente leggibile, firmato e in corso di validità rispetto a oggi ${todayStr}; "GIALLO" se c'è qualcosa di ambiguo, non si legge bene, o manca il timbro/firma; "ROSSO" se è chiaramente scaduto rispetto a oggi, palesemente falso, o non è un certificato medico).
 5. note (una breve spiegazione del perché hai assegnato quello stato, max 100 caratteri).
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:

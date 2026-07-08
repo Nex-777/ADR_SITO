@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const search = '1.01.55';
-const replace = '1.01.55';
+const search = '1.01.56';
+const replace = '1.01.56';
 const root = 'd:/Antigravity_Projects/ADR_SITO';
 
 function walk(dir) {
