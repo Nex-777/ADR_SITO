@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-08] ingest | CSEN PDF Compilation & Vercel Bundle Fix (v1.01.54)
+- Configurato `vercel.json` per includere esplicitamente la cartella `CSEN_moduli/**` nella build dell'endpoint `/api/otp-verify.js`, risolvendo l'esclusione del modulo dal bundle in produzione.
+- Creato ed eseguito con successo lo script `scratch/regenerate_recent_pdfs.js` per rigenerare retroattivamente i PDF CSEN compilati e firmati digitalmente per i 5 utenti registrati di recente affetti dal problema (Niccolò Verre, Diego Pigliapoco, Giordano Guerrieri, Alessandro Lori, Giulia Clerici).
+- Incrementata la versione globale a v1.01.54.
+
 ## [2026-07-08] fix | Hide sensitive tabs for athlete view context (v1.01.53)
 - Rimosso l'accesso alla sezione "Pagamenti e Ricevute" (`tab-btn-user_pagamenti`), al "Registro Istruttori" (`tab-btn-registro_istruttori`) e al "Registro Volontari" (`tab-btn-registro_volontari`) per la vista atleta ("AREA TESSERATO") in `portal/dashboard.js`.
 - Aggiunti i relativi ID dei pulsanti dei tab nel metodo `hideAllTabs` per evitare che rimangano visibili quando si cambia contesto di visualizzazione.
