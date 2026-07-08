@@ -243,24 +243,9 @@ export default async function handler(req, res) {
             if (certError) {
                 console.error("Errore inserimento certificati medici:", certError);
             } else {
-                // Call AI validation synchronously so it's ready immediately
-                try {
-                    const apiBase = `https://${req.headers.host}`;
-                    console.log(`Triggering AI Validation at ${apiBase}/api/validate-cert`);
-                    await fetch(`${apiBase}/api/validate-cert`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-internal-secret': process.env.CRON_SECRET || ''
-                        },
-                        body: JSON.stringify({
-                            anagrafica_id: anagraficaId,
-                            file_url: profile.certificato_medico_url
-                        })
-                    });
-                } catch (aiErr) {
-                    console.error("Failed to execute AI validation:", aiErr);
-                }
+                // La validazione AI ora viene lanciata automaticamente tramite Webhook di Supabase
+                // all'inserimento del record in 'certificati_medici', svincolando la registrazione.
+                console.log(`[OTP] Certificato salvato in IN_ATTESA. Webhook AI triggerato da Supabase.`);
             }
         }
 

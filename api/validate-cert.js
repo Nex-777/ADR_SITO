@@ -104,11 +104,26 @@ export default async function handler(req, res) {
         }
 
         // --- Input validation ---
-        const { anagrafica_id, cert_id, file_url, is_manual, nuovo_stato, note } = req.body;
+        let targetAnagraficaId = req.body.anagrafica_id;
+        let targetFileUrl = req.body.file_url;
+        let isManual = req.body.is_manual;
+        let nuovo_stato = req.body.nuovo_stato;
+        let note = req.body.note;
+        let cert_id = req.body.cert_id;
 
-        let targetAnagraficaId = anagrafica_id;
+        // Support for Supabase Webhook Payload
+        if (req.body.type === 'INSERT' && req.body.table === 'certificati_medici' && req.body.record) {
+            targetAnagraficaId = req.body.record.anagrafica_id;
+            targetFileUrl = req.body.record.file_url;
+            cert_id = req.body.record.id;
+            isManual = false;
+            // Webhook optimization: if it's already NOT IN_ATTESA, skip
+            if (req.body.record.stato_validazione !== 'IN_ATTESA') {
+                return res.status(200).json({ message: 'Certificato non in attesa, ignorato.' });
+            }
+        }
 
-        if (is_manual && cert_id && !targetAnagraficaId) {
+        if (isManual && cert_id && !targetAnagraficaId) {
             const { data: certObj } = await supabase
                 .from('certificati_medici')
                 .select('anagrafica_id')
@@ -129,7 +144,7 @@ export default async function handler(req, res) {
         let finalExpiry = null;
         let finalType = 'NON_AGONISTICO';
 
-        if (is_manual) {
+        if (isManual) {
             // Manual path: validation done by President/Segretaria
             if (!nuovo_stato || !['VERDE', 'GIALLO', 'ROSSO'].includes(nuovo_stato)) {
                 return res.status(400).json({ error: 'Stato manuale non valido.' });
@@ -151,18 +166,18 @@ export default async function handler(req, res) {
             }
         } else {
             // Automated AI path
-            if (!file_url) {
+            if (!targetFileUrl) {
                 return res.status(400).json({ error: 'Parametri mancanti: file_url per AI.' });
             }
             const allowedUrlPrefix = `${supabaseUrl}/storage/v1/`;
-            if (!file_url.startsWith(allowedUrlPrefix)) {
-                console.error(`[AI VALIDATION] SSRF attempt blocked. URL: ${file_url}`);
+            if (!targetFileUrl.startsWith(allowedUrlPrefix)) {
+                console.error(`[AI VALIDATION] SSRF attempt blocked. URL: ${targetFileUrl}`);
                 return res.status(400).json({ error: 'URL del file non valido.' });
             }
 
             console.log(`[AI VALIDATION] Starting validation for anagrafica_id: ${targetAnagraficaId}`);
 
-            const imageResponse = await fetch(file_url);
+            const imageResponse = await fetch(targetFileUrl);
             if (!imageResponse.ok) {
                 console.error(`[AI VALIDATION] Failed to fetch image: ${imageResponse.status}`);
                 throw new Error('Impossibile scaricare il file.');
@@ -293,12 +308,20 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
     } catch (error) {
         console.error('[VALIDATION] Error:', error);
         
-        if (req.body?.anagrafica_id && !req.body.is_manual) {
+        let errorAnagraficaId = req.body?.anagrafica_id;
+        if (req.body?.type === 'INSERT' && req.body?.record) {
+            errorAnagraficaId = req.body.record.anagrafica_id;
+        }
+
+        if (errorAnagraficaId && !req.body?.is_manual) {
             try {
-                await supabase.from('certificati_medici').update({
+                // Ensure we have supabase client
+                const supaClient = supabase || createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+                await supaClient.from('certificati_medici').update({
                     stato_validazione: 'GIALLO',
-                    note_ai: 'Elaborazione automatica AI non riuscita. Richiesta revisione manuale.'
-                }).eq('anagrafica_id', req.body.anagrafica_id);
+                    note_ai: `Errore tecnico: ${error.message || 'Timeout/Crash'}. Richiesta revisione manuale.`
+                }).eq('anagrafica_id', errorAnagraficaId);
+                console.log(`[VALIDATION] Fallback to GIALLO applied for ${errorAnagraficaId}`);
             } catch (dbErr) {
                 console.error('[VALIDATION] Failed to set GIALLO fallback:', dbErr);
             }
