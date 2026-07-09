@@ -186,7 +186,9 @@ async function syncCsen() {
                 codice_fiscale,
                 certificati_medici (
                     tipologia,
-                    stato_validazione
+                    stato_validazione,
+                    data_scadenza,
+                    created_at
                 )
             )
         `)
@@ -268,6 +270,39 @@ async function syncCsen() {
             const nomeCompleto = `${anag.nome} ${anag.cognome}`;
             const statoAttuale = tess.sync_csen_status;
             console.log(`\n>>> Elaboro: ${nomeCompleto} (${cf}) [stato: ${statoAttuale}]`);
+
+            // 0. Controllo Validità Certificato Medico
+            const certs = Array.isArray(anag.certificati_medici) ? anag.certificati_medici : [];
+            const latestCert = [...certs].sort((a, b) => {
+                const dateA = a.created_at || a.data_scadenza || '1970-01-01';
+                const dateB = b.created_at || b.data_scadenza || '1970-01-01';
+                return new Date(dateB) - new Date(dateA);
+            })[0];
+
+            const oggiStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+            const haCertValido = latestCert && 
+                                 latestCert.stato_validazione === 'VERDE' && 
+                                 latestCert.data_scadenza && 
+                                 latestCert.data_scadenza >= oggiStr;
+
+            if (!haCertValido) {
+                const scadenzaDesc = latestCert ? (latestCert.data_scadenza || 'N/D') : 'Assente';
+                const logErr = `Salto sincronizzazione: certificato medico scaduto o non valido (Scadenza: ${scadenzaDesc}, Stato: ${latestCert ? latestCert.stato_validazione : 'N/D'}).`;
+                console.log(`   ⚠️ ${logErr}`);
+                
+                await supabase.from('registro_tesserati').update({
+                    sync_csen_status: 'ERROR',
+                    sync_csen_log: logErr
+                }).eq('id_tesserato', tess.id_tesserato);
+
+                risultati.errori++;
+                risultati.falliti.push({ 
+                    nome: nomeCompleto, 
+                    cf, 
+                    errore: `Certificato medico non valido o scaduto (${scadenzaDesc})` 
+                });
+                continue;
+            }
 
             try {
                 // Naviga alla ricerca
