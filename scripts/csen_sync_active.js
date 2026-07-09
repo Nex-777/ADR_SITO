@@ -113,7 +113,7 @@ function analizzaStatoTessera(htmlContent) {
     const numeroCorrente = tesseraMatch ? tesseraMatch[1] : null;
 
     const necessitaRinnovo = scaduta || (annoScadenza !== null && annoScadenza < anno);
-    const tesseraAttiva = !necessitaRinnovo && numeroCorrente !== null;
+    const tesseraAttiva = !necessitaRinnovo && numeroCorrente !== null && numeroCorrente !== '0';
 
     return { necessitaRinnovo, tesseraAttiva, numeroCorrente, annoScadenza };
 }
@@ -649,7 +649,7 @@ async function estraiNumeraTesseraDopoOperazione(page, cf) {
         const { necessitaRinnovo, numeroCorrente, annoScadenza } = analizzaStatoTessera(html);
         const annoCorrente = new Date().getFullYear();
 
-        if (numeroCorrente && !necessitaRinnovo && annoScadenza >= annoCorrente) {
+        if (numeroCorrente && numeroCorrente !== '0' && !necessitaRinnovo && annoScadenza >= annoCorrente) {
             return numeroCorrente;
         }
         // Tessera ancora scaduta o numero non estratto

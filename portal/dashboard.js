@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.62"
+                VERSION: "1.01.63"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1164,7 +1164,7 @@
                         <td class="py-2 px-3 text-xs text-white font-bold">${escapeHtml(p.anagrafiche?.nome || '')} ${escapeHtml(p.anagrafiche?.cognome || '')}</td>
                         <td class="py-2 px-3 text-xs text-gray-400 font-mono">${escapeHtml(p.anagrafiche?.codice_fiscale || '')}</td>
                         <td class="py-2 px-3 text-xs text-primary">${escapeHtml(p.livello_copertura || '')}</td>
-                        <td class="py-2 px-3 text-xs text-gray-500">${p.data_richiesta_tesseramento || ''}</td>
+                        <td class="py-2 px-3 text-xs text-gray-500">${formatToItalianDate(p.data_richiesta_tesseramento)}</td>
                     </tr>
                 `).join('');
 
@@ -1856,7 +1856,7 @@
                     </td>
                     <td class="p-4 font-mono font-bold ${csenTextColor}">
                         ${escapeHtml(csenTextStr)}<br>
-                        <span class="text-[10px] text-gray-500 font-normal">Richiesta: ${escapeHtml(tess.data_richiesta_tesseramento)}</span>
+                        <span class="text-[10px] text-gray-500 font-normal">Richiesta: ${escapeHtml(formatToItalianDate(tess.data_richiesta_tesseramento))}</span>
                     </td>
                     <td class="p-4 text-gray-400">${escapeHtml(tess.livello_copertura)}</td>
                     <td class="p-4">${certHtml}</td>
