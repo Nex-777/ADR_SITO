@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.69"
+                VERSION: "1.01.70"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -292,6 +292,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
         let selectedTessera = "";
         let uploadedCertificatoFile = null;
         let uploadedDocumentoIdentitaFile = null;
+        let uploadedDocumentoIdentitaRetroFile = null;
 
         const inputAdesione = document.getElementById('tipo_adesione');
         const inputTessera = document.getElementById('tipo_tessera');
@@ -483,7 +484,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
             const file = e.target.files[0];
             if (!file) {
                 uploadedDocumentoIdentitaFile = null;
-                identitaFileNameLabel.textContent = "SELEZIONA O TRASCINA IL DOCUMENTO";
+                identitaFileNameLabel.textContent = "FRONTE O DOC UNICO";
                 identitaFileStatusLabel.textContent = "Nessun file selezionato";
                 identitaFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
                 return;
@@ -493,7 +494,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 alert("Il documento non deve superare i 5MB di dimensione.");
                 identitaFileInput.value = "";
                 uploadedDocumentoIdentitaFile = null;
-                identitaFileNameLabel.textContent = "SELEZIONA O TRASCINA IL DOCUMENTO";
+                identitaFileNameLabel.textContent = "FRONTE O DOC UNICO";
                 identitaFileStatusLabel.textContent = "Errore: File troppo grande (>5MB)";
                 identitaFileStatusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
                 return;
@@ -504,6 +505,38 @@ function togglePasswordVisibility(inputId, buttonEl) {
             identitaFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
             identitaFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
         });
+
+        const identitaRetroFileInput = document.getElementById('documento_identita_retro_file');
+        const identitaRetroFileNameLabel = document.getElementById('documento-identita-retro-file-name');
+        const identitaRetroFileStatusLabel = document.getElementById('documento-identita-retro-file-status');
+
+        if (identitaRetroFileInput) {
+            identitaRetroFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) {
+                    uploadedDocumentoIdentitaRetroFile = null;
+                    identitaRetroFileNameLabel.textContent = "RETRO (OPZIONALE)";
+                    identitaRetroFileStatusLabel.textContent = "Nessun file selezionato";
+                    identitaRetroFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("Il retro del documento non deve superare i 5MB di dimensione.");
+                    identitaRetroFileInput.value = "";
+                    uploadedDocumentoIdentitaRetroFile = null;
+                    identitaRetroFileNameLabel.textContent = "RETRO (OPZIONALE)";
+                    identitaRetroFileStatusLabel.textContent = "Errore: File troppo grande (>5MB)";
+                    identitaRetroFileStatusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                    return;
+                }
+
+                uploadedDocumentoIdentitaRetroFile = file;
+                identitaRetroFileNameLabel.textContent = file.name.toUpperCase();
+                identitaRetroFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                identitaRetroFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+            });
+        }
 
         // Initialize rates download
         fetchTariffe();
@@ -1222,6 +1255,46 @@ function togglePasswordVisibility(inputId, buttonEl) {
             }
         });
 
+        function compressImage(file, maxWidth, maxHeight, quality = 0.8) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = event => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width *= maxHeight / height;
+                                height = maxHeight;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error("Errore Canvas to Blob"));
+                            }
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = error => reject(error);
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
         function updateOtpButtonStatus(text, showSpinner = true) {
             if (showSpinner) {
                 btnValidaOtp.innerHTML = `${text} <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block ml-2 align-middle"></div>`;
@@ -1286,6 +1359,55 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     if (signedUrlError) throw signedUrlError;
                     certificatoMedicoUrl = urlData.signedUrl;
                     console.log("Certificato medico caricato con successo.");
+                }
+
+                // 1.45 Merge Fronte & Retro if Retro is present
+                if (uploadedDocumentoIdentitaRetroFile) {
+                    if (typeof window.PDFLib === 'undefined') {
+                        alert("Sistema di elaborazione documenti non ancora pronto. Attendi qualche secondo e riprova, o disabilita eventuali ad-blocker.");
+                        btnValidaOtp.disabled = false;
+                        updateOtpButtonStatus("CONFERMA FIRMA");
+                        return;
+                    }
+
+                    updateOtpButtonStatus("ELABORAZIONE DOCUMENTI...");
+                    
+                    try {
+                        const pdfDoc = await window.PDFLib.PDFDocument.create();
+                        const files = [uploadedDocumentoIdentitaFile, uploadedDocumentoIdentitaRetroFile];
+                        
+                        for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            if (file.type === 'application/pdf') {
+                                const fileBytes = await file.arrayBuffer();
+                                const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
+                                const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
+                                copiedPages.forEach(page => pdfDoc.addPage(page));
+                            } else if (file.type.startsWith('image/')) {
+                                const compBlob = await compressImage(file, 1200, 1200, 0.8);
+                                const imageBytes = await compBlob.arrayBuffer();
+                                let embeddedImage;
+                                if (file.type === 'image/png') {
+                                    embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
+                                } else {
+                                    embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                                }
+                                const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                                page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
+                            }
+                        }
+                        
+                        const pdfBytes = await pdfDoc.save();
+                        const mergedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        
+                        uploadedDocumentoIdentitaFile = new File([mergedPdfBlob], "documento_unito.pdf", { type: "application/pdf" });
+                    } catch (error) {
+                        console.error("Errore durante l'elaborazione dei documenti:", error);
+                        alert("Impossibile elaborare i file. Assicurati che non siano danneggiati o protetti da password.");
+                        btnValidaOtp.disabled = false;
+                        updateOtpButtonStatus("CONFERMA FIRMA");
+                        return;
+                    }
                 }
 
                 // 1.5 Upload Identity Document

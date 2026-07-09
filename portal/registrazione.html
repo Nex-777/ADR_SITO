@@ -15,6 +15,7 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="sha384-d+vyQ0dYcymoP8ndq2hW7FGC50nqGdXUEgoOUGxbbkAJwZqL7h+jKN0GGgn9hFDS" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="config.js"></script>
     
@@ -155,7 +156,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.69</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.70</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -394,13 +395,21 @@
                         <div id="documento_identita_container" class="space-y-4 border border-white/10 p-4 bg-black/25 mt-4">
                             <div class="flex justify-between items-center">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">DOCUMENTO DI RICONOSCIMENTO (OBBLIGATORIO)</label>
-                                <span class="text-[9px] text-gray-400">Fronte/Retro (PDF, PNG, JPG - MAX 5MB)</span>
+                                <span class="text-[9px] text-gray-400">PDF, PNG, JPG - MAX 5MB A FILE</span>
                             </div>
-                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-registrazione-click-identita">
-                                <input type="file" id="documento_identita_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
-                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
-                                <p class="text-xs text-white uppercase font-bold" id="documento-identita-file-name">SELEZIONA O TRASCINA IL DOCUMENTO</p>
-                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="documento-identita-file-status">Nessun file selezionato</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-registrazione-click-identita">
+                                    <input type="file" id="documento_identita_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                    <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                    <p class="text-xs text-white uppercase font-bold" id="documento-identita-file-name">FRONTE O DOC UNICO</p>
+                                    <p class="text-[9px] text-gray-400 mt-1 uppercase" id="documento-identita-file-status">Nessun file selezionato</p>
+                                </div>
+                                <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-registrazione-click-identita-retro" onclick="document.getElementById('documento_identita_retro_file').click()">
+                                    <input type="file" id="documento_identita_retro_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                    <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                    <p class="text-xs text-white uppercase font-bold" id="documento-identita-retro-file-name">RETRO (OPZIONALE)</p>
+                                    <p class="text-[9px] text-gray-400 mt-1 uppercase" id="documento-identita-retro-file-status">Nessun file selezionato</p>
+                                </div>
                             </div>
                         </div>
 
