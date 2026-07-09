@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.70"
+                VERSION: "1.01.71"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -480,13 +480,42 @@ function togglePasswordVisibility(inputId, buttonEl) {
         const identitaFileNameLabel = document.getElementById('documento-identita-file-name');
         const identitaFileStatusLabel = document.getElementById('documento-identita-file-status');
 
+        function updateDocumentoIdentitaHelper() {
+            const msgEl = document.getElementById('documento-identita-helper-msg');
+            if (!msgEl) return;
+
+            if (!uploadedDocumentoIdentitaFile) {
+                msgEl.classList.add('hidden');
+                return;
+            }
+
+            if (uploadedDocumentoIdentitaFile.type === 'application/pdf') {
+                msgEl.textContent = "✓ PDF CARICATO. Assicurati che contenga già sia il fronte che il retro del documento.";
+                msgEl.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-green-500";
+                msgEl.classList.remove('hidden');
+            } else if (uploadedDocumentoIdentitaFile.type.startsWith('image/')) {
+                if (uploadedDocumentoIdentitaRetroFile) {
+                    msgEl.textContent = "✓ FRONTE E RETRO SELEZIONATI. Verranno uniti in un singolo PDF.";
+                    msgEl.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-green-500";
+                    msgEl.classList.remove('hidden');
+                } else {
+                    msgEl.textContent = "💡 HAI CARICATO UN'IMMAGINE. CARICA LA FOTO DEL RETRO A FIANCO PER COMPLETARE IL DOCUMENTO.";
+                    msgEl.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-amber-500 animate-pulse";
+                    msgEl.classList.remove('hidden');
+                }
+            } else {
+                msgEl.classList.add('hidden');
+            }
+        }
+
         identitaFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) {
                 uploadedDocumentoIdentitaFile = null;
-                identitaFileNameLabel.textContent = "FRONTE O DOC UNICO";
+                identitaFileNameLabel.textContent = "FRONTE (O DOC. COMPLETO)";
                 identitaFileStatusLabel.textContent = "Nessun file selezionato";
                 identitaFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                updateDocumentoIdentitaHelper();
                 return;
             }
 
@@ -494,9 +523,10 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 alert("Il documento non deve superare i 5MB di dimensione.");
                 identitaFileInput.value = "";
                 uploadedDocumentoIdentitaFile = null;
-                identitaFileNameLabel.textContent = "FRONTE O DOC UNICO";
+                identitaFileNameLabel.textContent = "FRONTE (O DOC. COMPLETO)";
                 identitaFileStatusLabel.textContent = "Errore: File troppo grande (>5MB)";
                 identitaFileStatusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                updateDocumentoIdentitaHelper();
                 return;
             }
 
@@ -504,6 +534,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
             identitaFileNameLabel.textContent = file.name.toUpperCase();
             identitaFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
             identitaFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+            updateDocumentoIdentitaHelper();
         });
 
         const identitaRetroFileInput = document.getElementById('documento_identita_retro_file');
@@ -515,9 +546,10 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 const file = e.target.files[0];
                 if (!file) {
                     uploadedDocumentoIdentitaRetroFile = null;
-                    identitaRetroFileNameLabel.textContent = "RETRO (OPZIONALE)";
+                    identitaRetroFileNameLabel.textContent = "RETRO (SE FILE SEPARATO)";
                     identitaRetroFileStatusLabel.textContent = "Nessun file selezionato";
                     identitaRetroFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                    updateDocumentoIdentitaHelper();
                     return;
                 }
 
@@ -525,9 +557,10 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     alert("Il retro del documento non deve superare i 5MB di dimensione.");
                     identitaRetroFileInput.value = "";
                     uploadedDocumentoIdentitaRetroFile = null;
-                    identitaRetroFileNameLabel.textContent = "RETRO (OPZIONALE)";
+                    identitaRetroFileNameLabel.textContent = "RETRO (SE FILE SEPARATO)";
                     identitaRetroFileStatusLabel.textContent = "Errore: File troppo grande (>5MB)";
                     identitaRetroFileStatusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                    updateDocumentoIdentitaHelper();
                     return;
                 }
 
@@ -535,6 +568,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 identitaRetroFileNameLabel.textContent = file.name.toUpperCase();
                 identitaRetroFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
                 identitaRetroFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                updateDocumentoIdentitaHelper();
             });
         }
 
