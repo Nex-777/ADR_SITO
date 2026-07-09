@@ -4,11 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
-## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.57)
+## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.58)
 - Centralizzata la logica di controllo scadenza certificato in `dashboard.js` tramite la funzione helper `isCertificatoScaduto()`.
 - Sostituito il confronto di oggetti Date inline che creava falsi positivi nel giorno di scadenza stesso con un confronto di stringhe locale in formato ISO YYYY-MM-DD.
 - Aggiornato allo stesso modo il controllo di scadenza in `pagamento.js` per sbloccare l'utente Diego Pigliapoco e prevenire loop di pagamento/scadenza.
-- Incrementata la versione globale del portale e del sito a v1.01.57.
+- Incrementata la versione globale del portale e del sito a v1.01.58.
 
 ## [2026-07-08] ingest | CSEN PDF Compilation & Vercel Bundle Fix (v1.01.54)
 - Configurato `vercel.json` per includere esplicitamente la cartella `CSEN_moduli/**` nella build dell'endpoint `/api/otp-verify.js`, risolvendo l'esclusione del modulo dal bundle in produzione.

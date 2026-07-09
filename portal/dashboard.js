@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.57"
+                VERSION: "1.01.58"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -68,7 +68,14 @@
             if (!anag) return null;
             if (!anag.certificati_medici) return null;
             if (Array.isArray(anag.certificati_medici)) {
-                return anag.certificati_medici.length > 0 ? anag.certificati_medici[0] : null;
+                if (anag.certificati_medici.length === 0) return null;
+                // Ordina per data_scadenza decrescente per ottenere il certificato attivo/più recente
+                const sorted = [...anag.certificati_medici].sort((a, b) => {
+                    const dateA = a.data_scadenza || '1970-01-01';
+                    const dateB = b.data_scadenza || '1970-01-01';
+                    return dateB.localeCompare(dateA);
+                });
+                return sorted[0];
             }
             return anag.certificati_medici;
         }
@@ -5632,12 +5639,6 @@
                 const publicUrl = urlData.signedUrl;
 
                 const anagId = currentUserProfile.anagrafiche?.[0]?.id || currentUserProfile.anagrafiche?.id;
-
-                // Elimina il vecchio certificato per evitare violazioni del vincolo unique_certificato_anagrafica
-                await supabaseClient
-                    .from('certificati_medici')
-                    .delete()
-                    .eq('anagrafica_id', anagId);
 
                 const { error: insertError } = await supabaseClient
                     .from('certificati_medici')
