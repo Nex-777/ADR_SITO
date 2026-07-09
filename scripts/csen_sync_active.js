@@ -335,7 +335,12 @@ async function syncCsen() {
 
                     // Qualifica
                     const certs = Array.isArray(anag.certificati_medici) ? anag.certificati_medici : [];
-                    const haCertAgonistico = certs.some(c => c.tipologia === 'AGONISTICO' && c.stato_validazione === 'VERDE');
+                    const latestCert = [...certs].sort((a, b) => {
+                        const dateA = a.created_at || a.data_scadenza || '1970-01-01';
+                        const dateB = b.created_at || b.data_scadenza || '1970-01-01';
+                        return new Date(dateB) - new Date(dateA);
+                    })[0];
+                    const haCertAgonistico = latestCert && latestCert.tipologia === 'AGONISTICO' && latestCert.stato_validazione === 'VERDE';
                     const qualifica = haCertAgonistico ? 'Atleta Agonista' : 'Atleta Praticante';
                     await page.selectOption('select[name="qualifica"]', { label: qualifica }).catch(() => console.log('   - Option qualifica non trovata'));
 

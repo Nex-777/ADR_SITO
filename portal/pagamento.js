@@ -3,7 +3,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.58"
+                VERSION: "1.01.59"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -57,7 +57,19 @@
 
                 const anag = Array.isArray(userProfile.anagrafiche) ? userProfile.anagrafiche[0] : userProfile.anagrafiche;
                 const regSocio = anag && anag.registro_soci ? (Array.isArray(anag.registro_soci) ? anag.registro_soci[0] : anag.registro_soci) : null;
-                const cert = anag && anag.certificati_medici ? (Array.isArray(anag.certificati_medici) ? anag.certificati_medici[0] : anag.certificati_medici) : null;
+                let cert = null;
+                if (anag && anag.certificati_medici) {
+                    if (Array.isArray(anag.certificati_medici)) {
+                        const sorted = [...anag.certificati_medici].sort((a, b) => {
+                            const valA = a.created_at || a.data_scadenza || a.data_rilascio || '1970-01-01';
+                            const valB = b.created_at || b.data_scadenza || b.data_rilascio || '1970-01-01';
+                            return new Date(valB) - new Date(valA);
+                        });
+                        cert = sorted[0];
+                    } else {
+                        cert = anag.certificati_medici;
+                    }
+                }
 
                 // Check governance status if they are registering as a member (socio or socio_tesserato)
                 if ((userProfile.tipo_adesione === 'socio' || userProfile.tipo_adesione === 'socio_tesserato') && regSocio && regSocio.stato_socio === 'IN_ATTESA_DELIBERA') {

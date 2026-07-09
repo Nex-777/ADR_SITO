@@ -218,7 +218,8 @@ export default async function handler(req, res) {
 
         // C2. Insert into public.certificati_medici if present
         if (profile.certificato_medico_url) {
-            await supabase.from('certificati_medici').delete().eq('anagrafica_id', anagraficaId);
+            // Manteniamo lo storico per 5 anni, non eliminiamo il record precedente fisicamente.
+            // await supabase.from('certificati_medici').delete().eq('anagrafica_id', anagraficaId);
             
             // Calcola una data di scadenza fittizia (1 anno) per bypassare il constraint NOT NULL,
             // verrà sovrascritta dall'AI fra pochi secondi.
@@ -251,7 +252,8 @@ export default async function handler(req, res) {
 
         // C3. Insert into public.documenti_identita if present
         if (profile.documento_identita_url) {
-            await supabase.from('documenti_identita').delete().eq('anagrafica_id', anagraficaId);
+            // Manteniamo lo storico per 5 anni, non eliminiamo il record precedente fisicamente.
+            // await supabase.from('documenti_identita').delete().eq('anagrafica_id', anagraficaId);
             const { error: idDocError } = await supabase
                 .from('documenti_identita')
                 .insert({

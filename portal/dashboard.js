@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.58"
+                VERSION: "1.01.59"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -69,15 +69,31 @@
             if (!anag.certificati_medici) return null;
             if (Array.isArray(anag.certificati_medici)) {
                 if (anag.certificati_medici.length === 0) return null;
-                // Ordina per data_scadenza decrescente per ottenere il certificato attivo/più recente
+                // Ordina primariamente per created_at (data caricamento) decrescente per ottenere l'ultimo caricato
                 const sorted = [...anag.certificati_medici].sort((a, b) => {
-                    const dateA = a.data_scadenza || '1970-01-01';
-                    const dateB = b.data_scadenza || '1970-01-01';
-                    return dateB.localeCompare(dateA);
+                    const valA = a.created_at || a.data_scadenza || a.data_rilascio || '1970-01-01';
+                    const valB = b.created_at || b.data_scadenza || b.data_rilascio || '1970-01-01';
+                    return new Date(valB) - new Date(valA);
                 });
                 return sorted[0];
             }
             return anag.certificati_medici;
+        }
+
+        function getIdDocInfo(anag) {
+            if (!anag) return null;
+            if (!anag.documenti_identita) return null;
+            if (Array.isArray(anag.documenti_identita)) {
+                if (anag.documenti_identita.length === 0) return null;
+                // Ordina per created_at decrescente per ottenere l'ultimo caricato
+                const sorted = [...anag.documenti_identita].sort((a, b) => {
+                    const valA = a.created_at || a.data_caricamento || '1970-01-01';
+                    const valB = b.created_at || b.data_caricamento || '1970-01-01';
+                    return new Date(valB) - new Date(valA);
+                });
+                return sorted[0];
+            }
+            return anag.documenti_identita;
         }
 
         function generateProgressBarHtml(dateStr) {
@@ -525,7 +541,7 @@
                     userCertContainer.classList.remove('hidden');
                     
                     const anag = Array.isArray(profile.anagrafiche) ? profile.anagrafiche[0] : profile.anagrafiche;
-                    const cert = anag && anag.certificati_medici ? (Array.isArray(anag.certificati_medici) ? anag.certificati_medici[0] : anag.certificati_medici) : null;
+                    const cert = getCertInfo(anag);
                     
                     const box = document.getElementById('user-cert-status-box');
                     const msg = document.getElementById('user-cert-message');
@@ -1370,8 +1386,8 @@
                     let certHtml = '<span class="text-primary font-bold">MANCANTE</span>';
                     let isCertVerde = false;
                     let docIdHtml = '<span class="text-gray-500 font-bold text-[9px]">-</span>';
-                    if (anag.documenti_identita && anag.documenti_identita.length > 0) {
-                        const docId = anag.documenti_identita[0];
+                    const docId = getIdDocInfo(anag);
+                    if (docId) {
                         docIdHtml = `
                             <div class="mt-2 text-center border-t border-white/10 pt-2">
                                 <a href="#" data-file-url="${escapeHtml(docId.file_url)}" class="approvazioni-view-id-btn underline text-blue-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">badge</span>DOC. IDENTITÀ</a>
@@ -5227,7 +5243,7 @@
                 }
 
                 const anag = Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche;
-                const cert = anag && anag.certificati_medici ? (Array.isArray(anag.certificati_medici) ? anag.certificati_medici[0] : anag.certificati_medici) : null;
+                const cert = getCertInfo(anag);
                 
                 if (cert && cert.data_scadenza) {
                     document.getElementById('user-info-scadenza-certificato').textContent = new Date(cert.data_scadenza).toLocaleDateString('it-IT');

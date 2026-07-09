@@ -4,11 +4,17 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
-## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.58)
+## [2026-07-09] ingest | Document Retention and History Management (v1.01.59)
+- Aggiunta la colonna `created_at` alla tabella `certificati_medici` in Supabase per ordinamento temporale.
+- Disabilitata l'eliminazione fisica (`.delete()`) dei vecchi certificati e documenti d'identità in `api/otp-verify.js` per garantire la conservazione di 5 anni dello storico.
+- Modificati `portal/dashboard.js` e `portal/pagamento.js` per estrarre e utilizzare sempre l'ultimo documento caricato (tramite ordinamento decrescente sul timestamp di inserimento) anziché affidarsi all'indice `[0]` dell'array.
+- Corretti gli script di sincronizzazione CSEN `csen_sync_active.js` e `test_runner_csen.js` affinché verifichino lo stato agonistico del tesserato basandosi esclusivamente sul suo ultimo certificato.
+
+## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.59)
 - Centralizzata la logica di controllo scadenza certificato in `dashboard.js` tramite la funzione helper `isCertificatoScaduto()`.
 - Sostituito il confronto di oggetti Date inline che creava falsi positivi nel giorno di scadenza stesso con un confronto di stringhe locale in formato ISO YYYY-MM-DD.
 - Aggiornato allo stesso modo il controllo di scadenza in `pagamento.js` per sbloccare l'utente Diego Pigliapoco e prevenire loop di pagamento/scadenza.
-- Incrementata la versione globale del portale e del sito a v1.01.58.
+- Incrementata la versione globale del portale e del sito a v1.01.59.
 
 ## [2026-07-08] ingest | CSEN PDF Compilation & Vercel Bundle Fix (v1.01.54)
 - Configurato `vercel.json` per includere esplicitamente la cartella `CSEN_moduli/**` nella build dell'endpoint `/api/otp-verify.js`, risolvendo l'esclusione del modulo dal bundle in produzione.
