@@ -474,7 +474,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.67</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.68</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -637,6 +637,10 @@
 
                 <button id="tab-btn-taratura_pdf" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
                     <span class="material-symbols-outlined text-sm">tune</span> TARATURA PDF MODULI
+                </button>
+
+                <button id="tab-btn-sandbox" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm">science</span> SANDBOX DOCUMENTI
                 </button>
             </div>
 
@@ -1519,6 +1523,71 @@
                         </h3>
                         <div class="w-full border border-white/5">
                             <iframe id="pdf-tuner-preview-frame" style="display: block; width: 100%; height: 950px; min-height: 950px; border: none; background: #111;"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 9.5: SANDBOX DOCUMENTI -->
+            <div id="panel-sandbox" class="tab-panel space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase">🔬 Sandbox Unione & Compressione Documenti</h2>
+                        <p class="text-xs text-gray-500 uppercase">Testa la compressione ed unione locale di immagini e PDF prima del rilascio</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Configurazione e Inputs -->
+                    <div class="border border-white/10 p-6 bg-black/40 space-y-6">
+                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/10 pb-2">Seleziona File di Test</h3>
+                        
+                        <!-- Box Fronte -->
+                        <div class="space-y-2">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">FILE 1: FRONTE (PDF o Immagine)</label>
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="sandbox-fronte-click" onclick="document.getElementById('sandbox_file_fronte').click()">
+                                <input type="file" id="sandbox_file_fronte" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                <p class="text-xs text-white uppercase font-bold" id="sandbox-fronte-name">SELEZIONA O TRASCINA IL FRONTE</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="sandbox-fronte-status">Nessun file selezionato</p>
+                            </div>
+                        </div>
+
+                        <!-- Box Retro -->
+                        <div class="space-y-2">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">FILE 2: RETRO (Opzionale - PDF o Immagine)</label>
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="sandbox-retro-click" onclick="document.getElementById('sandbox_file_retro').click()">
+                                <input type="file" id="sandbox_file_retro" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                <p class="text-xs text-white uppercase font-bold" id="sandbox-retro-name">SELEZIONA O TRASCINA IL RETRO</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="sandbox-retro-status">Nessun file selezionato</p>
+                            </div>
+                        </div>
+
+                        <button id="btn-run-sandbox" class="w-full bg-primary hover:bg-primary-dim text-white font-headline text-xs font-bold py-3 transition-all uppercase flex justify-center items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">merge</span> Unisci e Comprimi (Locali)
+                        </button>
+                    </div>
+
+                    <!-- Risultati Test -->
+                    <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                        <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest border-b border-white/10 pb-2">Log di Elaborazione e Anteprima</h3>
+                        <div id="sandbox-console-log" class="font-mono text-[10px] text-green-400 bg-black/80 p-4 h-[250px] overflow-y-auto border border-white/5 space-y-1">
+                            <div>Pronto per il test. Seleziona i file a sinistra e clicca sul pulsante.</div>
+                        </div>
+                        <div id="sandbox-preview-container" class="hidden space-y-2">
+                            <p class="text-xs text-white font-bold uppercase">Anteprima PDF Generato:</p>
+                            <div class="flex gap-4">
+                                <button id="btn-sandbox-view" class="flex-grow border border-primary text-primary font-headline text-xs font-bold py-2 hover:bg-primary/10 transition-all uppercase flex justify-center items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">open_in_new</span> Apri in Nuova Scheda
+                                </button>
+                                <button id="btn-sandbox-download" class="flex-grow bg-primary text-white font-headline text-xs font-bold py-2 hover:brightness-110 transition-all uppercase flex justify-center items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">download</span> Scarica PDF unito
+                                </button>
+                            </div>
+                            <div class="text-[9px] text-gray-400 uppercase mt-1">
+                                Peso stimato del PDF finale: <span id="sandbox-pdf-size" class="text-white font-bold">-</span>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.67"
+                VERSION: "1.01.68"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -345,7 +345,7 @@
                 const tabs = [
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
                     'instructor_corsi', 'volunteer_eventi',
-                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf',
+                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf', 'sandbox',
                     'registro_istruttori', 'registro_volontari'
                 ];
                 tabs.forEach(tab => {
@@ -451,6 +451,7 @@
                 if (isPresidentOrVP) {
                     document.getElementById('tab-btn-gestione_corsi').classList.remove('hidden');
                     document.getElementById('tab-btn-taratura_pdf').classList.remove('hidden');
+                    document.getElementById('tab-btn-sandbox').classList.remove('hidden');
                 }
 
                 document.getElementById('tab-btn-direttivo').classList.remove('hidden');
@@ -6444,6 +6445,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-sandbox');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('sandbox');
+            initSandboxDocumenti();
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('auto-dashboard-click-2');
     if (el) {
         el.addEventListener('click', function(event) {
@@ -8245,6 +8256,220 @@ window.salvaTaraturaPDF = async function() {
         hideLoader();
     }
 };
+
+let sandboxFronteFile = null;
+let sandboxRetroFile = null;
+let sandboxMergedBlob = null;
+
+window.initSandboxDocumenti = function() {
+    sandboxFronteFile = null;
+    sandboxRetroFile = null;
+    sandboxMergedBlob = null;
+    
+    document.getElementById('sandbox_file_fronte').value = '';
+    document.getElementById('sandbox_file_retro').value = '';
+    
+    document.getElementById('sandbox-fronte-name').textContent = 'SELEZIONA O TRASCINA IL FRONTE';
+    document.getElementById('sandbox-fronte-status').textContent = 'Nessun file selezionato';
+    document.getElementById('sandbox-fronte-status').className = 'text-[9px] text-gray-400 mt-1 uppercase';
+    
+    document.getElementById('sandbox-retro-name').textContent = 'SELEZIONA O TRASCINA IL RETRO';
+    document.getElementById('sandbox-retro-status').textContent = 'Nessun file selezionato';
+    document.getElementById('sandbox-retro-status').className = 'text-[9px] text-gray-400 mt-1 uppercase';
+    
+    document.getElementById('sandbox-console-log').innerHTML = '<div>🔬 Sandbox Documenti pronta per il test. Seleziona i file e avvia il merge.</div>';
+    document.getElementById('sandbox-preview-container').classList.add('hidden');
+    
+    // Bind listeners once
+    const inputFronte = document.getElementById('sandbox_file_fronte');
+    const inputRetro = document.getElementById('sandbox_file_retro');
+    
+    inputFronte.replaceWith(inputFronte.cloneNode(true));
+    inputRetro.replaceWith(inputRetro.cloneNode(true));
+    
+    const newInputFronte = document.getElementById('sandbox_file_fronte');
+    const newInputRetro = document.getElementById('sandbox_file_retro');
+    
+    newInputFronte.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            sandboxFronteFile = file;
+            document.getElementById('sandbox-fronte-name').textContent = file.name.toUpperCase();
+            document.getElementById('sandbox-fronte-status').textContent = `✓ SELEZIONATO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            document.getElementById('sandbox-fronte-status').className = 'text-[9px] text-green-500 mt-1 uppercase font-bold';
+            logSandbox(`File 1 caricato: ${file.name} (${(file.size / 1024).toFixed(0)} KB, tipo: ${file.type})`);
+        }
+    });
+
+    newInputRetro.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            sandboxRetroFile = file;
+            document.getElementById('sandbox-retro-name').textContent = file.name.toUpperCase();
+            document.getElementById('sandbox-retro-status').textContent = `✓ SELEZIONATO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            document.getElementById('sandbox-retro-status').className = 'text-[9px] text-green-500 mt-1 uppercase font-bold';
+            logSandbox(`File 2 caricato: ${file.name} (${(file.size / 1024).toFixed(0)} KB, tipo: ${file.type})`);
+        }
+    });
+};
+
+function logSandbox(msg) {
+    const consoleLog = document.getElementById('sandbox-console-log');
+    if (consoleLog) {
+        consoleLog.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnRun = document.getElementById('btn-run-sandbox');
+    if (btnRun) {
+        btnRun.addEventListener('click', async () => {
+            if (!sandboxFronteFile) {
+                alert("Devi selezionare almeno il File 1 (Fronte).");
+                return;
+            }
+            
+            logSandbox("=== Inizio elaborazione unione e compressione ===");
+            btnRun.disabled = true;
+            btnRun.textContent = "Elaborazione in corso...";
+            
+            try {
+                // Se c'è solo il fronte, lo lasciamo così com'è (se PDF) o lo convertiamo in PDF (se immagine)
+                if (!sandboxRetroFile) {
+                    if (sandboxFronteFile.type === 'application/pdf') {
+                        logSandbox("Trovato file unico PDF. Nessun merge necessario. Elaborazione terminata.");
+                        sandboxMergedBlob = sandboxFronteFile;
+                    } else if (sandboxFronteFile.type.startsWith('image/')) {
+                        logSandbox("Trovato file unico immagine. Conversione in PDF compresso...");
+                        const compData = await compressImageSandbox(sandboxFronteFile, 1200, 1200, 0.8);
+                        logSandbox("Conversione immagine singola completata.");
+                        
+                        const pdfDoc = await window.PDFLib.PDFDocument.create();
+                        const imageBytes = await fetch(compData).then(res => res.arrayBuffer());
+                        const embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                        const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                        page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
+                        const pdfBytes = await pdfDoc.save();
+                        sandboxMergedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    } else {
+                        throw new Error("Formato file non supportato. Caricare JPG, PNG o PDF.");
+                    }
+                } else {
+                    // C'è sia Fronte che Retro.
+                    logSandbox("Trovati due file. Avvio unione universale...");
+                    
+                    const pdfDoc = await window.PDFLib.PDFDocument.create();
+                    const files = [sandboxFronteFile, sandboxRetroFile];
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        const label = i === 0 ? "FRONTE" : "RETRO";
+                        
+                        if (file.type === 'application/pdf') {
+                            logSandbox(`Elaborazione ${label} come PDF...`);
+                            const fileBytes = await file.arrayBuffer();
+                            const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
+                            const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
+                            copiedPages.forEach(page => pdfDoc.addPage(page));
+                            logSandbox(`Importate ${copiedPages.length} pagine da PDF ${label}.`);
+                        } else if (file.type.startsWith('image/')) {
+                            logSandbox(`Compressione ${label} come immagine...`);
+                            const compData = await compressImageSandbox(file, 1200, 1200, 0.8);
+                            const imageBytes = await fetch(compData).then(res => res.arrayBuffer());
+                            
+                            let embeddedImage;
+                            if (file.type === 'image/png') {
+                                embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
+                            } else {
+                                embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                            }
+                            
+                            const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                            page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
+                            logSandbox(`Aggiunta pagina da immagine ${label}.`);
+                        } else {
+                            throw new Error(`Tipo file per ${label} non supportato.`);
+                        }
+                    }
+                    
+                    const pdfBytes = await pdfDoc.save();
+                    sandboxMergedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    logSandbox("Unione universale PDF-lib completata con successo!");
+                }
+                
+                const sizeKb = (sandboxMergedBlob.size / 1024).toFixed(1);
+                document.getElementById('sandbox-pdf-size').textContent = `${sizeKb} KB`;
+                document.getElementById('sandbox-preview-container').classList.remove('hidden');
+                logSandbox(`✅ PDF Generato con successo. Peso totale: ${sizeKb} KB.`);
+                
+            } catch (err) {
+                logSandbox(`❌ ERRORE: ${err.message}`);
+                console.error(err);
+                alert("Errore durante l'elaborazione del test: " + err.message);
+            } finally {
+                btnRun.disabled = false;
+                btnRun.textContent = "Unisci e Comprimi (Locali)";
+            }
+        });
+    }
+    
+    const btnView = document.getElementById('btn-sandbox-view');
+    if (btnView) {
+        btnView.addEventListener('click', () => {
+            if (sandboxMergedBlob) {
+                const fileUrl = URL.createObjectURL(sandboxMergedBlob);
+                window.open(fileUrl, '_blank');
+            }
+        });
+    }
+    
+    const btnDownload = document.getElementById('btn-sandbox-download');
+    if (btnDownload) {
+        btnDownload.addEventListener('click', () => {
+            if (sandboxMergedBlob) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(sandboxMergedBlob);
+                link.download = `test_documento_unito_${Date.now()}.pdf`;
+                link.click();
+            }
+        });
+    }
+});
+
+function compressImageSandbox(file, maxWidth, maxHeight, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = event => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = error => reject(error);
+        };
+        reader.onerror = error => reject(error);
+    });
+}
 
 
 
