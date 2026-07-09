@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.68"
+                VERSION: "1.01.69"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -8342,11 +8342,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         sandboxMergedBlob = sandboxFronteFile;
                     } else if (sandboxFronteFile.type.startsWith('image/')) {
                         logSandbox("Trovato file unico immagine. Conversione in PDF compresso...");
-                        const compData = await compressImageSandbox(sandboxFronteFile, 1200, 1200, 0.8);
+                        const compBlob = await compressImageSandbox(sandboxFronteFile, 1200, 1200, 0.8);
                         logSandbox("Conversione immagine singola completata.");
                         
                         const pdfDoc = await window.PDFLib.PDFDocument.create();
-                        const imageBytes = await fetch(compData).then(res => res.arrayBuffer());
+                        const imageBytes = await compBlob.arrayBuffer();
                         const embeddedImage = await pdfDoc.embedJpg(imageBytes);
                         const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
                         page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
@@ -8375,8 +8375,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             logSandbox(`Importate ${copiedPages.length} pagine da PDF ${label}.`);
                         } else if (file.type.startsWith('image/')) {
                             logSandbox(`Compressione ${label} come immagine...`);
-                            const compData = await compressImageSandbox(file, 1200, 1200, 0.8);
-                            const imageBytes = await fetch(compData).then(res => res.arrayBuffer());
+                            const compBlob = await compressImageSandbox(file, 1200, 1200, 0.8);
+                            const imageBytes = await compBlob.arrayBuffer();
                             
                             let embeddedImage;
                             if (file.type === 'image/png') {
@@ -8463,7 +8463,13 @@ function compressImageSandbox(file, maxWidth, maxHeight, quality = 0.8) {
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', quality));
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error("Errore Canvas to Blob"));
+                    }
+                }, 'image/jpeg', quality);
             };
             img.onerror = error => reject(error);
         };
