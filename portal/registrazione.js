@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.65"
+                VERSION: "1.01.66"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -540,6 +540,9 @@ function togglePasswordVisibility(inputId, buttonEl) {
         const step4 = document.getElementById('step-4');
 
         function updateNavigationUI(direction = 'next') {
+            if (currentStep > 4) currentStep = 4;
+            if (currentStep < 1) currentStep = 1;
+            
             isMinor = getAge(inputBirth.value) < 18;
             
             const panels = [step1, step2, step3, step4];
@@ -735,6 +738,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
         }
 
         btnNext.addEventListener('click', () => {
+            if (currentStep >= 4) return;
             if (validateStep(currentStep)) {
                 currentStep++;
                 updateNavigationUI('next');
@@ -1044,14 +1048,13 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
             // 1.b Controllo preventivo Codice Fiscale
             try {
-                const { data: existingCfData, error: cfError } = await supabaseClient
-                    .from('anagrafiche')
-                    .select('id')
-                    .eq('codice_fiscale', cf)
-                    .maybeSingle();
+                const [cfAnag, cfUtenti] = await Promise.all([
+                    supabaseClient.from('anagrafiche').select('id').eq('codice_fiscale', cf).maybeSingle(),
+                    supabaseClient.from('utenti').select('id').eq('codice_fiscale', cf).maybeSingle()
+                ]);
                 
-                if (existingCfData) {
-                    alert("Questo Codice Fiscale risulta già registrato nel sistema. Se sei tu e non hai mai effettuato l'accesso, torna alla schermata di Login e utilizza la funzione 'Primo Accesso / Password Dimenticata' per impostare la tua password.");
+                if (cfAnag.data || cfUtenti.data) {
+                    alert("Questo Codice Fiscale risulta già registrato nel sistema. Se sei tu e non hai mai completato la registrazione, torna alla schermata di Login e utilizza la funzione 'Primo Accesso / Password Dimenticata' con l'email originale per impostare la tua password.");
                     btnInviaOtp.disabled = false;
                     btnInviaOtp.textContent = "INVIA CODICE OTP";
                     return;
