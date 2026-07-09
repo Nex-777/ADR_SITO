@@ -451,6 +451,16 @@ async function syncCsen() {
                         continue;
                     }
 
+                    // ---- SCENARIO B1.5: RINNOVO SUBMITTED IN ATTESA DI ASSEGNAZIONE CODICE ----
+                    if (statoAttuale === 'RENEWAL_SUBMITTED') {
+                        console.log(`   🟡 Rinnovo inviato precedentemente. CSEN non ha ancora assegnato il nuovo numero. Stato: RENEWAL_SUBMITTED`);
+                        await supabase.from('registro_tesserati').update({
+                            sync_csen_log: `Rinnovo CSEN inviato. In attesa assegnazione nuovo numero da CSEN (portale mostra numero: ${numeroCorrente || '0'}).`
+                        }).eq('id_tesserato', tess.id_tesserato);
+                        risultati.successi++;
+                        continue;
+                    }
+
                     // ---- SCENARIO B2: TESSERA SCADUTA → ESEGUI RINNOVO ----
                     if (necessitaRinnovo) {
                         // PROTEZIONE: se era in RENEWAL_SUBMITTED e CSEN ancora non ha processato,
