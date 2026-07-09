@@ -65,3 +65,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: node scripts/scraper_csen.js
+
+      - name: Salva Screenshot e Log di Errore
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csen-error-debug
+          path: |
+            csen_error_*.png
+            csen_page_source.html
+

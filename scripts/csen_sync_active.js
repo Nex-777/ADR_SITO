@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
 
 const CSEN_USER = process.env.CSEN_USER;
 const CSEN_PASS = process.env.CSEN_PASS;
@@ -600,6 +601,17 @@ async function syncCsen() {
 
     } catch (err) {
         console.error('\n❌ ERRORE GENERALE SCRIPT:', err.message);
+        try {
+            if (page) {
+                const timestamp = Date.now();
+                await page.screenshot({ path: `csen_error_${timestamp}.png`, fullPage: true });
+                const htmlContent = await page.content();
+                fs.writeFileSync('csen_page_source.html', htmlContent);
+                console.log(`   📸 Screenshot e sorgente HTML salvati (csen_error_${timestamp}.png, csen_page_source.html)`);
+            }
+        } catch (e) {
+            console.error('   ⚠️ Impossibile salvare lo screenshot di debug:', e.message);
+        }
         await sendAlertEmail(
             '🔴 CSEN SYNC FALLITO: Errore critico nel workflow',
             `<div style="font-family:monospace;background:#111;color:#fff;padding:20px;border-left:5px solid #df293e">
