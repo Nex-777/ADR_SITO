@@ -153,11 +153,13 @@ export default async function handler(req, res) {
             finalNotes = note || 'Approvazione manuale del direttivo.';
 
             // Get current certificate values to preserve dates
-            const { data: currentCert } = await supabase
-                .from('certificati_medici')
-                .select('*')
-                .eq('anagrafica_id', targetAnagraficaId)
-                .maybeSingle();
+            let certQuery = supabase.from('certificati_medici').select('*');
+            if (cert_id) {
+                certQuery = certQuery.eq('id', cert_id);
+            } else {
+                certQuery = certQuery.eq('anagrafica_id', targetAnagraficaId);
+            }
+            const { data: currentCert } = await certQuery.maybeSingle();
 
             if (currentCert) {
                 finalRelease = currentCert.data_rilascio;
@@ -193,14 +195,17 @@ export default async function handler(req, res) {
             const prompt = `
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
 Sto per fornirti un'immagine di un certificato medico.
-IMPORTANTE: La data odierna è il ${todayStr}. Utilizzala come punto di riferimento per verificare se il certificato è scaduto, valido o post-datato.
+IMPORTANTE: La data odierna è il ${todayStr}. Utilizzala come punto di riferimento per verificare se il certificato è scaduto.
+
+Devi estrarre le date esatte scritte sul documento. Ignora qualsiasi altra informazione esterna.
+Se le date presenti sul certificato indicano che è scaduto rispetto a oggi, lo stato DEVE essere "ROSSO".
 
 Devi estrarre le seguenti informazioni in formato JSON STRICT:
-1. data_emissione (formato YYYY-MM-DD, se non la trovi stima in base alla firma o metti null)
-2. data_scadenza (formato YYYY-MM-DD, spesso è 1 anno dalla data di emissione)
-3. agonistico (booleano: true se c'è scritto "agonistico" o fa riferimento al D.M. 18/02/1982, false se "non agonistico" o D.M. 24/04/2013)
-4. stato (stringa: "VERDE" se il certificato è chiaramente leggibile, firmato e in corso di validità rispetto a oggi ${todayStr}; "GIALLO" se c'è qualcosa di ambiguo, non si legge bene, o manca il timbro/firma; "ROSSO" se è chiaramente scaduto rispetto a oggi, palesemente falso, o non è un certificato medico).
-5. note (una breve spiegazione del perché hai assegnato quello stato, max 100 caratteri).
+1. data_emissione (formato YYYY-MM-DD, la data in cui il certificato è stato rilasciato)
+2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato)
+3. agonistico (booleano)
+4. stato (stringa: "VERDE" se il certificato è originale, chiaramente leggibile e in corso di validità rispetto a oggi; "GIALLO" se c'è qualcosa di incomprensibile o non si legge bene; "ROSSO" se il certificato è chiaramente scaduto rispetto a oggi o non è un certificato medico).
+5. note (una breve spiegazione del perché hai assegnato quello stato).
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 {"data_emissione": "2023-10-15", "data_scadenza": "2024-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato valido e leggibile."}
@@ -243,13 +248,16 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
             tipologia: finalType
         };
 
-        const { error: updateError } = await supabase
-            .from('certificati_medici')
-            .update(updatePayload)
-            .eq('anagrafica_id', targetAnagraficaId);
+        let dbQuery = supabase.from('certificati_medici').update(updatePayload);
+        if (cert_id) {
+            dbQuery = dbQuery.eq('id', cert_id);
+        } else {
+            dbQuery = dbQuery.eq('anagrafica_id', targetAnagraficaId);
+        }
+        const { error: updateError } = await dbQuery;
 
         if (updateError) throw updateError;
-        console.log(`[VALIDATION] Successfully updated certificati_medici for anagrafica_id: ${targetAnagraficaId}`);
+        console.log(`[VALIDATION] Successfully updated certificati_medici. cert_id: ${cert_id || 'N/A'}, anagrafica_id: ${targetAnagraficaId}`);
 
         // --- Post-Validation Actions & Notifications ---
         // Fetch user/anagrafica details for emails and checkout checks
@@ -316,15 +324,16 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
             errorAnagraficaId = req.body.record.anagrafica_id;
         }
 
-        if (errorAnagraficaId && !req.body?.is_manual) {
+        const targetCertId = cert_id || (req.body?.record?.id);
+        if (targetCertId && !req.body?.is_manual) {
             try {
                 // Ensure we have supabase client
                 const supaClient = supabase || createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
                 await supaClient.from('certificati_medici').update({
                     stato_validazione: 'GIALLO',
                     note_ai: `Errore tecnico: ${error.message || 'Timeout/Crash'}. Richiesta revisione manuale.`
-                }).eq('anagrafica_id', errorAnagraficaId);
-                console.log(`[VALIDATION] Fallback to GIALLO applied for ${errorAnagraficaId}`);
+                }).eq('id', targetCertId);
+                console.log(`[VALIDATION] Fallback to GIALLO applied for cert_id: ${targetCertId}`);
             } catch (dbErr) {
                 console.error('[VALIDATION] Failed to set GIALLO fallback:', dbErr);
             }
