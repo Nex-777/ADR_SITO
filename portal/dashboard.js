@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.59"
+                VERSION: "1.01.60"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -7469,7 +7469,7 @@ async function apriDossierTesserato(utente_id) {
                 .from('certificati_medici')
                 .select('*')
                 .eq('anagrafica_id', ana.id)
-                .order('data_scadenza', { ascending: false });
+                .order('created_at', { ascending: false });
             
             if (certs && certs.length > 0) {
                 certs.forEach(c => {
@@ -7480,7 +7480,7 @@ async function apriDossierTesserato(utente_id) {
                             <div>
                                 <span class="text-white text-xs">${escapeHtml(c.tipologia)}</span>
                                 ${statusStr}
-                                <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${c.data_scadenza}</div>
+                                <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${escapeHtml(formatToItalianDate(c.data_scadenza))}</div>
                             </div>
                             <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
                         </div>`;
