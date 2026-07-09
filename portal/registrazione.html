@@ -156,7 +156,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.71</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.72</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -246,6 +246,12 @@
                                 </select>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- STEP 2: Adesione & Quote -->
+                    <div id="step-2" class="step-panel space-y-6">
+                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">ADESIONE & QUOTE</h2>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Seleziona la tipologia di adesione e carica il certificato medico se richiesto.</p>
 
                         <!-- Selezione Tipo di Iscrizione in Cards Brutaliste -->
                         <div class="group space-y-3" id="tipo_adesione_container">
@@ -391,6 +397,38 @@
                             </div>
                         </div>
 
+                        <!-- Riepilogo Quota Dinamico -->
+                        <div id="riepilogo_quota_container" class="bg-primary/5 border border-primary/20 p-4 flex justify-between items-center hidden">
+                            <div>
+                                <h4 class="font-headline text-xs font-bold text-white uppercase">RIEPILOGO QUOTA DA VERSARE</h4>
+                                <p class="text-[9px] text-gray-400 uppercase" id="riepilogo_quota_dettagli">Nessuna quota selezionata</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-headline text-xl font-black text-primary" id="riepilogo_quota_totale">€0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 3: Documento di Riconoscimento -->
+                    <div id="step-3" class="step-panel space-y-6">
+                        <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">DOCUMENTO DI RICONOSCIMENTO</h2>
+                        <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Carica il tuo documento di riconoscimento fronte e retro.</p>
+
+                        <!-- Domanda radio button preliminare -->
+                        <div class="group space-y-3 mb-4">
+                            <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COME PREFERISCI CARICARE IL DOCUMENTO DI RICONOSCIMENTO?</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 font-headline text-[11px] font-bold">
+                                <label class="border border-white/10 p-3 flex items-center gap-3 cursor-pointer hover:bg-white/5 transition-all">
+                                    <input type="radio" name="documento_layout_choice" value="single" checked class="accent-primary">
+                                    HO UN FILE UNICO (PDF o foto con fronte/retro vicini)
+                                </label>
+                                <label class="border border-white/10 p-3 flex items-center gap-3 cursor-pointer hover:bg-white/5 transition-all">
+                                    <input type="radio" name="documento_layout_choice" value="double" class="accent-primary">
+                                    HO DUE FILE SEPARATI (es. foto fronte e foto retro)
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Sezione Caricamento Documento d'Identità (Obbligatorio per tutti) -->
                         <div id="documento_identita_container" class="space-y-4 border border-white/10 p-4 bg-black/25 mt-4">
                             <div class="flex justify-between items-center">
@@ -404,7 +442,7 @@
                                     <p class="text-xs text-white uppercase font-bold" id="documento-identita-file-name">FRONTE (O DOC. COMPLETO)</p>
                                     <p class="text-[9px] text-gray-400 mt-1 uppercase" id="documento-identita-file-status">Nessun file selezionato</p>
                                 </div>
-                                <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-registrazione-click-identita-retro" onclick="document.getElementById('documento_identita_retro_file').click()">
+                                <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative hidden" id="auto-registrazione-click-identita-retro" onclick="document.getElementById('documento_identita_retro_file').click()">
                                     <input type="file" id="documento_identita_retro_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
                                     <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
                                     <p class="text-xs text-white uppercase font-bold" id="documento-identita-retro-file-name">RETRO (SE FILE SEPARATO)</p>
@@ -413,21 +451,10 @@
                             </div>
                             <div id="documento-identita-helper-msg" class="text-[10px] uppercase font-bold tracking-wider mt-2 text-center hidden"></div>
                         </div>
-
-                        <!-- Riepilogo Quota Dinamico -->
-                        <div id="riepilogo_quota_container" class="bg-primary/5 border border-primary/20 p-4 flex justify-between items-center hidden">
-                            <div>
-                                <h4 class="font-headline text-xs font-bold text-white uppercase">RIEPILOGO QUOTA DA VERSARE</h4>
-                                <p class="text-[9px] text-gray-400 uppercase" id="riepilogo_quota_dettagli">Nessuna quota selezionata</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="font-headline text-xl font-black text-primary" id="riepilogo_quota_totale">€0.00</span>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- STEP 2: Indirizzo di Residenza -->
-                    <div id="step-2" class="step-panel space-y-6">
+                    <!-- STEP 4: Indirizzo di Residenza -->
+                    <div id="step-4" class="step-panel space-y-6">
                         <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">INDIRIZZO DI RESIDENZA</h2>
                         <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Compila con il massimo aiuto del sistema in cascata.</p>
                         
@@ -462,8 +489,8 @@
                         </div>
                     </div>
 
-                    <!-- STEP 3: Dati Genitore/Tutore (Condizionale per Minorenni) -->
-                    <div id="step-3" class="step-panel space-y-6">
+                    <!-- STEP 5: Dati Genitore/Tutore (Condizionale per Minorenni) -->
+                    <div id="step-5" class="step-panel space-y-6">
                         <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">DATI GENITORE / TUTORE</h2>
                         <p class="text-xs text-primary uppercase font-bold tracking-wider mb-6">Rilevato atleta minorenne. I seguenti campi sono obbligatori ai fini legali.</p>
                         
@@ -503,8 +530,8 @@
                         </div>
                     </div>
 
-                    <!-- STEP 4: Firma Digitale & Validazione OTP -->
-                    <div id="step-4" class="step-panel space-y-6">
+                    <!-- STEP 6: Firma Digitale & Validazione OTP -->
+                    <div id="step-6" class="step-panel space-y-6">
                         <h2 class="font-headline text-2xl font-black text-white uppercase mb-2">FIRMA DIGITALE &amp; INVIO</h2>
                         <p class="text-xs text-on-surface-variant uppercase tracking-wider mb-6">Valida la tua identità e firma digitalmente l'adesione all'Adrenalina Club.</p>
                         

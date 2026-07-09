@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.71"
+                VERSION: "1.01.72"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -479,34 +479,59 @@ function togglePasswordVisibility(inputId, buttonEl) {
         const identitaFileInput = document.getElementById('documento_identita_file');
         const identitaFileNameLabel = document.getElementById('documento-identita-file-name');
         const identitaFileStatusLabel = document.getElementById('documento-identita-file-status');
+        const identitaRetroFileInput = document.getElementById('documento_identita_retro_file');
+        const identitaRetroFileNameLabel = document.getElementById('documento-identita-retro-file-name');
+        const identitaRetroFileStatusLabel = document.getElementById('documento-identita-retro-file-status');
 
         function updateDocumentoIdentitaHelper() {
             const msgEl = document.getElementById('documento-identita-helper-msg');
             if (!msgEl) return;
+
+            const layoutChoice = document.querySelector('input[name="documento_layout_choice"]:checked')?.value || 'single';
 
             if (!uploadedDocumentoIdentitaFile) {
                 msgEl.classList.add('hidden');
                 return;
             }
 
-            if (uploadedDocumentoIdentitaFile.type === 'application/pdf') {
-                msgEl.textContent = "✓ PDF CARICATO. Assicurati che contenga già sia il fronte che il retro del documento.";
+            if (layoutChoice === 'single') {
+                msgEl.textContent = "✓ DOCUMENTO PRONTO PER L'INVIO.";
                 msgEl.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-green-500";
                 msgEl.classList.remove('hidden');
-            } else if (uploadedDocumentoIdentitaFile.type.startsWith('image/')) {
+            } else {
+                // double mode
                 if (uploadedDocumentoIdentitaRetroFile) {
-                    msgEl.textContent = "✓ FRONTE E RETRO SELEZIONATI. Verranno uniti in un singolo PDF.";
+                    msgEl.textContent = "✓ FRONTE E RETRO SELEZIONATI. VERRANNO UNITI IN UN SINGOLO PDF.";
                     msgEl.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-green-500";
                     msgEl.classList.remove('hidden');
                 } else {
-                    msgEl.textContent = "💡 HAI CARICATO UN'IMMAGINE. CARICA LA FOTO DEL RETRO A FIANCO PER COMPLETARE IL DOCUMENTO.";
+                    msgEl.textContent = "💡 HAI CARICATO IL FRONTE. CARICA LA FOTO DEL RETRO A FIANCO PER COMPLETARE IL DOCUMENTO.";
                     msgEl.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-amber-500 animate-pulse";
                     msgEl.classList.remove('hidden');
                 }
-            } else {
-                msgEl.classList.add('hidden');
             }
         }
+
+        const docLayoutRadios = document.getElementsByName('documento_layout_choice');
+        const retroBox = document.getElementById('auto-registrazione-click-identita-retro');
+
+        docLayoutRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.value === 'single') {
+                    retroBox.classList.add('hidden');
+                    uploadedDocumentoIdentitaRetroFile = null;
+                    if (identitaRetroFileInput) {
+                        identitaRetroFileInput.value = "";
+                    }
+                    identitaRetroFileNameLabel.textContent = "RETRO (SE FILE SEPARATO)";
+                    identitaRetroFileStatusLabel.textContent = "Nessun file selezionato";
+                    identitaRetroFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                } else {
+                    retroBox.classList.remove('hidden');
+                }
+                updateDocumentoIdentitaHelper();
+            });
+        });
 
         identitaFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -536,10 +561,6 @@ function togglePasswordVisibility(inputId, buttonEl) {
             identitaFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
             updateDocumentoIdentitaHelper();
         });
-
-        const identitaRetroFileInput = document.getElementById('documento_identita_retro_file');
-        const identitaRetroFileNameLabel = document.getElementById('documento-identita-retro-file-name');
-        const identitaRetroFileStatusLabel = document.getElementById('documento-identita-retro-file-status');
 
         if (identitaRetroFileInput) {
             identitaRetroFileInput.addEventListener('change', (e) => {
@@ -592,7 +613,6 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
         // --- 8. Multi-Step Form Navigation ---
         let currentStep = 1;
-        const totalSteps = 4;
         
         const btnNext = document.getElementById('btn-next');
         const btnBack = document.getElementById('btn-back');
@@ -605,51 +625,65 @@ function togglePasswordVisibility(inputId, buttonEl) {
         const step2 = document.getElementById('step-2');
         const step3 = document.getElementById('step-3');
         const step4 = document.getElementById('step-4');
+        const step5 = document.getElementById('step-5');
+        const step6 = document.getElementById('step-6');
 
         function updateNavigationUI(direction = 'next') {
-            if (currentStep > 4) currentStep = 4;
+            isMinor = getAge(inputBirth.value) < 18;
+            const maxStep = 6;
+            
+            if (currentStep > maxStep) currentStep = maxStep;
             if (currentStep < 1) currentStep = 1;
             
-            isMinor = getAge(inputBirth.value) < 18;
-            
-            const panels = [step1, step2, step3, step4];
+            const panels = [step1, step2, step3, step4, step5, step6];
             let targetPanel;
             let labelText = "";
             let percentText = "";
             let progressVal = "";
             
-            const displayTotalSteps = isMinor ? 4 : 3;
+            const displayTotalSteps = isMinor ? 6 : 5;
+            
+            // Skip tutore step dynamically if adult
+            if (currentStep === 5 && !isMinor) {
+                if (direction === 'next') {
+                    currentStep = 6;
+                } else {
+                    currentStep = 4;
+                }
+            }
             
             if (currentStep === 1) {
                 targetPanel = step1;
                 btnBack.classList.add('invisible');
-                labelText = `PASSO 1 DI ${displayTotalSteps}: ANAGRAFICA & ADESIONE`;
-                percentText = isMinor ? "25%" : "33%";
-                progressVal = isMinor ? "25%" : "33%";
+                labelText = `PASSO 1 DI ${displayTotalSteps}: DATI ANAGRAFICI`;
+                percentText = Math.round((1 / displayTotalSteps) * 100) + "%";
+                progressVal = percentText;
             } else if (currentStep === 2) {
                 targetPanel = step2;
                 btnBack.classList.remove('invisible');
-                labelText = `PASSO 2 DI ${displayTotalSteps}: RESIDENZA`;
-                percentText = isMinor ? "50%" : "66%";
-                progressVal = isMinor ? "50%" : "66%";
+                labelText = `PASSO 2 DI ${displayTotalSteps}: ADESIONE & QUOTE`;
+                percentText = Math.round((2 / displayTotalSteps) * 100) + "%";
+                progressVal = percentText;
             } else if (currentStep === 3) {
-                if (isMinor) {
-                    targetPanel = step3;
-                    btnBack.classList.remove('invisible');
-                    labelText = `PASSO 3 DI ${displayTotalSteps}: TUTORE MINORE`;
-                    percentText = "75%";
-                    progressVal = "75%";
-                } else {
-                    if (direction === 'next') {
-                        currentStep = 4;
-                    } else {
-                        currentStep = 2;
-                    }
-                    updateNavigationUI(direction);
-                    return;
-                }
+                targetPanel = step3;
+                btnBack.classList.remove('invisible');
+                labelText = `PASSO 3 DI ${displayTotalSteps}: DOCUMENTO DI RICONOSCIMENTO`;
+                percentText = Math.round((3 / displayTotalSteps) * 100) + "%";
+                progressVal = percentText;
             } else if (currentStep === 4) {
                 targetPanel = step4;
+                btnBack.classList.remove('invisible');
+                labelText = `PASSO 4 DI ${displayTotalSteps}: INDIRIZZO DI RESIDENZA`;
+                percentText = Math.round((4 / displayTotalSteps) * 100) + "%";
+                progressVal = percentText;
+            } else if (currentStep === 5) {
+                targetPanel = step5;
+                btnBack.classList.remove('invisible');
+                labelText = `PASSO 5 DI 6: DATI GENITORE / TUTORE`;
+                percentText = "83%";
+                progressVal = "83%";
+            } else if (currentStep === 6) {
+                targetPanel = step6;
                 btnBack.classList.remove('invisible');
                 labelText = `PASSO ${displayTotalSteps} DI ${displayTotalSteps}: FIRMA E VALIDAZIONE`;
                 percentText = "100%";
@@ -657,7 +691,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 btnNext.classList.add('hidden');
             }
 
-            if (currentStep < 4) {
+            if (currentStep < 6) {
                 btnNext.classList.remove('hidden');
                 btnNext.textContent = "AVANTI";
             }
@@ -731,16 +765,10 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     alert("Seleziona la provincia e il comune di nascita.");
                     return false;
                 }
-
+            } else if (step === 2) {
                 // Check Membership type
                 if (!selectedAdesione) {
                     alert("Seleziona un tipo di adesione cliccando su una delle tre card.");
-                    return false;
-                }
-
-                // Check Identity Document (Mandatory for all)
-                if (!uploadedDocumentoIdentitaFile) {
-                    alert("Devi selezionare e caricare un documento di riconoscimento prima di procedere.");
                     return false;
                 }
 
@@ -777,17 +805,30 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         return false;
                     }
                 }
-            } else if (step === 2) {
-                const inputs = step2.querySelectorAll('input[required], select[required]');
+            } else if (step === 3) {
+                // Check Identity Document (Mandatory for all)
+                if (!uploadedDocumentoIdentitaFile) {
+                    alert("Devi selezionare e caricare un documento di riconoscimento prima di procedere.");
+                    return false;
+                }
+
+                // Check Retro if double layout is selected
+                const layoutChoice = document.querySelector('input[name="documento_layout_choice"]:checked')?.value || 'single';
+                if (layoutChoice === 'double' && !uploadedDocumentoIdentitaRetroFile) {
+                    alert("Hai selezionato la modalità a due file. Carica il retro del documento.");
+                    return false;
+                }
+            } else if (step === 4) {
+                const inputs = step4.querySelectorAll('input[required], select[required]');
                 for (let input of inputs) {
                     if (!input.checkValidity()) {
                         input.reportValidity();
                         return false;
                     }
                 }
-            } else if (step === 3) {
+            } else if (step === 5) {
                 if (isMinor) {
-                    const inputs = step3.querySelectorAll('input:not([type="file"])');
+                    const inputs = step5.querySelectorAll('input:not([type="file"])');
                     for (let input of inputs) {
                         if (!input.value.trim()) {
                             alert(`Compila il campo "${input.previousElementSibling.textContent}" per il Genitore/Tutore.`);
@@ -805,7 +846,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
         }
 
         btnNext.addEventListener('click', () => {
-            if (currentStep >= 4) return;
+            if (currentStep >= 6) return;
             if (validateStep(currentStep)) {
                 currentStep++;
                 updateNavigationUI('next');
@@ -813,8 +854,8 @@ function togglePasswordVisibility(inputId, buttonEl) {
         });
 
         btnBack.addEventListener('click', () => {
-            if (currentStep === 4 && !isMinor) {
-                currentStep = 2; // Skip tutore backwards if adult
+            if (currentStep === 6 && !isMinor) {
+                currentStep = 4; // Skip tutore backwards if adult
             } else {
                 currentStep--;
             }
