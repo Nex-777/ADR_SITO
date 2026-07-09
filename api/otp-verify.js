@@ -345,11 +345,30 @@ export default async function handler(req, res) {
         let urlPdfIscrizione = null;
 
         try {
-            // Setup coordinates and fonts
-            const csenPath1 = path.join(process.cwd(), 'CSEN_moduli', 'INFORMATIVA PER SINGOLI TESSERATI (1).pdf');
-            const csenPath2 = path.join(process.cwd(), 'CSEN_moduli', 'Modulo_Iscrizione_2024(1)(1) - aggiornato silver e gold (2).pdf');
+            // Setup coordinates and fonts with robust directory resolution for Vercel
+            const candidateBaseDirs = [
+                process.cwd(),
+                path.join(__dirname, '..'),
+                __dirname
+            ];
 
-            if (fs.existsSync(csenPath1) && fs.existsSync(csenPath2)) {
+            let csenDir = null;
+            for (const base of candidateBaseDirs) {
+                const testPath = path.join(base, 'CSEN_moduli');
+                if (fs.existsSync(testPath)) {
+                    csenDir = testPath;
+                    break;
+                }
+            }
+
+            if (!csenDir) {
+                console.warn('CSEN forms base directory not found. Candidates tested:', candidateBaseDirs);
+            }
+
+            const csenPath1 = csenDir ? path.join(csenDir, 'INFORMATIVA PER SINGOLI TESSERATI (1).pdf') : null;
+            const csenPath2 = csenDir ? path.join(csenDir, 'Modulo_Iscrizione_2024(1)(1) - aggiornato silver e gold (2).pdf') : null;
+
+            if (csenPath1 && csenPath2 && fs.existsSync(csenPath1) && fs.existsSync(csenPath2)) {
                 const supabase = createClient(supabaseUrl, supabaseServiceKey);
                 
                 // Query dynamic coordinates from database

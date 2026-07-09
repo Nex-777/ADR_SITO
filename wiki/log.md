@@ -4,27 +4,32 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
-## [2026-07-09] ingest | Medical Certificate Expiration Validation in CSEN Sync (v1.01.64)
+## [2026-07-09] ingest | CSEN PDF Path Resolution on Vercel and Retroactive Recovery (v1.01.65)
+- Risolto il problema di risoluzione dei percorsi per i modelli PDF in `api/otp-verify.js` implementando una strategia di fallback multi-percorso (`process.cwd()`, `__dirname/..`, `__dirname`) per individuare stabilmente la cartella `CSEN_moduli` su Vercel.
+- Eseguito localmente lo script `scratch/regenerate_recent_pdfs.js` per rigenerare e caricare i PDF firmati mancanti per Giulia Lautanio e Giorgio Cardinelli, ripristinando la visualizzazione nel loro Dossier.
+- Incrementata la versione globale a v1.01.65.
+
+## [2026-07-09] ingest | Medical Certificate Expiration Validation in CSEN Sync (v1.01.65)
 - Aggiunto controllo preventivo di validità e scadenza del certificato medico in `scripts/csen_sync_active.js` prima di procedere con Playwright sul portale CSEN. Gli utenti con certificati scaduti o non validati (stato non VERDE) vengono ora saltati e contrassegnati con stato `ERROR` e log descrittivo.
 - Aggiornata la query Supabase iniziale nello script per recuperare anche `data_scadenza` e `created_at` dei certificati medici.
-- Incrementata la versione globale a v1.01.64.
+- Incrementata la versione globale a v1.01.65.
 
-## [2026-07-09] ingest | CSEN Provisional Card Number Fix (v1.01.64)
+## [2026-07-09] ingest | CSEN Provisional Card Number Fix (v1.01.65)
 - Risolto il bug per cui le tessere temporanee con numero "0" venivano marcate come `SYNCED` salvando "0" come numero di tessera definitivo. Escluso esplicitamente il valore "0" come numero tessera valido in `analizzaStatoTessera` e `estraiNumeraTesseraDopoOperazione`.
 - Formattata la data di richiesta tesseramento come GG/MM/AA nella visualizzazione del pannello di sincronizzazione e nella tabella dei tesserati del portale.
 - Ripristinati manualmente i record affetti a `RENEWAL_SUBMITTED` e `numero_tessera_csen = null` in Supabase per permettere il recupero automatico del vero numero tessera non appena disponibile su CSEN.
-- Incrementata la versione globale a v1.01.64.
+- Incrementata la versione globale a v1.01.65.
 
-## [2026-07-09] ingest | CSEN Sync Debug Diagnostics (v1.01.64)
+## [2026-07-09] ingest | CSEN Sync Debug Diagnostics (v1.01.65)
 - Modificato `.github/workflows/csen_sync.yml` per caricare gli screenshot e i sorgenti HTML d'errore come Artifact in caso di fallimento del workflow.
 - Modificato `scripts/csen_sync_active.js` per scattare uno screenshot (`csen_error_[timestamp].png`) e salvare il codice sorgente della pagina (`csen_page_source.html`) non appena si verifica un errore nel blocco `catch` principale.
-- Incrementata la versione globale a v1.01.64.
+- Incrementata la versione globale a v1.01.65.
 
-## [2026-07-09] fix | Dossier Certificates Ordering and Format (v1.01.64)
+## [2026-07-09] fix | Dossier Certificates Ordering and Format (v1.01.65)
 - Modificato il caricamento dei certificati medici all'interno del Dossier Tesserato per ordinare cronologicamente per `created_at` decrescente, assicurando che l'ultimo inserito sia in alto.
 - Formattate le date di scadenza all'interno del dossier nel formato italiano GG/MM/AA tramite la funzione helper `formatToItalianDate()`.
 - Eliminato manualmente il vecchio record fittizio ("fittizio") del certificato di Valerio Mannocchi dal database.
-- Incrementata la versione globale a v1.01.64.
+- Incrementata la versione globale a v1.01.65.
 
 ## [2026-07-09] ingest | Document Retention and History Management (v1.01.59)
 - Aggiunta la colonna `created_at` alla tabella `certificati_medici` in Supabase per ordinamento temporale.
@@ -32,11 +37,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Modificati `portal/dashboard.js` e `portal/pagamento.js` per estrarre e utilizzare sempre l'ultimo documento caricato (tramite ordinamento decrescente sul timestamp di inserimento) anziché affidarsi all'indice `[0]` dell'array.
 - Corretti gli script di sincronizzazione CSEN `csen_sync_active.js` e `test_runner_csen.js` affinché verifichino lo stato agonistico del tesserato basandosi esclusivamente sul suo ultimo certificato.
 
-## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.64)
+## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.65)
 - Centralizzata la logica di controllo scadenza certificato in `dashboard.js` tramite la funzione helper `isCertificatoScaduto()`.
 - Sostituito il confronto di oggetti Date inline che creava falsi positivi nel giorno di scadenza stesso con un confronto di stringhe locale in formato ISO YYYY-MM-DD.
 - Aggiornato allo stesso modo il controllo di scadenza in `pagamento.js` per sbloccare l'utente Diego Pigliapoco e prevenire loop di pagamento/scadenza.
-- Incrementata la versione globale del portale e del sito a v1.01.64.
+- Incrementata la versione globale del portale e del sito a v1.01.65.
 
 ## [2026-07-08] ingest | CSEN PDF Compilation & Vercel Bundle Fix (v1.01.54)
 - Configurato `vercel.json` per includere esplicitamente la cartella `CSEN_moduli/**` nella build dell'endpoint `/api/otp-verify.js`, risolvendo l'esclusione del modulo dal bundle in produzione.
