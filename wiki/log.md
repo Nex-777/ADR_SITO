@@ -4,107 +4,112 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
-## [2026-07-13] ingest | GitHub Actions Workflow for Sending Suspended Emails (v1.01.78)
+## [2026-07-13] ingest | Remove send-suspended-emails.js Serverless Function to comply with Hobby Limit (v1.01.79)
+- Rimosso l'endpoint `api/send-suspended-emails.js` per rientrare nel limite massimo di 12 Serverless Functions imposto dal piano Vercel Hobby, risolvendo l'errore di build fallita ("Build Failed: No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan").
+- Mantenuto lo script CLI e il workflow GitHub Actions per l'invio manuale in sicurezza.
+- Incrementata la versione globale a v1.01.79.
+
+## [2026-07-13] ingest | GitHub Actions Workflow for Sending Suspended Emails (v1.01.79)
 - Aggiunto lo script CLI `scripts/send-suspended-emails-cli.js` e il relativo workflow GitHub Actions `.github/workflows/send_suspended_emails.yml` per consentire l'invio manuale delle mail a tutti i tesserati attualmente sospesi utilizzando le chiavi di produzione registrate nei secrets del repository.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-13] ingest | Send Out Emails to Suspended Members Endpoint (v1.01.78)
+## [2026-07-13] ingest | Send Out Emails to Suspended Members Endpoint (v1.01.79)
 - Creato l'endpoint temporaneo `api/send-suspended-emails.js` per scorrere tutti i tesserati attualmente in stato `SOSPESO` e inviare loro l'email ufficiale di notifica sospensione con le nuove indicazioni sulle restrizioni del portale.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-13] ingest | Unified Certificate Expiry Scan, Vercel Auth, Auto-Reactivation and Athlete UI Restriction (v1.01.78)
+## [2026-07-13] ingest | Unified Certificate Expiry Scan, Vercel Auth, Auto-Reactivation and Athlete UI Restriction (v1.01.79)
 - Risolto l'errore di autenticazione del cron job su Vercel in `api/cron-scadenze.js` supportando l'header `Authorization: Bearer <token>` in aggiunta a `x-cron-secret`.
 - Corretto il bug critico dello storico certificati: il cron job ora esegue una scansione unificata partendo dagli atleti e selezionando solo il certificato più recente (ordinato per `created_at DESC`), risolvendo falsi positivi a 30, 15 giorni e sospensioni errate.
 - Introdotta la riattivazione automatica del tesseramento sportivo (da `SOSPESO` ad `ATTIVO`) sia a livello di cron giornaliero sia istantaneamente all'approvazione VERDE manuale/automatica in `api/validate-cert.js`.
 - Riformulati i template email di pre-avviso (30 e 15 giorni) e sospensione per specificare chiaramente la limitazione temporanea del portale atleti alla sola consultazione e caricamento documenti.
 - Implementata la restrizione UI nel portale atleti (`portal/dashboard.js`): per gli atleti con certificato scaduto, rifiutato (`ROSSO`) o mancante, i tab Corsi ed Eventi vengono nascosti e l'utente viene forzato sulla schermata di caricamento del certificato.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-13] ingest | Tuner Loading Reference Fix & Inline Sticky Preview UI (v1.01.78)
+## [2026-07-13] ingest | Tuner Loading Reference Fix & Inline Sticky Preview UI (v1.01.79)
 - Corretto il posizionamento sticky dell'anteprima PDF sul tuner applicando stile inline `position: sticky; top: 90px; align-self: start;` per evitare conflitti con la testata fissa e garantire il corretto funzionamento dello scorrimento.
 - Definite le funzioni globali `showLoader` e `hideLoader` in `portal/dashboard.js` per risolvere il crash causato da ReferenceError all'atto del salvataggio, ripristinando il feedback visivo di successo all'utente.
 - Verificato il corretto salvataggio delle coordinate di logo e intestazione nel database.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-13] ingest | PDF ESM, CSEN Sync Fixes, Association Logo Header & Sticky Preview UI (v1.01.78)
+## [2026-07-13] ingest | PDF ESM, CSEN Sync Fixes, Association Logo Header & Sticky Preview UI (v1.01.79)
 - Corretto l'uso di `__dirname` in ambiente ES Modules (`api/otp-verify.js` e script di utilità) sostituendolo con `fileURLToPath` per evitare crash silenti a runtime su Vercel.
 - Sistemata la formattazione della data di nascita nel portale CSEN (richiesto formato nativo `YYYY-MM-DD` da Playwright per input tipo data) e introdotta la validazione di fallimento se l'atleta non compare sul portale dopo il submit.
 - Aggiunta logica di auto-healing in `scripts/csen_reconciliation.js` per resettare a `PENDING` gli atleti non trovati su CSEN.
 - Integrata la stampa del logo dell'associazione (`assets/logo_icon.png` in scala 40x40 pt) e dei testi dell'intestazione dell'associazione nel riquadro in alto a sinistra del Modulo CSEN, con coordinate posizionali configurabili.
 - Ottimizzato il Tuner PDF della dashboard presidenziale (`portal/dashboard.html` e `portal/dashboard.js`) rendendo l'anteprima PDF `sticky` (lg:sticky lg:top-4 self-start) e rimuovendo i limiti di altezza sui controlli per permettere uno scorrimento agevole senza perdere di vista il modello compilato. Aggiunto il caching in memoria del logo buffer per ottimizzare le prestazioni.
 - Eseguita la migrazione SQL delle coordinate predefinite ed eseguita la rigenerazione retroattiva dei PDF storici.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-10] ingest | Medical Certificate Overwrite and AI Validation Optimization (v1.01.78)
+## [2026-07-10] ingest | Medical Certificate Overwrite and AI Validation Optimization (v1.01.79)
 - Modificato `api/validate-cert.js` per utilizzare la chiave primaria `id`/`cert_id` nelle operazioni di aggiornamento database anziché `anagrafica_id`, isolando l'operazione sul singolo certificato.
 - Ottimizzato il prompt di Gemini 2.5 Flash rimuovendo le regole complesse di anti-contraffazione digitale e focalizzandolo sull'estrazione accurata delle date per sovrascrivere l'input originario dell'utente.
 - Corretto l'aggiornamento nel blocco di errore per applicare lo stato `GIALLO` solo al record del certificato specifico.
-- Incrementata la versione globale del portale a v1.01.78.
+- Incrementata la versione globale del portale a v1.01.79.
 
-## [2026-07-09] ingest | Registration Reorganization & Layout Choice (v1.01.78)
+## [2026-07-09] ingest | Registration Reorganization & Layout Choice (v1.01.79)
 - Riorganizzato il wizard di registrazione a 5 passi (maggiorenni) / 6 passi (minorenni) in `portal/registrazione.html` e `portal/registrazione.js` per ridurre il carico cognitivo dell'utente.
 - Inserita una domanda preliminare a scelta radio sul tipo di layout (File Unico o Due File) al passo 3.
 - Modificata la logica di `updateNavigationUI` e `validateStep` per gestire dinamicamente lo step condizionale del tutore ed evitare errori di navigazione o loop.
 - Rimosso il testo fuorviante per i PDF caricati in modalità file singolo.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | Document Front/Back UI Clarifications (v1.01.78)
+## [2026-07-09] ingest | Document Front/Back UI Clarifications (v1.01.79)
 - Riformulate le etichette del caricamento documenti in `portal/registrazione.html`: `FRONTE (O DOC. COMPLETO)` e `RETRO (SE FILE SEPARATO)`, con sottotitolo `⚠️ RICHIESTO FRONTE E RETRO` per chiarire l'obbligatorietà di fornire entrambe le facciate.
 - Aggiunta la funzione `updateDocumentoIdentitaHelper()` in `portal/registrazione.js` che mostra messaggi di aiuto contestuali e animati (pulse) in base al tipo di file caricato (PDF o immagini) per guidare l'utente nel completamento del retro se necessario.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | Document Front/Back Merging & Compression Release (v1.01.78)
+## [2026-07-09] ingest | Document Front/Back Merging & Compression Release (v1.01.79)
 - Rilasciata in produzione la funzionalità di caricamento separato per Fronte e Retro del documento d'identità in `portal/registrazione.html`.
 - Integrata la libreria `pdf-lib` via CDN in `portal/registrazione.html` per l'unione universale dei file lato client.
 - Implementata la logica di compressione e unione automatica asincrona in `portal/registrazione.js` durante la fase di convalida OTP, con gestione difensiva degli errori (try/catch), controllo di disponibilità di `PDFLib` e feedback visivo all'utente ("ELABORAZIONE DOCUMENTI...").
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | Sandbox Canvas CSP Fetch Fix (v1.01.78)
+## [2026-07-09] ingest | Sandbox Canvas CSP Fetch Fix (v1.01.79)
 - Sostituito il meccanismo di conversione delle immagini compresse in `portal/dashboard.js` per evitare l'uso di `fetch('data:...')` che viene bloccato dalle politiche CSP del browser. La funzione `compressImageSandbox` restituisce ora un oggetto `Blob` nativo tramite `canvas.toBlob()`, e i byte vengono estratti direttamente offline con il metodo standard `blob.arrayBuffer()`, garantendo compatibilità universale e offline.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | Document Sandbox for Merging and Compression (v1.01.78)
+## [2026-07-09] ingest | Document Sandbox for Merging and Compression (v1.01.79)
 - Creata la scheda "SANDBOX DOCUMENTI" (`tab-btn-sandbox` e `panel-sandbox`) nella Dashboard amministrativa (riservata a Presidente e Vice Presidente).
 - Implementata la logica di test in `portal/dashboard.js` per testare in tempo reale l'unione e la compressione del fronte e retro dei documenti d'identità tramite la combinazione universale di `pdf-lib` (per unire PDF e immagini) e Canvas (per comprimere immagini riducendo il peso a poche centinaia di KB).
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | CSEN Sync RENEWAL_SUBMITTED Fallback Fix (v1.01.78)
+## [2026-07-09] ingest | CSEN Sync RENEWAL_SUBMITTED Fallback Fix (v1.01.79)
 - Aggiunto lo scenario B1.5 in `scripts/csen_sync_active.js` per verificare se un tesserato era già in stato `RENEWAL_SUBMITTED` e il portale CSEN non ha ancora assegnato il nuovo numero (mostrando ancora numero provvisorio `0` o scadenza `null`). Questo impedisce che l'atleta venga erroneamente marcato in stato `ERROR` per "stato non classificabile", mantenendo correttamente lo stato di attesa e aggiornando il log descrittivo.
 - Ripristinati manualmente i record di Giorgio Cardinelli, Giulia Lautanio, Giulia Clerici, Niccolò Verre, Alessandro Lori e Giordano Guerrieri a `RENEWAL_SUBMITTED` in Supabase per consentire la corretta ripresa automatica del sync.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | Registration Step Crash and Duplicate CF Fixes (v1.01.78)
+## [2026-07-09] ingest | Registration Step Crash and Duplicate CF Fixes (v1.01.79)
 - Aggiunta barriera di sicurezza al pulsante "AVANTI" (`btnNext`) e sanitizzazione dell'indice di navigazione `currentStep` per impedire l'innalzamento accidentale oltre il passo 4, risolvendo il crash di rendering (schermata nera/vuota) causato da double-click e race condition in `portal/registrazione.js`.
 - Esteso il controllo preventivo del codice fiscale in `portal/registrazione.js` affinché verifichi simultaneamente la presenza del CF sia nella tabella `anagrafiche` che nella tabella `utenti` (dove risiedono i profili di registrazioni non completate), intercettando e bloccando tempestivamente i tentativi sdoppiati con diversi indirizzi email.
 - Eliminato manualmente l'account incompleto di Umberto Palatroni (`hotmail.it`) liberando il codice fiscale `PLTMRT93H18A462S` per il suo nuovo account (`gmail.com`).
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | CSEN PDF Path Resolution on Vercel and Retroactive Recovery (v1.01.78)
+## [2026-07-09] ingest | CSEN PDF Path Resolution on Vercel and Retroactive Recovery (v1.01.79)
 - Risolto il problema di risoluzione dei percorsi per i modelli PDF in `api/otp-verify.js` implementando una strategia di fallback multi-percorso (`process.cwd()`, `__dirname/..`, `__dirname`) per individuare stabilmente la cartella `CSEN_moduli` su Vercel.
 - Eseguito localmente lo script `scratch/regenerate_recent_pdfs.js` per rigenerare e caricare i PDF firmati mancanti per Giulia Lautanio e Giorgio Cardinelli, ripristinando la visualizzazione nel loro Dossier.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | Medical Certificate Expiration Validation in CSEN Sync (v1.01.78)
+## [2026-07-09] ingest | Medical Certificate Expiration Validation in CSEN Sync (v1.01.79)
 - Aggiunto controllo preventivo di validità e scadenza del certificato medico in `scripts/csen_sync_active.js` prima di procedere con Playwright sul portale CSEN. Gli utenti con certificati scaduti o non validati (stato non VERDE) vengono ora saltati e contrassegnati con stato `ERROR` e log descrittivo.
 - Aggiornata la query Supabase iniziale nello script per recuperare anche `data_scadenza` e `created_at` dei certificati medici.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | CSEN Provisional Card Number Fix (v1.01.78)
+## [2026-07-09] ingest | CSEN Provisional Card Number Fix (v1.01.79)
 - Risolto il bug per cui le tessere temporanee con numero "0" venivano marcate come `SYNCED` salvando "0" come numero di tessera definitivo. Escluso esplicitamente il valore "0" come numero tessera valido in `analizzaStatoTessera` e `estraiNumeraTesseraDopoOperazione`.
 - Formattata la data di richiesta tesseramento come GG/MM/AA nella visualizzazione del pannello di sincronizzazione e nella tabella dei tesserati del portale.
 - Ripristinati manualmente i record affetti a `RENEWAL_SUBMITTED` e `numero_tessera_csen = null` in Supabase per permettere il recupero automatico del vero numero tessera non appena disponibile su CSEN.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] ingest | CSEN Sync Debug Diagnostics (v1.01.78)
+## [2026-07-09] ingest | CSEN Sync Debug Diagnostics (v1.01.79)
 - Modificato `.github/workflows/csen_sync.yml` per caricare gli screenshot e i sorgenti HTML d'errore come Artifact in caso di fallimento del workflow.
 - Modificato `scripts/csen_sync_active.js` per scattare uno screenshot (`csen_error_[timestamp].png`) e salvare il codice sorgente della pagina (`csen_page_source.html`) non appena si verifica un errore nel blocco `catch` principale.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
-## [2026-07-09] fix | Dossier Certificates Ordering and Format (v1.01.78)
+## [2026-07-09] fix | Dossier Certificates Ordering and Format (v1.01.79)
 - Modificato il caricamento dei certificati medici all'interno del Dossier Tesserato per ordinare cronologicamente per `created_at` decrescente, assicurando che l'ultimo inserito sia in alto.
 - Formattate le date di scadenza all'interno del dossier nel formato italiano GG/MM/AA tramite la funzione helper `formatToItalianDate()`.
 - Eliminato manualmente il vecchio record fittizio ("fittizio") del certificato di Valerio Mannocchi dal database.
-- Incrementata la versione globale a v1.01.78.
+- Incrementata la versione globale a v1.01.79.
 
 ## [2026-07-09] ingest | Document Retention and History Management (v1.01.59)
 - Aggiunta la colonna `created_at` alla tabella `certificati_medici` in Supabase per ordinamento temporale.
@@ -112,11 +117,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Modificati `portal/dashboard.js` e `portal/pagamento.js` per estrarre e utilizzare sempre l'ultimo documento caricato (tramite ordinamento decrescente sul timestamp di inserimento) anziché affidarsi all'indice `[0]` dell'array.
 - Corretti gli script di sincronizzazione CSEN `csen_sync_active.js` e `test_runner_csen.js` affinché verifichino lo stato agonistico del tesserato basandosi esclusivamente sul suo ultimo certificato.
 
-## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.78)
+## [2026-07-08] ingest | Medical Certificate Expiration Edge-case Fix (v1.01.79)
 - Centralizzata la logica di controllo scadenza certificato in `dashboard.js` tramite la funzione helper `isCertificatoScaduto()`.
 - Sostituito il confronto di oggetti Date inline che creava falsi positivi nel giorno di scadenza stesso con un confronto di stringhe locale in formato ISO YYYY-MM-DD.
 - Aggiornato allo stesso modo il controllo di scadenza in `pagamento.js` per sbloccare l'utente Diego Pigliapoco e prevenire loop di pagamento/scadenza.
-- Incrementata la versione globale del portale e del sito a v1.01.78.
+- Incrementata la versione globale del portale e del sito a v1.01.79.
 
 ## [2026-07-08] ingest | CSEN PDF Compilation & Vercel Bundle Fix (v1.01.54)
 - Configurato `vercel.json` per includere esplicitamente la cartella `CSEN_moduli/**` nella build dell'endpoint `/api/otp-verify.js`, risolvendo l'esclusione del modulo dal bundle in produzione.
