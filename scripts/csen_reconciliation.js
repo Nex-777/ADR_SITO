@@ -119,6 +119,12 @@ async function runReconciliation() {
                     codice_fiscale: cf,
                     dettagli: { id_tesserato: tess.id_tesserato }
                 });
+                // Reset a PENDING per consentire il retry automatico nel sync attivo
+                await supabase.from('registro_tesserati').update({
+                    sync_csen_status: 'PENDING',
+                    sync_csen_log: `Riconciliazione: utente mancante su CSEN (era ${tess.sync_csen_status}). Rimesso in PENDING per retry.`
+                }).eq('id_tesserato', tess.id_tesserato);
+                console.log(`   - 🔄 Reset a PENDING per retry automatico.`);
             } else {
                 // Controlla stato tessera: deve essere attiva (non scaduta) per l'anno corrente
                 const annoCorrente = new Date().getFullYear();

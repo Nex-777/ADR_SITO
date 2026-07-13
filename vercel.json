@@ -27,7 +27,7 @@
     ],
     "functions": {
         "api/otp-verify.js": {
-            "includeFiles": "CSEN_moduli/**"
+            "includeFiles": "{CSEN_moduli/**,assets/**}"
         }
     }
 }

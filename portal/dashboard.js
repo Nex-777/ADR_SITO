@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.73"
+                VERSION: "1.01.74"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -7938,7 +7938,11 @@ const tunerDefaults = {
         email:                      { x: 120, y: 520, font_size: 10, pagina: 0 },
         firma_1:                    { x: 40,  y: 86,  font_size: 12, pagina: 0 },
         firma_2:                    { x: 40,  y: 86,  font_size: 12, pagina: 1 },
-        crocetta_iscritto_dichiara: { x: 61,  y: 233, font_size: 12, pagina: 0 }
+        crocetta_iscritto_dichiara: { x: 61,  y: 233, font_size: 12, pagina: 0 },
+        associazione_logo:          { x: 35,  y: 755, font_size: 10, pagina: 0 },
+        associazione_denominazione: { x: 35,  y: 780, font_size: 9,  pagina: 0 },
+        associazione_indirizzo:     { x: 35,  y: 769, font_size: 7,  pagina: 0 },
+        associazione_cf_pi:         { x: 35,  y: 759, font_size: 7,  pagina: 0 }
     }
 };
 
@@ -8003,20 +8007,25 @@ window.cambiaModuloTuner = function() {
         prov_nascita:               "PROVINCIA NASCITA",
         data_nascita:               "DATA NASCITA (GG/MM/AAAA)",
         residente_via:              "VIA/PIAZZA RESIDENZA",
-        civico:          "NUMERO CIVICO",
-        comune:          "COMUNE RESIDENZA",
-        provincia:       "PROVINCIA RESIDENZA",
-        cap:             "C.A.P. RESIDENZA",
-        telefono:        "TELEFONO ABITAZIONE",
-        cellulare:       "CELLULARE",
-        email:           "E-MAIL",
-        firma_1:         "FIRMA PAGINA 1",
-        firma_2:         "FIRMA PAGINA 2",
-        crocetta_iscritto_dichiara: "X CASELLA L'ISCRITTO DICHIARA"
+        civico:                     "NUMERO CIVICO",
+        comune:                     "COMUNE RESIDENZA",
+        provincia:                  "PROVINCIA RESIDENZA",
+        cap:                        "C.A.P. RESIDENZA",
+        telefono:                   "TELEFONO ABITAZIONE",
+        cellulare:                  "CELLULARE",
+        email:                      "E-MAIL",
+        firma_1:                    "FIRMA PAGINA 1",
+        firma_2:                    "FIRMA PAGINA 2",
+        crocetta_iscritto_dichiara: "X CASELLA L'ISCRITTO DICHIARA",
+        associazione_logo:          "LOGO ASSOCIAZIONE (SOLO X/Y)",
+        associazione_denominazione: "ASSOCIAZIONE - DENOMINAZIONE",
+        associazione_indirizzo:     "ASSOCIAZIONE - INDIRIZZO",
+        associazione_cf_pi:         "ASSOCIAZIONE - CF / P.IVA"
     };
 
     Object.keys(defaultFields).forEach(fieldKey => {
         const currentVal = tunerCoords[modulo]?.[fieldKey] || defaultFields[fieldKey];
+        const isImage = fieldKey === 'associazione_logo';
         
         const card = document.createElement('div');
         card.className = "border border-white/5 bg-white/5 p-3 space-y-2";
@@ -8025,7 +8034,7 @@ window.cambiaModuloTuner = function() {
                 <span class="text-[10px] font-headline font-bold text-gray-300 uppercase">${labelsMap[fieldKey] || fieldKey.replace(/_/g, ' ')}</span>
                 <span class="text-[8px] text-gray-500 font-mono">PAGINA: ${currentVal.pagina + 1}</span>
             </div>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid ${isImage ? 'grid-cols-2' : 'grid-cols-3'} gap-2">
                 <div>
                     <label class="block text-[8px] text-gray-500 font-mono">COOR X</label>
                     <input type="number" value="${currentVal.x}" oninput="updateFieldCoord('${modulo}', '${fieldKey}', 'x', this.value)" class="w-full bg-black text-white text-xs border border-white/10 p-1 font-mono focus:outline-none focus:border-primary" />
@@ -8034,11 +8043,14 @@ window.cambiaModuloTuner = function() {
                     <label class="block text-[8px] text-gray-500 font-mono">COOR Y</label>
                     <input type="number" value="${currentVal.y}" oninput="updateFieldCoord('${modulo}', '${fieldKey}', 'y', this.value)" class="w-full bg-black text-white text-xs border border-white/10 p-1 font-mono focus:outline-none focus:border-primary" />
                 </div>
+                ${isImage ? '' : `
                 <div>
                     <label class="block text-[8px] text-gray-500 font-mono">FONT SIZE</label>
                     <input type="number" value="${currentVal.font_size}" oninput="updateFieldCoord('${modulo}', '${fieldKey}', 'font_size', this.value)" class="w-full bg-black text-white text-xs border border-white/10 p-1 font-mono focus:outline-none focus:border-primary" />
                 </div>
+                `}
             </div>
+            ${isImage ? '<div class="text-[8px] text-gray-500 font-mono italic mt-1">Dimensione logo: 40x40 pt (fissa)</div>' : ''}
         `;
         container.appendChild(card);
     });
@@ -8098,6 +8110,15 @@ window.updateFieldCoord = function(modulo, campo, asse, valore) {
         }
     }, 1000);
 };
+
+let cachedLogo = null;
+async function getLogoBuffer() {
+    if (cachedLogo) return cachedLogo;
+    const res = await fetch('../assets/logo_icon.png');
+    if (!res.ok) throw new Error("Impossibile caricare il logo dell'associazione");
+    cachedLogo = await res.arrayBuffer();
+    return cachedLogo;
+}
 
 window.aggiornaAnteprimaPdf = async function() {
     try {
@@ -8199,6 +8220,39 @@ window.aggiornaAnteprimaPdf = async function() {
             const dich = getVal('crocetta_iscritto_dichiara');
             if (dich && p1) {
                 p1.drawText('X', { x: dich.x, y: dich.y, size: dich.font_size, color: PDFLib.rgb(0,0,0) });
+            }
+
+            // Logo dell'Associazione
+            const logoPos = getVal('associazione_logo');
+            if (logoPos && p1) {
+                try {
+                    const logoBuf = await getLogoBuffer();
+                    const logoImage = await doc.embedPng(logoBuf);
+                    p1.drawImage(logoImage, {
+                        x: logoPos.x,
+                        y: logoPos.y,
+                        width: 40,
+                        height: 40
+                    });
+                } catch (e) {
+                    console.warn("Impossibile disegnare il logo dell'associazione:", e);
+                }
+            }
+
+            // Dati statici associazione
+            const denPos = getVal('associazione_denominazione');
+            const indPos = getVal('associazione_indirizzo');
+            const cfPos  = getVal('associazione_cf_pi');
+            
+            const assFont = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+            if (denPos && p1) {
+                p1.drawText('ASD Adrenalina Club APS', { x: denPos.x, y: denPos.y, size: denPos.font_size, font: assFont });
+            }
+            if (indPos && p1) {
+                p1.drawText('Via Rigantè 44 - 63100 Ascoli Piceno', { x: indPos.x, y: indPos.y, size: indPos.font_size, font: assFont });
+            }
+            if (cfPos && p1) {
+                p1.drawText('CF: 92042260445 - P.IVA: 02014060442', { x: cfPos.x, y: cfPos.y, size: cfPos.font_size, font: assFont });
             }
         }
 

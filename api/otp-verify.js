@@ -4,6 +4,7 @@ import { sendEmail } from './resend-mail.js';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 let supabase;
 
@@ -346,6 +347,8 @@ export default async function handler(req, res) {
 
         try {
             // Setup coordinates and fonts with robust directory resolution for Vercel
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
             const candidateBaseDirs = [
                 process.cwd(),
                 path.join(__dirname, '..'),
@@ -353,12 +356,17 @@ export default async function handler(req, res) {
             ];
 
             let csenDir = null;
+            let assetsDir = null;
             for (const base of candidateBaseDirs) {
-                const testPath = path.join(base, 'CSEN_moduli');
-                if (fs.existsSync(testPath)) {
-                    csenDir = testPath;
-                    break;
+                const testPath1 = path.join(base, 'CSEN_moduli');
+                if (fs.existsSync(testPath1)) {
+                    csenDir = testPath1;
                 }
+                const testPath2 = path.join(base, 'assets');
+                if (fs.existsSync(testPath2)) {
+                    assetsDir = testPath2;
+                }
+                if (csenDir && assetsDir) break;
             }
 
             if (!csenDir) {
@@ -369,7 +377,6 @@ export default async function handler(req, res) {
             const csenPath2 = csenDir ? path.join(csenDir, 'Modulo_Iscrizione_2024(1)(1) - aggiornato silver e gold (2).pdf') : null;
 
             if (csenPath1 && csenPath2 && fs.existsSync(csenPath1) && fs.existsSync(csenPath2)) {
-                const supabase = createClient(supabaseUrl, supabaseServiceKey);
                 
                 // Query dynamic coordinates from database
                 const { data: configRows } = await supabase
@@ -508,6 +515,40 @@ export default async function handler(req, res) {
                 page2.drawText(signatureText, { x: cIscrFirma1.x, y: cIscrFirma1.y, size: cIscrFirma1.font_size, color: signatureColor });
                 if (page2b) {
                     page2b.drawText(signatureText, { x: cIscrFirma2.x, y: cIscrFirma2.y, size: cIscrFirma2.font_size, color: signatureColor });
+                }
+
+                // Dati e Logo Associazione (ASD Adrenalina Club APS)
+                const assFont = await doc2.embedFont(StandardFonts.Helvetica);
+                const logoPos = getVal('iscrizione', 'associazione_logo');
+                if (logoPos && assetsDir) {
+                    const logoPath = path.join(assetsDir, 'logo_icon.png');
+                    if (fs.existsSync(logoPath)) {
+                        try {
+                            const logoBytes = fs.readFileSync(logoPath);
+                            const logoImage = await doc2.embedPng(logoBytes);
+                            page2.drawImage(logoImage, {
+                                x: logoPos.x,
+                                y: logoPos.y,
+                                width: 40,
+                                height: 40
+                            });
+                        } catch (logoErr) {
+                            console.error('Failed to embed association logo PNG:', logoErr);
+                        }
+                    }
+                }
+
+                const denPos = getVal('iscrizione', 'associazione_denominazione');
+                const indPos = getVal('iscrizione', 'associazione_indirizzo');
+                const cfPos  = getVal('iscrizione', 'associazione_cf_pi');
+                if (denPos) {
+                    page2.drawText('ASD Adrenalina Club APS', { x: denPos.x, y: denPos.y, size: denPos.font_size, font: assFont });
+                }
+                if (indPos) {
+                    page2.drawText('Via Rigant\u00e8 44 - 63100 Ascoli Piceno', { x: indPos.x, y: indPos.y, size: indPos.font_size, font: assFont });
+                }
+                if (cfPos) {
+                    page2.drawText('CF: 92042260445 - P.IVA: 02014060442', { x: cfPos.x, y: cfPos.y, size: cfPos.font_size, font: assFont });
                 }
 
                 const out1Bytes = await doc1.save();

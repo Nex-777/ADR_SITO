@@ -71,7 +71,13 @@ async function solveCaptcha(base64Data, apiKey) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: bodyParams.toString()
     });
-    const jsonIn = await resIn.json();
+    const rawText = await resIn.text();
+    let jsonIn;
+    try {
+        jsonIn = JSON.parse(rawText);
+    } catch (parseErr) {
+        throw new Error(`Errore parsing JSON da 2Captcha. Risposta raw: ${rawText.substring(0, 300)}`);
+    }
     if (jsonIn.status !== 1) throw new Error('Errore invio 2Captcha: ' + jsonIn.request);
 
     const taskId = jsonIn.request;
@@ -79,7 +85,13 @@ async function solveCaptcha(base64Data, apiKey) {
     for (let i = 0; i < 15; i++) {
         await new Promise(r => setTimeout(r, 3000));
         const resOut = await fetch(`https://2captcha.com/res.php?key=${apiKey}&action=get&id=${taskId}&json=1`);
-        const jsonOut = await resOut.json();
+        const rawTextOut = await resOut.text();
+        let jsonOut;
+        try {
+            jsonOut = JSON.parse(rawTextOut);
+        } catch (parseErr) {
+            throw new Error(`Errore parsing JSON da 2Captcha (status check). Risposta raw: ${rawTextOut.substring(0, 300)}`);
+        }
         if (jsonOut.status === 1) {
             console.log(`   - CAPTCHA risolto: ${jsonOut.request}`);
             return jsonOut.request;
@@ -423,11 +435,27 @@ async function syncCsen() {
 
                     // Recupera nuovo numero tessera
                     const nuovoNumero = await estraiNumeraTesseraDopoOperazione(page, cf);
-                    await aggiornaRecord(supabase, tess.id_tesserato, nuovoNumero, 'Nuova registrazione CSEN completata');
-                    if (nuovoNumero) risultati.successi++;
-                    else {
-                        // Numero non ancora assegnato (attesa CSEN) - il nightly lo riprenderà
+                    if (nuovoNumero) {
+                        await aggiornaRecord(supabase, tess.id_tesserato, nuovoNumero, 'Nuova registrazione CSEN completata');
                         risultati.successi++;
+                    } else {
+                        // Verifica se l'utente esiste sul portale (numero non ancora assegnato) o se la registrazione è fallita.
+                        // estraiNumeraTesseraDopoOperazione ha eseguito una ricerca, quindi la pagina corrente mostra i risultati di ricerca.
+                        const pageCheck = await page.content();
+                        const utenteCreato = !pageCheck.includes('Nessun tesserato individuato');
+                        if (utenteCreato) {
+                            // Utente creato con successo, ma senza numero tessera
+                            await aggiornaRecord(supabase, tess.id_tesserato, null, 'Nuova registrazione CSEN completata (tessera in attesa di emissione)');
+                            risultati.successi++;
+                        } else {
+                            // Utente non presente, l'inserimento è fallito!
+                            await supabase.from('registro_tesserati').update({
+                                sync_csen_status: 'ERROR',
+                                sync_csen_log: 'Registrazione CSEN fallita: utente non trovato sul portale dopo il submit.'
+                            }).eq('id_tesserato', tess.id_tesserato);
+                            risultati.errori++;
+                            risultati.falliti.push({ nome: nomeCompleto, cf, errore: 'Registrazione CSEN fallita (utente non creato)' });
+                        }
                     }
 
                     // -------------------------------------------------------
