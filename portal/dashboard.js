@@ -4,12 +4,19 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.74"
+                VERSION: "1.01.75"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function showLoader() {
+            document.body.style.cursor = 'wait';
+        }
+        function hideLoader() {
+            document.body.style.cursor = 'default';
+        }
 
         // Helper per formattare le date in GG/MM/AA
         function formatToItalianDate(dateStr) {
