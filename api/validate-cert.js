@@ -280,6 +280,17 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 .maybeSingle();
 
             if (finalStatus === 'VERDE') {
+                // Riattiva il tesseramento se era SOSPESO
+                const { error: errReact } = await supabase
+                    .from('registro_tesserati')
+                    .update({ stato_tesseramento: 'ATTIVO' })
+                    .eq('anagrafica_id', targetAnagraficaId)
+                    .eq('stato_tesseramento', 'SOSPESO');
+                
+                if (errReact) {
+                    console.error(`Errore riattivazione tesseramento sospeso per anagrafica_id ${targetAnagraficaId}:`, errReact);
+                }
+
                 if (approvazione && approvazione.stato === 'IN_ATTESA_PAGAMENTO' && userEmail) {
                     // Send approval payment email
                     const checkoutLink = 'https://portal.adrenalinaclub.it/portal/pagamento.html';

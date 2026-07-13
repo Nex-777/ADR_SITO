@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.75"
+                VERSION: "1.01.76"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -371,16 +371,30 @@
                 document.getElementById('board-stats-grid').classList.add('hidden');
                 document.getElementById('board-alert-board').classList.add('hidden');
                 
+                const anag = currentUserProfile ? (Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche) : null;
+                const cert = getCertInfo(anag);
+                const isBlocked = !cert || isCertificatoScaduto(cert.data_scadenza) || cert.stato_validazione === 'ROSSO';
+
                 // Mostra pulsanti atleti base
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
-                document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
-                document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
+                
+                if (isBlocked) {
+                    document.getElementById('tab-btn-user_corsi').classList.add('hidden');
+                    document.getElementById('tab-btn-user_eventi').classList.add('hidden');
+                } else {
+                    document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
+                    document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
+                }
 
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
 
-                switchTab('user_profilo');
+                if (isBlocked) {
+                    switchTab('user_certificato');
+                } else {
+                    switchTab('user_profilo');
+                }
             } else if (currentViewContext === 'member') {
                 document.body.classList.add('theme-socio');
                 document.getElementById('welcome-title').textContent = "Area Socio";
