@@ -213,10 +213,8 @@ async function caricaLookupDati() {
 function onGruppoStoricoChange() {
     const selectGruppo = document.getElementById('fa-gruppo-storico');
     const selectPopolo = document.getElementById('fa-popolo');
-    
     const gruppoId = parseInt(selectGruppo.value);
     addDebugLog(`Cambio gruppo storico selezionato: ID ${gruppoId}`);
-    const gruppoScelto = gruppiStorici.find(g => g.id === gruppoId);
     const gruppoScelto = gruppiStorici.find(g => g.id === gruppoId);
 
     if (gruppoScelto) {

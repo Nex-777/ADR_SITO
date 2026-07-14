@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-14] ingest | Solve PostgreSQL RLS Incompatibility and SyntaxError in epika.js (v1.01.83)
+- Patched the Row Level Security (RLS) policies on all `epika_*` tables to directly query `public.utenti` instead of using the custom function `get_user_role(auth.uid())`, which generated PostgreSQL schema cast errors (HTTP 500) when executed within the EPIKA context.
+- Fixed an `Uncaught SyntaxError` in `portal/epika.js` by removing a duplicate variable declaration of `gruppoScelto`.
+- Incremented global version tag to `v1.01.83`.
+
 ## [2026-07-14] ingest | Add Debug Logger Panel for EPIKA First Access Dropdowns Troubleshooting (v1.01.82)
 - Added an on-page `#epk-debug-box` display panel in `portal/epika.html` to output real-time initialization steps, query results lengths, and runtime errors.
 - Updated `portal/epika.js` to log events (session validation, lookup table queries) and catch statements directly onto the debug panel.
