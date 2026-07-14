@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-14] ingest | Add Piceni to Peoples List, Remove Debug Panel and Adrenalina Logo, and Add Version Badge (v1.01.85)
+- Removed the Adrenalina logo icon from `portal/epika.html` header as requested.
+- Added a stylized version badge (e.g. `Vs. 1.01.85`) next to the "EPIKA" header title using a new CSS class `.epk-version-badge` defined in `portal/epika.css`.
+- Added the "Piceni" option to the static peoples/cultures dropdown select.
+- Removed the troubleshooting `#epk-debug-box` and debug log code statements from `portal/epika.html` and `portal/epika.js`.
+- Incremented global version tag to `v1.01.85`.
+
 ## [2026-07-14] ingest | Resolve Infinite Recursion in epika_profili RLS Policy (v1.01.84)
 - Fixed an `infinite recursion detected` (error `42P17`) inside the PostgreSQL RLS policy of the `epika_profili` table. Semplified SELECT policies by removing recursive cross-checks on the table itself and using simple `auth.uid() IS NOT NULL` evaluations, restricting modifications (UPDATE) strictly to owners and the President.
 - Incremented global version tag to `v1.01.84`.
