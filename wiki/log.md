@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-14] ingest | Add Debug Logger Panel for EPIKA First Access Dropdowns Troubleshooting (v1.01.82)
+- Added an on-page `#epk-debug-box` display panel in `portal/epika.html` to output real-time initialization steps, query results lengths, and runtime errors.
+- Updated `portal/epika.js` to log events (session validation, lookup table queries) and catch statements directly onto the debug panel.
+- Incremented global version tag to `v1.01.82`.
+
 ## [2026-07-14] ingest | Classical Antiquity Historical Portal (EPIKA) Portals & Logics (Fase 2-5) (v1.01.81)
 - Created and styled the classical antiquity-themed portal UI `portal/epika.html`, `portal/epika.css` (parchment, terracotta, and gold color scheme with Cinzel serif typography) and its script `portal/epika.js`.
 - Implemented robust Supabase session checks and automatic login redirect (`login.html?redirect=epika`) inside `epika.js`.

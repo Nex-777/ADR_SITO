@@ -38,6 +38,7 @@ async function initPortal() {
         }
 
         currentUser = session.user;
+        console.log("Sessione trovata per utente ID:", currentUser.id);
 
         // Recupera info utente reale ed enum dei ruoli Adrenalina
         const { data: userData, error: userError } = await supabaseClient
@@ -46,8 +47,15 @@ async function initPortal() {
             .eq('id', currentUser.id)
             .maybeSingle();
 
+        if (userError) {
+            console.error("Errore recupero utenti:", userError);
+            alert("Errore caricamento profilo utenti: " + userError.message);
+        }
+
         if (userData) {
             document.getElementById('epk-user-real-name').textContent = `${userData.nome} ${userData.cognome}`;
+        } else {
+            console.warn("Nessun record trovato in utenti per ID:", currentUser.id);
         }
 
         // Default value per il primo anno di partecipazione (anno corrente)
@@ -67,6 +75,7 @@ async function initPortal() {
 
         if (epikaError) {
             console.error("Errore query profilo epika:", epikaError);
+            alert("Errore query profilo epika: " + epikaError.message);
         }
 
         // Determina se l'utente loggato è amministratore di EPIKA
@@ -116,6 +125,7 @@ async function initPortal() {
 
     } catch (err) {
         console.error("Errore in initPortal:", err);
+        alert("Errore critico durante l'inizializzazione del portale: " + err.message);
     }
 }
 
@@ -133,41 +143,68 @@ async function switchEpikaView(view) {
     }
 }
 
+function addDebugLog(msg) {
+    const box = document.getElementById('epk-debug-box');
+    const log = document.getElementById('epk-debug-log');
+    if (box && log) {
+        box.classList.remove('epk-hidden');
+        log.textContent += msg + "\n";
+    }
+}
+
 // Caricamento dati dalle tabelle lookup
 async function caricaLookupDati() {
     try {
+        addDebugLog("caricaLookupDati() avviato...");
+
         // Carica Gruppi Storici
+        addDebugLog("Eseguo query epika_gruppi_storici...");
         const { data: gruppi, error: gError } = await supabaseClient
             .from('epika_gruppi_storici')
             .select('*')
             .eq('attivo', true);
 
-        if (gError) throw gError;
-        gruppiStorici = gruppi || [];
+        if (gError) {
+            addDebugLog(`Errore gruppi storici: ${gError.message} (${gError.code})`);
+            throw gError;
+        }
 
+        gruppiStorici = gruppi || [];
+        addDebugLog(`Gruppi storici trovati: ${gruppiStorici.length}`);
+        
         const selectGruppo = document.getElementById('fa-gruppo-storico');
         selectGruppo.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
         gruppiStorici.forEach(g => {
             selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+            addDebugLog(`Aggiunto gruppo: ${g.nome} (ID: ${g.id})`);
         });
 
         // Carica Allenatori
+        addDebugLog("Eseguo query epika_opzioni per allenatori...");
         const { data: allenatori, error: aError } = await supabaseClient
             .from('epika_opzioni')
             .select('*')
             .eq('tipo', 'allenatore')
             .eq('attivo', true);
 
-        if (aError) throw aError;
+        if (aError) {
+            addDebugLog(`Errore allenatori: ${aError.message} (${aError.code})`);
+            throw aError;
+        }
+
+        const allenatoriLista = allenatori || [];
+        addDebugLog(`Allenatori trovati: ${allenatoriLista.length}`);
 
         const selectAllenatore = document.getElementById('fa-allenatore');
         selectAllenatore.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
-        (allenatori || []).forEach(a => {
+        allenatoriLista.forEach(a => {
             selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`;
+            addDebugLog(`Aggiunto allenatore: ${a.valore} (ID: ${a.id})`);
         });
 
     } catch (err) {
         console.error("Errore caricamento dati lookup:", err);
+        addDebugLog(`CRITICAL CATCH: ${err.message}`);
         alert("Errore durante il recupero dei dati del tempio. Riprova più tardi.");
     }
 }
@@ -178,6 +215,8 @@ function onGruppoStoricoChange() {
     const selectPopolo = document.getElementById('fa-popolo');
     
     const gruppoId = parseInt(selectGruppo.value);
+    addDebugLog(`Cambio gruppo storico selezionato: ID ${gruppoId}`);
+    const gruppoScelto = gruppiStorici.find(g => g.id === gruppoId);
     const gruppoScelto = gruppiStorici.find(g => g.id === gruppoId);
 
     if (gruppoScelto) {
