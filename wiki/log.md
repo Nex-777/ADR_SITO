@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-14] ingest | Resolve Infinite Recursion in epika_profili RLS Policy (v1.01.84)
+- Fixed an `infinite recursion detected` (error `42P17`) inside the PostgreSQL RLS policy of the `epika_profili` table. Semplified SELECT policies by removing recursive cross-checks on the table itself and using simple `auth.uid() IS NOT NULL` evaluations, restricting modifications (UPDATE) strictly to owners and the President.
+- Incremented global version tag to `v1.01.84`.
+
 ## [2026-07-14] ingest | Solve PostgreSQL RLS Incompatibility and SyntaxError in epika.js (v1.01.83)
 - Patched the Row Level Security (RLS) policies on all `epika_*` tables to directly query `public.utenti` instead of using the custom function `get_user_role(auth.uid())`, which generated PostgreSQL schema cast errors (HTTP 500) when executed within the EPIKA context.
 - Fixed an `Uncaught SyntaxError` in `portal/epika.js` by removing a duplicate variable declaration of `gruppoScelto`.
