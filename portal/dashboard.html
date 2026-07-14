@@ -461,6 +461,53 @@
             #mobile-menu-overlay { display: none !important; }
             .mobile-card-list { display: none !important; }
         }
+
+        /* --- EPIKA BANNER STYLING --- */
+        .epk-banner-card {
+            background: linear-gradient(135deg, #2a1109 0%, #150904 100%);
+            border: 2px solid #C9A84C !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(201, 168, 76, 0.05);
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .epk-banner-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: repeating-linear-gradient(90deg, #C9A84C, #C9A84C 10px, transparent 10px, transparent 20px);
+        }
+        .epk-banner-card .epk-btn {
+            background-color: #6B1E2B;
+            border: 1px solid #C9A84C;
+            color: #F5E6C8;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            box-shadow: 4px 4px 0px rgba(201, 168, 76, 0.3);
+        }
+        .epk-banner-card .epk-btn:hover {
+            background-color: #C9A84C;
+            color: #150904;
+            box-shadow: 2px 2px 0px #F5E6C8;
+            transform: translate(2px, 2px);
+        }
+        #tab-btn-epika-presidente {
+            border: 1px solid rgba(201, 168, 76, 0.4);
+            color: #C9A84C;
+            background: linear-gradient(90deg, rgba(107, 30, 43, 0.1) 0%, rgba(26, 14, 5, 0.2) 100%);
+        }
+        #tab-btn-epika-presidente:hover {
+            background: #6B1E2B;
+            color: #F5E6C8;
+            border-color: #C9A84C;
+        }
     </style>
     <link rel="stylesheet" href="../output.css">
 </head>
@@ -474,7 +521,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.80</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.01.81</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -641,6 +688,11 @@
 
                 <button id="tab-btn-sandbox" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
                     <span class="material-symbols-outlined text-sm">science</span> SANDBOX DOCUMENTI
+                </button>
+
+                <!-- EPIKA President Button -->
+                <button id="tab-btn-epika-presidente" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all flex items-center gap-3 hidden" onclick="window.open('epika.html?admin=true', 'portale_epika')">
+                    <span class="material-symbols-outlined text-sm">theater_comedy</span> GESTIONE EPIKA
                 </button>
             </div>
 
@@ -846,6 +898,23 @@
                         <div id="user-bacheca-notizie" class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
                             <p class="text-xs text-gray-500 uppercase font-mono">Nessuna comunicazione recente in bacheca.</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- EPIKA Athlete Access Banner -->
+                <div id="epika-banner-container" class="hidden mt-6">
+                    <div class="epk-banner-card p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div class="space-y-2 text-center md:text-left">
+                            <h3 class="font-headline text-sm font-bold text-[#C9A84C] uppercase tracking-wider flex items-center justify-center md:justify-start gap-2">
+                                <span class="material-symbols-outlined">shield</span> PORTALE RIEVOCAZIONE STORICA EPIKA
+                            </h3>
+                            <p class="text-[11px] text-[#F5E6C8]/80 font-mono uppercase leading-relaxed">
+                                Entra nell'era classica (300 AC - 0 DC) tra Roma, Grecia e i popoli antichi. Gestisci il tuo profilo storico, iscriviti ai Campi Marzio e consulta i ranghi.
+                            </p>
+                        </div>
+                        <button class="epk-btn px-6 py-3 shrink-0" onclick="window.open('epika.html', 'portale_epika')">
+                            ACCEDI AL PORTALE
+                        </button>
                     </div>
                 </div>
             </div>

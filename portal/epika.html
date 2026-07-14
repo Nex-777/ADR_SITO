@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPIKA - Portale Rievocazione Storica</title>
+    <link rel="icon" type="image/png" href="/assets/logo_icon.png">
+    <link rel="stylesheet" href="epika.css">
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="config.js"></script>
+</head>
+<body class="epk-body">
+
+    <!-- Header Navbar -->
+    <header class="epk-header">
+        <div class="epk-logo-group">
+            <img src="/assets/logo_icon.png" alt="Adrenalina Icon" class="epk-logo-img">
+            <h1 class="epk-headline" style="font-size: 16px; margin: 0;">EPIKA</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="text-align: right;">
+                <span id="epk-user-real-name" style="font-size: 12px; font-weight: bold; display: block;">Caricamento...</span>
+                <span id="epk-user-battle-name" class="epk-headline" style="font-size: 10px; display: block;"></span>
+            </div>
+            <!-- Context selector per gli admin, mostrato solo se is_admin_epika o presidente -->
+            <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold;" onchange="switchEpikaView(this.value)">
+                <option value="athlete">VISTA ATLETA</option>
+                <option value="admin">VISTA AMMINISTRATORE</option>
+            </select>
+            <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()">CHIUDI</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="epk-container">
+
+        <!-- loader -->
+        <div id="epk-loader" style="text-align: center; padding: 40px;">
+            <h3 class="epk-headline">IN ATTESA DEL TEMPIO...</h3>
+        </div>
+
+        <!-- 1. PRIMO ACCESSO: Registrazione Profilo Storico -->
+        <section id="epk-first-access" class="epk-hidden">
+            <div class="epk-card" style="max-w: 600px; margin: 0 auto;">
+                <h2 class="epk-headline" style="margin-top: 0; font-size: 20px; text-align: center;">CREA IL TUO PERSONAGGIO STORICO</h2>
+                <p style="font-size: 11px; text-transform: uppercase; text-align: center; color: rgba(245, 230, 200, 0.7); margin-bottom: 24px;">
+                    Inserisci i tuoi dati storici per accedere al portale EPIKA
+                </p>
+
+                <form id="epk-first-access-form" class="space-y-4" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <label class="epk-label" for="fa-nome-battaglia">Nome di Battaglia / Nome Storico *</label>
+                        <input type="text" id="fa-nome-battaglia" class="epk-input" placeholder="Es. TITO, CUNAGATO, GARID..." required>
+                    </div>
+
+                    <div class="epk-grid-2">
+                        <div>
+                            <label class="epk-label" for="fa-ruolo-combattimento">Ruolo Combattimento *</label>
+                            <select id="fa-ruolo-combattimento" class="epk-input" required>
+                                <option value="" disabled selected>SELEZIONA</option>
+                                <option value="combattente">COMBATTENTE</option>
+                                <option value="non_combattente">NON COMBATTENTE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="epk-label" for="fa-primo-anno">Primo Anno di Partecipazione *</label>
+                            <input type="number" id="fa-primo-anno" class="epk-input" min="2010" max="2026" required>
+                        </div>
+                    </div>
+
+                    <div class="epk-grid-2">
+                        <div>
+                            <label class="epk-label" for="fa-gruppo-storico">Gruppo Storico *</label>
+                            <select id="fa-gruppo-storico" class="epk-input" onchange="onGruppoStoricoChange()" required>
+                                <option value="" disabled selected>SELEZIONA</option>
+                                <!-- Popolato via JS -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="epk-label" for="fa-popolo">Popolo / Cultura *</label>
+                            <select id="fa-popolo" class="epk-input" required>
+                                <option value="" disabled selected>SELEZIONA</option>
+                                <option value="Romani">Romani</option>
+                                <option value="Greci">Greci</option>
+                                <option value="Celti">Celti</option>
+                                <option value="Italici">Italici</option>
+                                <option value="Germani">Germani</option>
+                                <option value="Sanniti">Sanniti</option>
+                                <option value="Liguri">Liguri</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="epk-label" for="fa-allenatore">Allenatore di Riferimento *</label>
+                        <select id="fa-allenatore" class="epk-input" required>
+                            <option value="" disabled selected>SELEZIONA</option>
+                            <!-- Popolato via JS -->
+                        </select>
+                    </div>
+
+                    <button type="submit" class="epk-btn" style="margin-top: 10px; width: 100%;">ENTRA NELL'ERA DI EPIKA</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 2. PORTALE PRINCIPALE (Fase 4 - Dashboard Atleta) -->
+        <section id="epk-main" class="epk-hidden" style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- Profilo e Statistiche Grid -->
+            <div class="epk-grid-2">
+                
+                <!-- Scheda Personaggio -->
+                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                    <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                        SCHEDA PERSONAGGIO
+                    </h2>
+                    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; text-transform: uppercase;">
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: rgba(245, 230, 200, 0.6);">NOME REALE:</span>
+                            <span id="epk-prof-real-name" style="font-weight: bold; color: white;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: rgba(245, 230, 200, 0.6);">NOME STORICO:</span>
+                            <span id="epk-prof-battle-name" style="font-weight: bold; color: var(--epk-gold); font-family: 'Cinzel', serif;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: rgba(245, 230, 200, 0.6);">GRUPPO STORICO:</span>
+                            <span id="epk-prof-gruppo" style="font-weight: bold; color: white;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: rgba(245, 230, 200, 0.6);">POPOLO / CULTURA:</span>
+                            <span id="epk-prof-popolo" style="font-weight: bold; color: white;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: rgba(245, 230, 200, 0.6);">RUOLO COMBATTIMENTO:</span>
+                            <span id="epk-prof-ruolo" style="font-weight: bold; color: white;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: rgba(245, 230, 200, 0.6);">ALLENATORE RIFERIMENTO:</span>
+                            <span id="epk-prof-allenatore" style="font-weight: bold; color: white;">-</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                            <span style="color: rgba(245, 230, 200, 0.6);">GRUPPO DI LAVORO:</span>
+                            <span id="epk-prof-lavoro" style="font-weight: bold; color: var(--epk-gold);">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistiche Storiche -->
+                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                    <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                        MEDAGLIERE E RANGO
+                    </h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 16px; text-align: center;">
+                            <span style="font-size: 9px; color: rgba(245, 230, 200, 0.5); display: block; text-transform: uppercase;">CAMPI MARZIO</span>
+                            <span id="epk-stat-campi" class="epk-headline" style="font-size: 32px; font-weight: 900; display: block; margin: 8px 0;">0</span>
+                            <span style="font-size: 9px; color: rgba(245, 230, 200, 0.4); display: block; text-transform: uppercase;">COMPLETATI</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 16px; text-align: center;">
+                            <span style="font-size: 9px; color: rgba(245, 230, 200, 0.5); display: block; text-transform: uppercase;">TORNEI SVOLTI</span>
+                            <span id="epk-stat-tornei" class="epk-headline" style="font-size: 32px; font-weight: 900; display: block; margin: 8px 0;">0</span>
+                            <span style="font-size: 9px; color: rgba(245, 230, 200, 0.4); display: block; text-transform: uppercase;">PARTECIPAZIONI</span>
+                        </div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-left: 3px solid var(--epk-gold); font-size: 11px; text-transform: uppercase;">
+                        <span style="color: rgba(245, 230, 200, 0.6);">Anni di Servizio Rievocativo:</span>
+                        <span id="epk-stat-anni-servizio" style="font-weight: bold; margin-left: 4px;">-</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Prossimi Eventi -->
+            <div class="epk-card">
+                <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    EVENTI RIEVOCATIVI DISPONIBILI
+                </h2>
+                <div id="epk-eventi-lista" style="display: flex; flex-direction: column; gap: 16px;">
+                    <p style="font-size: 12px; color: rgba(245, 230, 200, 0.5); text-transform: uppercase; text-align: center; padding: 20px 0;">
+                        Ricerca eventi del tempio in corso...
+                    </p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 3. PORTALE AMMINISTRATORE (Fase 5 - Gestione Presidente) -->
+        <section id="epk-admin" class="epk-hidden" style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- Organigramma Mermaid.js -->
+            <div class="epk-card">
+                <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    ORGANIGRAMMA STRUTTURALE GRUPPI DI LAVORO
+                </h2>
+                <div id="epk-mermaid-container" class="mermaid" style="background: rgba(0,0,0,0.2); padding: 20px; border: 1px solid var(--epk-gold-dim); text-align: center; overflow-x: auto;">
+                    <!-- Caricato dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Due colonne gestionali superiori -->
+            <div class="epk-grid-2">
+                
+                <!-- Gestione Allenatori (CRUD) -->
+                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                    <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                        GESTIONE ALLENATORI
+                    </h2>
+                    
+                    <!-- Form aggiunta -->
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="adm-new-allenatore" class="epk-input" placeholder="NUOVO ALLENATORE..." style="flex: 1;">
+                        <button class="epk-btn" onclick="creaAllenatore()" style="padding: 10px 16px; font-size: 10px;">AGGIUNGI</button>
+                    </div>
+
+                    <div id="adm-allenatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 220px; overflow-y: auto;">
+                        <!-- Righe allenatori popolati via JS -->
+                    </div>
+                </div>
+
+                <!-- Gestione Nomine Gruppi di Lavoro -->
+                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                    <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                        NOMINE GRUPPI DI LAVORO E RUOLI ADMIN
+                    </h2>
+                    <div id="adm-tesserati-nomine-list" style="display: flex; flex-direction: column; gap: 10px; max-h: 280px; overflow-y: auto;">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Gestione Eventi e Presenze -->
+            <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 8px;">
+                    <h2 class="epk-headline" style="margin: 0; font-size: 16px;">
+                        GESTIONE EVENTI STORICI & CONFERMA PRESENZE
+                    </h2>
+                    <button class="epk-btn" onclick="mostraFormCreaEvento()" style="padding: 8px 16px; font-size: 10px;">+ NUOVO EVENTO</button>
+                </div>
+
+                <!-- Form Creazione Evento (nascosto di default) -->
+                <div id="adm-evento-form-container" class="epk-hidden" style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold); padding: 16px; margin-bottom: 16px;">
+                    <h3 class="epk-headline" style="margin-top: 0; font-size: 12px; margin-bottom: 12px;">CREA EVENTO STORICO RIEVOCATIVO</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="epk-grid-2">
+                            <div>
+                                <label class="epk-label">Titolo Evento *</label>
+                                <input type="text" id="evt-titolo" class="epk-input" required>
+                            </div>
+                            <div>
+                                <label class="epk-label">Luogo *</label>
+                                <input type="text" id="evt-luogo" class="epk-input" required>
+                            </div>
+                        </div>
+                        <div class="epk-grid-2">
+                            <div>
+                                <label class="epk-label">Data Evento *</label>
+                                <input type="date" id="evt-data" class="epk-input" required>
+                            </div>
+                            <div>
+                                <label class="epk-label">Tipologia Evento *</label>
+                                <select id="evt-tipo" class="epk-input" required>
+                                    <option value="campo_marzio">CAMPO MARZIO</option>
+                                    <option value="torneo">TORNEO</option>
+                                    <option value="altro">ALTRO / EVENTO GENERALE</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="epk-label">Descrizione Evento</label>
+                            <textarea id="evt-descrizione" class="epk-input" style="height: 60px; font-family: sans-serif;"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
+                            <button class="epk-btn-secondary" onclick="nascondiFormCreaEvento()">ANNULLA</button>
+                            <button class="epk-btn" onclick="salvaEventoStorico()" style="padding: 10px 20px; font-size: 11px;">SALVA EVENTO</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista Eventi per Admin -->
+                <div id="adm-eventi-lista" style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Righe eventi con tasti Gestisci Presenze / Modifica / Elimina -->
+                </div>
+            </div>
+
+            <!-- Modal / Pannello Gestione Presenze Evento Specifico -->
+            <div id="adm-presenze-panel" class="epk-card epk-hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    <h3 id="adm-presenze-titolo" class="epk-headline" style="margin: 0; font-size: 14px;">GESTIONE PRESENZE: EVENTO</h3>
+                    <button class="epk-btn-secondary" onclick="nascondiPannelloPresenze()">CHIUDI</button>
+                </div>
+                <input type="hidden" id="adm-presenze-evento-id">
+                <div id="adm-presenze-utenti-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Iscritti con toggle presenza -->
+                </div>
+            </div>
+
+        </section>
+
+    </div>
+
+    <script src="epika.js"></script>
+</body>
+</html>

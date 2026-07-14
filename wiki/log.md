@@ -4,6 +4,24 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-14] ingest | Classical Antiquity Historical Portal (EPIKA) Portals & Logics (Fase 2-5) (v1.01.81)
+- Created and styled the classical antiquity-themed portal UI `portal/epika.html`, `portal/epika.css` (parchment, terracotta, and gold color scheme with Cinzel serif typography) and its script `portal/epika.js`.
+- Implemented robust Supabase session checks and automatic login redirect (`login.html?redirect=epika`) inside `epika.js`.
+- Added the Athlete's EPIKA overview entry banner (`#epika-banner-container`) and the President's admin button (`#tab-btn-epika-presidente`) inside `portal/dashboard.html` and `portal/dashboard.js`, dynamically showing/hiding elements depending on the context.
+- Implemented a Named Window tab system (`window.open(..., 'portale_epika')`) to prevent duplicate page instances and handle window focusing.
+- Created the First Access setup form in `epika.html` to populate the `epika_profili` table, dynamically linking selected groups to cultures (auto-populating and disabling choices except for Mercenari).
+- Built character profile cards, dynamic years-of-service computation, and count-only statistics (`COUNT()` on confirmed presenze in `epika_presenze_eventi`) inside `epika.js`.
+- Developed President administrative panels including dynamic Working Groups assignment dropdown selectors, Coaches CRUD actions, and past event registrations attendance toggle checkers.
+- Integrated dynamic structural organigram drawing powered by Mermaid.js, initializing rendering post-visibility container insertion (`mermaid.run`) to resolve dimensions computations bugs.
+- Incremented global version tag to `v1.01.81`.
+
+## [2026-07-14] ingest | Classical Antiquity Historical Portal (EPIKA) Database Migration (Fase 1)
+- Created the 7 isolated database tables (`epika_gruppi_storici`, `epika_gruppi_lavoro`, `epika_opzioni`, `epika_profili`, `epika_eventi`, `epika_iscrizioni_eventi`, `epika_presenze_eventi`) to build the classical antiquity historical re-enactment environment without corrupting the existing Adrenalina database.
+- Executed the DDL migration query successfully on Supabase, establishing Row Level Security (RLS) rules on all tables to prevent cross-profile data leakage and restrict administrative writes to `is_admin_epika` accounts or the Adrenalina `presidente` role.
+- Seeded lookup tables with the 9 historical groups mapped to their respective cultures (e.g. Celti, Romani, Greci), the 8 event-organizing working groups, and the 10 reference coaches.
+- Setup an automatic trigger `trg_epika_profili_updated_at` to update `updated_at` timestamps on profile modifications.
+- Documented the entire schema structure in the new wiki page [epika_portal.md](epika_portal.md).
+
 ## [2026-07-14] ingest | Fix Resend API Key Rotation and Email Script Error Reporting (v1.01.80)
 - Diagnosticato il mancato recapito delle email di sospensione a causa della chiave `RESEND_API_KEY` scaduta/revocata (risposta `401 API key is invalid`). La chiave è stata rigenerata sul pannello Resend e aggiornata nel file `.env` locale.
 - Migliorato lo script `scripts/send-suspended-emails-cli.js` aggiungendo un contatore di errori e un riepilogo finale. Il processo ora termina con `exit code 1` se almeno un'email fallisce, rendendo il job di GitHub Actions ❌ rosso e immediatamente visibile.

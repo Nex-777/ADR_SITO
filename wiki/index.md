@@ -21,6 +21,9 @@ Welcome to the **Adrenalina Club (ADR_SITO)** LLM Wiki. This is a persistent kno
 *   **[API Endpoints](api_endpoints.md)** – API endpoints for OTP request and verification (Vercel serverless + Supabase Edge Functions).
 *   **[OTP Signature System](otp_signature_system.md)** – Secure paperless digital signature process, from generation to validation.
 
+### 🎭 EPIKA Historical Portal
+*   **[EPIKA Portal Architecture](epika_portal.md)** – Overview of the classical antiquity historical re-enactment portal (300 BC - 0 AD), including its database schema, authentication flow, and administrative tools.
+
 ---
 
 ## 🪵 Changelog & History

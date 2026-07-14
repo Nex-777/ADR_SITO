@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.80"
+                VERSION: "1.01.81"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -353,7 +353,7 @@
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
                     'instructor_corsi', 'volunteer_eventi',
                     'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf', 'sandbox',
-                    'registro_istruttori', 'registro_volontari'
+                    'registro_istruttori', 'registro_volontari', 'epika-presidente'
                 ];
                 tabs.forEach(tab => {
                     const el = document.getElementById(`tab-btn-${tab}`);
@@ -362,6 +362,10 @@
             }
 
             hideAllTabs();
+
+            // --- EPIKA BANNER HIDE BY DEFAULT ---
+            const epikaBanner = document.getElementById('epika-banner-container');
+            if (epikaBanner) epikaBanner.classList.add('hidden');
 
             if (currentViewContext === 'athlete') {
                 document.body.classList.add('theme-tesserato');
@@ -389,6 +393,9 @@
 
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
+
+                // --- EPIKA BANNER SHOW FOR ATHLETES ---
+                if (epikaBanner) epikaBanner.classList.remove('hidden');
 
                 if (isBlocked) {
                     switchTab('user_certificato');
@@ -473,6 +480,12 @@
                     document.getElementById('tab-btn-gestione_corsi').classList.remove('hidden');
                     document.getElementById('tab-btn-taratura_pdf').classList.remove('hidden');
                     document.getElementById('tab-btn-sandbox').classList.remove('hidden');
+                }
+
+                // --- SHOW EPIKA BTN FOR PRESIDENT ---
+                if (userRoles.includes('presidente')) {
+                    const epikaPresidenteBtn = document.getElementById('tab-btn-epika-presidente');
+                    if (epikaPresidenteBtn) epikaPresidenteBtn.classList.remove('hidden');
                 }
 
                 document.getElementById('tab-btn-direttivo').classList.remove('hidden');

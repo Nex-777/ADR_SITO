@@ -1,0 +1,192 @@
+/* ===========================================================================
+   EPIKA PORTAL STYLESHEET
+   Classic Antiquity Theme: terracotta (#2a1109), bordeaux (#6B1E2B), 
+   gold (#C9A84C), parchment (#F5E6C8), stone (#2b2b2b)
+   =========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Lato:wght@300;400;700&display=swap');
+
+:root {
+    --epk-terracotta: #2a1109;
+    --epk-terracotta-dark: #150904;
+    --epk-bordeaux: #6B1E2B;
+    --epk-bordeaux-light: #892837;
+    --epk-gold: #C9A84C;
+    --epk-gold-dim: rgba(201, 168, 76, 0.4);
+    --epk-parchment: #F5E6C8;
+    --epk-stone: #2b2b2b;
+    --epk-bg: #110703;
+}
+
+body.epk-body {
+    font-family: 'Lato', sans-serif;
+    background-color: var(--epk-bg);
+    color: var(--epk-parchment);
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+/* Classical Antiquity Headers */
+.epk-headline {
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.1em;
+    color: var(--epk-gold);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.epk-container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+/* Header Navbar */
+.epk-header {
+    border-bottom: 2px solid var(--epk-gold);
+    background: linear-gradient(180deg, var(--epk-terracotta-dark) 0%, var(--epk-bg) 100%);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.epk-logo-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.epk-logo-img {
+    height: 36px;
+    width: auto;
+}
+
+/* Antique Cards and Frames */
+.epk-card {
+    background: linear-gradient(135deg, var(--epk-terracotta) 0%, var(--epk-terracotta-dark) 100%);
+    border: 2px solid var(--epk-gold);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(201, 168, 76, 0.1);
+    padding: 24px;
+    position: relative;
+    border-radius: 4px;
+}
+
+/* Meander / Greek Key border style effect at top of cards */
+.epk-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: repeating-linear-gradient(90deg, var(--epk-gold), var(--epk-gold) 10px, transparent 10px, transparent 20px);
+}
+
+/* Form Styling */
+.epk-label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--epk-gold);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.epk-input {
+    width: 100%;
+    box-sizing: border-box;
+    background-color: var(--epk-terracotta-dark) !important;
+    border: 1px solid var(--epk-gold-dim) !important;
+    color: var(--epk-parchment) !important;
+    font-family: 'Lato', sans-serif;
+    padding: 12px;
+    font-size: 13px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.epk-input:focus {
+    border-color: var(--epk-gold) !important;
+    box-shadow: 0 0 10px rgba(201, 168, 76, 0.3) !important;
+    outline: none;
+}
+
+.epk-input::placeholder {
+    color: rgba(245, 230, 200, 0.4);
+}
+
+/* Antique Buttons */
+.epk-btn {
+    background-color: var(--epk-bordeaux);
+    border: 1px solid var(--epk-gold);
+    color: var(--epk-parchment);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 12px 24px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 4px 0px var(--epk-gold-dim);
+}
+
+.epk-btn:hover {
+    background-color: var(--epk-gold);
+    color: var(--epk-terracotta-dark);
+    box-shadow: 2px 2px 0px var(--epk-parchment);
+    transform: translate(2px, 2px);
+}
+
+.epk-btn-secondary {
+    background-color: transparent;
+    border: 1px solid var(--epk-parchment);
+    color: var(--epk-parchment);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    padding: 8px 16px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.epk-btn-secondary:hover {
+    background-color: rgba(245, 230, 200, 0.05);
+    border-color: var(--epk-gold);
+    color: var(--epk-gold);
+}
+
+/* Utils and Layout */
+.epk-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .epk-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.epk-hidden {
+    display: none !important;
+}
+
+.epk-alert {
+    background-color: rgba(107, 30, 43, 0.2);
+    border-left: 4px solid var(--epk-bordeaux);
+    padding: 16px;
+    color: var(--epk-parchment);
+    font-size: 12px;
+    font-family: monospace;
+    text-transform: uppercase;
+}
