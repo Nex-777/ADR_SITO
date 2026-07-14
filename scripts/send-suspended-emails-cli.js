@@ -37,6 +37,9 @@ async function sendEmail({ to, subject, html }) {
 }
 
 async function run() {
+    let sentCount = 0;
+    let errorCount = 0;
+
     try {
         console.log("Querying suspended athletes...");
         const { data: athletes, error: athletesErr } = await supabase
@@ -68,7 +71,7 @@ async function run() {
 
                 const email = anag.contatti?.email;
                 if (!email) {
-                    console.log(`Athlete ${anag.nome} ${anag.cognome} has no email configured.`);
+                    console.warn(`[SKIP] ${anag.nome} ${anag.cognome} — no email configured.`);
                     continue;
                 }
 
@@ -77,7 +80,7 @@ async function run() {
                 const latestCert = sortedCerts[0];
                 const dataScadenza = latestCert ? latestCert.data_scadenza : 'N/D';
 
-                console.log(`Sending email to ${anag.nome} ${anag.cognome} (${email}) - expired: ${dataScadenza}...`);
+                console.log(`[SENDING] ${anag.nome} ${anag.cognome} (${email}) — cert expired: ${dataScadenza}`);
                 try {
                     await sendEmail({
                         to: email,
@@ -91,14 +94,26 @@ async function run() {
                                 </p>
                                </div>`
                     });
-                    console.log(`Email successfully sent to ${email}`);
+                    console.log(`[OK] Email sent to ${email}`);
+                    sentCount++;
                 } catch (emailErr) {
-                    console.error(`Failed to send email to ${email}:`, emailErr.message);
+                    console.error(`[ERROR] Failed to send to ${email}: ${emailErr.message}`);
+                    errorCount++;
                 }
             }
         }
     } catch (err) {
-        console.error("Execution error:", err);
+        console.error("[FATAL] Execution error:", err);
+        process.exit(1);
+    }
+
+    console.log(`\n===== RIEPILOGO =====`);
+    console.log(`Inviate con successo: ${sentCount}`);
+    console.log(`Errori di invio:      ${errorCount}`);
+    console.log(`=====================\n`);
+
+    if (errorCount > 0) {
+        console.error(`Job terminato con ${errorCount} errori di invio.`);
         process.exit(1);
     }
 }
