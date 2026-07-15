@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.01.94">
+    <link rel="stylesheet" href="epika.css?v=1.01.95">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.01.94"></script>
+    <script src="config.js?v=1.01.95"></script>
 </head>
 <body class="epk-body">
 
     <!-- Header Navbar -->
     <header class="epk-header">
         <div class="epk-logo-group">
-            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.01.94</span></h1>
+            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.01.95</span></h1>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
             <div style="text-align: right;">
@@ -190,120 +190,244 @@
         </section>
 
         <!-- 3. PORTALE AMMINISTRATORE (Fase 5 - Gestione Presidente) -->
-        <section id="epk-admin" class="epk-hidden" style="display: flex; flex-direction: column; gap: 24px;">
-            
-            <!-- Organigramma Mermaid.js -->
-            <div class="epk-card">
-                <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
-                    ORGANIGRAMMA STRUTTURALE GRUPPI DI LAVORO
-                </h2>
-                <div id="epk-mermaid-container" class="mermaid" style="background: rgba(0,0,0,0.2); padding: 20px; border: 1px solid var(--epk-gold-dim); text-align: center; overflow-x: auto;">
-                    <!-- Caricato dinamicamente -->
-                </div>
-            </div>
+        <section id="epk-admin" class="epk-hidden">
+            <div class="epk-admin-layout">
+                <!-- Sidebar -->
+                <aside class="epk-admin-sidebar">
+                    <button id="epk-adm-btn-dash" class="epk-sidebar-btn active" onclick="switchAdminTab('dash')">
+                        DASH GENERALE
+                    </button>
+                    <button id="epk-adm-btn-direttivi" class="epk-sidebar-btn" onclick="switchAdminTab('direttivi')">
+                        DIRETTIVI
+                    </button>
+                    <button id="epk-adm-btn-scab" class="epk-sidebar-btn" onclick="switchAdminTab('scab')">
+                        SCAB
+                    </button>
+                    <button id="epk-adm-btn-allenatori" class="epk-sidebar-btn" onclick="switchAdminTab('allenatori')">
+                        ALLENATORI
+                    </button>
+                    <button id="epk-adm-btn-eventi" class="epk-sidebar-btn" onclick="switchAdminTab('eventi')">
+                        EVENTI & PRESENZE
+                    </button>
+                </aside>
 
-            <!-- Due colonne gestionali superiori -->
-            <div class="epk-grid-2">
-                
-                <!-- Gestione Allenatori (CRUD) -->
-                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
-                    <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
-                        GESTIONE ALLENATORI
-                    </h2>
+                <!-- Content Area -->
+                <div class="epk-admin-content">
                     
-                    <!-- Form aggiunta -->
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="adm-new-allenatore" class="epk-input" placeholder="NUOVO ALLENATORE..." style="flex: 1;">
-                        <button class="epk-btn" onclick="creaAllenatore()" style="padding: 10px 16px; font-size: 10px;">AGGIUNGI</button>
+                    <!-- Tab 1: Dash Generale -->
+                    <div id="epk-adm-tab-dash" class="epk-admin-tab-panel">
+                        <!-- Organigramma Mermaid.js -->
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                ORGANIGRAMMA STRUTTURALE GRUPPI DI LAVORO
+                            </h2>
+                            <div id="epk-mermaid-container" class="mermaid" style="background: rgba(0,0,0,0.2); padding: 20px; border: 1px solid var(--epk-gold-dim); text-align: center; overflow-x: auto;">
+                                <!-- Caricato dinamicamente -->
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="adm-allenatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 220px; overflow-y: auto;">
-                        <!-- Righe allenatori popolati via JS -->
+                    <!-- Tab 2: Direttivi -->
+                    <div id="epk-adm-tab-direttivi" class="epk-admin-tab-panel epk-hidden">
+                        <!-- Qui inseriremo i quadri inversi per ogni direttivo -->
+                        <div class="epk-grid-2" id="adm-direttivi-quadri-list">
+                            <!-- Popolato dinamicamente da JS -->
+                        </div>
                     </div>
+
+                    <!-- Tab 3: SCAB -->
+                    <div id="epk-adm-tab-scab" class="epk-admin-tab-panel epk-hidden">
+                        <div style="display: flex; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                            <button id="scab-tab-btn-abbinamenti" class="epk-btn-secondary" style="border-color: var(--epk-gold); color: var(--epk-gold);" onclick="switchScabSubTab('abbinamenti')">Abbinamenti</button>
+                            <button id="scab-tab-btn-anagrafica" class="epk-btn-secondary" onclick="switchScabSubTab('anagrafica')">Anagrafica SCAB</button>
+                        </div>
+                        
+                        <!-- SCAB Sotto-Tab 1: Abbinamenti -->
+                        <div id="scab-panel-abbinamenti">
+                            <div class="epk-card" style="margin-bottom: 24px; overflow-x: auto;">
+                                <h3 class="epk-headline" style="margin-top: 0; font-size: 14px; margin-bottom: 12px;">ABBINAMENTI PALESTRE</h3>
+                                <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; min-width: 800px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif; font-size: 11px;">
+                                            <th style="padding: 10px;">Palestra</th>
+                                            <th style="padding: 10px;">Allenatore Ref.</th>
+                                            <th style="padding: 10px;">Validatore</th>
+                                            <th style="padding: 10px;">Co-Allenatori</th>
+                                            <th style="padding: 10px;">Allievi ALL</th>
+                                            <th style="padding: 10px; width: 80px;">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="scab-palestre-table-body">
+                                        <!-- Righe popolate via JS -->
+                                    </tbody>
+                                </table>
+                                <button class="epk-btn-secondary" style="margin-top: 12px; font-size: 9px;" onclick="aggiungiRigaAbbinamento('palestra')">+ Aggiungi Palestra</button>
+                            </div>
+
+                            <div class="epk-card" style="overflow-x: auto;">
+                                <h3 class="epk-headline" style="margin-top: 0; font-size: 14px; margin-bottom: 12px;">ABBINAMENTI CENTRI PRATICA</h3>
+                                <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; min-width: 800px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif; font-size: 11px;">
+                                            <th style="padding: 10px;">Centro Pratica</th>
+                                            <th style="padding: 10px;">Allievo Ref.</th>
+                                            <th style="padding: 10px;">Allenatore</th>
+                                            <th style="padding: 10px;">Allievi ALL</th>
+                                            <th style="padding: 10px; width: 80px;">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="scab-centri-table-body">
+                                        <!-- Righe popolate via JS -->
+                                    </tbody>
+                                </table>
+                                <button class="epk-btn-secondary" style="margin-top: 12px; font-size: 9px;" onclick="aggiungiRigaAbbinamento('centro_pratica')">+ Aggiungi Centro Pratica</button>
+                            </div>
+                        </div>
+
+                        <!-- SCAB Sotto-Tab 2: Anagrafica -->
+                        <div id="scab-panel-anagrafica" class="epk-hidden" style="display: flex; flex-direction: column; gap: 20px;">
+                            <div class="epk-grid-2">
+                                <div class="epk-card">
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 12px;">Aggiungi Palestra / Centro</h3>
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        <input type="text" id="scab-new-struttura-nome" class="epk-input" placeholder="NOME STRUTTURA...">
+                                        <select id="scab-new-struttura-tipo" class="epk-input">
+                                            <option value="palestra">PALESTRA</option>
+                                            <option value="centro_pratica">CENTRO PRATICA</option>
+                                        </select>
+                                        <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaStrutturaSCAB()">Aggiungi Struttura</button>
+                                    </div>
+                                    <div id="scab-strutture-list" style="margin-top: 16px; max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                        <!-- Lista strutture populated by JS -->
+                                    </div>
+                                </div>
+
+                                <div class="epk-card">
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 12px;">Aggiungi Soggetto SCAB</h3>
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        <input type="text" id="scab-new-soggetto-valore" class="epk-input" placeholder="NOME SOGGETTO...">
+                                        <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaSoggettoSCAB()">Aggiungi Soggetto</button>
+                                    </div>
+                                    <div id="scab-soggetti-list" style="margin-top: 16px; max-h: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                        <!-- Lista soggetti populated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4: Allenatori -->
+                    <div id="epk-adm-tab-allenatori" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                                GESTIONE ANAGRAFICA ALLENATORI
+                            </h2>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="adm-new-allenatore" class="epk-input" placeholder="NUOVO ALLENATORE..." style="flex: 1;">
+                                <button class="epk-btn" onclick="creaAllenatore()" style="padding: 10px 16px; font-size: 10px;">AGGIUNGI</button>
+                            </div>
+                            <div id="adm-allenatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
+                                <!-- Righe allenatori popolati via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 5: Eventi e Presenze -->
+                    <div id="epk-adm-tab-eventi" class="epk-admin-tab-panel epk-hidden">
+                        <!-- Gestione Eventi e Presenze -->
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 8px;">
+                                <h2 class="epk-headline" style="margin: 0; font-size: 16px;">
+                                    GESTIONE EVENTI STORICI & CONFERMA PRESENZE
+                                </h2>
+                                <button class="epk-btn" onclick="mostraFormCreaEvento()" style="padding: 8px 16px; font-size: 10px;">+ NUOVO EVENTO</button>
+                            </div>
+
+                            <!-- Form Creazione Evento -->
+                            <div id="adm-evento-form-container" class="epk-hidden" style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold); padding: 16px; margin-bottom: 16px;">
+                                <h3 class="epk-headline" style="margin-top: 0; font-size: 12px; margin-bottom: 12px;">CREA EVENTO STORICO RIEVOCATIVO</h3>
+                                <div style="display: flex; flex-direction: column; gap: 12px;">
+                                    <div class="epk-grid-2">
+                                        <div>
+                                            <label class="epk-label">Titolo *</label>
+                                            <input type="text" id="evt-titolo" class="epk-input" required>
+                                        </div>
+                                        <div>
+                                            <label class="epk-label">Luogo *</label>
+                                            <input type="text" id="evt-luogo" class="epk-input" required>
+                                        </div>
+                                    </div>
+                                    <div class="epk-grid-2">
+                                        <div>
+                                            <label class="epk-label">Data Evento *</label>
+                                            <input type="date" id="evt-data" class="epk-input" required>
+                                        </div>
+                                        <div>
+                                            <label class="epk-label">Tipologia *</label>
+                                            <select id="evt-tipo" class="epk-input" required>
+                                                <option value="campo_marzio">CAMPO MARZIO</option>
+                                                <option value="torneo">TORNEO</option>
+                                                <option value="altro">ALTRO / EVENTO GENERALE</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="epk-label">Descrizione Evento</label>
+                                        <textarea id="evt-descrizione" class="epk-input" style="height: 60px; font-family: sans-serif;"></textarea>
+                                    </div>
+                                    <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
+                                        <button class="epk-btn-secondary" onclick="nascondiFormCreaEvento()">ANNULLA</button>
+                                        <button class="epk-btn" onclick="salvaEventoStorico()" style="padding: 10px 20px; font-size: 11px;">SALVA EVENTO</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="adm-eventi-lista" style="display: flex; flex-direction: column; gap: 16px;">
+                                <!-- Righe eventi -->
+                            </div>
+                        </div>
+
+                        <!-- Modal Gestione Presenze -->
+                        <div id="adm-presenze-panel" class="epk-card epk-hidden" style="margin-top: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                <h3 id="adm-presenze-titolo" class="epk-headline" style="margin: 0; font-size: 14px;">GESTIONE PRESENZE: EVENTO</h3>
+                                <button class="epk-btn-secondary" onclick="nascondiPannelloPresenze()">CHIUDI</button>
+                            </div>
+                            <input type="hidden" id="adm-presenze-evento-id">
+                            <div id="adm-presenze-utenti-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                <!-- Iscritti con toggle presenza -->
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-
-                <!-- Gestione Nomine Gruppi di Lavoro -->
-                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
-                    <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
-                        NOMINE GRUPPI DI LAVORO E RUOLI ADMIN
-                    </h2>
-                    <div id="adm-tesserati-nomine-list" style="display: flex; flex-direction: column; gap: 10px; max-h: 280px; overflow-y: auto;">
-                        <!-- Popolato via JS -->
-                    </div>
-                </div>
-
             </div>
 
-            <!-- Gestione Eventi e Presenze -->
-            <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 8px;">
-                    <h2 class="epk-headline" style="margin: 0; font-size: 16px;">
-                        GESTIONE EVENTI STORICI & CONFERMA PRESENZE
-                    </h2>
-                    <button class="epk-btn" onclick="mostraFormCreaEvento()" style="padding: 8px 16px; font-size: 10px;">+ NUOVO EVENTO</button>
-                </div>
-
-                <!-- Form Creazione Evento (nascosto di default) -->
-                <div id="adm-evento-form-container" class="epk-hidden" style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold); padding: 16px; margin-bottom: 16px;">
-                    <h3 class="epk-headline" style="margin-top: 0; font-size: 12px; margin-bottom: 12px;">CREA EVENTO STORICO RIEVOCATIVO</h3>
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <div class="epk-grid-2">
-                            <div>
-                                <label class="epk-label">Titolo Evento *</label>
-                                <input type="text" id="evt-titolo" class="epk-input" required>
-                            </div>
-                            <div>
-                                <label class="epk-label">Luogo *</label>
-                                <input type="text" id="evt-luogo" class="epk-input" required>
-                            </div>
-                        </div>
-                        <div class="epk-grid-2">
-                            <div>
-                                <label class="epk-label">Data Evento *</label>
-                                <input type="date" id="evt-data" class="epk-input" required>
-                            </div>
-                            <div>
-                                <label class="epk-label">Tipologia Evento *</label>
-                                <select id="evt-tipo" class="epk-input" required>
-                                    <option value="campo_marzio">CAMPO MARZIO</option>
-                                    <option value="torneo">TORNEO</option>
-                                    <option value="altro">ALTRO / EVENTO GENERALE</option>
-                                </select>
-                            </div>
-                        </div>
+            <!-- Modale Centralizzato Nomine Direttivi (Step 3.3) -->
+            <div id="adm-nomina-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px;">
+                <div class="epk-card" style="max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9);">
+                    <h3 id="adm-nomina-modal-titolo" class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                        AGGIUNGI MEMBRO AL DIRETTIVO
+                    </h3>
+                    <input type="hidden" id="adm-nomina-modal-gruppo-id">
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
                         <div>
-                            <label class="epk-label">Descrizione Evento</label>
-                            <textarea id="evt-descrizione" class="epk-input" style="height: 60px; font-family: sans-serif;"></textarea>
+                            <label class="epk-label" for="adm-nomina-modal-search">Cerca Tesserato (Nome o Nome Storico)</label>
+                            <input type="text" id="adm-nomina-modal-search" class="epk-input" placeholder="Digita per cercare..." oninput="filtraTesseratiNomina()">
                         </div>
-                        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 8px;">
-                            <button class="epk-btn-secondary" onclick="nascondiFormCreaEvento()">ANNULLA</button>
-                            <button class="epk-btn" onclick="salvaEventoStorico()" style="padding: 10px 20px; font-size: 11px;">SALVA EVENTO</button>
+                        <div id="adm-nomina-modal-results" style="max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px; background: rgba(0,0,0,0.2);">
+                            <!-- Risultati della ricerca -->
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+                            <button class="epk-btn-secondary" onclick="chiudiModaleNomine()">ANNULLA</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Lista Eventi per Admin -->
-                <div id="adm-eventi-lista" style="display: flex; flex-direction: column; gap: 16px;">
-                    <!-- Righe eventi con tasti Gestisci Presenze / Modifica / Elimina -->
-                </div>
             </div>
-
-            <!-- Modal / Pannello Gestione Presenze Evento Specifico -->
-            <div id="adm-presenze-panel" class="epk-card epk-hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
-                    <h3 id="adm-presenze-titolo" class="epk-headline" style="margin: 0; font-size: 14px;">GESTIONE PRESENZE: EVENTO</h3>
-                    <button class="epk-btn-secondary" onclick="nascondiPannelloPresenze()">CHIUDI</button>
-                </div>
-                <input type="hidden" id="adm-presenze-evento-id">
-                <div id="adm-presenze-utenti-list" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Iscritti con toggle presenza -->
-                </div>
-            </div>
-
         </section>
 
     </div>
 
-    <script src="epika.js?v=1.01.94"></script>
+    <script src="epika.js?v=1.01.95"></script>
 </body>
 </html>

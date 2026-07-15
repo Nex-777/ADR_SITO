@@ -11,6 +11,9 @@ let currentUserProfile = null;
 let gruppiStorici = [];
 let gruppiLavoro = [];
 let isEpikaAdmin = false;
+let tesseratiCache = [];
+let scabStrutture = [];
+let scabSoggetti = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     initPortal();
@@ -434,6 +437,8 @@ function formattaData(dateStr) {
 // FASE 5 — LOGICA DI AMMINISTRAZIONE DEL PRESIDENTE
 // ===========================================================================
 
+let activeAdminTab = 'dash';
+
 async function renderAdminDashboard() {
     try {
         // Carica la lista dei gruppi di lavoro per il selettore nomine
@@ -447,16 +452,623 @@ async function renderAdminDashboard() {
             gruppiLavoro = gruppiL || [];
         }
 
-        // Esegui le viste in ordine
-        await renderAllenatoriAdmin();
-        await renderTesseratiNomine();
-        await renderEventiAdmin();
-        await renderOrganigrammaMermaid();
+        // Carica il tab attivo
+        switchAdminTab(activeAdminTab);
 
     } catch (err) {
         console.error("Errore renderAdminDashboard:", err);
     }
 }
+
+function switchAdminTab(tab) {
+    activeAdminTab = tab;
+    
+    // Rimuove classe active da tutti i bottoni e nasconde tutti i pannelli
+    document.querySelectorAll('.epk-sidebar-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.epk-admin-tab-panel').forEach(panel => panel.classList.add('epk-hidden'));
+    
+    // Attiva bottone e mostra pannello corrispondente
+    const btn = document.getElementById(`epk-adm-btn-${tab}`);
+    if (btn) btn.classList.add('active');
+    
+    const panel = document.getElementById(`epk-adm-tab-${tab}`);
+    if (panel) panel.classList.remove('epk-hidden');
+    
+    // Caricamento dei dati on-demand per ottimizzare le query
+    if (tab === 'dash') {
+        renderOrganigrammaMermaid();
+    } else if (tab === 'direttivi') {
+        renderTesseratiNomineInverso();
+    } else if (tab === 'scab') {
+        renderSCABTab();
+    } else if (tab === 'allenatori') {
+        renderAllenatoriAdmin();
+    } else if (tab === 'eventi') {
+        renderEventiAdmin();
+    }
+}
+
+// STUBS PER LE PROSSIME FASI (Evitano crash a runtime)
+// B — Gestione Nomine Gruppi di Lavoro e Admin (STRUTTURA INVERSA)
+async function renderTesseratiNomineInverso() {
+    const container = document.getElementById('adm-direttivi-quadri-list');
+    if (!container) return;
+    
+    container.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray; grid-column: span 2;">Caricamento quadri in corso...</p>';
+    
+    try {
+        // 1. Carica tutti i profili completati
+        const { data: profili, error: profError } = await supabaseClient
+            .from('epika_profili')
+            .select('*')
+            .eq('profilo_completato', true)
+            .order('nome_di_battaglia', { ascending: true });
+
+        if (profError) throw profError;
+        tesseratiCache = profili || [];
+
+        // 2. Carica anagrafica utenti reali
+        const uids = tesseratiCache.map(p => p.id);
+        let utentiMappa = {};
+        if (uids.length > 0) {
+            const { data: utentiD } = await supabaseClient
+                .from('utenti')
+                .select('id, nome, cognome')
+                .in('id', uids);
+            (utentiD || []).forEach(u => {
+                utentiMappa[u.id] = `${u.nome} ${u.cognome}`;
+            });
+        }
+
+        // Attacca il nome reale ai record per abilitare la ricerca
+        tesseratiCache.forEach(t => {
+            t.nome_reale = utentiMappa[t.id] || 'N/D';
+        });
+
+        // Raggruppa i profili per gruppo_lavoro_id
+        const membriPerGruppo = {};
+        tesseratiCache.forEach(p => {
+            const gid = p.gruppo_lavoro_id || 0; // 0 = Senza nomina
+            if (!membriPerGruppo[gid]) membriPerGruppo[gid] = [];
+            membriPerGruppo[gid].push(p);
+        });
+
+        container.innerHTML = '';
+
+        // Genera i quadri per ciascun gruppo di lavoro attivo
+        gruppiLavoro.forEach(g => {
+            const membri = membriPerGruppo[g.id] || [];
+            let membriHTML = '';
+            
+            if (membri.length === 0) {
+                membriHTML = '<p style="font-size: 11px; color: rgba(245, 230, 200, 0.4); text-transform: uppercase; font-style: italic; margin: 10px 0;">Nessun componente nominato</p>';
+            } else {
+                membri.forEach(m => {
+                    const nomeReale = utentiMappa[m.id] || 'N/D';
+                    membriHTML += `
+                        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.1); padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
+                            <div>
+                                <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold);">${m.nome_di_battaglia}</span>
+                                <span style="font-size: 9px; display: block; color: rgba(245,230,200,0.5);">Real: ${nomeReale.toUpperCase()}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <input type="checkbox" id="chk-adm-${g.id}-${m.id}" ${m.is_admin_epika ? 'checked' : ''} onchange="salvaStatoAdminInverso('${m.id}', this.checked)" style="cursor: pointer; transform: scale(0.9);">
+                                    <label for="chk-adm-${g.id}-${m.id}" style="font-size: 8px; font-weight: bold; color: var(--epk-gold); cursor: pointer; text-transform: uppercase;">ADMIN</label>
+                                </div>
+                                <button class="epk-btn-secondary" style="font-size: 8px; padding: 2px 6px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="rimuoviNominaLavoroInverso('${m.id}')">
+                                    RIMUOVI
+                                </button>
+                            </div>
+                        </div>`;
+                });
+            }
+
+            container.innerHTML += `
+                <div class="epk-card" style="display: flex; flex-direction: column; gap: 12px;">
+                    <h3 class="epk-headline" style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 6px;">
+                        ${g.nome.toUpperCase()}
+                    </h3>
+                    <div style="flex-grow: 1; max-h: 220px; overflow-y: auto; padding-right: 4px;">
+                        ${membriHTML}
+                    </div>
+                    <button class="epk-btn-secondary" style="font-size: 9px; width: 100%; text-align: center; margin-top: 8px; border-color: var(--epk-gold); color: var(--epk-gold);" onclick="apriModaleNomina(${g.id}, '${g.nome.replace(/'/g, "\\'")}')">
+                        + AGGIUNGI COMPONENTE
+                    </button>
+                </div>`;
+        });
+
+    } catch (err) {
+        console.error("Errore renderTesseratiNomineInverso:", err);
+        container.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: red;">Errore durante il caricamento delle nomine.</p>';
+    }
+}
+
+// Logica per il Modale Centralizzato di Ricerca e Aggiunta
+function apriModaleNomina(gruppoId, gruppoNome) {
+    const modal = document.getElementById('adm-nomina-modal');
+    if (!modal) return;
+    
+    document.getElementById('adm-nomina-modal-gruppo-id').value = gruppoId;
+    document.getElementById('adm-nomina-modal-titolo').textContent = `AGGIUNGI MEMBRO A: ${gruppoNome.toUpperCase()}`;
+    document.getElementById('adm-nomina-modal-search').value = '';
+    
+    modal.classList.remove('epk-hidden');
+    filtraTesseratiNomina();
+}
+
+function chiudiModaleNomine() {
+    const modal = document.getElementById('adm-nomina-modal');
+    if (modal) modal.classList.add('epk-hidden');
+}
+
+function filtraTesseratiNomina() {
+    const searchVal = document.getElementById('adm-nomina-modal-search').value.trim().toUpperCase();
+    const gruppoId = parseInt(document.getElementById('adm-nomina-modal-gruppo-id').value);
+    const resultsContainer = document.getElementById('adm-nomina-modal-results');
+    
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = '';
+    
+    // Filtra i tesserati: non devono far parte del gruppo attivo e devono matchare il nome
+    const filtered = tesseratiCache.filter(t => {
+        if (t.gruppo_lavoro_id === gruppoId) return false;
+        if (!searchVal) return true;
+        
+        const battleMatch = t.nome_di_battaglia && t.nome_di_battaglia.toUpperCase().includes(searchVal);
+        const realMatch = t.nome_reale && t.nome_reale.toUpperCase().includes(searchVal);
+        return battleMatch || realMatch;
+    });
+    
+    if (filtered.length === 0) {
+        resultsContainer.innerHTML = '<p style="font-size: 11px; text-align: center; color: rgba(245,230,200,0.5); text-transform: uppercase; padding: 12px;">Nessun tesserato trovato</p>';
+        return;
+    }
+    
+    filtered.forEach(t => {
+        resultsContainer.innerHTML += `
+            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
+                <div>
+                    <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold);">${t.nome_di_battaglia}</span>
+                </div>
+                <button class="epk-btn" style="font-size: 8px; padding: 6px 12px;" onclick="salvaNominaLavoroInverso('${t.id}', ${gruppoId})">
+                    AGGIUNGI
+                </button>
+            </div>`;
+    });
+}
+
+// Chiamate API Supabase per il salvataggio
+async function salvaNominaLavoroInverso(utenteId, gruppoId) {
+    try {
+        const { error } = await supabaseClient
+            .from('epika_profili')
+            .update({ gruppo_lavoro_id: gruppoId })
+            .eq('id', utenteId);
+            
+        if (error) throw error;
+        
+        chiudiModaleNomine();
+        await renderTesseratiNomineInverso();
+        await renderOrganigrammaMermaid();
+    } catch (e) {
+        console.error("Errore salvataggio nomina inverso:", e);
+        alert("Impossibile salvare la nomina. Riprova.");
+    }
+}
+
+async function rimuoviNominaLavoroInverso(utenteId) {
+    try {
+        const { error } = await supabaseClient
+            .from('epika_profili')
+            .update({ gruppo_lavoro_id: null })
+            .eq('id', utenteId);
+            
+        if (error) throw error;
+        
+        await renderTesseratiNomineInverso();
+        await renderOrganigrammaMermaid();
+    } catch (e) {
+        console.error("Errore rimozione nomina inverso:", e);
+        alert("Impossibile rimuovere il componente. Riprova.");
+    }
+}
+
+async function salvaStatoAdminInverso(utenteId, isChecked) {
+    try {
+        const { error } = await supabaseClient
+            .from('epika_profili')
+            .update({ is_admin_epika: isChecked })
+            .eq('id', utenteId);
+            
+        if (error) throw error;
+    } catch (e) {
+        console.error("Errore aggiornamento ruolo admin inverso:", e);
+        alert("Errore durante l'aggiornamento dei privilegi amministratore.");
+    }
+}
+
+async function renderSCABTab() {
+    try {
+        // 1. Carica strutture SCAB
+        const { data: struttureD, error: strErr } = await supabaseClient
+            .from('epika_scab_strutture')
+            .select('*')
+            .order('tipo', { ascending: false }) // Palestre prima dei centri
+            .order('nome', { ascending: true });
+            
+        if (strErr) throw strErr;
+        scabStrutture = struttureD || [];
+
+        // 2. Carica soggetti SCAB (tipo = 'soggetto_scab')
+        const { data: soggettiD, error: sogErr } = await supabaseClient
+            .from('epika_opzioni')
+            .select('*')
+            .eq('tipo', 'soggetto_scab')
+            .eq('attivo', true)
+            .order('valore', { ascending: true });
+            
+        if (sogErr) throw sogErr;
+        scabSoggetti = soggettiD || [];
+
+        // 3. Carica abbinamenti esistenti
+        const { data: abbinamentiD, error: abbErr } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .select('*');
+            
+        if (abbErr) throw abbErr;
+        const abbinamentiMap = {};
+        (abbinamentiD || []).forEach(a => {
+            abbinamentiMap[a.struttura_id] = a;
+        });
+
+        // 4. Renderizza Anagrafiche
+        renderSCABAnagrafica();
+
+        // 5. Renderizza Abbinamenti
+        renderSCABAbbinamenti(abbinamentiMap);
+
+    } catch (e) {
+        console.error("Errore renderSCABTab:", e);
+    }
+}
+
+// Rendering Anagrafica SCAB (Step 4.1)
+function renderSCABAnagrafica() {
+    const struttureList = document.getElementById('scab-strutture-list');
+    const soggettiList = document.getElementById('scab-soggetti-list');
+    if (!struttureList || !soggettiList) return;
+
+    // Renderizza strutture
+    struttureList.innerHTML = '';
+    scabStrutture.forEach(s => {
+        const badge = s.tipo === 'palestra' ? 'PAL' : 'CP';
+        const activeText = s.attivo ? 'DISATTIVA' : 'ATTIVA';
+        const activeStyle = s.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
+        
+        struttureList.innerHTML += `
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
+                <div>
+                    <span style="font-size: 9px; font-weight: bold; padding: 2px 4px; background: rgba(201,168,76,0.2); border: 1px solid var(--epk-gold); border-radius: 2px; margin-right: 6px;">${badge}</span>
+                    <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.nome.toUpperCase()}</span>
+                </div>
+                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoStrutturaSCAB('${s.id}', ${s.attivo})">
+                    ${activeText}
+                </button>
+            </div>`;
+    });
+
+    // Renderizza soggetti
+    soggettiList.innerHTML = '';
+    scabSoggetti.forEach(s => {
+        soggettiList.innerHTML += `
+            <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
+                <span style="font-size: 13px; font-weight: bold;">${s.valore.toUpperCase()}</span>
+                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="toggleStatoSoggettoSCAB('${s.id}', ${s.attivo})">
+                    ELIMINA
+                </button>
+            </div>`;
+    });
+}
+
+// Rendering Abbinamenti SCAB (Step 4.2)
+function renderSCABAbbinamenti(abbinamentiMap) {
+    const palestreBody = document.getElementById('scab-palestre-table-body');
+    const centriBody = document.getElementById('scab-centri-table-body');
+    if (!palestreBody || !centriBody) return;
+
+    palestreBody.innerHTML = '';
+    centriBody.innerHTML = '';
+
+    scabStrutture.forEach(s => {
+        if (!s.attivo) return;
+
+        const abb = abbinamentiMap[s.id] || {
+            allenatore_ref_id: null,
+            validatore_id: null,
+            allenatori_co_ids: [],
+            allievo_ref_id: null,
+            allievi_ids: []
+        };
+        
+        // Garanzia di fallback se il DB restituisce null per gli array
+        abb.allenatori_co_ids = abb.allenatori_co_ids || [];
+        abb.allievi_ids = abb.allievi_ids || [];
+
+        if (s.tipo === 'palestra') {
+            // Dropdown Allenatore Referente
+            const refSelect = `<select id="select-pal-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allenatore_ref_id)}</select>`;
+            
+            // Dropdown Validatore
+            const valSelect = `<select id="select-pal-val-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.validatore_id)}</select>`;
+            
+            // Dropdown Co-Allenatori (mappati su array index 0 e 1)
+            const co1Select = `<select id="select-pal-co1-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allenatori_co_ids[0])}</select>`;
+            const co2Select = `<select id="select-pal-co2-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allenatori_co_ids[1])}</select>`;
+            
+            // Dropdown Allievi (mappati su array index 0-3)
+            const all1Select = `<select id="select-pal-all1-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[0])}</select>`;
+            const all2Select = `<select id="select-pal-all2-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[1])}</select>`;
+            const all3Select = `<select id="select-pal-all3-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[2])}</select>`;
+            const all4Select = `<select id="select-pal-all4-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allievi_ids[3])}</select>`;
+
+            palestreBody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 8px; font-weight: bold; color: var(--epk-gold);">${s.nome.toUpperCase()}</td>
+                    <td style="padding: 8px;">${refSelect}</td>
+                    <td style="padding: 8px;">${valSelect}</td>
+                    <td style="padding: 8px; display: flex; flex-direction: column;">${co1Select}${co2Select}</td>
+                    <td style="padding: 8px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                            <div>${all1Select}${all2Select}</div>
+                            <div>${all3Select}${all4Select}</div>
+                        </div>
+                    </td>
+                    <td style="padding: 8px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <button class="epk-btn" style="font-size: 8px; padding: 6px; width: 100%; border-radius: 2px;" onclick="salvaAbbinamentoSCAB(${s.id}, 'palestra')">SALVA</button>
+                            <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px; width: 100%; border-radius: 2px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="pulisciAbbinamentoSCAB(${s.id})">PULISCI</button>
+                        </div>
+                    </td>
+                </tr>`;
+        } else {
+            // Dropdown Allievo Ref. (Centro Pratica)
+            const allRefSelect = `<select id="select-cp-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allievo_ref_id)}</select>`;
+            
+            // Dropdown Allenatore (Centro Pratica)
+            const alnSelect = `<select id="select-cp-aln-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allenatore_ref_id)}</select>`;
+            
+            // Dropdown Allievi (Centro Pratica, maps to allievi_ids 0-3)
+            const all1Select = `<select id="select-cp-all1-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[0])}</select>`;
+            const all2Select = `<select id="select-cp-all2-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[1])}</select>`;
+            const all3Select = `<select id="select-cp-all3-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[2])}</select>`;
+            const all4Select = `<select id="select-cp-all4-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allievi_ids[3])}</select>`;
+
+            centriBody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 8px; font-weight: bold; color: var(--epk-gold);">${s.nome.toUpperCase()}</td>
+                    <td style="padding: 8px;">${allRefSelect}</td>
+                    <td style="padding: 8px;">${alnSelect}</td>
+                    <td style="padding: 8px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                            <div>${all1Select}${all2Select}</div>
+                            <div>${all3Select}${all4Select}</div>
+                        </div>
+                    </td>
+                    <td style="padding: 8px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <button class="epk-btn" style="font-size: 8px; padding: 6px; width: 100%; border-radius: 2px;" onclick="salvaAbbinamentoSCAB(${s.id}, 'centro_pratica')">SALVA</button>
+                            <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px; width: 100%; border-radius: 2px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="pulisciAbbinamentoSCAB(${s.id})">PULISCI</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }
+    });
+}
+
+function generaOpzioniSoggetti(selectedValue) {
+    let html = '<option value="">-- NESSUNO --</option>';
+    scabSoggetti.forEach(s => {
+        const sel = s.id === selectedValue ? 'selected' : '';
+        html += `<option value="${s.id}" ${sel}>${s.valore.toUpperCase()}</option>`;
+    });
+    return html;
+}
+
+// Logiche di Salvataggio e Creazione (Step 4.3)
+async function creaStrutturaSCAB() {
+    const nomeInput = document.getElementById('scab-new-struttura-nome');
+    const tipoSelect = document.getElementById('scab-new-struttura-tipo');
+    const nome = nomeInput.value.trim();
+    const tipo = tipoSelect.value;
+
+    if (!nome) {
+        alert("Inserisci un nome valido per la struttura.");
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_scab_strutture')
+            .insert({ nome: nome, tipo: tipo });
+            
+        if (error) throw error;
+        nomeInput.value = '';
+        await renderSCABTab();
+    } catch (e) {
+        console.error(e);
+        alert("Errore durante il salvataggio della struttura.");
+    }
+}
+
+async function toggleStatoStrutturaSCAB(id, statoAttuale) {
+    try {
+        const { error } = await supabaseClient
+            .from('epika_scab_strutture')
+            .update({ attivo: !statoAttuale })
+            .eq('id', id);
+            
+        if (error) throw error;
+        await renderSCABTab();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function creaSoggettoSCAB() {
+    const valoreInput = document.getElementById('scab-new-soggetto-valore');
+    const valore = valoreInput.value.trim();
+
+    if (!valore) {
+        alert("Inserisci un nome valido.");
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_opzioni')
+            .insert({ tipo: 'soggetto_scab', valore: valore });
+            
+        if (error) throw error;
+        valoreInput.value = '';
+        await renderSCABTab();
+    } catch (e) {
+        console.error(e);
+        alert("Errore durante il salvataggio del soggetto.");
+    }
+}
+
+async function toggleStatoSoggettoSCAB(id, statoAttuale) {
+    if (!confirm("Sei sicuro di voler eliminare questo soggetto?")) return;
+    try {
+        const { error } = await supabaseClient
+            .from('epika_opzioni')
+            .delete()
+            .eq('id', id);
+            
+        if (error) throw error;
+        await renderSCABTab();
+    } catch (e) {
+        console.error(e);
+        alert("Impossibile eliminare il soggetto, potrebbe essere associato a degli abbinamenti.");
+    }
+}
+
+async function salvaAbbinamentoSCAB(strutturaId, tipoStruttura) {
+    try {
+        let payload = {
+            struttura_id: strutturaId,
+            allenatore_ref_id: null,
+            validatore_id: null,
+            allenatori_co_ids: [],
+            allievo_ref_id: null,
+            allievi_ids: []
+        };
+
+        if (tipoStruttura === 'palestra') {
+            const refVal = document.getElementById(`select-pal-ref-${strutturaId}`).value;
+            const valVal = document.getElementById(`select-pal-val-${strutturaId}`).value;
+            const co1Val = document.getElementById(`select-pal-co1-${strutturaId}`).value;
+            const co2Val = document.getElementById(`select-pal-co2-${strutturaId}`).value;
+            const all1Val = document.getElementById(`select-pal-all1-${strutturaId}`).value;
+            const all2Val = document.getElementById(`select-pal-all2-${strutturaId}`).value;
+            const all3Val = document.getElementById(`select-pal-all3-${strutturaId}`).value;
+            const all4Val = document.getElementById(`select-pal-all4-${strutturaId}`).value;
+
+            payload.allenatore_ref_id = refVal ? parseInt(refVal) : null;
+            payload.validatore_id = valVal ? parseInt(valVal) : null;
+            
+            // Build co-allenatori array
+            const coIds = [];
+            if (co1Val) coIds.push(parseInt(co1Val));
+            if (co2Val) coIds.push(parseInt(co2Val));
+            payload.allenatori_co_ids = coIds;
+
+            // Build allievi array
+            const allieviIds = [];
+            if (all1Val) allieviIds.push(parseInt(all1Val));
+            if (all2Val) allieviIds.push(parseInt(all2Val));
+            if (all3Val) allieviIds.push(parseInt(all3Val));
+            if (all4Val) allieviIds.push(parseInt(all4Val));
+            payload.allievi_ids = allieviIds;
+        } else {
+            const allRefVal = document.getElementById(`select-cp-ref-${strutturaId}`).value;
+            const alnVal = document.getElementById(`select-cp-aln-${strutturaId}`).value;
+            const all1Val = document.getElementById(`select-cp-all1-${strutturaId}`).value;
+            const all2Val = document.getElementById(`select-cp-all2-${strutturaId}`).value;
+            const all3Val = document.getElementById(`select-cp-all3-${strutturaId}`).value;
+            const all4Val = document.getElementById(`select-cp-all4-${strutturaId}`).value;
+
+            payload.allievo_ref_id = allRefVal ? parseInt(allRefVal) : null;
+            payload.allenatore_ref_id = alnVal ? parseInt(alnVal) : null;
+
+            // Build allievi array
+            const allieviIds = [];
+            if (all1Val) allieviIds.push(parseInt(all1Val));
+            if (all2Val) allieviIds.push(parseInt(all2Val));
+            if (all3Val) allieviIds.push(parseInt(all3Val));
+            if (all4Val) allieviIds.push(parseInt(all4Val));
+            payload.allievi_ids = allieviIds;
+        }
+
+        const { error } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .upsert(payload, { onConflict: 'struttura_id' });
+
+        if (error) throw error;
+        alert("Abbinamento salvato con successo!");
+        await renderSCABTab();
+
+    } catch (e) {
+        console.error(e);
+        alert("Impossibile salvare l'abbinamento. Riprova.");
+    }
+}
+
+async function pulisciAbbinamentoSCAB(strutturaId) {
+    if (!confirm("Vuoi azzerare gli abbinamenti per questa struttura?")) return;
+    try {
+        const { error } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .delete()
+            .eq('struttura_id', strutturaId);
+
+        if (error) throw error;
+        await renderSCABTab();
+    } catch (e) {
+        console.error(e);
+        alert("Errore durante l'azzeramento.");
+    }
+}
+
+// Stub di default per aggiungere riga abbinamento
+function aggiungiRigaAbbinamento(tipo) {
+    alert("Per aggiungere un abbinamento, inserisci prima la struttura nel tab 'Anagrafica SCAB'. Verrà mostrata automaticamente qui.");
+    switchScabSubTab('anagrafica');
+}
+
+let activeScabSubTab = 'abbinamenti';
+function switchScabSubTab(subTab) {
+    activeScabSubTab = subTab;
+    document.getElementById('scab-panel-abbinamenti').classList.add('epk-hidden');
+    document.getElementById('scab-panel-anagrafica').classList.add('epk-hidden');
+    document.getElementById('scab-tab-btn-abbinamenti').style.borderColor = 'transparent';
+    document.getElementById('scab-tab-btn-abbinamenti').style.color = 'var(--epk-parchment)';
+    document.getElementById('scab-tab-btn-anagrafica').style.borderColor = 'transparent';
+    document.getElementById('scab-tab-btn-anagrafica').style.color = 'var(--epk-parchment)';
+
+    const btn = document.getElementById(`scab-tab-btn-${subTab}`);
+    if (btn) {
+        btn.style.borderColor = 'var(--epk-gold)';
+        btn.style.color = 'var(--epk-gold)';
+    }
+
+    const panel = document.getElementById(`scab-panel-${subTab}`);
+    if (panel) {
+        panel.classList.remove('epk-hidden');
+    }
+}
+
 
 // A — Gestione Allenatori (CRUD)
 async function renderAllenatoriAdmin() {

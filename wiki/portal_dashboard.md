@@ -23,7 +23,7 @@ The management board organizes athletes and verification files via three registr
 
 ## 👻 Ghost Users Resolution Panel
 
-Added in version **1.01.94** and updated in **1.01.94**:
+Added in version **1.01.95** and updated in **1.01.95**:
 -   **Problem**: Users creating credentials (`auth.users`) and public profiles (`public.utenti`) but abandoning registration during OTP signing left "orphan/ghost" rows in the DB, blocking their emails.
 -   **Dashboard Section**: "REGISTRAZIONI INCOMPLETE" (within the approval panel).
 -   **Behavior**: Identifies pending users who lack `anagrafiche` profiles.
@@ -33,7 +33,7 @@ Added in version **1.01.94** and updated in **1.01.94**:
 
 ## 🏋️‍♂️ Member & Athlete Dashboard Panels
 
-Added in version **1.01.94**:
+Added in version **1.01.95**:
 Standard athletes and members (`!isBoardMember` such as `tesserato_esterno` or `socio_approvato`) have a personalized workspace:
 
 ### 1. Panoramica (Overview)
@@ -58,7 +58,7 @@ Standard athletes and members (`!isBoardMember` such as `tesserato_esterno` or `
 -   **Catalogo**: A grid showing all active activities. Supports multi-tier subscription plans (e.g. Mensile, Trimestrale, Semestrale, Annuale) rendered as a brutalist select dropdown that dynamically updates the price tag on option changes.
 -   **Reservations**: Display of active bookings.
 -   **Payment Redirection**: Redirects to a dynamic Stripe session specifying the exact plan selected (or registers directly for free events).
--   *Updated in version **1.01.94** to support dynamic course checkout based on chosen plans (e.g. Strongman e Powerlifting, Ibrido, SCAB).*
+-   *Updated in version **1.01.95** to support dynamic course checkout based on chosen plans (e.g. Strongman e Powerlifting, Ibrido, SCAB).*
 
 ### 5. Pagamenti e Ricevute (Payments & Receipts)
 -   Lists all user payments (memberships, donations, and events).
@@ -68,7 +68,7 @@ Standard athletes and members (`!isBoardMember` such as `tesserato_esterno` or `
 
 ## 🏋️‍♂️ Gestione Corsi ed Eventi (Direttivo)
 
-Aggiunto nella versione **1.01.94**:
+Aggiunto nella versione **1.01.95**:
 -   **Ruoli Autorizzati**: `presidente` e `vice_presidente`.
 -   **Dashboard Section**: Tab "GESTIONE CORSI" nella sidebar amministrativa.
 -   **Funzionalità CRUD**:
@@ -84,7 +84,7 @@ Aggiunto nella versione **1.01.94**:
 
 ## 👨‍🏫 Area Istruttore
 
-Aggiunta nella versione **1.01.94**:
+Aggiunta nella versione **1.01.95**:
 -   **Ruolo Autorizzato**: `istruttore`.
 -   **Dashboard Section**: Tab "I MIEI CORSI" (contesto `instructor` nel switcher).
 -   **Widget 1: I Miei Corsi**:
