@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.90"
+                VERSION: "1.01.91"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -336,6 +336,17 @@
             currentViewContext = view;
             localStorage.setItem('currentViewContext', view);
             renderContextUI();
+            // Se si passa a un contesto non-board, mostra e aggiorna i widget personali
+            const isBoardContext = view === 'board';
+            const widgetContainer = document.getElementById('user-panoramica-widgets');
+            if (widgetContainer) {
+                if (!isBoardContext) {
+                    widgetContainer.classList.remove('hidden');
+                    populateUserPanoramicaSummary().catch(console.error);
+                } else {
+                    widgetContainer.classList.add('hidden');
+                }
+            }
         }
 
         function renderContextUI() {
@@ -350,7 +361,7 @@
             // Funzione di utilità per nascondere tutti i bottoni tab amministrativi e atleti
             function hideAllTabs() {
                 const tabs = [
-                    'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
+                    'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti', 'user_documento',
                     'instructor_corsi', 'volunteer_eventi',
                     'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf', 'sandbox',
                     'registro_istruttori', 'registro_volontari', 'epika-presidente', 'user-epika-disabled'
@@ -393,6 +404,8 @@
                     document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
                 }
 
+                document.getElementById('tab-btn-user_documento').classList.remove('hidden');
+
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
 
@@ -414,6 +427,7 @@
                 document.getElementById('tab-btn-user_corsi').classList.remove('hidden');
                 document.getElementById('tab-btn-user_eventi').classList.remove('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
+                document.getElementById('tab-btn-user_documento').classList.remove('hidden');
                 document.getElementById('tab-btn-verbali_assemblea').classList.remove('hidden');
                 document.getElementById('tab-btn-bilanci').classList.remove('hidden');
                 document.getElementById('tab-btn-tesserati').classList.remove('hidden');
@@ -432,6 +446,7 @@
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
+                document.getElementById('tab-btn-user_documento').classList.remove('hidden');
                 document.getElementById('tab-btn-instructor_corsi').classList.remove('hidden');
 
                 switchTab('user_profilo');
@@ -446,6 +461,7 @@
                 // Mostra pulsanti base e pulsanti volontario
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                document.getElementById('tab-btn-user_documento').classList.remove('hidden');
                 document.getElementById('tab-btn-volunteer_eventi').classList.remove('hidden');
 
                 switchTab('user_profilo');
@@ -1089,6 +1105,99 @@
 
         let approvazioniData = [];
 
+        async function loadDocsAttesa() {
+            const listEl = document.getElementById('docs-attesa-list');
+            const badgeEl = document.getElementById('badge-docs-attesa');
+            if (!listEl) return;
+            try {
+                const { data: docs, error } = await supabaseClient
+                    .from('documenti_identita')
+                    .select('id, anagrafica_id, tipo_documento, file_url, stato_validazione, note_ai, data_scadenza, created_at, anagrafiche(nome, cognome, codice_fiscale)')
+                    .in('stato_validazione', ['GIALLO', 'IN_ATTESA'])
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!docs || docs.length === 0) {
+                    listEl.innerHTML = `<p class="text-xs text-gray-500 uppercase">✓ Nessun documento in attesa di verifica.</p>`;
+                    if (badgeEl) badgeEl.classList.add('hidden');
+                    return;
+                }
+
+                if (badgeEl) {
+                    badgeEl.textContent = `${docs.length} IN ATTESA`;
+                    badgeEl.classList.remove('hidden');
+                }
+
+                listEl.innerHTML = docs.map(doc => {
+                    const anag = doc.anagrafiche;
+                    const nomeCognome = anag ? `${anag.nome} ${anag.cognome}` : 'N/D';
+                    const cf = anag?.codice_fiscale || 'N/D';
+                    const dataScad = doc.data_scadenza ? new Date(doc.data_scadenza).toLocaleDateString('it-IT') : 'N/D';
+                    const tipoDoc = doc.tipo_documento || 'PERSONALE';
+                    const dataCar = new Date(doc.created_at).toLocaleDateString('it-IT');
+                    const note = doc.note_ai || '';
+
+                    return `
+                        <div class="border border-white/10 p-4 bg-black/30 space-y-3" data-doc-id="${doc.id}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-headline font-bold text-white uppercase">${nomeCognome}</p>
+                                    <p class="text-[9px] text-gray-400 font-mono">${cf} — ${tipoDoc} — Caricato il ${dataCar}</p>
+                                    <p class="text-[9px] text-gray-400">Scadenza doc: <span class="text-amber-300">${dataScad}</span></p>
+                                    ${note ? `<p class="text-[9px] text-amber-400 mt-1">AI: "${note}"</p>` : ''}
+                                </div>
+                                <span class="px-1.5 py-0.5 text-[8px] bg-amber-900 text-amber-300 font-headline font-bold rounded uppercase shrink-0">${doc.stato_validazione}</span>
+                            </div>
+                            <div class="flex gap-2 flex-wrap">
+                                <button onclick="handleDocManualValidation('${doc.id}', 'VERDE')" class="bg-green-800 hover:bg-green-600 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">✓ APPROVA</button>
+                                <button onclick="handleDocManualValidation('${doc.id}', 'ROSSO')" class="bg-red-900 hover:bg-red-700 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">✗ RIFIUTA</button>
+                                <button onclick="handleDocManualValidation('${doc.id}', 'GIALLO')" class="bg-gray-800 hover:bg-gray-600 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">⚠ RINVIA AI</button>
+                            </div>
+                            <div class="hidden space-y-2" id="doc-nota-${doc.id}">
+                                <input type="text" id="doc-nota-text-${doc.id}" class="w-full bg-black border border-white/20 text-xs text-white p-2 font-mono" placeholder="Inserisci una nota opzionale...">
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Handler called inline
+                window.handleDocManualValidation = async (docId, nuovoStato) => {
+                    const noteEl = document.getElementById(`doc-nota-text-${docId}`);
+                    const nota = noteEl?.value || '';
+                    const noteContainer = document.getElementById(`doc-nota-${docId}`);
+
+                    if ((nuovoStato === 'ROSSO' || nuovoStato === 'GIALLO') && noteContainer) {
+                        noteContainer.classList.remove('hidden');
+                        if (!nota) {
+                            noteEl.focus();
+                            noteEl.placeholder = '⚠ Inserisci una nota motivazionale obbligatoria';
+                            return;
+                        }
+                    }
+
+                    try {
+                        const { data: session } = await supabaseClient.auth.getSession();
+                        const token = session?.session?.access_token;
+                        const res = await fetch(`${APP_CONFIG.API_BASE_URL}/api/validate-doc`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ doc_id: docId, is_manual: true, nuovo_stato: nuovoStato, note: nota || `Validazione manuale: ${nuovoStato}` })
+                        });
+                        if (!res.ok) throw new Error(await res.text());
+                        await loadDocsAttesa();
+                    } catch (err) {
+                        console.error('Errore validazione manuale documento:', err);
+                        alert('Errore durante la validazione: ' + err.message);
+                    }
+                };
+
+            } catch (err) {
+                console.error('Errore loadDocsAttesa:', err);
+                listEl.innerHTML = `<p class="text-xs text-red-400 uppercase">Errore nel caricamento dei documenti.</p>`;
+            }
+        }
+
         async function loadApprovazioni() {
             try {
                 const { data, error } = await supabaseClient
@@ -1128,7 +1237,11 @@
                             documenti_identita (
                                 id,
                                 tipologia,
-                                file_url
+                                tipo_documento,
+                                file_url,
+                                stato_validazione,
+                                note_ai,
+                                data_scadenza
                             )
                         )
                     `)
@@ -5218,7 +5331,7 @@
 
         async function loadUserDashboard() {
             const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
-            if (!isBoardMember) {
+            if (!isBoardMember || currentViewContext !== 'board') {
                 document.getElementById('user-panoramica-widgets').classList.remove('hidden');
                 await populateUserPanoramicaSummary();
                 await loadUserBacheca();
@@ -5255,10 +5368,10 @@
                         dataScadenzaStr = new Date(socioReg.quota_scadenza).toLocaleDateString('it-IT');
                         scaduto = new Date(socioReg.quota_scadenza) < new Date();
                     } else if (currentUserProfile.tipo_adesione) {
-                        dataScadenzaStr = '31/12/2026';
+                    dataScadenzaStr = '31/12/' + new Date().getFullYear();
                     }
                 } else if (currentUserProfile.tipo_adesione) {
-                    dataScadenzaStr = '31/12/2026';
+                    dataScadenzaStr = '31/12/' + new Date().getFullYear();
                 }
 
                 const badge = document.getElementById('user-info-scadenza-status');
@@ -6033,6 +6146,140 @@
             }
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // Documento d'Identità Tab (user_documento)
+        // ─────────────────────────────────────────────────────────────
+        async function loadUserDocumento() {
+            try {
+                const anagId = currentUserProfile?.anagrafiche?.[0]?.id || currentUserProfile?.anagrafiche?.id;
+                if (!anagId) {
+                    document.getElementById('doc-personale-info').innerHTML = `<p class="text-gray-500">Anagrafica non trovata.</p>`;
+                    return;
+                }
+
+                const { data: docs, error } = await supabaseClient
+                    .from('documenti_identita')
+                    .select('id, file_url, tipologia, tipo_documento, data_scadenza, stato_validazione, note_ai, created_at')
+                    .eq('anagrafica_id', anagId)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const personale = docs?.filter(d => d.tipo_documento === 'PERSONALE' || !d.tipo_documento)[0] || null;
+                const tutore = docs?.filter(d => d.tipo_documento === 'TUTORE')[0] || null;
+
+                // Helper: render semaphore badge
+                function statoColor(stato) {
+                    if (stato === 'VERDE') return 'bg-green-900 text-green-300';
+                    if (stato === 'ROSSO') return 'bg-red-900 text-red-300';
+                    if (stato === 'IN_ATTESA') return 'bg-blue-900 text-blue-300';
+                    return 'bg-amber-900 text-amber-300'; // GIALLO
+                }
+                function statoLabel(stato) {
+                    if (stato === 'VERDE') return '✓ VALIDO';
+                    if (stato === 'ROSSO') return '✗ NON ACCETTATO';
+                    if (stato === 'IN_ATTESA') return '⏳ IN ELABORAZIONE';
+                    return '⚠ ATTENZIONE RICHIESTA'; // GIALLO
+                }
+                function renderDocInfo(containerId, infoId, badgeId, uploadId, doc) {
+                    const infoEl = document.getElementById(infoId);
+                    const badgeEl = document.getElementById(badgeId);
+                    const uploadEl = document.getElementById(uploadId);
+
+                    if (!doc) {
+                        infoEl.innerHTML = `<p class="text-gray-500">Nessun documento caricato.</p>`;
+                        if (uploadEl) uploadEl.classList.remove('hidden');
+                        return;
+                    }
+
+                    const dataScad = doc.data_scadenza ? new Date(doc.data_scadenza).toLocaleDateString('it-IT') : 'Non disponibile';
+                    const isScaduto = doc.data_scadenza && new Date(doc.data_scadenza) < new Date();
+                    const dataCar = new Date(doc.created_at).toLocaleDateString('it-IT');
+
+                    badgeEl.textContent = statoLabel(doc.stato_validazione);
+                    badgeEl.className = `px-1.5 py-0.5 text-[8px] font-headline font-bold rounded ml-2 ${statoColor(doc.stato_validazione)}`;
+                    badgeEl.classList.remove('hidden');
+
+                    infoEl.innerHTML = `
+                        <div class="grid grid-cols-2 gap-3 text-[11px]">
+                            <div><span class="text-gray-500">TIPO:</span><br><span class="text-white">${doc.tipo_documento || 'N/D'}</span></div>
+                            <div><span class="text-gray-500">CARICATO IL:</span><br><span class="text-white">${dataCar}</span></div>
+                            <div><span class="text-gray-500">SCADE IL:</span><br><span class="${isScaduto ? 'text-red-400 font-bold' : 'text-white'}">${dataScad}${isScaduto ? ' ⚠ SCADUTO' : ''}</span></div>
+                            <div><span class="text-gray-500">STATO:</span><br><span class="${statoColor(doc.stato_validazione).replace('bg-', 'text-').split(' ')[0]}">${statoLabel(doc.stato_validazione)}</span></div>
+                            ${doc.note_ai ? `<div class="col-span-2"><span class="text-gray-500">NOTE:</span><br><span class="text-gray-300">${doc.note_ai}</span></div>` : ''}
+                        </div>
+                    `;
+
+                    // Show upload section if doc is GIALLO, ROSSO or scaduto
+                    if (uploadEl && (doc.stato_validazione === 'GIALLO' || doc.stato_validazione === 'ROSSO' || isScaduto)) {
+                        uploadEl.classList.remove('hidden');
+                    }
+                }
+
+                renderDocInfo('doc-personale-container', 'doc-personale-info', 'doc-personale-badge', 'doc-personale-upload', personale);
+
+                if (tutore) {
+                    document.getElementById('doc-tutore-container').classList.remove('hidden');
+                    renderDocInfo('doc-tutore-container', 'doc-tutore-info', 'doc-tutore-badge', 'doc-tutore-upload', tutore);
+                }
+
+                // Handle file selection display
+                document.getElementById('doc-personale-file-input')?.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        document.getElementById('doc-personale-file-name').textContent = file.name;
+                        document.getElementById('doc-personale-file-status').textContent = `${(file.size / 1024).toFixed(0)} KB`;
+                    }
+                });
+                document.getElementById('doc-tutore-file-input')?.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        document.getElementById('doc-tutore-file-name').textContent = file.name;
+                        document.getElementById('doc-tutore-file-status').textContent = `${(file.size / 1024).toFixed(0)} KB`;
+                    }
+                });
+
+                // Upload handlers
+                async function handleDocUpload(fileInputId, scadenzaInputId, tipoDoc) {
+                    const fileInput = document.getElementById(fileInputId);
+                    const scadenzaInput = document.getElementById(scadenzaInputId);
+                    const file = fileInput?.files?.[0];
+                    if (!file) { alert('Seleziona un file prima di inviare.'); return; }
+                    const scadenza = scadenzaInput?.value;
+                    if (!scadenza) { alert('Inserisci la data di scadenza del documento.'); return; }
+
+                    try {
+                        const filePath = `${currentUser.id}/${tipoDoc.toLowerCase()}_${Date.now()}.${file.name.split('.').pop()}`;
+                        const { error: uploadErr } = await supabaseClient.storage.from('documenti_identita').upload(filePath, file, { contentType: file.type, upsert: true });
+                        if (uploadErr) throw uploadErr;
+
+                        const { error: insertErr } = await supabaseClient.from('documenti_identita').insert({
+                            anagrafica_id: anagId,
+                            file_url: filePath,
+                            tipologia: 'FRONTE_RETRO',
+                            tipo_documento: tipoDoc,
+                            data_scadenza: scadenza,
+                            stato_validazione: 'IN_ATTESA'
+                        });
+                        if (insertErr) throw insertErr;
+
+                        alert('Documento caricato con successo! Sarà verificato automaticamente dall\'AI e, se necessario, manualmente dalla segreteria.');
+                        await loadUserDocumento();
+                    } catch (err) {
+                        console.error('Errore upload documento:', err);
+                        alert('Errore durante il caricamento: ' + err.message);
+                    }
+                }
+
+                document.getElementById('btn-upload-doc-personale')?.addEventListener('click', () => handleDocUpload('doc-personale-file-input', 'doc-personale-scadenza-input', 'PERSONALE'));
+                document.getElementById('btn-upload-doc-tutore')?.addEventListener('click', () => handleDocUpload('doc-tutore-file-input', 'doc-tutore-scadenza-input', 'TUTORE'));
+
+            } catch (err) {
+                console.error('Errore loadUserDocumento:', err);
+                document.getElementById('doc-personale-info').innerHTML = `<p class="text-red-400">Errore nel caricamento dei dati. Riprova.</p>`;
+            }
+        }
+
         async function loadUserPagamenti() {
             try {
                 const { data: receipts, error } = await supabaseClient
@@ -6352,10 +6599,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-user_documento');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('user_documento');
+            loadUserDocumento();
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('tab-btn-approvazioni');
     if (el) {
         el.addEventListener('click', function(event) {
-            switchTab('approvazioni')
+            switchTab('approvazioni');
+            loadDocsAttesa();
         });
     }
 });

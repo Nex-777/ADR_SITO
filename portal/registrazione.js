@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.90"
+                VERSION: "1.01.91"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1628,8 +1628,16 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         updatePayload.certificato_tipologia = document.getElementById('certificato_tipologia').value;
                         updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione').value;
                     }
-                    if (tutoreDocumentoUrl) updatePayload.tutore_documento_url = tutoreDocumentoUrl;
-                    if (documentoIdentitaUrl) updatePayload.documento_identita_url = documentoIdentitaUrl;
+                    if (tutoreDocumentoUrl) {
+                        updatePayload.tutore_documento_url = tutoreDocumentoUrl;
+                        const tutoreScadenza = document.getElementById('tutore_documento_scadenza')?.value;
+                        if (tutoreScadenza) updatePayload.tutore_documento_scadenza = tutoreScadenza;
+                    }
+                    if (documentoIdentitaUrl) {
+                        updatePayload.documento_identita_url = documentoIdentitaUrl;
+                        const docScadenza = document.getElementById('documento_identita_scadenza')?.value;
+                        if (docScadenza) updatePayload.documento_identita_scadenza = docScadenza;
+                    }
 
                     const { error: utentiUpdateError } = await supabaseClient
                         .from('utenti')
@@ -1637,6 +1645,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         .eq('id', userId);
                     if (utentiUpdateError) throw utentiUpdateError;
                 }
+
 
                 // 5. Verify OTP and finalize sign document state server-side
                 updateOtpButtonStatus("REGISTRAZIONE FINALE...");

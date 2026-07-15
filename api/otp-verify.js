@@ -141,7 +141,7 @@ export default async function handler(req, res) {
         // Fetch user data from public.utenti
         const { data: profile, error: profileError } = await supabase
             .from('utenti')
-            .select('id, codice_fiscale, indirizzo, nome, cognome, data_nascita, luogo_nascita_provincia, luogo_nascita_comune, provincia, comune, cap, cellulare, email, certificato_medico_url, certificato_data_emissione, certificato_tipologia, tipo_adesione, tipo_tessera, documento_identita_url')
+            .select('id, codice_fiscale, indirizzo, nome, cognome, data_nascita, luogo_nascita_provincia, luogo_nascita_comune, provincia, comune, cap, cellulare, email, certificato_medico_url, certificato_data_emissione, certificato_tipologia, tipo_adesione, tipo_tessera, documento_identita_url, documento_identita_scadenza, tutore_documento_url, tutore_documento_scadenza')
             .eq('id', utenteId)
             .maybeSingle();
             
@@ -251,18 +251,37 @@ export default async function handler(req, res) {
             }
         }
 
-        // C3. Insert into public.documenti_identita if present
+        // C3. Insert into public.documenti_identita if present (documento personale)
         if (profile.documento_identita_url) {
             // Manteniamo lo storico per 5 anni, non eliminiamo il record precedente fisicamente.
-            // await supabase.from('documenti_identita').delete().eq('anagrafica_id', anagraficaId);
             const { error: idDocError } = await supabase
                 .from('documenti_identita')
                 .insert({
                     anagrafica_id: anagraficaId,
                     file_url: profile.documento_identita_url,
-                    tipologia: 'FRONTE_RETRO'
+                    tipologia: 'FRONTE_RETRO',
+                    tipo_documento: 'PERSONALE',
+                    data_scadenza: profile.documento_identita_scadenza || null,
+                    stato_validazione: 'IN_ATTESA'
+                    // Webhook AI triggerato automaticamente da DB trigger AI_Validate_Document
                 });
             if (idDocError) console.error("Errore inserimento documento identita:", idDocError);
+        }
+
+        // C4. Insert into public.documenti_identita for tutore/genitore (if minor)
+        if (profile.tutore_documento_url) {
+            const { error: tutoreDocError } = await supabase
+                .from('documenti_identita')
+                .insert({
+                    anagrafica_id: anagraficaId,
+                    file_url: profile.tutore_documento_url,
+                    tipologia: 'FRONTE_RETRO',
+                    tipo_documento: 'TUTORE',
+                    data_scadenza: profile.tutore_documento_scadenza || null,
+                    stato_validazione: 'IN_ATTESA'
+                    // Webhook AI triggerato automaticamente da DB trigger AI_Validate_Document
+                });
+            if (tutoreDocError) console.error("Errore inserimento documento tutore:", tutoreDocError);
         }
 
         // D. Split Flow Decision Logic (Casistica 1, 2, 3)
