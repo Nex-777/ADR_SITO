@@ -585,12 +585,9 @@
                     <span class="material-symbols-outlined text-sm">id_card</span> DOCUMENTO D'IDENTITÀ
                 </button>
 
-                <!-- Inactive EPIKA button for athletes -->
-                <button id="tab-btn-user-epika-disabled" class="w-full text-left font-headline text-xs font-bold uppercase p-3 border border-transparent text-gray-600 cursor-not-allowed flex items-center justify-between gap-3 hidden" title="Il portale EPIKA sarà disponibile a breve per i tesserati.">
-                    <span class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-sm text-gray-600">theater_comedy</span> PORTALE EPIKA
-                    </span>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded border border-gray-600/30 text-gray-500 font-sans tracking-normal normal-case select-none shrink-0">COMING SOON</span>
+                <!-- Active EPIKA button for athletes -->
+                <button id="tab-btn-user-epika" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden" onclick="window.open('epika.html', 'portale_epika')">
+                    <span class="material-symbols-outlined text-sm">theater_comedy</span> PORTALE EPIKA
                 </button>
 
                 <!-- Instructor Dashboard Navigation -->

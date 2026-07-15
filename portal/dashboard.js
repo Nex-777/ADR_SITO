@@ -364,7 +364,7 @@
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti', 'user_documento',
                     'instructor_corsi', 'volunteer_eventi',
                     'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf', 'sandbox',
-                    'registro_istruttori', 'registro_volontari', 'epika-presidente', 'user-epika-disabled'
+                    'registro_istruttori', 'registro_volontari', 'epika-presidente', 'user-epika'
                 ];
                 tabs.forEach(tab => {
                     const el = document.getElementById(`tab-btn-${tab}`);
@@ -392,9 +392,9 @@
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
                 
-                // Show disabled epika button for athletes
-                const epikaDisabledBtn = document.getElementById('tab-btn-user-epika-disabled');
-                if (epikaDisabledBtn) epikaDisabledBtn.classList.remove('hidden');
+                // Show epika button for athletes
+                const epikaBtn = document.getElementById('tab-btn-user-epika');
+                if (epikaBtn) epikaBtn.classList.remove('hidden');
                 
                 if (isBlocked) {
                     document.getElementById('tab-btn-user_corsi').classList.add('hidden');
