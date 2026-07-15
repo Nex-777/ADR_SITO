@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.89"
+                VERSION: "1.01.90"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -363,9 +363,7 @@
 
             hideAllTabs();
 
-            // --- EPIKA BANNER HIDE BY DEFAULT ---
-            const epikaBanner = document.getElementById('epika-banner-container');
-            if (epikaBanner) epikaBanner.classList.add('hidden');
+
 
             if (currentViewContext === 'athlete') {
                 document.body.classList.add('theme-tesserato');
@@ -397,9 +395,6 @@
 
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
-
-                // --- EPIKA BANNER SHOW FOR ATHLETES ---
-                if (epikaBanner) epikaBanner.classList.remove('hidden');
 
                 if (isBlocked) {
                     switchTab('user_certificato');
