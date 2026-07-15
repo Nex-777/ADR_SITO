@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.91"
+                VERSION: "1.01.92"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1179,10 +1179,10 @@
                     try {
                         const { data: session } = await supabaseClient.auth.getSession();
                         const token = session?.session?.access_token;
-                        const res = await fetch(`${APP_CONFIG.API_BASE_URL}/api/validate-doc`, {
+                        const res = await fetch(`${APP_CONFIG.API_BASE_URL}/api/validate`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify({ doc_id: docId, is_manual: true, nuovo_stato: nuovoStato, note: nota || `Validazione manuale: ${nuovoStato}` })
+                            body: JSON.stringify({ target_type: 'doc', doc_id: docId, is_manual: true, nuovo_stato: nuovoStato, note: nota || `Validazione manuale: ${nuovoStato}` })
                         });
                         if (!res.ok) throw new Error(await res.text());
                         await loadDocsAttesa();
@@ -1830,13 +1830,14 @@
                     throw new Error("Sessione scaduta o non valida.");
                 }
 
-                const response = await fetch(`${APP_CONFIG.API_BASE_URL}/api/validate-cert`, {
+                const response = await fetch(`${APP_CONFIG.API_BASE_URL}/api/validate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
+                        target_type: 'cert',
                         cert_id: certId,
                         is_manual: true,
                         nuovo_stato: nuovoStato,
