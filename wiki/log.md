@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-15] ingest | Expand GESTIONE EPIKA Access to Board Members and Add Disabled Tesserato Button (v1.01.86)
+- Modified `portal/dashboard.js` to allow all members of the board/direttivo (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`) to see the "GESTIONE EPIKA" administration link button.
+- Added a disabled "PORTALE EPIKA" tab button labeled with a "COMING SOON" badge in the Area Socio sidebar panel inside `portal/dashboard.html` and `portal/dashboard.js` so that athletes can see it but cannot click/access it yet.
+- Incremented global version tag to `v1.01.86`.
+
 ## [2026-07-14] ingest | Add Piceni to Peoples List, Remove Debug Panel and Adrenalina Logo, and Add Version Badge (v1.01.85)
 - Removed the Adrenalina logo icon from `portal/epika.html` header as requested.
 - Added a stylized version badge (e.g. `Vs. 1.01.85`) next to the "EPIKA" header title using a new CSS class `.epk-version-badge` defined in `portal/epika.css`.

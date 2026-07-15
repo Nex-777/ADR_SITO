@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.85"
+                VERSION: "1.01.86"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -353,7 +353,7 @@
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti',
                     'instructor_corsi', 'volunteer_eventi',
                     'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf', 'sandbox',
-                    'registro_istruttori', 'registro_volontari', 'epika-presidente'
+                    'registro_istruttori', 'registro_volontari', 'epika-presidente', 'user-epika-disabled'
                 ];
                 tabs.forEach(tab => {
                     const el = document.getElementById(`tab-btn-${tab}`);
@@ -382,6 +382,10 @@
                 // Mostra pulsanti atleti base
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                
+                // Show disabled epika button for athletes
+                const epikaDisabledBtn = document.getElementById('tab-btn-user-epika-disabled');
+                if (epikaDisabledBtn) epikaDisabledBtn.classList.remove('hidden');
                 
                 if (isBlocked) {
                     document.getElementById('tab-btn-user_corsi').classList.add('hidden');
@@ -482,8 +486,9 @@
                     document.getElementById('tab-btn-sandbox').classList.remove('hidden');
                 }
 
-                // --- SHOW EPIKA BTN FOR PRESIDENT ---
-                if (userRoles.includes('presidente')) {
+                // --- SHOW EPIKA BTN FOR DIRETTIVO ---
+                const isDirettivoMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+                if (isDirettivoMember) {
                     const epikaPresidenteBtn = document.getElementById('tab-btn-epika-presidente');
                     if (epikaPresidenteBtn) epikaPresidenteBtn.classList.remove('hidden');
                 }
