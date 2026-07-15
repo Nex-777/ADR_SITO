@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.01.92"
+                VERSION: "1.01.93"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1010,6 +1010,13 @@ function togglePasswordVisibility(inputId, buttonEl) {
             btn.disabled = true;
             btn.textContent = "INVIO IN CORSO...";
             try {
+                // Refresh session to ensure a non-expired JWT is used
+                const { data: refreshData } = await supabaseClient.auth.refreshSession();
+                if (refreshData?.session?.access_token) {
+                    jwtToken = refreshData.session.access_token;
+                    if (createdUserSession) createdUserSession.access_token = jwtToken;
+                }
+
                 const apiBase = APP_CONFIG.API_BASE_URL || "";
                 const response = await fetch(`${apiBase}/api/otp.js`, {
                     method: 'POST',
