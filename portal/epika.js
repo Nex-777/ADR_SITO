@@ -728,6 +728,9 @@ async function renderSCABTab() {
         // 5. Renderizza Abbinamenti
         renderSCABAbbinamenti(abbinamentiMap);
 
+        // 6. Renderizza Allenatori
+        renderAllenatoriAdmin();
+
     } catch (e) {
         console.error("Errore renderSCABTab:", e);
     }
@@ -1052,10 +1055,13 @@ function switchScabSubTab(subTab) {
     activeScabSubTab = subTab;
     document.getElementById('scab-panel-abbinamenti').classList.add('epk-hidden');
     document.getElementById('scab-panel-anagrafica').classList.add('epk-hidden');
+    document.getElementById('scab-panel-allenatori').classList.add('epk-hidden');
     document.getElementById('scab-tab-btn-abbinamenti').style.borderColor = 'transparent';
     document.getElementById('scab-tab-btn-abbinamenti').style.color = 'var(--epk-parchment)';
     document.getElementById('scab-tab-btn-anagrafica').style.borderColor = 'transparent';
     document.getElementById('scab-tab-btn-anagrafica').style.color = 'var(--epk-parchment)';
+    document.getElementById('scab-tab-btn-allenatori').style.borderColor = 'transparent';
+    document.getElementById('scab-tab-btn-allenatori').style.color = 'var(--epk-parchment)';
 
     const btn = document.getElementById(`scab-tab-btn-${subTab}`);
     if (btn) {
