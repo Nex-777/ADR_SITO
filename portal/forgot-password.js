@@ -22,21 +22,11 @@ form.addEventListener('submit', async (e) => {
     btn.innerHTML = `ATTENDERE... <span class="material-symbols-outlined text-xl">hourglass_empty</span>`;
 
     const email = document.getElementById('email').value.trim();
-    // Costruiamo un URL assoluto robusto per il reindirizzamento (gestendo l'estensione .html opzionale su Vercel)
-    let resetUrl = window.location.origin + window.location.pathname;
-    if (resetUrl.includes('forgot-password.html')) {
-        resetUrl = resetUrl.replace('forgot-password.html', 'reset-password.html');
-    } else if (resetUrl.endsWith('forgot-password')) {
-        resetUrl = resetUrl.replace('forgot-password', 'reset-password.html');
-    } else if (resetUrl.endsWith('forgot-password/')) {
-        resetUrl = resetUrl.replace('forgot-password/', 'reset-password.html');
-    } else {
-        if (window.location.pathname.includes('/portal/')) {
-            resetUrl = window.location.origin + '/portal/reset-password.html';
-        } else {
-            resetUrl = window.location.origin + '/reset-password.html';
-        }
-    }
+    // URL fisso assoluto: evita qualsiasi mismatch con la whitelist di Supabase.
+    // NOTA: se l'URL del template Reset Password su Supabase usa {{ .RedirectTo }},
+    // questo valore deve essere ESATTAMENTE identico a quello inserito nella whitelist
+    // di Supabase (Authentication -> URL Configuration -> Redirect URLs).
+    const resetUrl = 'https://portal.adrenalinaclub.it/portal/reset-password.html';
 
         let success = false;
         try {
