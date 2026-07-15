@@ -4,6 +4,19 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-15] ingest | Area Documento Identità + Validazione AI + Fix Dashboard Board Member (v1.01.91)
+- **DB (Supabase):** `ALTER TABLE documenti_identita` — aggiunte colonne `data_scadenza DATE`, `stato_validazione VARCHAR(20)`, `note_ai TEXT`, `confidence_score INTEGER`, `tipo_documento VARCHAR(20)`. Aggiornati 20 record legacy a `stato_validazione = 'GIALLO'`. Aggiunte policy RLS `INSERT` e `UPDATE` per l'utente autenticato.
+- **DB (Supabase):** Aggiunte colonne `documento_identita_scadenza DATE` e `tutore_documento_scadenza DATE` alla tabella `utenti` (staging temporaneo per il flusso di registrazione).
+- **DB (Supabase):** Creato DB trigger `AI_Validate_Document` su `INSERT` in `documenti_identita` che chiama automaticamente `POST /api/validate-doc` (pattern identico a `AI_Validate_Certificate`).
+- **Nuovo file `api/validate-doc.js`:** Endpoint API per validazione documenti identità via Gemini AI. Supporta sia webhook automatici (DB trigger) sia validazione manuale dal Direttivo. Prompt AI specializzato per CI/Passaporto/Patente con estrazione di `data_scadenza` e stato semaforo VERDE/GIALLO/ROSSO. Email automatiche in caso di ROSSO o GIALLO.
+- **`api/otp-verify.js`:** Fix INSERT C3 in `documenti_identita`: aggiunto `data_scadenza`, `tipo_documento = 'PERSONALE'`, `stato_validazione = 'IN_ATTESA'`. Aggiunto blocco C4 per il documento del tutore/genitore dei minorenni (`tipo_documento = 'TUTORE'` dal bucket `documenti_tutori`). Aggiornata SELECT del profilo per includere i nuovi campi.
+- **`portal/registrazione.html`:** Aggiunto campo `<input type="date" id="documento_identita_scadenza">` obbligatorio nella sezione documento d'identità. Aggiunto campo analogo `tutore_documento_scadenza` nella sezione minorenni.
+- **`portal/registrazione.js`:** `updatePayload` ora include `documento_identita_scadenza` e `tutore_documento_scadenza` nel salvataggio in `utenti`.
+- **`portal/dashboard.js`:** Fix bug board member: `loadUserDashboard` ora mostra i widget anche quando `isBoardMember && currentViewContext !== 'board'`. Fix bug anno hardcoded: due occorrenze di `'31/12/2026'` sostituite con `'31/12/' + new Date().getFullYear()`. `switchContext()` aggiornato per mostrare/nascondere `user-panoramica-widgets` al cambio di contesto.
+- **`portal/dashboard.js`:** Aggiunta funzione `loadUserDocumento()` con rendering semaforo, storico documenti (PERSONALE + TUTORE), e upload aggiornamento con validazione AI automatica. Aggiunta funzione `loadDocsAttesa()` per il Direttivo con bottoni APPROVA/RIFIUTA/RINVIA. `tab-btn-user_documento` aggiunto a `hideAllTabs()` e a tutti i contesti non-board. `loadDocsAttesa()` viene chiamata all'apertura del tab Approvazioni.
+- **`portal/dashboard.html`:** Aggiunto `tab-btn-user_documento` nel menu laterale. Aggiunto `panel-user_documento` con sezione documento personale e tutore. Aggiunta sezione "Documenti in attesa di verifica" nel pannello Registro Approvazioni. Estesa join `documenti_identita` nella query `loadApprovazioni` per includere `stato_validazione`, `note_ai`, `data_scadenza`, `tipo_documento`.
+- Incrementato global version tag a `v1.01.91`.
+
 ## [2026-07-15] ingest | Remove Epika Banner from Athlete Overview, Fix package.json bumping (v1.01.91)
 - Removed the `#epika-banner-container` yellow panel element and its inline CSS styles from the athlete's Panoramica dashboard view in `portal/dashboard.html`.
 - Updated `portal/dashboard.js` to remove show/hide triggers related to the obsolete `epikaBanner`.
