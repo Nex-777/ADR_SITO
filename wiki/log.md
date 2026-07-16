@@ -4,6 +4,16 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-16] ingest | Correzioni SCAB e Nomine Multi-Ruolo Direttivi (v1.01.99)
+- **JS (epika.js):**
+  - Corretto bug `switchScabSubTab` per mappare correttamente gli ID dei bottoni tab modificati (`scab-tab-btn-palestre-centri` e `scab-tab-btn-ruoli`).
+  - Rinominata la funzione `renderAllenatoriAdmin` a `renderRuoliAdmin` per risolvere il ReferenceError nel rendering SCAB.
+  - Modificato il sistema di nomine direttivi/gruppi di lavoro in `epika_profili` migrando la colonna `gruppo_lavoro_id` (singola) alla colonna array `gruppo_lavoro_ids` (`bigint[]`).
+  - Aggiornate le funzioni `renderTesseratiNomineInverso`, `filtraTesseratiNomina`, `salvaNominaLavoroInverso` e `rimuoviNominaLavoroInverso` per supportare l'assegnazione multipla di ruoli.
+  - Aggiornata la dashboard dell'atleta e il diagramma Mermaid per gestire e mostrare gruppi multipli associati all'utente.
+- **Database (Supabase DDL):** Eseguita migrazione per convertire `gruppo_lavoro_id` in array ed eliminati i gruppi non più desiderati ("Gruppo Validatori" e "Coordinamento Allenatori Validatori", disattivati impostando `attivo = false`).
+
+
 ## [2026-07-15] ingest | Spostamento Gestione Allenatori dentro SCAB (v1.01.99)
 - **HTML (epika.html):** Rimosso il bottone "ALLENATORI" dal menu laterale primario e rimosso il pannello di tab dedicato. Inserito il sotto-tab "Allenatori" all'interno del pannello SCAB e la corrispondente sezione di gestione dell'anagrafica allenatori.
 - **JS (epika.js):** Aggiornata la funzione `switchScabSubTab` per gestire il sotto-tab allenatori. Modificata `renderSCABTab` affinché inizializzi ed esegua la renderizzazione della lista allenatori all'avvio della sezione SCAB.
