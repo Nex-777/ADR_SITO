@@ -1830,6 +1830,7 @@ async function creaGruppoStorico() {
         console.error("Errore creazione gruppo storico:", e);
         alert("Errore durante la creazione: il gruppo potrebbe già esistere.");
     }
+}
 
 async function toggleStatoGruppoStorico(id, stato) {
     try {
