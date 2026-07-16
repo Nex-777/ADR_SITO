@@ -1697,6 +1697,7 @@ async function renderEventiAdmin() {
             const statusText = evt.attivo ? 'DISATTIVA' : 'ATTIVA';
 
             const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})">${statusText}</button>`;
+            const deleteBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="cancellaEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">CANCELLA</button>`;
             const presenzeBtnText = isReadOnly() ? 'VEDI PRESENZE' : 'GESTISCI PRESENZE';
 
             container.innerHTML += `
@@ -1712,6 +1713,7 @@ async function renderEventiAdmin() {
                             <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #1e3a8a; border-color: #3b82f6;" onclick="mostraDashboardEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.data_inizio}', '${evt.data_fine}')">DASHBOARD</button>
                             <button class="epk-btn" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
                             ${toggleBtnHtml}
+                            ${deleteBtnHtml}
                         </div>
                     </div>
                 </div>`;
@@ -1794,6 +1796,47 @@ async function toggleStatoEvento(id, statoAttuale) {
         await renderEventiAdmin();
     } catch (err) {
         console.error("Errore aggiornamento stato evento:", err);
+    }
+}
+
+async function cancellaEvento(id, titolo) {
+    if (isReadOnly()) return;
+    
+    const conferma = confirm(`Sei sicuro di voler CANCELLARE DEFINITIVAMENTE l'evento "${titolo}"?\nQuesta azione eliminerà anche tutte le iscrizioni e presenze collegate e non potrà essere annullata.`);
+    if (!conferma) return;
+
+    try {
+        // 1. Elimina presenze collegate
+        const { error: presError } = await supabaseClient
+            .from('epika_presenze_eventi')
+            .delete()
+            .eq('evento_id', id);
+        if (presError) throw presError;
+
+        // 2. Elimina iscrizioni collegate
+        const { error: iscError } = await supabaseClient
+            .from('epika_iscrizioni_eventi')
+            .delete()
+            .eq('evento_id', id);
+        if (iscError) throw iscError;
+
+        // 3. Elimina l'evento stesso
+        const { error: evtError } = await supabaseClient
+            .from('epika_eventi')
+            .delete()
+            .eq('id', id);
+        if (evtError) throw evtError;
+
+        alert("Evento eliminato con successo.");
+        
+        // Chiudi eventuali pannelli aperti per questo evento
+        document.getElementById('adm-presenze-panel').classList.add('epk-hidden');
+        document.getElementById('adm-dashboard-evento-panel').classList.add('epk-hidden');
+        
+        await renderEventiAdmin();
+    } catch (err) {
+        console.error("Errore cancellazione evento:", err);
+        alert("Impossibile cancellare l'evento: " + err.message);
     }
 }
 
