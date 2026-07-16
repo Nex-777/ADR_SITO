@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.13">
+    <link rel="stylesheet" href="epika.css?v=1.02.14">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.13"></script>
+    <script src="config.js?v=1.02.14"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.02.13</span>
+            <span class="epk-version-badge">Vs. 1.02.14</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -796,89 +796,6 @@
                 </div>
             </div>
 
-            <!-- Modale Iscrizione Dettagliata Evento -->
-            <div id="epk-iscrizione-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
-                <div class="epk-card" style="max-width: 600px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9); margin: auto;">
-                    <h3 id="epk-iscrizione-modal-titolo" class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
-                        ISCRIZIONE A EVENTO STORICO
-                    </h3>
-                    <input type="hidden" id="epk-iscrizione-modal-evento-id">
-                    
-                    <div style="display: flex; flex-direction: column; gap: 16px;">
-                        <!-- Selezione Giorni Presenza -->
-                        <div>
-                            <label class="epk-label" style="margin-bottom: 8px; display: block;">Seleziona i giorni in cui sarai presente: *</label>
-                            <div id="epk-iscrizione-modal-giorni" style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(201, 168, 76, 0.1);">
-                                <!-- Popolato via JS -->
-                            </div>
-                        </div>
-
-                        <!-- Questionario Combattenti (Condizionale) -->
-                        <div id="epk-iscrizione-modal-combattente-fields" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 16px; display: flex; flex-direction: column; gap: 16px;">
-                            <span class="epk-headline" style="font-size: 11px; display: block; color: var(--epk-gold);">INFORMAZIONI AGGIUNTIVE COMBATTENTE</span>
-                            
-                            <!-- Allenatore Abilitante -->
-                            <div>
-                                <label class="epk-label" for="epk-iscrizione-coach">Allenatore che ti ha abilitato: *</label>
-                                <select id="epk-iscrizione-coach" class="epk-input" required>
-                                    <!-- Popolato via JS (da epika_opzioni) -->
-                                </select>
-                            </div>
-
-                            <!-- Armatura -->
-                            <div class="epk-grid-2">
-                                <div>
-                                    <label class="epk-label" for="epk-iscrizione-armatura">Hai un'armatura? *</label>
-                                    <select id="epk-iscrizione-armatura" class="epk-input" required>
-                                        <option value="nessuna">NO / NESSUNA</option>
-                                        <option value="leggera">SÌ, LEGGERA</option>
-                                        <option value="pesante">SÌ, PESANTE</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="epk-label" for="epk-iscrizione-arciere">Sei un arciere? *</label>
-                                    <select id="epk-iscrizione-arciere" class="epk-input" required>
-                                        <option value="nessuno">NO</option>
-                                        <option value="puro">SÌ, PURO (solo arco e pugnale)</option>
-                                        <option value="ibrido">SÌ, IBRIDO (arco, pugnale + altre armi)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Abilitazioni Speciali / Armi -->
-                            <div>
-                                <label class="epk-label" style="margin-bottom: 8px; display: block;">Abilitazioni speciali / Armi portate all'evento:</label>
-                                <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(201, 168, 76, 0.1);">
-                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
-                                        <input type="checkbox" id="epk-wp-giavellotto" style="cursor: pointer;"> Giavellotti
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
-                                        <input type="checkbox" id="epk-wp-spada-lunga" style="cursor: pointer;"> Spade Lunghe
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
-                                        <input type="checkbox" id="epk-wp-lancia" style="cursor: pointer;"> Lancia
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
-                                        <input type="checkbox" id="epk-wp-sperimentali" style="cursor: pointer;" onchange="toggleArmiSperimentaliDesc(this.checked)"> Armi Sperimentali
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Descrizione Armi Sperimentali (Condizionale) -->
-                            <div id="epk-iscrizione-modal-sperimentali-desc-container" class="epk-hidden">
-                                <label class="epk-label" for="epk-iscrizione-sperimentali-desc">Descrizione armi sperimentali: *</label>
-                                <textarea id="epk-iscrizione-sperimentali-desc" class="epk-input" style="height: 60px; font-family: sans-serif;" placeholder="Fornisci dettagli sull'arma sperimentale..."></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Bottoni -->
-                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; border-top: 1px solid var(--epk-gold-dim); padding-top: 16px;">
-                            <button class="epk-btn-secondary" onclick="chiudiModaleIscrizione()">ANNULLA</button>
-                            <button class="epk-btn" onclick="salvaIscrizioneDettagliata()" style="padding: 10px 20px; font-size: 11px;">CONFERMA ISCRIZIONE</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <!-- 4. PORTALE CAPOGRUPPO -->
@@ -1038,6 +955,90 @@
 
     </div>
 
-    <script src="epika.js?v=1.02.13"></script>
+    <!-- Modale Iscrizione Dettagliata Evento -->
+    <div id="epk-iscrizione-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+        <div class="epk-card" style="max-width: 600px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9); margin: auto;">
+            <h3 id="epk-iscrizione-modal-titolo" class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                ISCRIZIONE A EVENTO STORICO
+            </h3>
+            <input type="hidden" id="epk-iscrizione-modal-evento-id">
+            
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Selezione Giorni Presenza -->
+                <div>
+                    <label class="epk-label" style="margin-bottom: 8px; display: block;">Seleziona i giorni in cui sarai presente: *</label>
+                    <div id="epk-iscrizione-modal-giorni" style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(201, 168, 76, 0.1);">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <!-- Questionario Combattenti (Condizionale) -->
+                <div id="epk-iscrizione-modal-combattente-fields" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 16px; display: flex; flex-direction: column; gap: 16px;">
+                    <span class="epk-headline" style="font-size: 11px; display: block; color: var(--epk-gold);">INFORMAZIONI AGGIUNTIVE COMBATTENTE</span>
+                    
+                    <!-- Allenatore Abilitante -->
+                    <div>
+                        <label class="epk-label" for="epk-iscrizione-coach">Allenatore che ti ha abilitato: *</label>
+                        <select id="epk-iscrizione-coach" class="epk-input" required>
+                            <!-- Popolato via JS (da epika_opzioni) -->
+                        </select>
+                    </div>
+
+                    <!-- Armatura -->
+                    <div class="epk-grid-2">
+                        <div>
+                            <label class="epk-label" for="epk-iscrizione-armatura">Hai un'armatura? *</label>
+                            <select id="epk-iscrizione-armatura" class="epk-input" required>
+                                <option value="nessuna">NO / NESSUNA</option>
+                                <option value="leggera">SÌ, LEGGERA</option>
+                                <option value="pesante">SÌ, PESANTE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="epk-label" for="epk-iscrizione-arciere">Sei un arciere? *</label>
+                            <select id="epk-iscrizione-arciere" class="epk-input" required>
+                                <option value="nessuno">NO</option>
+                                <option value="puro">SÌ, PURO (solo arco e pugnale)</option>
+                                <option value="ibrido">SÌ, IBRIDO (arco, pugnale + altre armi)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Abilitazioni Speciali / Armi -->
+                    <div>
+                        <label class="epk-label" style="margin-bottom: 8px; display: block;">Abilitazioni speciali / Armi portate all'evento:</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(201, 168, 76, 0.1);">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                <input type="checkbox" id="epk-wp-giavellotto" style="cursor: pointer;"> Giavellotti
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                <input type="checkbox" id="epk-wp-spada-lunga" style="cursor: pointer;"> Spade Lunghe
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                <input type="checkbox" id="epk-wp-lancia" style="cursor: pointer;"> Lancia
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                <input type="checkbox" id="epk-wp-sperimentali" style="cursor: pointer;" onchange="toggleArmiSperimentaliDesc(this.checked)"> Armi Sperimentali
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Descrizione Armi Sperimentali (Condizionale) -->
+                    <div id="epk-iscrizione-modal-sperimentali-desc-container" class="epk-hidden">
+                        <label class="epk-label" for="epk-iscrizione-sperimentali-desc">Descrizione armi sperimentali: *</label>
+                        <textarea id="epk-iscrizione-sperimentali-desc" class="epk-input" style="height: 60px; font-family: sans-serif;" placeholder="Fornisci dettagli sull'arma sperimentale..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Bottoni -->
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; border-top: 1px solid var(--epk-gold-dim); padding-top: 16px;">
+                    <button class="epk-btn-secondary" onclick="chiudiModaleIscrizione()">ANNULLA</button>
+                    <button class="epk-btn" onclick="salvaIscrizioneDettagliata()" style="padding: 10px 20px; font-size: 11px;">CONFERMA ISCRIZIONE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="epika.js?v=1.02.14"></script>
 </body>
 </html>
