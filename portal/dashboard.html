@@ -22,7 +22,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.02.11"></script>
+    <script src="config.js?v=1.02.12"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -474,7 +474,7 @@
             border-color: #C9A84C;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.02.11">
+    <link rel="stylesheet" href="../output.css?v=1.02.12">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -486,7 +486,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.02.11</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.02.12</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -2857,7 +2857,7 @@
     </div>
 
     <!-- App Logic -->
-    <script src="dashboard.js?v=1.02.11"></script>
+    <script src="dashboard.js?v=1.02.12"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -2922,6 +2922,9 @@
                 'user_corsi': { icon: 'fitness_center', label: 'Corsi' },
                 'user_eventi': { icon: 'event', label: 'Eventi' },
                 'user_pagamenti': { icon: 'receipt_long', label: 'Pagamenti e Ricevute' },
+                'user_documento': { icon: 'id_card', label: "Documento d'Identità" },
+                'user-epika': { icon: 'theater_comedy', label: 'Portale Epika' },
+                'epika-presidente': { icon: 'theater_comedy', label: 'Portale Epika (Pres.)' },
                 'instructor_corsi': { icon: 'school', label: 'Corsi Seguiti' },
                 'volunteer_eventi': { icon: 'event_available', label: 'Gestione Eventi' },
                 'approvazioni': { icon: 'rule', label: 'Registro Approvazioni' },
@@ -2949,7 +2952,18 @@
                 const menuItem = document.createElement('button');
                 menuItem.className = 'menu-item' + (btn.classList.contains('bg-primary/10') ? ' active' : '');
                 menuItem.setAttribute('data-tab', tabId);
-                menuItem.onclick = function() { mobileMenuSwitch(tabId); };
+                
+                // If the desktop sidebar button has an onclick attribute (like window.open for Epika)
+                // trigger it directly instead of switching internal dashboard tabs.
+                if (btn.hasAttribute('onclick')) {
+                    menuItem.onclick = function() {
+                        btn.click();
+                        document.getElementById('mobile-menu-overlay').classList.add('menu-hidden');
+                    };
+                } else {
+                    menuItem.onclick = function() { mobileMenuSwitch(tabId); };
+                }
+
                 menuItem.innerHTML = `<span class="material-symbols-outlined">${config.icon}</span> ${config.label}`;
                 menuBody.appendChild(menuItem);
             });
