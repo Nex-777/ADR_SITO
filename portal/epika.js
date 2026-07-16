@@ -217,16 +217,47 @@ async function caricaLookupDati() {
 
         const selectNewGruppoPopolo = document.getElementById('new-gruppo-popolo');
         if (selectNewGruppoPopolo) {
-            selectNewGruppoPopolo.innerHTML = '<option value="">Mercenari (Nessuno)</option>';
+            selectNewGruppoPopolo.innerHTML = '<option value="" disabled selected>SELEZIONA POPOLO...</option>';
             popoliList.forEach(p => {
                 selectNewGruppoPopolo.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
             });
         }
 
+        // Carica Tesserati Completati
+        const { data: profili, error: profError } = await supabaseClient
+            .from('epika_profili')
+            .select('*')
+            .eq('profilo_completato', true)
+            .order('nome_di_battaglia', { ascending: true });
+
+        if (profError) {
+            throw profError;
+        }
+        tesseratiCache = profili || [];
+
+        // Popola select del form creazione gruppi storici
+        popolaSelectTesserati('new-gruppo-capo', false);
+        popolaSelectTesserati('new-gruppo-vice', true);
+        popolaSelectTesserati('new-gruppo-resp', true);
+
     } catch (err) {
         console.error("Errore caricamento dati lookup:", err);
         alert("Errore durante il recupero dei dati del tempio. Riprova più tardi.");
     }
+}
+
+// Popola un select element con i tesserati della cache
+function popolaSelectTesserati(selectId, includeNone) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    
+    select.innerHTML = includeNone 
+        ? '<option value="" selected>NESSUNO</option>'
+        : '<option value="" disabled selected>SELEZIONA...</option>';
+        
+    tesseratiCache.forEach(t => {
+        select.innerHTML += `<option value="${t.id}">${t.nome_di_battaglia || 'Senza Nome'}</option>`;
+    });
 }
 
 // Logica di auto-popolamento cultura in base al gruppo scelto
@@ -575,7 +606,7 @@ async function renderTesseratiNomineInverso() {
             t.nome_reale = utentiMappa[t.id] || 'N/D';
         });
 
-        // Raggruppa i profili per gruppo_lavoro_ids
+        // Raggruppa i profili per gruppo_lavoro_ids (solo per quelli manuali)
         const membriPerGruppo = {};
         tesseratiCache.forEach(p => {
             const gids = p.gruppo_lavoro_ids || [];
@@ -594,7 +625,56 @@ async function renderTesseratiNomineInverso() {
 
         // Genera i quadri per ciascun gruppo di lavoro attivo
         gruppiLavoro.forEach(g => {
-            const membri = membriPerGruppo[g.id] || [];
+            let membri = [];
+            let isAutoCompiled = false;
+            
+            if (g.id === 5) {
+                // Capi Gruppo (auto-compilato)
+                isAutoCompiled = true;
+                gruppiStorici.forEach(grp => {
+                    if (grp.capogruppo_id) {
+                        const m = tesseratiCache.find(t => t.id === grp.capogruppo_id);
+                        if (m) {
+                            membri.push({
+                                ...m,
+                                gruppoRepresentedName: grp.nome
+                            });
+                        }
+                    }
+                });
+            } else if (g.nome === 'Gruppo Vice Capi Gruppo') {
+                // Vice Capi Gruppo (auto-compilato)
+                isAutoCompiled = true;
+                gruppiStorici.forEach(grp => {
+                    if (grp.vice_capogruppo_id) {
+                        const m = tesseratiCache.find(t => t.id === grp.vice_capogruppo_id);
+                        if (m) {
+                            membri.push({
+                                ...m,
+                                gruppoRepresentedName: grp.nome
+                            });
+                        }
+                    }
+                });
+            } else if (g.id === 6) {
+                // Responsabili Iscrizioni (auto-compilato)
+                isAutoCompiled = true;
+                gruppiStorici.forEach(grp => {
+                    if (grp.responsabile_iscrizioni_id) {
+                        const m = tesseratiCache.find(t => t.id === grp.responsabile_iscrizioni_id);
+                        if (m) {
+                            membri.push({
+                                ...m,
+                                gruppoRepresentedName: grp.nome
+                            });
+                        }
+                    }
+                });
+            } else {
+                // Standard manuale
+                membri = membriPerGruppo[g.id] || [];
+            }
+
             let membriHTML = '';
             
             if (membri.length === 0) {
@@ -604,7 +684,10 @@ async function renderTesseratiNomineInverso() {
                     const nomeReale = utentiMappa[m.id] || 'N/D';
                     
                     let rappresentatoText = '';
-                    if ((g.id === 5 || g.id === 6) && m.rappresentante_gruppo_storico_id) {
+                    if (isAutoCompiled && m.gruppoRepresentedName) {
+                        rappresentatoText = ` <span style="font-size: 10px; color: var(--epk-gold); font-weight: bold; border: 1px solid var(--epk-gold-dim); padding: 1px 4px; margin-left: 6px; border-radius: 2px;">${m.gruppoRepresentedName}</span>`;
+                    } else if ((g.id === 5 || g.id === 6) && m.rappresentante_gruppo_storico_id) {
+                        // Legacy fallback
                         const grp = gruppiStorici.find(x => x.id === m.rappresentante_gruppo_storico_id);
                         if (grp) {
                             rappresentatoText = ` <span style="font-size: 10px; color: var(--epk-gold); font-weight: bold; border: 1px solid var(--epk-gold-dim); padding: 1px 4px; margin-left: 6px; border-radius: 2px;">${grp.nome}</span>`;
@@ -624,12 +707,23 @@ async function renderTesseratiNomineInverso() {
                                     <label for="chk-adm-${g.id}-${m.id}" style="font-size: 8px; font-weight: bold; color: var(--epk-gold); cursor: pointer; text-transform: uppercase;">ADMIN</label>
                                 </div>
                                 ` : ''}
+                                ${!isAutoCompiled ? `
                                 <button class="epk-btn-secondary" style="font-size: 8px; padding: 2px 6px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="rimuoviNominaLavoroInverso('${m.id}', ${g.id})">
                                     RIMUOVI
                                 </button>
+                                ` : ''}
                             </div>
                         </div>`;
                 });
+            }
+
+            let actionButtonHTML = '';
+            if (isAutoCompiled) {
+                actionButtonHTML = `<div style="font-size: 9px; text-align: center; margin-top: 8px; color: #71717a; font-style: italic; border: 1px dashed rgba(255,255,255,0.05); padding: 6px;">Gestito tramite la scheda Gruppi Storici</div>`;
+            } else {
+                actionButtonHTML = `<button class="epk-btn-secondary" style="font-size: 9px; width: 100%; text-align: center; margin-top: 8px; border-color: var(--epk-gold); color: var(--epk-gold);" onclick="apriModaleNomina(${g.id}, '${g.nome.replace(/'/g, "\\'")}')">
+                    + AGGIUNGI COMPONENTE
+                </button>`;
             }
 
             container.innerHTML += `
@@ -640,9 +734,7 @@ async function renderTesseratiNomineInverso() {
                     <div style="flex-grow: 1; max-h: 220px; overflow-y: auto; padding-right: 4px;">
                         ${membriHTML}
                     </div>
-                    <button class="epk-btn-secondary" style="font-size: 9px; width: 100%; text-align: center; margin-top: 8px; border-color: var(--epk-gold); color: var(--epk-gold);" onclick="apriModaleNomina(${g.id}, '${g.nome.replace(/'/g, "\\'")}')">
-                        + AGGIUNGI COMPONENTE
-                    </button>
+                    ${actionButtonHTML}
                 </div>`;
         });
 
@@ -1590,7 +1682,6 @@ async function renderOrganigrammaMermaid() {
 }
 
 // --- GESTIONE GRUPPI STORICI ---
-// --- GESTIONE GRUPPI STORICI ---
 async function renderGruppiStoriciAdmin() {
     const listContainer = document.getElementById('adm-gruppi-storici-list');
     if (!listContainer) return;
@@ -1615,11 +1706,20 @@ async function renderGruppiStoriciAdmin() {
             const row = document.createElement('div');
             row.style = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(251, 191, 36, 0.15); padding: 8px 12px; margin-bottom: 4px;";
             
+            const capoProf = tesseratiCache.find(t => t.id === g.capogruppo_id);
+            const capoNome = capoProf ? (capoProf.nome_di_battaglia || 'Senza Nome') : 'Nessuno';
+
             const infoText = document.createElement('div');
-            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${g.nome}</strong> <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${g.popolo || 'Mercenari'})</span>`;
+            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${g.nome}</strong> <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${g.popolo || 'Mercenari'})</span> <span style="font-size: 10px; color: #71717a; margin-left: 12px;">Capogruppo: ${capoNome}</span>`;
             
             const btnContainer = document.createElement('div');
             btnContainer.style = "display: flex; gap: 4px;";
+
+            const detBtn = document.createElement('button');
+            detBtn.className = 'epk-btn';
+            detBtn.style = 'font-size: 8px; padding: 4px 8px; background: #92400e; border-color: #78350f; color: #fff; cursor: pointer;';
+            detBtn.textContent = 'Gestione';
+            detBtn.onclick = () => apriDettaglioGruppo(g.id);
 
             const toggleBtn = document.createElement('button');
             toggleBtn.className = 'epk-btn-secondary';
@@ -1633,6 +1733,7 @@ async function renderGruppiStoriciAdmin() {
             deleteBtn.textContent = 'Canc';
             deleteBtn.onclick = () => cancellaGruppoStorico(g.id);
 
+            btnContainer.appendChild(detBtn);
             btnContainer.appendChild(toggleBtn);
             btnContainer.appendChild(deleteBtn);
 
@@ -1649,24 +1750,79 @@ async function renderGruppiStoriciAdmin() {
 async function creaGruppoStorico() {
     const nomeInput = document.getElementById('new-gruppo-nome');
     const popoloSelect = document.getElementById('new-gruppo-popolo');
+    const capoSelect = document.getElementById('new-gruppo-capo');
+    const viceSelect = document.getElementById('new-gruppo-vice');
+    const respSelect = document.getElementById('new-gruppo-resp');
     
     const nome = nomeInput.value.trim().toUpperCase();
     const popolo = popoloSelect.value || null;
+    const capoId = capoSelect.value || null;
+    const viceId = viceSelect.value || null;
+    const respId = respSelect.value || null;
 
     if (!nome) {
         alert("Inserisci un nome valido per il gruppo storico.");
         return;
     }
+    if (!popolo) {
+        alert("Il popolo di riferimento è obbligatorio.");
+        return;
+    }
+    if (!capoId) {
+        alert("Il capogruppo è obbligatorio.");
+        return;
+    }
 
     try {
-        const { error } = await supabaseClient
+        const { data: nuovoGruppo, error: insertError } = await supabaseClient
             .from('epika_gruppi_storici')
-            .insert([{ nome, popolo, attivo: true }]);
+            .insert([{
+                nome,
+                popolo,
+                capogruppo_id: capoId,
+                vice_capogruppo_id: viceId || null,
+                responsabile_iscrizioni_id: respId || null,
+                attivo: true
+            }])
+            .select();
 
-        if (error) throw error;
+        if (insertError) throw insertError;
+        
+        const gruppoId = nuovoGruppo[0].id;
+        
+        const logProms = [];
+        logProms.push(supabaseClient.from('epika_storico_ruoli_gruppi').insert([{
+            gruppo_storico_id: gruppoId,
+            profilo_id: capoId,
+            ruolo: 'capogruppo',
+            data_inizio: new Date().toISOString()
+        }]));
+        
+        if (viceId) {
+            logProms.push(supabaseClient.from('epika_storico_ruoli_gruppi').insert([{
+                gruppo_storico_id: gruppoId,
+                profilo_id: viceId,
+                ruolo: 'vice_capogruppo',
+                data_inizio: new Date().toISOString()
+            }]));
+        }
+        
+        if (respId) {
+            logProms.push(supabaseClient.from('epika_storico_ruoli_gruppi').insert([{
+                gruppo_storico_id: gruppoId,
+                profilo_id: respId,
+                ruolo: 'responsabile_iscrizioni',
+                data_inizio: new Date().toISOString()
+            }]));
+        }
+        
+        await Promise.all(logProms);
 
         nomeInput.value = '';
         popoloSelect.value = '';
+        capoSelect.value = '';
+        viceSelect.value = '';
+        respSelect.value = '';
         
         await renderGruppiStoriciAdmin();
         await caricaLookupDati();
@@ -1674,7 +1830,6 @@ async function creaGruppoStorico() {
         console.error("Errore creazione gruppo storico:", e);
         alert("Errore durante la creazione: il gruppo potrebbe già esistere.");
     }
-}
 
 async function toggleStatoGruppoStorico(id, stato) {
     try {
@@ -1875,5 +2030,260 @@ async function cancellaPopolo(id) {
         } else {
             alert("Errore durante la cancellazione.");
         }
+    }
+}
+
+// --- SOTTO-DASHBOARD GESTIONE DETTAGLIO GRUPPO ---
+let oldRuoliDettaglio = {}; // Per tracciare i cambiamenti di ruolo e fare lo storico
+
+async function apriDettaglioGruppo(gruppoId) {
+    document.getElementById('epk-adm-tab-gruppi').classList.add('epk-hidden');
+    
+    const panel = document.getElementById('epk-adm-tab-gruppo-dettaglio');
+    if (!panel) return;
+    panel.classList.remove('epk-hidden');
+    
+    try {
+        const { data: gruppi, error } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .select('*')
+            .eq('id', gruppoId);
+            
+        if (error) throw error;
+        if (!gruppi || gruppi.length === 0) return;
+        
+        const g = gruppi[0];
+        
+        document.getElementById('epk-dettaglio-titolo').textContent = `GESTIONE GRUPPO: ${g.nome}`;
+        document.getElementById('det-gruppo-id').value = g.id;
+        document.getElementById('det-gruppo-nome').value = g.nome;
+        
+        const detPopolo = document.getElementById('det-gruppo-popolo');
+        const detCapo = document.getElementById('det-gruppo-capo');
+        const detVice = document.getElementById('det-gruppo-vice');
+        const detResp = document.getElementById('det-gruppo-resp');
+        
+        if (detPopolo) {
+            detPopolo.innerHTML = '<option value="" disabled>SELEZIONA POPOLO...</option>';
+            popoliList.forEach(p => {
+                const selected = p.nome === g.popolo ? 'selected' : '';
+                detPopolo.innerHTML += `<option value="${p.nome}" ${selected}>${p.nome}</option>`;
+            });
+        }
+        
+        if (detCapo) {
+            detCapo.innerHTML = '<option value="" disabled>SELEZIONA CAPOGRUPPO...</option>';
+            tesseratiCache.forEach(t => {
+                const selected = t.id === g.capogruppo_id ? 'selected' : '';
+                detCapo.innerHTML += `<option value="${t.id}" ${selected}>${t.nome_di_battaglia}</option>`;
+            });
+        }
+        
+        if (detVice) {
+            detVice.innerHTML = '<option value="">NESSUNO</option>';
+            tesseratiCache.forEach(t => {
+                const selected = t.id === g.vice_capogruppo_id ? 'selected' : '';
+                detVice.innerHTML += `<option value="${t.id}" ${selected}>${t.nome_di_battaglia}</option>`;
+            });
+        }
+        
+        if (detResp) {
+            detResp.innerHTML = '<option value="">NESSUNO</option>';
+            tesseratiCache.forEach(t => {
+                const selected = t.id === g.responsabile_iscrizioni_id ? 'selected' : '';
+                detResp.innerHTML += `<option value="${t.id}" ${selected}>${t.nome_di_battaglia}</option>`;
+            });
+        }
+        
+        oldRuoliDettaglio = {
+            capogruppo_id: g.capogruppo_id || null,
+            vice_capogruppo_id: g.vice_capogruppo_id || null,
+            responsabile_iscrizioni_id: g.responsabile_iscrizioni_id || null
+        };
+        
+        document.getElementById('det-data-formazione-dal').value = g.data_inizio_formazione || '';
+        document.getElementById('det-data-formazione-al').value = g.data_fine_formazione || '';
+        document.getElementById('det-data-ufficiale-dal').value = g.data_inizio_ufficiale || '';
+        document.getElementById('det-data-ufficiale-al').value = g.data_fine_ufficiale || '';
+        
+        await caricaStoricoRuoliGruppo(gruppoId);
+        
+    } catch (e) {
+        console.error("Errore caricamento dettaglio gruppo:", e);
+        alert("Errore durante il caricamento del dettaglio gruppo.");
+    }
+}
+
+function chiudiDettaglioGruppo() {
+    const panel = document.getElementById('epk-adm-tab-gruppo-dettaglio');
+    if (panel) panel.classList.add('epk-hidden');
+    
+    document.getElementById('epk-adm-tab-gruppi').classList.remove('epk-hidden');
+    renderGruppiStoriciAdmin();
+}
+
+async function caricaStoricoRuoliGruppo(gruppoId) {
+    const tbody = document.getElementById('det-storico-ruoli-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 8px;">Caricamento storico...</td></tr>';
+    
+    try {
+        const { data: storico, error } = await supabaseClient
+            .from('epika_storico_ruoli_gruppi')
+            .select('*')
+            .eq('gruppo_storico_id', gruppoId)
+            .order('data_inizio', { ascending: false });
+            
+        if (error) throw error;
+        
+        if (!storico || storico.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 8px; color: gray;">Nessun mandato storico registrato per questo gruppo.</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        storico.forEach(s => {
+            const prof = tesseratiCache.find(t => t.id === s.profilo_id);
+            const nomeTesserato = prof ? (prof.nome_di_battaglia || 'Senza Nome') : 'Utente Sconosciuto';
+            
+            let ruoloFormatted = '';
+            if (s.ruolo === 'capogruppo') ruoloFormatted = 'CAPOGRUPPO';
+            else if (s.ruolo === 'vice_capogruppo') ruoloFormatted = 'VICE CAPOGRUPPO';
+            else if (s.ruolo === 'responsabile_iscrizioni') ruoloFormatted = 'RESP. ISCRIZIONI';
+            
+            const inizioStr = s.data_inizio ? new Date(s.data_inizio).toLocaleDateString('it-IT') : 'N/D';
+            const fineStr = s.data_fine ? new Date(s.data_fine).toLocaleDateString('it-IT') : 'Attivo';
+            
+            const tr = document.createElement('tr');
+            tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
+            tr.innerHTML = `
+                <td style="padding: 8px;">${nomeTesserato}</td>
+                <td style="padding: 8px; color: var(--epk-gold);">${ruoloFormatted}</td>
+                <td style="padding: 8px;">${inizioStr}</td>
+                <td style="padding: 8px; ${s.data_fine ? '' : 'color: #22c55e; font-weight: bold;'}">${fineStr}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+    } catch (e) {
+        console.error("Errore caricamento storico ruoli:", e);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red; padding: 8px;">Errore caricamento storico.</td></tr>';
+    }
+}
+
+async function salvaRuoliGruppo() {
+    const gruppoId = parseInt(document.getElementById('det-gruppo-id').value);
+    const nome = document.getElementById('det-gruppo-nome').value.trim().toUpperCase();
+    const popolo = document.getElementById('det-gruppo-popolo').value;
+    const capoId = document.getElementById('det-gruppo-capo').value;
+    const viceId = document.getElementById('det-gruppo-vice').value || null;
+    const respId = document.getElementById('det-gruppo-resp').value || null;
+    
+    if (!nome) {
+        alert("Inserisci un nome per il gruppo.");
+        return;
+    }
+    if (!popolo) {
+        alert("Il popolo di riferimento è obbligatorio.");
+        return;
+    }
+    if (!capoId) {
+        alert("Il capogruppo è obbligatorio.");
+        return;
+    }
+    
+    try {
+        const updatePayload = {
+            nome,
+            popolo,
+            capogruppo_id: capoId,
+            vice_capogruppo_id: viceId,
+            responsabile_iscrizioni_id: respId
+        };
+        
+        const { error: updateError } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .update(updatePayload)
+            .eq('id', gruppoId);
+            
+        if (updateError) throw updateError;
+        
+        const logProms = [];
+        const oraISO = new Date().toISOString();
+        
+        const gestisciStoricoRuolo = async (ruoloKey, ruoloNome, nuovoValore) => {
+            const vecchioValore = oldRuoliDettaglio[ruoloKey];
+            if (vecchioValore !== nuovoValore) {
+                if (vecchioValore) {
+                    logProms.push(
+                        supabaseClient
+                            .from('epika_storico_ruoli_gruppi')
+                            .update({ data_fine: oraISO })
+                            .eq('gruppo_storico_id', gruppoId)
+                            .eq('profilo_id', vecchioValore)
+                            .eq('ruolo', ruoloNome)
+                            .is('data_fine', null)
+                    );
+                }
+                if (nuovoValore) {
+                    logProms.push(
+                        supabaseClient
+                            .from('epika_storico_ruoli_gruppi')
+                            .insert([{
+                                gruppo_storico_id: gruppoId,
+                                profilo_id: nuovoValore,
+                                ruolo: ruoloNome,
+                                data_inizio: oraISO
+                            }])
+                    );
+                }
+            }
+        };
+        
+        await gestisciStoricoRuolo('capogruppo_id', 'capogruppo', capoId);
+        await gestisciStoricoRuolo('vice_capogruppo_id', 'vice_capogruppo', viceId);
+        await gestisciStoricoRuolo('responsabile_iscrizioni_id', 'responsabile_iscrizioni', respId);
+        
+        if (logProms.length > 0) {
+            await Promise.all(logProms);
+        }
+        
+        alert("Ruoli salvati con successo!");
+        await caricaLookupDati();
+        await apriDettaglioGruppo(gruppoId);
+        
+    } catch (e) {
+        console.error("Errore salvataggio ruoli gruppo:", e);
+        alert("Errore durante il salvataggio dei ruoli.");
+    }
+}
+
+async function salvaDateGruppo() {
+    const gruppoId = parseInt(document.getElementById('det-gruppo-id').value);
+    const dataFormazioneDal = document.getElementById('det-data-formazione-dal').value || null;
+    const dataFormazioneAl = document.getElementById('det-data-formazione-al').value || null;
+    const dataUfficialeDal = document.getElementById('det-data-ufficiale-dal').value || null;
+    const dataUfficialeAl = document.getElementById('det-data-ufficiale-al').value || null;
+    
+    try {
+        const { error } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .update({
+                data_inizio_formazione: dataFormazioneDal,
+                data_fine_formazione: dataFormazioneAl,
+                data_inizio_ufficiale: dataUfficialeDal,
+                data_fine_ufficiale: dataUfficialeAl
+            })
+            .eq('id', gruppoId);
+            
+        if (error) throw error;
+        
+        alert("Date di attività salvate con successo!");
+        await caricaLookupDati();
+        
+    } catch (e) {
+        console.error("Errore salvataggio date gruppo:", e);
+        alert("Errore durante il salvataggio delle date.");
     }
 }
