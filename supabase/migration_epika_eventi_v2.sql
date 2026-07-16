@@ -94,3 +94,15 @@ CREATE POLICY select_consiglio_anagrafiche ON public.anagrafiche FOR SELECT
             AND ie.utente_id = anagrafiche.id
         )
     );
+
+-- 7. Fix ricorsione infinita nella cancellazione delle iscrizioni eventi per gli admin
+DROP POLICY IF EXISTS delete_epika_iscrizioni_eventi ON public.epika_iscrizioni_eventi;
+CREATE POLICY delete_epika_iscrizioni_eventi ON public.epika_iscrizioni_eventi
+    FOR DELETE USING (
+        utente_id = auth.uid()
+        OR EXISTS (
+            SELECT 1 FROM public.epika_profili
+            WHERE id = auth.uid() AND is_admin_epika = TRUE
+        )
+        OR 'presidente' = ANY(public.get_user_role(auth.uid()))
+    );
