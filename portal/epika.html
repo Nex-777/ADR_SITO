@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.00">
+    <link rel="stylesheet" href="epika.css?v=1.02.01">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.00"></script>
+    <script src="config.js?v=1.02.01"></script>
 </head>
 <body class="epk-body">
 
     <!-- Header Navbar -->
     <header class="epk-header">
         <div class="epk-logo-group">
-            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.02.00</span></h1>
+            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.02.01</span></h1>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
             <div style="text-align: right;">
@@ -82,14 +82,7 @@
                             <label class="epk-label" for="fa-popolo">Popolo / Cultura *</label>
                             <select id="fa-popolo" class="epk-input" required>
                                 <option value="" disabled selected>SELEZIONA</option>
-                                <option value="Romani">Romani</option>
-                                <option value="Greci">Greci</option>
-                                <option value="Celti">Celti</option>
-                                <option value="Italici">Italici</option>
-                                <option value="Germani">Germani</option>
-                                <option value="Sanniti">Sanniti</option>
-                                <option value="Liguri">Liguri</option>
-                                <option value="Piceni">Piceni</option>
+                                <!-- Popolato via JS -->
                             </select>
                         </div>
                     </div>
@@ -205,6 +198,9 @@
                     </button>
                     <button id="epk-adm-btn-gruppi" class="epk-sidebar-btn" onclick="switchAdminTab('gruppi')">
                         GRUPPI STORICI
+                    </button>
+                    <button id="epk-adm-btn-popoli" class="epk-sidebar-btn" onclick="switchAdminTab('popoli')">
+                        POPOLI
                     </button>
                     <button id="epk-adm-btn-eventi" class="epk-sidebar-btn" onclick="switchAdminTab('eventi')">
                         EVENTI & PRESENZE
@@ -372,18 +368,32 @@
                                     <label class="epk-label" for="new-gruppo-popolo">Popolo Riferimento</label>
                                     <select id="new-gruppo-popolo" class="epk-input">
                                         <option value="">Mercenari (Nessuno)</option>
-                                        <option value="Romani">Romani</option>
-                                        <option value="Greci">Greci</option>
-                                        <option value="Celti">Celti</option>
-                                        <option value="Liguri">Liguri</option>
-                                        <option value="Sanniti">Sanniti</option>
-                                        <option value="Germani">Germani</option>
+                                        <!-- Popolato via JS -->
                                     </select>
                                 </div>
                                 <button class="epk-btn" onclick="creaGruppoStorico()" style="padding: 10px 20px; font-size: 11px;">CREA GRUPPO</button>
                             </div>
                             <div id="adm-gruppi-storici-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 400px; overflow-y: auto;">
                                 <!-- Elenco gruppi gestiti dinamicamente -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4b: Popoli -->
+                    <div id="epk-adm-tab-popoli" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 8px;">
+                                GESTIONE POPOLI
+                            </h2>
+                            <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: flex-end; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(251, 191, 36, 0.1);">
+                                <div style="flex: 1;">
+                                    <label class="epk-label" for="new-popolo-nome">Nome Popolo *</label>
+                                    <input type="text" id="new-popolo-nome" class="epk-input" placeholder="ES: ETRUSCHI...">
+                                </div>
+                                <button class="epk-btn" onclick="creaPopolo()" style="padding: 10px 20px; font-size: 11px;">CREA POPOLO</button>
+                            </div>
+                            <div id="adm-popoli-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 400px; overflow-y: auto;">
+                                <!-- Elenco popoli gestito dinamicamente -->
                             </div>
                         </div>
                     </div>
@@ -490,6 +500,6 @@
 
     </div>
 
-    <script src="epika.js?v=1.02.00"></script>
+    <script src="epika.js?v=1.02.01"></script>
 </body>
 </html>

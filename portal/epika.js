@@ -9,6 +9,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let currentUserProfile = null;
 let gruppiStorici = [];
+let popoliList = [];
 let gruppiLavoro = [];
 let isEpikaAdmin = false;
 let tesseratiCache = [];
@@ -165,10 +166,12 @@ async function caricaLookupDati() {
         gruppiStorici = gruppi || [];
         
         const selectGruppo = document.getElementById('fa-gruppo-storico');
-        selectGruppo.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
-        gruppiStorici.forEach(g => {
-            selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
-        });
+        if (selectGruppo) {
+            selectGruppo.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
+            gruppiStorici.forEach(g => {
+                selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+            });
+        }
 
         // Carica Allenatori
         const { data: allenatori, error: aError } = await supabaseClient
@@ -184,10 +187,41 @@ async function caricaLookupDati() {
         const allenatoriLista = allenatori || [];
 
         const selectAllenatore = document.getElementById('fa-allenatore');
-        selectAllenatore.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
-        allenatoriLista.forEach(a => {
-            selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`;
-        });
+        if (selectAllenatore) {
+            selectAllenatore.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
+            allenatoriLista.forEach(a => {
+                selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`;
+            });
+        }
+
+        // Carica Popoli
+        const { data: popoli, error: pError } = await supabaseClient
+            .from('epika_popoli')
+            .select('*')
+            .eq('attivo', true)
+            .order('nome', { ascending: true });
+
+        if (pError) {
+            throw pError;
+        }
+
+        popoliList = popoli || [];
+
+        const selectPopolo = document.getElementById('fa-popolo');
+        if (selectPopolo) {
+            selectPopolo.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
+            popoliList.forEach(p => {
+                selectPopolo.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+            });
+        }
+
+        const selectNewGruppoPopolo = document.getElementById('new-gruppo-popolo');
+        if (selectNewGruppoPopolo) {
+            selectNewGruppoPopolo.innerHTML = '<option value="">Mercenari (Nessuno)</option>';
+            popoliList.forEach(p => {
+                selectNewGruppoPopolo.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+            });
+        }
 
     } catch (err) {
         console.error("Errore caricamento dati lookup:", err);
@@ -452,6 +486,9 @@ let activeAdminTab = 'dash';
 
 async function renderAdminDashboard() {
     try {
+        // Carica dati lookup (gruppi storici, popoli, allenatori) in cache globale
+        await caricaLookupDati();
+
         // Carica la lista dei gruppi di lavoro per il selettore nomine
         const { data: gruppiL, error: glError } = await supabaseClient
             .from('epika_gruppi_lavoro')
@@ -494,6 +531,8 @@ function switchAdminTab(tab) {
         renderSCABTab();
     } else if (tab === 'gruppi') {
         renderGruppiStoriciAdmin();
+    } else if (tab === 'popoli') {
+        renderPopoliAdmin();
     } else if (tab === 'eventi') {
         renderEventiAdmin();
     }
@@ -836,8 +875,8 @@ function renderSCABAnagrafica() {
     
     scabStrutture.forEach(s => {
         const badge = s.tipo === 'palestra' ? 'PAL' : 'CP';
-        const activeText = s.attivo ? 'DISATTIVA' : 'ATTIVA';
-        const activeStyle = s.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
+        const activeText = s.attivo ? 'Dis' : 'Att';
+        const activeStyle = s.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
         
         const html = `
             <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
@@ -845,9 +884,14 @@ function renderSCABAnagrafica() {
                     <span style="font-size: 9px; font-weight: bold; padding: 2px 4px; background: rgba(201,168,76,0.2); border: 1px solid var(--epk-gold); border-radius: 2px; margin-right: 6px;">${badge}</span>
                     <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.nome.toUpperCase()}</span>
                 </div>
-                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoStrutturaSCAB('${s.id}', ${s.attivo})">
-                    ${activeText}
-                </button>
+                <div style="display: flex; gap: 4px;">
+                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoStrutturaSCAB('${s.id}', ${s.attivo})">
+                        ${activeText}
+                    </button>
+                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="cancellaStrutturaSCAB('${s.id}')">
+                        Canc
+                    </button>
+                </div>
             </div>`;
             
         if (s.tipo === 'palestra') {
@@ -1190,15 +1234,20 @@ async function renderRuoliAdmin() {
         if (allieviList) allieviList.innerHTML = '';
 
         (soggetti || []).forEach(s => {
-            const statusText = s.attivo ? 'DISATTIVA' : 'ATTIVA';
-            const statusClass = s.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
+            const activeText = s.attivo ? 'Dis' : 'Att';
+            const activeStyle = s.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             
             const html = `
                 <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.valore.toUpperCase()}</span>
-                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${statusClass}" onclick="toggleStatoSoggettoRuolo('${s.id}', ${s.attivo})">
-                        ${statusText}
-                    </button>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoSoggettoRuolo('${s.id}', ${s.attivo})">
+                            ${activeText}
+                        </button>
+                        <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="cancellaSoggettoRuolo('${s.id}')">
+                            Canc
+                        </button>
+                    </div>
                 </div>`;
                 
             if (s.tipo === 'scab_validatore' && valList) valList.innerHTML += html;
@@ -1541,6 +1590,7 @@ async function renderOrganigrammaMermaid() {
 }
 
 // --- GESTIONE GRUPPI STORICI ---
+// --- GESTIONE GRUPPI STORICI ---
 async function renderGruppiStoriciAdmin() {
     const listContainer = document.getElementById('adm-gruppi-storici-list');
     if (!listContainer) return;
@@ -1568,14 +1618,26 @@ async function renderGruppiStoriciAdmin() {
             const infoText = document.createElement('div');
             infoText.innerHTML = `<strong style="color: var(--epk-gold);">${g.nome}</strong> <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${g.popolo || 'Mercenari'})</span>`;
             
-            const actionBtn = document.createElement('button');
-            actionBtn.className = g.attivo ? 'epk-btn-secondary' : 'epk-btn';
-            actionBtn.style = "padding: 6px 12px; font-size: 9px;";
-            actionBtn.textContent = g.attivo ? 'DISATTIVA' : 'ATTIVA';
-            actionBtn.onclick = () => toggleStatoGruppoStorico(g.id, !g.attivo);
+            const btnContainer = document.createElement('div');
+            btnContainer.style = "display: flex; gap: 4px;";
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'epk-btn-secondary';
+            toggleBtn.style = `font-size: 8px; padding: 4px 8px; ${g.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);'}`;
+            toggleBtn.textContent = g.attivo ? 'Dis' : 'Att';
+            toggleBtn.onclick = () => toggleStatoGruppoStorico(g.id, !g.attivo);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'epk-btn-secondary';
+            deleteBtn.style = 'font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);';
+            deleteBtn.textContent = 'Canc';
+            deleteBtn.onclick = () => cancellaGruppoStorico(g.id);
+
+            btnContainer.appendChild(toggleBtn);
+            btnContainer.appendChild(deleteBtn);
 
             row.appendChild(infoText);
-            row.appendChild(actionBtn);
+            row.appendChild(btnContainer);
             listContainer.appendChild(row);
         });
     } catch (e) {
@@ -1628,5 +1690,190 @@ async function toggleStatoGruppoStorico(id, stato) {
     } catch (e) {
         console.error("Errore aggiornamento stato gruppo storico:", e);
         alert("Errore durante l'aggiornamento dello stato.");
+    }
+}
+
+// --- FISICA CANCELLAZIONE ---
+
+async function cancellaStrutturaSCAB(id) {
+    if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questa struttura? Questa azione è irreversibile.")) return;
+    try {
+        const { error } = await supabaseClient
+            .from('epika_scab_strutture')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        await renderSCABTab();
+    } catch (e) {
+        console.error("Errore cancellazione struttura SCAB:", e);
+        if (e.code === '23503') {
+            alert("Impossibile cancellare: questa struttura è associata ad abbinamenti attivi o presenze. Disattivala invece.");
+        } else {
+            alert("Errore durante la cancellazione.");
+        }
+    }
+}
+
+async function cancellaSoggettoRuolo(id) {
+    if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questo soggetto/ruolo? Questa azione è irreversibile.")) return;
+    try {
+        const { error } = await supabaseClient
+            .from('epika_opzioni')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        await renderSCABTab();
+    } catch (e) {
+        console.error("Errore cancellazione soggetto ruolo:", e);
+        if (e.code === '23503') {
+            alert("Impossibile cancellare: questo soggetto è già assegnato a tesserati o abbinamenti. Disattivalo invece.");
+        } else {
+            alert("Errore durante la cancellazione.");
+        }
+    }
+}
+
+async function cancellaGruppoStorico(id) {
+    if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questo gruppo storico? Questa azione è irreversibile.")) return;
+    try {
+        const { error } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        await renderGruppiStoriciAdmin();
+        await caricaLookupDati();
+    } catch (e) {
+        console.error("Errore cancellazione gruppo storico:", e);
+        if (e.code === '23503') {
+            alert("Impossibile cancellare: questo gruppo è già assegnato a tesserati o nomine. Disattivalo invece.");
+        } else {
+            alert("Errore durante la cancellazione.");
+        }
+    }
+}
+
+// --- GESTIONE POPOLI ---
+
+async function renderPopoliAdmin() {
+    const listContainer = document.getElementById('adm-popoli-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento in corso...</p>';
+
+    try {
+        const { data: popoli, error } = await supabaseClient
+            .from('epika_popoli')
+            .select('*')
+            .order('nome', { ascending: true });
+
+        if (error) throw error;
+
+        if (!popoli || popoli.length === 0) {
+            listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Nessun popolo registrato.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        popoli.forEach(p => {
+            const row = document.createElement('div');
+            row.style = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(251, 191, 36, 0.15); padding: 8px 12px; margin-bottom: 4px;";
+            
+            const infoText = document.createElement('div');
+            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${p.nome}</strong>`;
+            
+            const btnContainer = document.createElement('div');
+            btnContainer.style = "display: flex; gap: 4px;";
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'epk-btn-secondary';
+            toggleBtn.style = `font-size: 8px; padding: 4px 8px; ${p.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);'}`;
+            toggleBtn.textContent = p.attivo ? 'Dis' : 'Att';
+            toggleBtn.onclick = () => toggleStatoPopolo(p.id, !p.attivo);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'epk-btn-secondary';
+            deleteBtn.style = 'font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);';
+            deleteBtn.textContent = 'Canc';
+            deleteBtn.onclick = () => cancellaPopolo(p.id);
+
+            btnContainer.appendChild(toggleBtn);
+            btnContainer.appendChild(deleteBtn);
+
+            row.appendChild(infoText);
+            row.appendChild(btnContainer);
+            listContainer.appendChild(row);
+        });
+    } catch (e) {
+        console.error("Errore caricamento popoli:", e);
+        listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: red;">Errore durante il caricamento.</p>';
+    }
+}
+
+async function creaPopolo() {
+    const nomeInput = document.getElementById('new-popolo-nome');
+    if (!nomeInput) return;
+    
+    const nome = nomeInput.value.trim().toUpperCase();
+
+    if (!nome) {
+        alert("Inserisci un nome valido per il popolo.");
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_popoli')
+            .insert([{ nome, attivo: true }]);
+
+        if (error) throw error;
+
+        nomeInput.value = '';
+        await renderPopoliAdmin();
+        await caricaLookupDati();
+    } catch (e) {
+        console.error("Errore creazione popolo:", e);
+        alert("Errore durante la creazione: il popolo potrebbe già esistere.");
+    }
+}
+
+async function toggleStatoPopolo(id, stato) {
+    try {
+        const { error } = await supabaseClient
+            .from('epika_popoli')
+            .update({ attivo: stato })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        await renderPopoliAdmin();
+        await caricaLookupDati();
+    } catch (e) {
+        console.error("Errore aggiornamento stato popolo:", e);
+        alert("Errore durante l'aggiornamento dello stato.");
+    }
+}
+
+async function cancellaPopolo(id) {
+    if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questo popolo? Questa azione è irreversibile.")) return;
+    try {
+        const { error } = await supabaseClient
+            .from('epika_popoli')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        await renderPopoliAdmin();
+        await caricaLookupDati();
+    } catch (e) {
+        console.error("Errore cancellazione popolo:", e);
+        if (e.code === '23503') {
+            alert("Impossibile cancellare: questo popolo è associato a gruppi o tesserati. Disattivalo invece.");
+        } else {
+            alert("Errore durante la cancellazione.");
+        }
     }
 }
