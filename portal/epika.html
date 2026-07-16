@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.01.99">
+    <link rel="stylesheet" href="epika.css?v=1.02.00">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.01.99"></script>
+    <script src="config.js?v=1.02.00"></script>
 </head>
 <body class="epk-body">
 
     <!-- Header Navbar -->
     <header class="epk-header">
         <div class="epk-logo-group">
-            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.01.99</span></h1>
+            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.02.00</span></h1>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
             <div style="text-align: right;">
@@ -203,6 +203,9 @@
                     <button id="epk-adm-btn-scab" class="epk-sidebar-btn" onclick="switchAdminTab('scab')">
                         SCAB
                     </button>
+                    <button id="epk-adm-btn-gruppi" class="epk-sidebar-btn" onclick="switchAdminTab('gruppi')">
+                        GRUPPI STORICI
+                    </button>
                     <button id="epk-adm-btn-eventi" class="epk-sidebar-btn" onclick="switchAdminTab('eventi')">
                         EVENTI & PRESENZE
                     </button>
@@ -354,6 +357,37 @@
                         </div>
                     </div>
 
+                    <!-- Tab 4: Gruppi Storici -->
+                    <div id="epk-adm-tab-gruppi" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 8px;">
+                                GESTIONE GRUPPI STORICI
+                            </h2>
+                            <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: flex-end; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(251, 191, 36, 0.1);">
+                                <div style="flex: 1;">
+                                    <label class="epk-label" for="new-gruppo-nome">Nome Gruppo Storico *</label>
+                                    <input type="text" id="new-gruppo-nome" class="epk-input" placeholder="ES: LEGA ITALICA...">
+                                </div>
+                                <div style="width: 180px;">
+                                    <label class="epk-label" for="new-gruppo-popolo">Popolo Riferimento</label>
+                                    <select id="new-gruppo-popolo" class="epk-input">
+                                        <option value="">Mercenari (Nessuno)</option>
+                                        <option value="Romani">Romani</option>
+                                        <option value="Greci">Greci</option>
+                                        <option value="Celti">Celti</option>
+                                        <option value="Liguri">Liguri</option>
+                                        <option value="Sanniti">Sanniti</option>
+                                        <option value="Germani">Germani</option>
+                                    </select>
+                                </div>
+                                <button class="epk-btn" onclick="creaGruppoStorico()" style="padding: 10px 20px; font-size: 11px;">CREA GRUPPO</button>
+                            </div>
+                            <div id="adm-gruppi-storici-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 400px; overflow-y: auto;">
+                                <!-- Elenco gruppi gestiti dinamicamente -->
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Tab 5: Eventi e Presenze -->
                     <div id="epk-adm-tab-eventi" class="epk-admin-tab-panel epk-hidden">
                         <!-- Gestione Eventi e Presenze -->
@@ -437,6 +471,12 @@
                             <label class="epk-label" for="adm-nomina-modal-search">Cerca Tesserato (Nome o Nome Storico)</label>
                             <input type="text" id="adm-nomina-modal-search" class="epk-input" placeholder="Digita per cercare..." oninput="filtraTesseratiNomina()">
                         </div>
+                        <div id="adm-nomina-modal-represent-container" class="epk-hidden">
+                            <label class="epk-label" for="adm-nomina-modal-represent-select">Gruppo Storico Rappresentato *</label>
+                            <select id="adm-nomina-modal-represent-select" class="epk-input">
+                                <!-- Popolato dinamicamente -->
+                            </select>
+                        </div>
                         <div id="adm-nomina-modal-results" style="max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px; background: rgba(0,0,0,0.2);">
                             <!-- Risultati della ricerca -->
                         </div>
@@ -450,6 +490,6 @@
 
     </div>
 
-    <script src="epika.js?v=1.01.99"></script>
+    <script src="epika.js?v=1.02.00"></script>
 </body>
 </html>

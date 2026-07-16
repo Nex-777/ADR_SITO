@@ -492,8 +492,8 @@ function switchAdminTab(tab) {
         renderTesseratiNomineInverso();
     } else if (tab === 'scab') {
         renderSCABTab();
-    } else if (tab === 'allenatori') {
-        renderRuoliAdmin();
+    } else if (tab === 'gruppi') {
+        renderGruppiStoriciAdmin();
     } else if (tab === 'eventi') {
         renderEventiAdmin();
     }
@@ -563,17 +563,28 @@ async function renderTesseratiNomineInverso() {
             } else {
                 membri.forEach(m => {
                     const nomeReale = utentiMappa[m.id] || 'N/D';
+                    
+                    let rappresentatoText = '';
+                    if ((g.id === 5 || g.id === 6) && m.rappresentante_gruppo_storico_id) {
+                        const grp = gruppiStorici.find(x => x.id === m.rappresentante_gruppo_storico_id);
+                        if (grp) {
+                            rappresentatoText = ` <span style="font-size: 10px; color: var(--epk-gold); font-weight: bold; border: 1px solid var(--epk-gold-dim); padding: 1px 4px; margin-left: 6px; border-radius: 2px;">${grp.nome}</span>`;
+                        }
+                    }
+
                     membriHTML += `
                         <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.1); padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
                             <div>
-                                <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold);">${m.nome_di_battaglia}</span>
+                                <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold);">${m.nome_di_battaglia}${rappresentatoText}</span>
                                 <span style="font-size: 9px; display: block; color: rgba(245,230,200,0.5);">Real: ${nomeReale.toUpperCase()}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 12px;">
+                                ${g.id === 1 ? `
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     <input type="checkbox" id="chk-adm-${g.id}-${m.id}" ${m.is_admin_epika ? 'checked' : ''} onchange="salvaStatoAdminInverso('${m.id}', this.checked)" style="cursor: pointer; transform: scale(0.9);">
                                     <label for="chk-adm-${g.id}-${m.id}" style="font-size: 8px; font-weight: bold; color: var(--epk-gold); cursor: pointer; text-transform: uppercase;">ADMIN</label>
                                 </div>
+                                ` : ''}
                                 <button class="epk-btn-secondary" style="font-size: 8px; padding: 2px 6px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="rimuoviNominaLavoroInverso('${m.id}', ${g.id})">
                                     RIMUOVI
                                 </button>
@@ -645,14 +656,36 @@ function filtraTesseratiNomina() {
     }
     
     filtered.forEach(t => {
+        let representSelectHTML = '';
+        if (gruppoId === 5 || gruppoId === 6) {
+            const defaultGrpId = t.rappresentante_gruppo_storico_id || t.gruppo_storico_id || '';
+            let options = '<option value="" disabled>SELEZIONA GRUPPO...</option>';
+            gruppiStorici.forEach(g => {
+                if (g.attivo) {
+                    const selected = g.id == defaultGrpId ? 'selected' : '';
+                    options += `<option value="${g.id}" ${selected}>${g.nome}</option>`;
+                }
+            });
+            representSelectHTML = `
+                <div style="margin-right: 12px;">
+                    <select id="select-rep-${t.id}" class="epk-input" style="font-size: 10px; padding: 4px 8px; height: 26px; min-width: 150px; background: #150904; border-color: var(--epk-gold-dim); color: #fff;">
+                        ${options}
+                    </select>
+                </div>
+            `;
+        }
+
         resultsContainer.innerHTML += `
-            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
+            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px; margin-bottom: 4px;">
                 <div>
                     <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold);">${t.nome_di_battaglia}</span>
                 </div>
-                <button class="epk-btn" style="font-size: 8px; padding: 6px 12px;" onclick="salvaNominaLavoroInverso('${t.id}', ${gruppoId})">
-                    AGGIUNGI
-                </button>
+                <div style="display: flex; align-items: center;">
+                    ${representSelectHTML}
+                    <button class="epk-btn" style="font-size: 8px; padding: 6px 12px;" onclick="salvaNominaLavoroInverso('${t.id}', ${gruppoId})">
+                        AGGIUNGI
+                    </button>
+                </div>
             </div>`;
     });
 }
@@ -662,11 +695,29 @@ async function salvaNominaLavoroInverso(utenteId, gruppoId) {
     try {
         const tesserato = tesseratiCache.find(t => t.id === utenteId);
         const currentGids = tesserato ? (tesserato.gruppo_lavoro_ids || []) : [];
+        
+        let updatePayload = {};
         if (!currentGids.includes(gruppoId)) {
-            const newGids = [...currentGids, gruppoId];
+            updatePayload.gruppo_lavoro_ids = [...currentGids, gruppoId];
+        }
+
+        // Se stiamo nominando a Capi Gruppo (5) o Responsabili Iscrizioni (6), leggiamo il gruppo rappresentato
+        if (gruppoId === 5 || gruppoId === 6) {
+            const selectRep = document.getElementById(`select-rep-${utenteId}`);
+            if (selectRep) {
+                const rappresentanteGruppoId = selectRep.value ? parseInt(selectRep.value) : null;
+                if (!rappresentanteGruppoId) {
+                    alert("Seleziona il gruppo storico rappresentato per questo ruolo.");
+                    return;
+                }
+                updatePayload.rappresentante_gruppo_storico_id = rappresentanteGruppoId;
+            }
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
             const { error } = await supabaseClient
                 .from('epika_profili')
-                .update({ gruppo_lavoro_ids: newGids })
+                .update(updatePayload)
                 .eq('id', utenteId);
             if (error) throw error;
         }
@@ -686,9 +737,17 @@ async function rimuoviNominaLavoroInverso(utenteId, gruppoId) {
         if (tesserato) {
             const currentGids = tesserato.gruppo_lavoro_ids || [];
             const newGids = currentGids.filter(id => id !== gruppoId);
+            
+            let updatePayload = { gruppo_lavoro_ids: newGids };
+            
+            // Logica Robusta: Azzera rappresentante_gruppo_storico_id solo se non ha più né il ruolo 5 né il ruolo 6
+            if ((gruppoId === 5 || gruppoId === 6) && !newGids.includes(5) && !newGids.includes(6)) {
+                updatePayload.rappresentante_gruppo_storico_id = null;
+            }
+
             const { error } = await supabaseClient
                 .from('epika_profili')
-                .update({ gruppo_lavoro_ids: newGids })
+                .update(updatePayload)
                 .eq('id', utenteId);
             if (error) throw error;
         }
@@ -1478,5 +1537,96 @@ async function renderOrganigrammaMermaid() {
     } catch (e) {
         console.error("Errore durante il rendering del diagramma Mermaid:", e);
         container.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: red;">Errore di rendering dell\'organigramma strutturale.</p>';
+    }
+}
+
+// --- GESTIONE GRUPPI STORICI ---
+async function renderGruppiStoriciAdmin() {
+    const listContainer = document.getElementById('adm-gruppi-storici-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento in corso...</p>';
+
+    try {
+        const { data: gruppi, error } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .select('*')
+            .order('nome', { ascending: true });
+
+        if (error) throw error;
+
+        if (!gruppi || gruppi.length === 0) {
+            listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Nessun gruppo storico registrato.</p>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        gruppi.forEach(g => {
+            const row = document.createElement('div');
+            row.style = "display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(251, 191, 36, 0.15); padding: 8px 12px; margin-bottom: 4px;";
+            
+            const infoText = document.createElement('div');
+            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${g.nome}</strong> <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${g.popolo || 'Mercenari'})</span>`;
+            
+            const actionBtn = document.createElement('button');
+            actionBtn.className = g.attivo ? 'epk-btn-secondary' : 'epk-btn';
+            actionBtn.style = "padding: 6px 12px; font-size: 9px;";
+            actionBtn.textContent = g.attivo ? 'DISATTIVA' : 'ATTIVA';
+            actionBtn.onclick = () => toggleStatoGruppoStorico(g.id, !g.attivo);
+
+            row.appendChild(infoText);
+            row.appendChild(actionBtn);
+            listContainer.appendChild(row);
+        });
+    } catch (e) {
+        console.error("Errore caricamento gruppi storici:", e);
+        listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: red;">Errore durante il caricamento.</p>';
+    }
+}
+
+async function creaGruppoStorico() {
+    const nomeInput = document.getElementById('new-gruppo-nome');
+    const popoloSelect = document.getElementById('new-gruppo-popolo');
+    
+    const nome = nomeInput.value.trim().toUpperCase();
+    const popolo = popoloSelect.value || null;
+
+    if (!nome) {
+        alert("Inserisci un nome valido per il gruppo storico.");
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .insert([{ nome, popolo, attivo: true }]);
+
+        if (error) throw error;
+
+        nomeInput.value = '';
+        popoloSelect.value = '';
+        
+        await renderGruppiStoriciAdmin();
+        await caricaLookupDati();
+    } catch (e) {
+        console.error("Errore creazione gruppo storico:", e);
+        alert("Errore durante la creazione: il gruppo potrebbe già esistere.");
+    }
+}
+
+async function toggleStatoGruppoStorico(id, stato) {
+    try {
+        const { error } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .update({ attivo: stato })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        await renderGruppiStoriciAdmin();
+        await caricaLookupDati();
+    } catch (e) {
+        console.error("Errore aggiornamento stato gruppo storico:", e);
+        alert("Errore durante l'aggiornamento dello stato.");
     }
 }
