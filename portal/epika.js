@@ -2524,68 +2524,128 @@ async function renderCapoStoricoRuoli(groupId) {
     }
 }
 
+let capoIscrittiCache = [];
+let capoIscrittiOrdinamentoAscendente = true;
+
 async function renderCapoIscrittiGruppo() {
     const tbody = document.getElementById('capo-iscritti-table-body');
     const countEl = document.getElementById('capo-iscritti-count');
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px;">Ricerca iscritti in corso...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 12px;">Ricerca iscritti in corso...</td></tr>';
     
     try {
         const { data: iscritti, error } = await supabaseClient
             .from('epika_profili')
             .select('*, utenti(nome, cognome)')
             .eq('gruppo_storico_id', currentManagedGroupId)
-            .eq('profilo_completato', true)
-            .order('nome_di_battaglia', { ascending: true });
+            .eq('profilo_completato', true);
             
         if (error) throw error;
         
-        const listaIscritti = iscritti || [];
-        countEl.textContent = `${listaIscritti.length} ISCRITTI`;
+        capoIscrittiCache = iscritti || [];
         
-        if (listaIscritti.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px; color: gray;">Nessun iscritto trovato per questo gruppo.</td></tr>';
-            return;
+        // Popola il filtro dei popoli in base ai popoli effettivamente presenti nel gruppo
+        const popoliPresenti = [...new Set(capoIscrittiCache.map(i => i.popolo).filter(Boolean))].sort();
+        const popoloFilterSel = document.getElementById('capo-filter-popolo');
+        if (popoloFilterSel) {
+            popoloFilterSel.innerHTML = '<option value="">TUTTI I POPOLI</option>';
+            popoliPresenti.forEach(p => {
+                popoloFilterSel.innerHTML += `<option value="${p}">${p.toUpperCase()}</option>`;
+            });
         }
         
-        tbody.innerHTML = '';
-        listaIscritti.forEach(i => {
-            const nomeStorico = i.nome_di_battaglia || 'Senza Nome';
-            const nomeReal = i.utenti ? `${i.utenti.nome} ${i.utenti.cognome}` : 'N/D';
-            
-            let ruoloComb = '';
-            if (i.ruolo_combattimento === 'combattente') ruoloComb = 'Combattente';
-            else if (i.ruolo_combattimento === 'non_combattente') ruoloComb = 'Non Combattente';
-            else ruoloComb = i.ruolo_combattimento || 'N/D';
-            
-            // Trova i nomi dei gruppi di lavoro
-            let incarichiStr = 'Nessuno';
-            const gids = i.gruppo_lavoro_ids || [];
-            if (gids.length > 0) {
-                const nomi = gids.map(gid => {
-                    const gl = gruppiLavoro.find(l => l.id === gid);
-                    return gl ? gl.nome : `Incarico #${gid}`;
-                });
-                incarichiStr = nomi.join(', ');
-            }
-            
-            const tr = document.createElement('tr');
-            tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
-            tr.innerHTML = `
-                <td style="padding: 10px;"><strong>${nomeStorico}</strong></td>
-                <td style="padding: 10px; color: #a1a1aa;">${nomeReal}</td>
-                <td style="padding: 10px; color: var(--epk-gold);">${ruoloComb}</td>
-                <td style="padding: 10px; font-size: 10px;">${incarichiStr}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        disegnaTabellaCapoIscritti();
         
     } catch (e) {
         console.error("Errore caricamento iscritti gruppo:", e);
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px; color: red;">Errore durante il caricamento degli iscritti.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 12px; color: red;">Errore durante il caricamento degli iscritti.</td></tr>';
     }
 }
+
+function disegnaTabellaCapoIscritti() {
+    const tbody = document.getElementById('capo-iscritti-table-body');
+    const countEl = document.getElementById('capo-iscritti-count');
+    if (!tbody) return;
+    
+    const query = (document.getElementById('capo-search-input')?.value || '').toLowerCase().trim();
+    const ruoloFilter = document.getElementById('capo-filter-ruolo')?.value || '';
+    const popoloFilter = document.getElementById('capo-filter-popolo')?.value || '';
+    
+    // 1. Filtra
+    let filtrati = capoIscrittiCache.filter(i => {
+        const nomeStorico = (i.nome_di_battaglia || '').toLowerCase();
+        const nomeReal = i.utenti ? `${i.utenti.nome} ${i.utenti.cognome}`.toLowerCase() : '';
+        const matchNome = nomeStorico.includes(query) || nomeReal.includes(query);
+        if (!matchNome) return false;
+        
+        if (ruoloFilter && i.ruolo_combattimento !== ruoloFilter) return false;
+        if (popoloFilter && i.popolo !== popoloFilter) return false;
+        
+        return true;
+    });
+    
+    // 2. Ordina
+    filtrati.sort((a, b) => {
+        const nomeA = (a.nome_di_battaglia || '').toLowerCase();
+        const nomeB = (b.nome_di_battaglia || '').toLowerCase();
+        if (nomeA < nomeB) return capoIscrittiOrdinamentoAscendente ? -1 : 1;
+        if (nomeA > nomeB) return capoIscrittiOrdinamentoAscendente ? 1 : -1;
+        return 0;
+    });
+    
+    countEl.textContent = `${filtrati.length} ISCRITTI`;
+    
+    if (filtrati.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 12px; color: gray;">Nessun iscritto trovato con i filtri selezionati.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    filtrati.forEach((i, idx) => {
+        const rowNum = idx + 1;
+        const nomeStorico = i.nome_di_battaglia || 'Senza Nome';
+        const nomeReal = i.utenti ? `${i.utenti.nome} ${i.utenti.cognome}` : 'N/D';
+        const popoloVal = i.popolo || 'Mercenario';
+        
+        let ruoloComb = '';
+        if (i.ruolo_combattimento === 'combattente') ruoloComb = 'Combattente';
+        else if (i.ruolo_combattimento === 'non_combattente') ruoloComb = 'Non Combattente';
+        else ruoloComb = i.ruolo_combattimento || 'N/D';
+        
+        let incarichiStr = 'Nessuno';
+        const gids = i.gruppo_lavoro_ids || [];
+        if (gids.length > 0) {
+            const nomi = gids.map(gid => {
+                const gl = gruppiLavoro.find(l => l.id === gid);
+                return gl ? gl.nome : `Incarico #${gid}`;
+            }).filter(Boolean);
+            if (nomi.length > 0) incarichiStr = nomi.join(', ');
+        }
+        
+        const tr = document.createElement('tr');
+        tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
+        tr.innerHTML = `
+            <td style="padding: 10px; text-align: center; color: var(--epk-gold-dim); font-weight: bold;">${rowNum}</td>
+            <td style="padding: 10px;"><strong>${nomeStorico}</strong></td>
+            <td style="padding: 10px; color: #a1a1aa;">${nomeReal}</td>
+            <td style="padding: 10px; color: #cbd5e1; font-weight: 500; font-size: 11px;">${popoloVal.toUpperCase()}</td>
+            <td style="padding: 10px; color: var(--epk-gold);">${ruoloComb}</td>
+            <td style="padding: 10px; font-size: 10px; color: #a1a1aa;">${incarichiStr}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function applicaFiltriCapoIscritti() {
+    disegnaTabellaCapoIscritti();
+}
+
+function toggleOrdinamentoCapoIscritti() {
+    capoIscrittiOrdinamentoAscendente = !capoIscrittiOrdinamentoAscendente;
+    disegnaTabellaCapoIscritti();
+}
+
 
 // --- GESTIONE LISTA GENERALE (2026-2028) ---
 let listaGeneraleProfili = [];
