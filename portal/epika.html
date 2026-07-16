@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.04">
+    <link rel="stylesheet" href="epika.css?v=1.02.05">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.04"></script>
+    <script src="config.js?v=1.02.05"></script>
 </head>
 <body class="epk-body">
 
     <!-- Header Navbar -->
     <header class="epk-header">
         <div class="epk-logo-group">
-            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.02.04</span></h1>
+            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.02.05</span></h1>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
             <div style="text-align: right;">
@@ -632,8 +632,146 @@
             </div>
         </section>
 
+        <!-- 4. PORTALE CAPOGRUPPO -->
+        <section id="epk-capogruppo" class="epk-hidden">
+            <div class="epk-admin-layout">
+                <!-- Sidebar -->
+                <aside class="epk-admin-sidebar">
+                    <div id="epk-capo-group-select-container" class="epk-hidden" style="margin-bottom: 8px; width: 100%;">
+                        <label class="epk-label" for="epk-capo-group-select">Gruppo Gestito</label>
+                        <select id="epk-capo-group-select" class="epk-input" style="font-size: 11px; padding: 8px 10px;" onchange="switchManagedGroup(this.value)">
+                            <!-- Popolato dinamicamente -->
+                        </select>
+                    </div>
+                    <button id="epk-capo-btn-dati" class="epk-sidebar-btn active" onclick="switchCapoTab('dati')">
+                        DATI GRUPPO
+                    </button>
+                    <button id="epk-capo-btn-iscritti" class="epk-sidebar-btn" onclick="switchCapoTab('iscritti')">
+                        ISCRITTI AL GRUPPO
+                    </button>
+                </aside>
+
+                <!-- Content Area -->
+                <div class="epk-admin-content">
+                    
+                    <!-- Tab 1: Dati Gruppo (Read-only Summary + History) -->
+                    <div id="epk-capo-tab-dati" class="epk-admin-tab-panel">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                                <h2 id="epk-capo-dettaglio-titolo" class="epk-headline" style="margin: 0; font-size: 18px;">
+                                    DATI GRUPPO
+                                </h2>
+                            </div>
+                            
+                            <div class="epk-grid-2">
+                                <!-- Sezione 1: Ruoli Attuali -->
+                                <div class="epk-card" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1);">
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 12px;">RUOLI ATTUALI</h3>
+                                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                                        <div>
+                                            <span class="epk-label">Nome Gruppo</span>
+                                            <span id="capo-val-nome" style="font-weight: bold; color: var(--epk-gold); font-size: 14px;">-</span>
+                                        </div>
+                                        <div>
+                                            <span class="epk-label">Popolo Riferimento</span>
+                                            <span id="capo-val-popolo" style="font-weight: bold; font-size: 13px;">-</span>
+                                        </div>
+                                        <div>
+                                            <span class="epk-label">Capogruppo</span>
+                                            <span id="capo-val-capo" style="font-weight: bold; font-size: 13px;">-</span>
+                                        </div>
+                                        <div>
+                                            <span class="epk-label">Vice Capogruppo</span>
+                                            <span id="capo-val-vice" style="font-weight: bold; font-size: 13px;">-</span>
+                                        </div>
+                                        <div>
+                                            <span class="epk-label">Responsabile Iscrizioni</span>
+                                            <span id="capo-val-resp" style="font-weight: bold; font-size: 13px;">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sezione 2: Periodo di Attività & Statistiche -->
+                                <div class="epk-card" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); display: flex; flex-direction: column; gap: 16px;">
+                                    <div>
+                                        <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 12px;">STATO ATTIVITÀ</h3>
+                                        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+                                            <div>
+                                                <strong>In Formazione:</strong> 
+                                                da <span id="capo-val-formazione-dal">-</span> a <span id="capo-val-formazione-al">-</span>
+                                            </div>
+                                            <div>
+                                                <strong>Ufficiale:</strong> 
+                                                da <span id="capo-val-ufficiale-dal">-</span> a <span id="capo-val-ufficiale-al">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Statistiche -->
+                                    <div style="border-top: 1px solid var(--epk-gold-dim); padding-top: 12px;">
+                                        <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 8px;">STATISTICHE CAMPO MARZIO</h3>
+                                        <p style="font-size: 11px; margin: 4px 0;"><strong>Campi Marzi Partecipati:</strong> <span id="capo-stat-partecipati">0</span></p>
+                                        <p style="font-size: 11px; margin: 4px 0;"><strong>Campi Marzi Vinti:</strong> <span id="capo-stat-vinti">0</span></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sezione 3: Storico Mandati -->
+                            <div class="epk-card" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1);">
+                                <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 12px;">CRONOLOGIA STORICA MANDATI</h3>
+                                <div style="overflow-x: auto;">
+                                    <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif;">
+                                                <th style="padding: 10px;">Tesserato</th>
+                                                <th style="padding: 10px;">Ruolo</th>
+                                                <th style="padding: 10px;">Inizio Mandato</th>
+                                                <th style="padding: 10px;">Fine Mandato</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="capo-storico-ruoli-table-body">
+                                            <!-- Popolato dinamicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Iscritti al Gruppo -->
+                    <div id="epk-capo-tab-iscritti" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                <h2 class="epk-headline" style="margin: 0; font-size: 18px;">
+                                    SOGGETTI ISCRITTI AL GRUPPO
+                                </h2>
+                                <span id="capo-iscritti-count" class="epk-version-badge" style="margin: 0;">0 ISCRITTI</span>
+                            </div>
+                            
+                            <div style="overflow-x: auto;">
+                                <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif;">
+                                            <th style="padding: 10px;">Nome Storico</th>
+                                            <th style="padding: 10px;">Nome Anagrafico</th>
+                                            <th style="padding: 10px;">Ruolo Combattimento</th>
+                                            <th style="padding: 10px;">Incarichi (Gruppo di Lavoro)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="capo-iscritti-table-body">
+                                        <!-- Popolato dinamicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </section>
+
     </div>
 
-    <script src="epika.js?v=1.02.04"></script>
+    <script src="epika.js?v=1.02.05"></script>
 </body>
 </html>

@@ -98,6 +98,6 @@ Stores confirmed event attendance (used to calculate member statistics on the fl
 ## 🔒 Row Level Security (RLS)
 
 - Lookups (`epika_gruppi_storici`, `epika_gruppi_lavoro`, `epika_opzioni`): Read access to all authenticated users. Write/Delete restricted to President or users with `is_admin_epika = TRUE`.
-- Profiles (`epika_profili`): Select/Update allowed only for the owner, President, or `is_admin_epika = TRUE`. Insert only allowed for the owner.
+- Profiles (`epika_profili`): Select allowed for the owner, President, `is_admin_epika = TRUE`, or any Capogruppo/Vice Capogruppo of the profile's current or historical group (to access member lists and cronologia mandati). Update allowed only for the owner, President, or `is_admin_epika = TRUE`. Insert allowed only for the owner.
 - Events (`epika_eventi`): Read allowed for all authenticated users. Writes/Delete restricted to admins.
 - Signups & Attendance: Select/write restricted to owner/admin where appropriate.
