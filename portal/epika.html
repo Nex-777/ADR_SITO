@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.08">
+    <link rel="stylesheet" href="epika.css?v=1.02.09">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.08"></script>
+    <script src="config.js?v=1.02.09"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.02.08</span>
+            <span class="epk-version-badge">Vs. 1.02.09</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -211,6 +211,9 @@
                     </button>
                     <button id="epk-adm-btn-eventi" class="epk-sidebar-btn" onclick="switchAdminTab('eventi')">
                         EVENTI & PRESENZE
+                    </button>
+                    <button id="epk-adm-btn-generale" class="epk-sidebar-btn" onclick="switchAdminTab('generale')">
+                        LISTA GENERALE
                     </button>
                 </aside>
 
@@ -463,6 +466,22 @@
                                 <div class="epk-card" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); display: flex; flex-direction: column; gap: 16px;">
                                     <div>
                                         <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 12px;">STATO ATTIVITÀ</h3>
+                                        <div style="margin-bottom: 12px; border-bottom: 1px solid rgba(251,191,36,0.1); padding-bottom: 12px;">
+                                            <div class="epk-grid-2" style="gap: 8px;">
+                                                <div>
+                                                    <label class="epk-label" for="det-gruppo-stato">Stato Gruppo</label>
+                                                    <select id="det-gruppo-stato" class="epk-input">
+                                                        <option value="in_formazione">IN FORMAZIONE</option>
+                                                        <option value="ufficiale">UFFICIALE</option>
+                                                        <option value="sospeso">SOSPESO</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="epk-label" for="det-gruppo-data-stato">Data Cambio Stato</label>
+                                                    <input type="date" id="det-gruppo-data-stato" class="epk-input">
+                                                </div>
+                                            </div>
+                                        </div>
                                         <div class="epk-grid-2" style="gap: 8px; margin-bottom: 8px;">
                                             <div>
                                                 <label class="epk-label">In Formazione Dal</label>
@@ -483,7 +502,7 @@
                                                 <input type="date" id="det-data-ufficiale-al" class="epk-input">
                                             </div>
                                         </div>
-                                        <button class="epk-btn-secondary" onclick="salvaDateGruppo()" style="font-size: 10px; width: 100%;">SALVA DATE ATTIVITÀ</button>
+                                        <button class="epk-btn-secondary" onclick="salvaDateGruppo()" style="font-size: 10px; width: 100%;">SALVA DATI ATTIVITÀ</button>
                                     </div>
 
                                     <!-- Statistiche Placeholder -->
@@ -603,6 +622,34 @@
                             <input type="hidden" id="adm-presenze-evento-id">
                             <div id="adm-presenze-utenti-list" style="display: flex; flex-direction: column; gap: 10px;">
                                 <!-- Iscritti con toggle presenza -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 6: Lista Generale -->
+                    <div id="epk-adm-tab-generale" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 8px;">
+                                <h2 class="epk-headline" style="margin: 0; font-size: 16px;">
+                                    LISTA GENERALE COMPONENTI - PLANNING ANNI FUTURI
+                                </h2>
+                                <button class="epk-btn" onclick="salvaTuttaLaListaGenerale()" style="padding: 8px 16px; font-size: 10px;">SALVA TUTTE LE MODIFICHE</button>
+                            </div>
+                            
+                            <div style="overflow-x: auto;">
+                                <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif;">
+                                            <th style="padding: 10px;">Tesserato (Storico / Anagrafico)</th>
+                                            <th style="padding: 10px; text-align: center;">2026 (Ruolo / Gruppo)</th>
+                                            <th style="padding: 10px; text-align: center;">2027 (Ruolo / Gruppo)</th>
+                                            <th style="padding: 10px; text-align: center;">2028 (Ruolo / Gruppo)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adm-generale-table-body">
+                                        <!-- Popolato dinamicamente -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -779,6 +826,6 @@
 
     </div>
 
-    <script src="epika.js?v=1.02.08"></script>
+    <script src="epika.js?v=1.02.09"></script>
 </body>
 </html>

@@ -603,6 +603,8 @@ function switchAdminTab(tab) {
         renderPopoliAdmin();
     } else if (tab === 'eventi') {
         renderEventiAdmin();
+    } else if (tab === 'generale') {
+        renderListaGeneraleAdmin();
     }
 }
 
@@ -1746,8 +1748,17 @@ async function renderGruppiStoriciAdmin() {
             const capoProf = tesseratiCache.find(t => t.id === g.capogruppo_id);
             const capoNome = capoProf ? (capoProf.nome_di_battaglia || 'Senza Nome') : 'Nessuno';
 
+            let statoLabel = '';
+            if (g.stato === 'in_formazione') {
+                statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); margin-left: 6px; border-radius: 3px;">IN FORMAZIONE</span>';
+            } else if (g.stato === 'sospeso') {
+                statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); margin-left: 6px; border-radius: 3px;">SOSPESO</span>';
+            } else {
+                statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); margin-left: 6px; border-radius: 3px;">UFFICIALE</span>';
+            }
+
             const infoText = document.createElement('div');
-            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${g.nome}</strong> <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${g.popolo || 'Mercenari'})</span> <span style="font-size: 10px; color: #71717a; margin-left: 12px;">Capogruppo: ${capoNome}</span>`;
+            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${g.nome}</strong>${statoLabel} <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${g.popolo || 'Mercenari'})</span> <span style="font-size: 10px; color: #71717a; margin-left: 12px;">Capogruppo: ${capoNome}</span>`;
             
             const btnContainer = document.createElement('div');
             btnContainer.style = "display: flex; gap: 4px;";
@@ -2143,6 +2154,8 @@ async function apriDettaglioGruppo(gruppoId) {
         document.getElementById('det-data-formazione-al').value = g.data_fine_formazione || '';
         document.getElementById('det-data-ufficiale-dal').value = g.data_inizio_ufficiale || '';
         document.getElementById('det-data-ufficiale-al').value = g.data_fine_ufficiale || '';
+        document.getElementById('det-gruppo-stato').value = g.stato || 'ufficiale';
+        document.getElementById('det-gruppo-data-stato').value = g.data_stato || '';
         
         await caricaStoricoRuoliGruppo(gruppoId);
         
@@ -2303,6 +2316,8 @@ async function salvaDateGruppo() {
     const dataFormazioneAl = document.getElementById('det-data-formazione-al').value || null;
     const dataUfficialeDal = document.getElementById('det-data-ufficiale-dal').value || null;
     const dataUfficialeAl = document.getElementById('det-data-ufficiale-al').value || null;
+    const stato = document.getElementById('det-gruppo-stato').value;
+    const dataStato = document.getElementById('det-gruppo-data-stato').value || null;
     
     try {
         const { error } = await supabaseClient
@@ -2311,18 +2326,20 @@ async function salvaDateGruppo() {
                 data_inizio_formazione: dataFormazioneDal,
                 data_fine_formazione: dataFormazioneAl,
                 data_inizio_ufficiale: dataUfficialeDal,
-                data_fine_ufficiale: dataUfficialeAl
+                data_fine_ufficiale: dataUfficialeAl,
+                stato: stato,
+                data_stato: dataStato
             })
             .eq('id', gruppoId);
             
         if (error) throw error;
         
-        alert("Date di attività salvate con successo!");
+        alert("Dati e stato di attività salvati con successo!");
         await caricaLookupDati();
         
     } catch (e) {
-        console.error("Errore salvataggio date gruppo:", e);
-        alert("Errore durante il salvataggio delle date.");
+        console.error("Errore salvataggio dati gruppo:", e);
+        alert("Errore durante il salvataggio dei dati del gruppo.");
     }
 }
 
@@ -2569,3 +2586,161 @@ async function renderCapoIscrittiGruppo() {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px; color: red;">Errore durante il caricamento degli iscritti.</td></tr>';
     }
 }
+
+// --- GESTIONE LISTA GENERALE (2026-2028) ---
+async function renderListaGeneraleAdmin() {
+    const tbody = document.getElementById('adm-generale-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px;">Caricamento lista generale...</td></tr>';
+    
+    try {
+        // 1. Carica profili completati
+        const { data: profili, error: profError } = await supabaseClient
+            .from('epika_profili')
+            .select('*, utenti(nome, cognome)')
+            .eq('profilo_completato', true)
+            .order('nome_di_battaglia', { ascending: true });
+            
+        if (profError) throw profError;
+        
+        // 2. Carica storico organico (2026-2028)
+        const { data: storico, error: storicoError } = await supabaseClient
+            .from('epika_storico_organico')
+            .select('*');
+            
+        if (storicoError) throw storicoError;
+        
+        // 3. Carica gruppi storici per i selettori
+        const { data: gruppi, error: gruppiError } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .select('id, nome')
+            .eq('attivo', true)
+            .order('nome', { ascending: true });
+            
+        if (gruppiError) throw gruppiError;
+        
+        const listaProfili = profili || [];
+        const listaStorico = storico || [];
+        const listaGruppi = gruppi || [];
+        
+        if (listaProfili.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px; color: gray;">Nessun componente trovato.</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        listaProfili.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
+            
+            const nomeStorico = p.nome_di_battaglia || 'Senza Nome';
+            const nomeReal = p.utenti ? `${p.utenti.nome} ${p.utenti.cognome}` : 'N/D';
+            
+            // Per ogni anno generiamo i selettori
+            let tdYearsHtml = '';
+            [2026, 2027, 2028].forEach(year => {
+                const rowStorico = listaStorico.find(s => s.profilo_id === p.id && s.anno_sociale === year);
+                
+                // Valori effettivi o fallback
+                const ruoloAttivo = rowStorico ? rowStorico.ruolo_combattimento : p.ruolo_combattimento;
+                const gruppoIdAttivo = rowStorico ? rowStorico.gruppo_storico_id : p.gruppo_storico_id;
+                
+                // Indicatore visivo se è fallback (non salvato per quest'anno)
+                const isFallback = !rowStorico;
+                const selectStyle = isFallback ? "opacity: 0.65; font-style: italic; border-color: rgba(251, 191, 36, 0.2);" : "border-color: var(--epk-gold);";
+                
+                // Select Ruolo
+                let ruoloSelect = `<select class="gen-ruolo epk-input" data-uid="${p.id}" data-year="${year}" style="font-size: 10px; padding: 4px; width: 100px; ${selectStyle}" onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
+                ruoloSelect += `<option value="" ${!ruoloAttivo ? 'selected' : ''}>NESSUNO</option>`;
+                ruoloSelect += `<option value="combattente" ${ruoloAttivo === 'combattente' ? 'selected' : ''}>COMBATTENTE</option>`;
+                ruoloSelect += `<option value="non_combattente" ${ruoloAttivo === 'non_combattente' ? 'selected' : ''}>NON COMBATTENTE</option>`;
+                ruoloSelect += `</select>`;
+                
+                // Select Gruppo
+                let gruppoSelect = `<select class="gen-gruppo epk-input" data-uid="${p.id}" data-year="${year}" style="font-size: 10px; padding: 4px; width: 110px; ${selectStyle}" onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
+                gruppoSelect += `<option value="" ${!gruppoIdAttivo ? 'selected' : ''}>NESSUNO</option>`;
+                listaGruppi.forEach(g => {
+                    const selected = (gruppoIdAttivo && Number(g.id) === Number(gruppoIdAttivo)) ? 'selected' : '';
+                    gruppoSelect += `<option value="${g.id}" ${selected}>${g.nome.toUpperCase()}</option>`;
+                });
+                gruppoSelect += `</select>`;
+                
+                tdYearsHtml += `
+                    <td style="padding: 8px; text-align: center;">
+                        <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                            ${ruoloSelect}
+                            ${gruppoSelect}
+                        </div>
+                    </td>
+                `;
+            });
+            
+            tr.innerHTML = `
+                <td style="padding: 10px;">
+                    <div style="display: flex; flex-direction: column;">
+                        <strong style="color: var(--epk-gold);">${nomeStorico}</strong>
+                        <span style="font-size: 10px; color: #a1a1aa;">${nomeReal}</span>
+                    </div>
+                </td>
+                ${tdYearsHtml}
+            `;
+            tbody.appendChild(tr);
+        });
+        
+    } catch (e) {
+        console.error("Errore caricamento lista generale:", e);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px; color: red;">Errore durante il caricamento della lista generale.</td></tr>';
+    }
+}
+
+async function salvaTuttaLaListaGenerale() {
+    const ruoliSelects = document.querySelectorAll('.gen-ruolo');
+    const gruppiSelects = document.querySelectorAll('.gen-gruppo');
+    
+    const rowsToUpsert = [];
+    
+    // Mappa per associare ruolo e gruppo per la stessa combinazione (profilo_id, anno_sociale)
+    const map = {};
+    
+    ruoliSelects.forEach(sel => {
+        const uid = sel.getAttribute('data-uid');
+        const year = parseInt(sel.getAttribute('data-year'));
+        const key = `${uid}_${year}`;
+        if (!map[key]) {
+            map[key] = { profilo_id: uid, anno_sociale: year };
+        }
+        map[key].ruolo_combattimento = sel.value || null;
+    });
+    
+    gruppiSelects.forEach(sel => {
+        const uid = sel.getAttribute('data-uid');
+        const year = parseInt(sel.getAttribute('data-year'));
+        const key = `${uid}_${year}`;
+        if (!map[key]) {
+            map[key] = { profilo_id: uid, anno_sociale: year };
+        }
+        map[key].gruppo_storico_id = sel.value ? parseInt(sel.value) : null;
+    });
+    
+    for (const key in map) {
+        rowsToUpsert.push(map[key]);
+    }
+    
+    if (rowsToUpsert.length === 0) return;
+    
+    try {
+        const { error } = await supabaseClient
+            .from('epika_storico_organico')
+            .upsert(rowsToUpsert, { onConflict: 'profilo_id,anno_sociale' });
+            
+        if (error) throw error;
+        
+        alert("Modifiche salvate con successo per tutti gli anni!");
+        await renderListaGeneraleAdmin();
+    } catch (e) {
+        console.error("Errore salvataggio lista generale:", e);
+        alert("Errore durante il salvataggio della lista generale.");
+    }
+}
+
