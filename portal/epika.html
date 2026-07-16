@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.01.97">
+    <link rel="stylesheet" href="epika.css?v=1.01.98">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.01.97"></script>
+    <script src="config.js?v=1.01.98"></script>
 </head>
 <body class="epk-body">
 
     <!-- Header Navbar -->
     <header class="epk-header">
         <div class="epk-logo-group">
-            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.01.97</span></h1>
+            <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA <span class="epk-version-badge">Vs. 1.01.98</span></h1>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
             <div style="text-align: right;">
@@ -236,8 +236,8 @@
                     <div id="epk-adm-tab-scab" class="epk-admin-tab-panel epk-hidden">
                         <div style="display: flex; gap: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
                             <button id="scab-tab-btn-abbinamenti" class="epk-btn-secondary" style="border-color: var(--epk-gold); color: var(--epk-gold);" onclick="switchScabSubTab('abbinamenti')">Abbinamenti</button>
-                            <button id="scab-tab-btn-anagrafica" class="epk-btn-secondary" onclick="switchScabSubTab('anagrafica')">Anagrafica SCAB</button>
-                            <button id="scab-tab-btn-allenatori" class="epk-btn-secondary" onclick="switchScabSubTab('allenatori')">Allenatori</button>
+                            <button id="scab-tab-btn-palestre-centri" class="epk-btn-secondary" onclick="switchScabSubTab('anagrafica')">Palestre e Centri</button>
+                            <button id="scab-tab-btn-ruoli" class="epk-btn-secondary" onclick="switchScabSubTab('allenatori')">Ruoli</button>
                         </div>
                         
                         <!-- SCAB Sotto-Tab 1: Abbinamenti -->
@@ -282,49 +282,73 @@
                             </div>
                         </div>
 
-                        <!-- SCAB Sotto-Tab 2: Anagrafica -->
+                        <!-- SCAB Sotto-Tab 2: Palestre e Centri -->
                         <div id="scab-panel-anagrafica" class="epk-hidden" style="display: flex; flex-direction: column; gap: 20px;">
                             <div class="epk-grid-2">
                                 <div class="epk-card">
-                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 12px;">Aggiungi Palestra / Centro</h3>
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 12px;">Palestre</h3>
                                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                                        <input type="text" id="scab-new-struttura-nome" class="epk-input" placeholder="NOME STRUTTURA...">
-                                        <select id="scab-new-struttura-tipo" class="epk-input">
-                                            <option value="palestra">PALESTRA</option>
-                                            <option value="centro_pratica">CENTRO PRATICA</option>
-                                        </select>
-                                        <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaStrutturaSCAB()">Aggiungi Struttura</button>
+                                        <input type="text" id="scab-new-palestra-nome" class="epk-input" placeholder="NOME PALESTRA...">
+                                        <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaStrutturaSCAB('palestra')">Aggiungi Palestra</button>
                                     </div>
-                                    <div id="scab-strutture-list" style="margin-top: 16px; max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                                        <!-- Lista strutture populated by JS -->
+                                    <div id="scab-palestre-list" style="margin-top: 16px; max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                        <!-- Lista palestre populated by JS -->
                                     </div>
                                 </div>
 
                                 <div class="epk-card">
-                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 12px;">Aggiungi Soggetto SCAB</h3>
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 12px;">Centri Pratica</h3>
                                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                                        <input type="text" id="scab-new-soggetto-valore" class="epk-input" placeholder="NOME SOGGETTO...">
-                                        <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaSoggettoSCAB()">Aggiungi Soggetto</button>
+                                        <input type="text" id="scab-new-centro-nome" class="epk-input" placeholder="NOME CENTRO PRATICA...">
+                                        <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaStrutturaSCAB('centro_pratica')">Aggiungi Centro Pratica</button>
                                     </div>
-                                    <div id="scab-soggetti-list" style="margin-top: 16px; max-h: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                                        <!-- Lista soggetti populated by JS -->
+                                    <div id="scab-centri-list" style="margin-top: 16px; max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                        <!-- Lista centri populated by JS -->
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- SCAB Sotto-Tab 3: Allenatori -->
+                        <!-- SCAB Sotto-Tab 3: Ruoli -->
                         <div id="scab-panel-allenatori" class="epk-hidden">
-                            <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
-                                <h3 class="epk-headline" style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
-                                    GESTIONE ANAGRAFICA ALLENATORI
-                                </h3>
-                                <div style="display: flex; gap: 8px;">
-                                    <input type="text" id="adm-new-allenatore" class="epk-input" placeholder="NUOVO ALLENATORE..." style="flex: 1;">
-                                    <button class="epk-btn" onclick="creaAllenatore()" style="padding: 10px 16px; font-size: 10px;">AGGIUNGI</button>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                                <!-- Validatori -->
+                                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                                        VALIDATORI
+                                    </h3>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="adm-new-validatore" class="epk-input" placeholder="NOME..." style="flex: 1;">
+                                        <button class="epk-btn" onclick="creaSoggettoRuolo('scab_validatore')" style="padding: 10px 12px; font-size: 9px;">ADD</button>
+                                    </div>
+                                    <div id="adm-validatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
+                                    </div>
                                 </div>
-                                <div id="adm-allenatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
-                                    <!-- Righe allenatori popolati via JS -->
+
+                                <!-- Allenatori -->
+                                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                                        ALLENATORI
+                                    </h3>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="adm-new-allenatore" class="epk-input" placeholder="NOME..." style="flex: 1;">
+                                        <button class="epk-btn" onclick="creaSoggettoRuolo('allenatore')" style="padding: 10px 12px; font-size: 9px;">ADD</button>
+                                    </div>
+                                    <div id="adm-allenatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
+                                    </div>
+                                </div>
+
+                                <!-- Allievi Allenatori -->
+                                <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                                    <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                                        ALLIEVI ALL.
+                                    </h3>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" id="adm-new-allievo" class="epk-input" placeholder="NOME..." style="flex: 1;">
+                                        <button class="epk-btn" onclick="creaSoggettoRuolo('scab_allievo_allenatore')" style="padding: 10px 12px; font-size: 9px;">ADD</button>
+                                    </div>
+                                    <div id="adm-allievi-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -426,6 +450,6 @@
 
     </div>
 
-    <script src="epika.js?v=1.01.97"></script>
+    <script src="epika.js?v=1.01.98"></script>
 </body>
 </html>

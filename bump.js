@@ -7,7 +7,7 @@ import path from 'path';
 // Lo script aggiornerà automaticamente tutte le versioni nel
 // codice (JS, HTML badge, ?v= nei tag script/link) in una volta.
 // ============================================================
-const newVersion = '1.01.97';
+const newVersion = '1.01.98';
 
 const root = 'd:/Antigravity_Projects/ADR_SITO';
 const portalDir = path.join(root, 'portal');

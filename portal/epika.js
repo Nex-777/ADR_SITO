@@ -13,7 +13,10 @@ let gruppiLavoro = [];
 let isEpikaAdmin = false;
 let tesseratiCache = [];
 let scabStrutture = [];
-let scabSoggetti = [];
+let soggettiValidatori = [];
+let soggettiAllenatori = [];
+let soggettiAllievi = [];
+let abbinamentiState = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     initPortal();
@@ -482,7 +485,7 @@ function switchAdminTab(tab) {
     } else if (tab === 'scab') {
         renderSCABTab();
     } else if (tab === 'allenatori') {
-        renderAllenatoriAdmin();
+        renderRuoliAdmin();
     } else if (tab === 'eventi') {
         renderEventiAdmin();
     }
@@ -700,16 +703,19 @@ async function renderSCABTab() {
         if (strErr) throw strErr;
         scabStrutture = struttureD || [];
 
-        // 2. Carica soggetti SCAB (tipo = 'soggetto_scab')
+        // 2. Carica soggetti SCAB per ruolo
         const { data: soggettiD, error: sogErr } = await supabaseClient
             .from('epika_opzioni')
             .select('*')
-            .eq('tipo', 'soggetto_scab')
+            .in('tipo', ['scab_validatore', 'allenatore', 'scab_allievo_allenatore'])
             .eq('attivo', true)
             .order('valore', { ascending: true });
             
         if (sogErr) throw sogErr;
-        scabSoggetti = soggettiD || [];
+        const allSoggetti = soggettiD || [];
+        soggettiValidatori = allSoggetti.filter(s => s.tipo === 'scab_validatore');
+        soggettiAllenatori = allSoggetti.filter(s => s.tipo === 'allenatore');
+        soggettiAllievi = allSoggetti.filter(s => s.tipo === 'scab_allievo_allenatore');
 
         // 3. Carica abbinamenti esistenti
         const { data: abbinamentiD, error: abbErr } = await supabaseClient
@@ -728,28 +734,29 @@ async function renderSCABTab() {
         // 5. Renderizza Abbinamenti
         renderSCABAbbinamenti(abbinamentiMap);
 
-        // 6. Renderizza Allenatori
-        renderAllenatoriAdmin();
+        // 6. Renderizza Ruoli
+        renderRuoliAdmin();
 
     } catch (e) {
         console.error("Errore renderSCABTab:", e);
     }
 }
 
-// Rendering Anagrafica SCAB (Step 4.1)
+// Rendering Anagrafica Palestre e Centri
 function renderSCABAnagrafica() {
-    const struttureList = document.getElementById('scab-strutture-list');
-    const soggettiList = document.getElementById('scab-soggetti-list');
-    if (!struttureList || !soggettiList) return;
+    const palestreList = document.getElementById('scab-palestre-list');
+    const centriList = document.getElementById('scab-centri-list');
+    if (!palestreList || !centriList) return;
 
-    // Renderizza strutture
-    struttureList.innerHTML = '';
+    palestreList.innerHTML = '';
+    centriList.innerHTML = '';
+    
     scabStrutture.forEach(s => {
         const badge = s.tipo === 'palestra' ? 'PAL' : 'CP';
         const activeText = s.attivo ? 'DISATTIVA' : 'ATTIVA';
         const activeStyle = s.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
         
-        struttureList.innerHTML += `
+        const html = `
             <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
                 <div>
                     <span style="font-size: 9px; font-weight: bold; padding: 2px 4px; background: rgba(201,168,76,0.2); border: 1px solid var(--epk-gold); border-radius: 2px; margin-right: 6px;">${badge}</span>
@@ -759,18 +766,12 @@ function renderSCABAnagrafica() {
                     ${activeText}
                 </button>
             </div>`;
-    });
-
-    // Renderizza soggetti
-    soggettiList.innerHTML = '';
-    scabSoggetti.forEach(s => {
-        soggettiList.innerHTML += `
-            <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
-                <span style="font-size: 13px; font-weight: bold;">${s.valore.toUpperCase()}</span>
-                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="toggleStatoSoggettoSCAB('${s.id}', ${s.attivo})">
-                    ELIMINA
-                </button>
-            </div>`;
+            
+        if (s.tipo === 'palestra') {
+            palestreList.innerHTML += html;
+        } else {
+            centriList.innerHTML += html;
+        }
     });
 }
 
@@ -794,38 +795,30 @@ function renderSCABAbbinamenti(abbinamentiMap) {
             allievi_ids: []
         };
         
-        // Garanzia di fallback se il DB restituisce null per gli array
-        abb.allenatori_co_ids = abb.allenatori_co_ids || [];
-        abb.allievi_ids = abb.allievi_ids || [];
+        // Inizializza lo stato in memoria per questa struttura, scartando gli orfani
+        abbinamentiState[s.id] = {
+            allenatori_co_ids: (abb.allenatori_co_ids || []).filter(id => soggettiAllenatori.some(x => x.id === id)),
+            allievi_ids: (abb.allievi_ids || []).filter(id => soggettiAllievi.some(x => x.id === id))
+        };
 
         if (s.tipo === 'palestra') {
-            // Dropdown Allenatore Referente
-            const refSelect = `<select id="select-pal-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allenatore_ref_id)}</select>`;
-            
-            // Dropdown Validatore
-            const valSelect = `<select id="select-pal-val-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.validatore_id)}</select>`;
-            
-            // Dropdown Co-Allenatori (mappati su array index 0 e 1)
-            const co1Select = `<select id="select-pal-co1-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allenatori_co_ids[0])}</select>`;
-            const co2Select = `<select id="select-pal-co2-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allenatori_co_ids[1])}</select>`;
-            
-            // Dropdown Allievi (mappati su array index 0-3)
-            const all1Select = `<select id="select-pal-all1-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[0])}</select>`;
-            const all2Select = `<select id="select-pal-all2-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[1])}</select>`;
-            const all3Select = `<select id="select-pal-all3-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[2])}</select>`;
-            const all4Select = `<select id="select-pal-all4-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allievi_ids[3])}</select>`;
+            const refSelect = `<select id="select-pal-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiAllenatori, abb.allenatore_ref_id)}</select>`;
+            const valSelect = `<select id="select-pal-val-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiValidatori, abb.validatore_id)}</select>`;
 
             palestreBody.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <td style="padding: 8px; font-weight: bold; color: var(--epk-gold);">${s.nome.toUpperCase()}</td>
                     <td style="padding: 8px;">${refSelect}</td>
                     <td style="padding: 8px;">${valSelect}</td>
-                    <td style="padding: 8px; display: flex; flex-direction: column;">${co1Select}${co2Select}</td>
                     <td style="padding: 8px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                            <div>${all1Select}${all2Select}</div>
-                            <div>${all3Select}${all4Select}</div>
-                        </div>
+                        <div id="container-co-${s.id}" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+                        <button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'co')">+</button>
+                        <div id="add-co-${s.id}" class="epk-hidden" style="margin-top:4px;"></div>
+                    </td>
+                    <td style="padding: 8px;">
+                        <div id="container-all-${s.id}" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+                        <button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'all')">+</button>
+                        <div id="add-all-${s.id}" class="epk-hidden" style="margin-top:4px;"></div>
                     </td>
                     <td style="padding: 8px;">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -835,17 +828,8 @@ function renderSCABAbbinamenti(abbinamentiMap) {
                     </td>
                 </tr>`;
         } else {
-            // Dropdown Allievo Ref. (Centro Pratica)
-            const allRefSelect = `<select id="select-cp-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allievo_ref_id)}</select>`;
-            
-            // Dropdown Allenatore (Centro Pratica)
-            const alnSelect = `<select id="select-cp-aln-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allenatore_ref_id)}</select>`;
-            
-            // Dropdown Allievi (Centro Pratica, maps to allievi_ids 0-3)
-            const all1Select = `<select id="select-cp-all1-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[0])}</select>`;
-            const all2Select = `<select id="select-cp-all2-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[1])}</select>`;
-            const all3Select = `<select id="select-cp-all3-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px; margin-bottom: 4px;">${generaOpzioniSoggetti(abb.allievi_ids[2])}</select>`;
-            const all4Select = `<select id="select-cp-all4-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(abb.allievi_ids[3])}</select>`;
+            const allRefSelect = `<select id="select-cp-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiAllievi, abb.allievo_ref_id)}</select>`;
+            const alnSelect = `<select id="select-cp-aln-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiAllenatori, abb.allenatore_ref_id)}</select>`;
 
             centriBody.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -853,10 +837,9 @@ function renderSCABAbbinamenti(abbinamentiMap) {
                     <td style="padding: 8px;">${allRefSelect}</td>
                     <td style="padding: 8px;">${alnSelect}</td>
                     <td style="padding: 8px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                            <div>${all1Select}${all2Select}</div>
-                            <div>${all3Select}${all4Select}</div>
-                        </div>
+                        <div id="container-all-${s.id}" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+                        <button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'all')">+</button>
+                        <div id="add-all-${s.id}" class="epk-hidden" style="margin-top:4px;"></div>
                     </td>
                     <td style="padding: 8px;">
                         <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -867,15 +850,99 @@ function renderSCABAbbinamenti(abbinamentiMap) {
                 </tr>`;
         }
     });
+
+    // Dopo aver creato il DOM, renderizza i token iniziali
+    scabStrutture.forEach(s => {
+        if (!s.attivo) return;
+        if (s.tipo === 'palestra') renderTokens(s.id, 'co');
+        renderTokens(s.id, 'all');
+    });
 }
 
-function generaOpzioniSoggetti(selectedValue) {
+function generaOpzioniSoggetti(sorgente, selectedValue, excludeIds = []) {
     let html = '<option value="">-- NESSUNO --</option>';
-    scabSoggetti.forEach(s => {
+    sorgente.forEach(s => {
+        if (excludeIds.includes(s.id)) return;
         const sel = s.id === selectedValue ? 'selected' : '';
         html += `<option value="${s.id}" ${sel}>${s.valore.toUpperCase()}</option>`;
     });
     return html;
+}
+
+// Logiche UI State-Driven
+function renderTokens(strutturaId, tipo) {
+    const container = document.getElementById(`container-${tipo}-${strutturaId}`);
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const ids = tipo === 'co' ? abbinamentiState[strutturaId].allenatori_co_ids : abbinamentiState[strutturaId].allievi_ids;
+    const sorgente = tipo === 'co' ? soggettiAllenatori : soggettiAllievi;
+    
+    ids.forEach(id => {
+        const sogg = sorgente.find(x => x.id === id);
+        if (sogg) {
+            container.innerHTML += `
+                <div style="background: rgba(201,168,76,0.1); border: 1px solid var(--epk-gold); padding: 2px 6px; font-size: 10px; border-radius: 2px; display: flex; align-items: center; gap: 4px;">
+                    ${sogg.valore.toUpperCase()}
+                    <span style="cursor: pointer; color: #ff4d4d; font-weight: bold;" onclick="rimuoviToken(${strutturaId}, '${tipo}', ${id})">&times;</span>
+                </div>`;
+        }
+    });
+}
+
+function mostraSelectAggiunta(strutturaId, tipo) {
+    const addContainer = document.getElementById(`add-${tipo}-${strutturaId}`);
+    if (!addContainer) return;
+    
+    const ids = tipo === 'co' ? abbinamentiState[strutturaId].allenatori_co_ids : abbinamentiState[strutturaId].allievi_ids;
+    const sorgente = tipo === 'co' ? soggettiAllenatori : soggettiAllievi;
+    
+    const selectHtml = `
+        <select class="epk-input" style="padding: 2px; font-size: 10px; width: 100%;" 
+                onchange="aggiungiTokenDaSelect(${strutturaId}, '${tipo}', this.value)" 
+                onblur="nascondiSelectAggiunta(${strutturaId}, '${tipo}')">
+            ${generaOpzioniSoggetti(sorgente, null, ids)}
+        </select>`;
+        
+    addContainer.innerHTML = selectHtml;
+    addContainer.classList.remove('epk-hidden');
+    
+    setTimeout(() => {
+        const select = addContainer.querySelector('select');
+        if (select) select.focus();
+    }, 50);
+}
+
+function nascondiSelectAggiunta(strutturaId, tipo) {
+    const addContainer = document.getElementById(`add-${tipo}-${strutturaId}`);
+    if (addContainer) {
+        addContainer.innerHTML = '';
+        addContainer.classList.add('epk-hidden');
+    }
+}
+
+function aggiungiTokenDaSelect(strutturaId, tipo, stringId) {
+    if (!stringId) {
+        nascondiSelectAggiunta(strutturaId, tipo);
+        return;
+    }
+    const id = parseInt(stringId);
+    if (tipo === 'co') {
+        abbinamentiState[strutturaId].allenatori_co_ids.push(id);
+    } else {
+        abbinamentiState[strutturaId].allievi_ids.push(id);
+    }
+    renderTokens(strutturaId, tipo);
+    nascondiSelectAggiunta(strutturaId, tipo);
+}
+
+function rimuoviToken(strutturaId, tipo, idToRemove) {
+    if (tipo === 'co') {
+        abbinamentiState[strutturaId].allenatori_co_ids = abbinamentiState[strutturaId].allenatori_co_ids.filter(id => id !== idToRemove);
+    } else {
+        abbinamentiState[strutturaId].allievi_ids = abbinamentiState[strutturaId].allievi_ids.filter(id => id !== idToRemove);
+    }
+    renderTokens(strutturaId, tipo);
 }
 
 // Logiche di Salvataggio e Creazione (Step 4.3)
@@ -918,45 +985,6 @@ async function toggleStatoStrutturaSCAB(id, statoAttuale) {
     }
 }
 
-async function creaSoggettoSCAB() {
-    const valoreInput = document.getElementById('scab-new-soggetto-valore');
-    const valore = valoreInput.value.trim();
-
-    if (!valore) {
-        alert("Inserisci un nome valido.");
-        return;
-    }
-
-    try {
-        const { error } = await supabaseClient
-            .from('epika_opzioni')
-            .insert({ tipo: 'soggetto_scab', valore: valore });
-            
-        if (error) throw error;
-        valoreInput.value = '';
-        await renderSCABTab();
-    } catch (e) {
-        console.error(e);
-        alert("Errore durante il salvataggio del soggetto.");
-    }
-}
-
-async function toggleStatoSoggettoSCAB(id, statoAttuale) {
-    if (!confirm("Sei sicuro di voler eliminare questo soggetto?")) return;
-    try {
-        const { error } = await supabaseClient
-            .from('epika_opzioni')
-            .delete()
-            .eq('id', id);
-            
-        if (error) throw error;
-        await renderSCABTab();
-    } catch (e) {
-        console.error(e);
-        alert("Impossibile eliminare il soggetto, potrebbe essere associato a degli abbinamenti.");
-    }
-}
-
 async function salvaAbbinamentoSCAB(strutturaId, tipoStruttura) {
     try {
         let payload = {
@@ -971,47 +999,24 @@ async function salvaAbbinamentoSCAB(strutturaId, tipoStruttura) {
         if (tipoStruttura === 'palestra') {
             const refVal = document.getElementById(`select-pal-ref-${strutturaId}`).value;
             const valVal = document.getElementById(`select-pal-val-${strutturaId}`).value;
-            const co1Val = document.getElementById(`select-pal-co1-${strutturaId}`).value;
-            const co2Val = document.getElementById(`select-pal-co2-${strutturaId}`).value;
-            const all1Val = document.getElementById(`select-pal-all1-${strutturaId}`).value;
-            const all2Val = document.getElementById(`select-pal-all2-${strutturaId}`).value;
-            const all3Val = document.getElementById(`select-pal-all3-${strutturaId}`).value;
-            const all4Val = document.getElementById(`select-pal-all4-${strutturaId}`).value;
 
             payload.allenatore_ref_id = refVal ? parseInt(refVal) : null;
             payload.validatore_id = valVal ? parseInt(valVal) : null;
             
-            // Build co-allenatori array
-            const coIds = [];
-            if (co1Val) coIds.push(parseInt(co1Val));
-            if (co2Val) coIds.push(parseInt(co2Val));
-            payload.allenatori_co_ids = coIds;
-
-            // Build allievi array
-            const allieviIds = [];
-            if (all1Val) allieviIds.push(parseInt(all1Val));
-            if (all2Val) allieviIds.push(parseInt(all2Val));
-            if (all3Val) allieviIds.push(parseInt(all3Val));
-            if (all4Val) allieviIds.push(parseInt(all4Val));
-            payload.allievi_ids = allieviIds;
+            if (abbinamentiState[strutturaId]) {
+                payload.allenatori_co_ids = [...abbinamentiState[strutturaId].allenatori_co_ids];
+                payload.allievi_ids = [...abbinamentiState[strutturaId].allievi_ids];
+            }
         } else {
             const allRefVal = document.getElementById(`select-cp-ref-${strutturaId}`).value;
             const alnVal = document.getElementById(`select-cp-aln-${strutturaId}`).value;
-            const all1Val = document.getElementById(`select-cp-all1-${strutturaId}`).value;
-            const all2Val = document.getElementById(`select-cp-all2-${strutturaId}`).value;
-            const all3Val = document.getElementById(`select-cp-all3-${strutturaId}`).value;
-            const all4Val = document.getElementById(`select-cp-all4-${strutturaId}`).value;
 
             payload.allievo_ref_id = allRefVal ? parseInt(allRefVal) : null;
             payload.allenatore_ref_id = alnVal ? parseInt(alnVal) : null;
 
-            // Build allievi array
-            const allieviIds = [];
-            if (all1Val) allieviIds.push(parseInt(all1Val));
-            if (all2Val) allieviIds.push(parseInt(all2Val));
-            if (all3Val) allieviIds.push(parseInt(all3Val));
-            if (all4Val) allieviIds.push(parseInt(all4Val));
-            payload.allievi_ids = allieviIds;
+            if (abbinamentiState[strutturaId]) {
+                payload.allievi_ids = [...abbinamentiState[strutturaId].allievi_ids];
+            }
         }
 
         const { error } = await supabaseClient
@@ -1080,39 +1085,56 @@ function switchScabSubTab(subTab) {
 async function renderAllenatoriAdmin() {
     const container = document.getElementById('adm-allenatori-list');
     try {
-        const { data: allenatori, error } = await supabaseClient
+        const { data: soggetti, error } = await supabaseClient
             .from('epika_opzioni')
             .select('*')
-            .eq('tipo', 'allenatore')
+            .in('tipo', ['scab_validatore', 'allenatore', 'scab_allievo_allenatore'])
             .order('attivo', { ascending: false })
             .order('valore', { ascending: true });
 
         if (error) throw error;
 
-        container.innerHTML = '';
-        (allenatori || []).forEach(a => {
-            const statusText = a.attivo ? 'DISATTIVA' : 'ATTIVA';
-            const statusClass = a.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
+        const valList = document.getElementById('adm-validatori-list');
+        const allList = document.getElementById('adm-allenatori-list');
+        const allieviList = document.getElementById('adm-allievi-list');
+        if (valList) valList.innerHTML = '';
+        if (allList) allList.innerHTML = '';
+        if (allieviList) allieviList.innerHTML = '';
+
+        (soggetti || []).forEach(s => {
+            const statusText = s.attivo ? 'DISATTIVA' : 'ATTIVA';
+            const statusClass = s.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             
-            container.innerHTML += `
+            const html = `
                 <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 13px; font-weight: bold; ${a.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${a.valore.toUpperCase()}</span>
-                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${statusClass}" onclick="toggleStatoAllenatore('${a.id}', ${a.attivo})">
+                    <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.valore.toUpperCase()}</span>
+                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${statusClass}" onclick="toggleStatoSoggettoRuolo('${s.id}', ${s.attivo})">
                         ${statusText}
                     </button>
                 </div>`;
+                
+            if (s.tipo === 'scab_validatore' && valList) valList.innerHTML += html;
+            else if (s.tipo === 'allenatore' && allList) allList.innerHTML += html;
+            else if (s.tipo === 'scab_allievo_allenatore' && allieviList) allieviList.innerHTML += html;
         });
 
     } catch (err) {
-        console.error("Errore caricamento allenatori admin:", err);
+        console.error("Errore caricamento ruoli admin:", err);
     }
 }
 
-async function creaAllenatore() {
-    const input = document.getElementById('adm-new-allenatore');
+async function creaSoggettoRuolo(tipo) {
+    let inputId = '';
+    if (tipo === 'scab_validatore') inputId = 'adm-new-validatore';
+    else if (tipo === 'allenatore') inputId = 'adm-new-allenatore';
+    else if (tipo === 'scab_allievo_allenatore') inputId = 'adm-new-allievo';
+
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
     const valore = input.value.trim();
     if (!valore) {
-        alert("Inserisci un nome valido per l'allenatore.");
+        alert("Inserisci un nome valido.");
         return;
     }
 
@@ -1120,23 +1142,24 @@ async function creaAllenatore() {
         const { error } = await supabaseClient
             .from('epika_opzioni')
             .insert({
-                tipo: 'allenatore',
+                tipo: tipo,
                 valore: valore
             });
 
         if (error) throw error;
 
         input.value = '';
-        alert("Allenatore aggiunto con successo!");
-        await renderAllenatoriAdmin();
+        alert("Soggetto aggiunto con successo!");
+        await renderRuoliAdmin();
+        await renderSCABTab();
 
     } catch (err) {
-        console.error("Errore inserimento allenatore:", err);
-        alert("Impossibile salvare l'allenatore. Riprova.");
+        console.error("Errore inserimento soggetto ruolo:", err);
+        alert("Impossibile salvare il soggetto. Riprova.");
     }
 }
 
-async function toggleStatoAllenatore(id, statoAttuale) {
+async function toggleStatoSoggettoRuolo(id, statoAttuale) {
     try {
         const { error } = await supabaseClient
             .from('epika_opzioni')
@@ -1144,9 +1167,10 @@ async function toggleStatoAllenatore(id, statoAttuale) {
             .eq('id', id);
 
         if (error) throw error;
-        await renderAllenatoriAdmin();
+        await renderRuoliAdmin();
+        await renderSCABTab();
     } catch (err) {
-        console.error("Errore aggiornamento allenatore:", err);
+        console.error("Errore aggiornamento ruolo:", err);
     }
 }
 
