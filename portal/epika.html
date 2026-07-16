@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.12">
+    <link rel="stylesheet" href="epika.css?v=1.02.13">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.12"></script>
+    <script src="config.js?v=1.02.13"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.02.12</span>
+            <span class="epk-version-badge">Vs. 1.02.13</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -214,6 +214,12 @@
                     </button>
                     <button id="epk-adm-btn-generale" class="epk-sidebar-btn" onclick="switchAdminTab('generale')">
                         LISTA GENERALE
+                    </button>
+                    <button id="epk-adm-btn-logistica" class="epk-sidebar-btn epk-hidden" onclick="switchAdminTab('logistica')">
+                        LOGISTICA
+                    </button>
+                    <button id="epk-adm-btn-marketing" class="epk-sidebar-btn epk-hidden" onclick="switchAdminTab('marketing')">
+                        MARKETING
                     </button>
                 </aside>
 
@@ -585,9 +591,15 @@
                                     </div>
                                     <div class="epk-grid-2">
                                         <div>
-                                            <label class="epk-label">Data Evento *</label>
-                                            <input type="date" id="evt-data" class="epk-input" required>
+                                            <label class="epk-label">Data Inizio *</label>
+                                            <input type="date" id="evt-data-inizio" class="epk-input" required>
                                         </div>
+                                        <div>
+                                            <label class="epk-label">Data Fine *</label>
+                                            <input type="date" id="evt-data-fine" class="epk-input" required>
+                                        </div>
+                                    </div>
+                                    <div class="epk-grid-2">
                                         <div>
                                             <label class="epk-label">Tipologia *</label>
                                             <select id="evt-tipo" class="epk-input" required>
@@ -622,6 +634,69 @@
                             <input type="hidden" id="adm-presenze-evento-id">
                             <div id="adm-presenze-utenti-list" style="display: flex; flex-direction: column; gap: 10px;">
                                 <!-- Iscritti con toggle presenza -->
+                            </div>
+                        <!-- Dashboard Dettagliata Evento -->
+                        <div id="adm-dashboard-evento-panel" class="epk-card epk-hidden" style="margin-top: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                <h3 id="adm-dashboard-evento-titolo" class="epk-headline" style="margin: 0; font-size: 14px;">STATISTICHE & GESTIONE EVENTO</h3>
+                                <button class="epk-btn-secondary" onclick="nascondiDashboardEvento()">CHIUDI</button>
+                            </div>
+                            <input type="hidden" id="adm-dashboard-evento-id">
+
+                            <!-- Griglia Statistiche -->
+                            <div class="epk-grid-2" style="gap: 16px; margin-bottom: 20px;">
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6); text-transform: uppercase;">Partecipanti Totali</span>
+                                    <span id="evt-stat-totale" class="epk-headline" style="font-size: 24px; color: var(--epk-gold);">0</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6); text-transform: uppercase;">Ruoli</span>
+                                    <span id="evt-stat-ruoli" style="font-size: 11px; font-family: monospace; line-height: 1.4; color: rgba(245, 230, 200, 0.8);">COMBATTENTI: 0<br>NON COMBATTENTI: 0</span>
+                                </div>
+                            </div>
+                            <div class="epk-grid-2" style="gap: 16px; margin-bottom: 20px;">
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6); text-transform: uppercase;">Armature & Arcieri</span>
+                                    <span id="evt-stat-combattimento" style="font-size: 11px; font-family: monospace; line-height: 1.4; color: rgba(245, 230, 200, 0.8);">ARMATURA LEGGERA: 0 | PESANTE: 0 | NO: 0<br>ARCIERI PURI: 0 | IBRIDI: 0 | NO: 0</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6); text-transform: uppercase;">Abilitazioni Speciali</span>
+                                    <span id="evt-stat-armi" style="font-size: 11px; font-family: monospace; line-height: 1.4; color: rgba(245, 230, 200, 0.8);">GIAVELLOTTI: 0 | SPADA LUNGA: 0 | LANCIA: 0 | SPERIMENTALI: 0</span>
+                                </div>
+                            </div>
+
+                            <!-- Presenza per Giorno -->
+                            <div style="background: rgba(0,0,0,0.1); border: 1px solid rgba(201, 168, 76, 0.1); padding: 16px; margin-bottom: 20px;">
+                                <span style="font-size: 11px; color: var(--epk-gold); text-transform: uppercase; font-family: 'Cinzel', serif; display: block; margin-bottom: 8px;">Presenze Giornaliere Aggregate</span>
+                                <div id="evt-giorni-presenze-container" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <!-- Popolato via JS -->
+                                </div>
+                            </div>
+
+                            <!-- Ricerca Partecipanti -->
+                            <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
+                                <input type="text" id="evt-dashboard-search" class="epk-input" placeholder="Cerca partecipante..." style="font-size: 11px; max-width: 250px;" oninput="filtraPartecipantiDashboard()">
+                            </div>
+
+                            <!-- Tabella Iscritti -->
+                            <div style="overflow-x: auto;">
+                                <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif;">
+                                            <th style="padding: 10px;">Nome Battaglia</th>
+                                            <th style="padding: 10px;">Nome Reale</th>
+                                            <th style="padding: 10px;">Gruppo</th>
+                                            <th style="padding: 10px;">Ruolo</th>
+                                            <th style="padding: 10px;">Presenze</th>
+                                            <th style="padding: 10px;">Allenatore</th>
+                                            <th style="padding: 10px;">Equipaggiamento</th>
+                                            <th style="padding: 10px;">Armi & Note</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="evt-dashboard-table-body">
+                                        <!-- Popolato via JS -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -668,6 +743,28 @@
                         </div>
                     </div>
 
+                    <!-- Tab 7: Logistica (Vuoto/Placeholder) -->
+                    <div id="epk-adm-tab-logistica" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px; min-height: 200px; justify-content: center; align-items: center; text-align: center;">
+                            <span class="material-symbols-outlined" style="font-size: 48px; color: var(--epk-gold-dim); margin-bottom: 8px;">local_shipping</span>
+                            <h2 class="epk-headline" style="margin: 0; font-size: 16px;">DASHBOARD DIRETTIVO LOGISTICA</h2>
+                            <p style="font-size: 12px; color: rgba(245, 230, 200, 0.6); max-width: 400px; margin: 0;">
+                                Questa sezione del portale è in fase di sviluppo. La dashboard per la gestione logistica dei materiali, trasporti e allestimenti del Campo Marzio verrà rilasciata nelle prossime versioni.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Tab 8: Marketing (Vuoto/Placeholder) -->
+                    <div id="epk-adm-tab-marketing" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px; min-height: 200px; justify-content: center; align-items: center; text-align: center;">
+                            <span class="material-symbols-outlined" style="font-size: 48px; color: var(--epk-gold-dim); margin-bottom: 8px;">campaign</span>
+                            <h2 class="epk-headline" style="margin: 0; font-size: 16px;">DASHBOARD DIRETTIVO MARKETING</h2>
+                            <p style="font-size: 12px; color: rgba(245, 230, 200, 0.6); max-width: 400px; margin: 0;">
+                                Questa sezione del portale è in fase di sviluppo. La dashboard per la gestione dei canali pubblicitari, delle promozioni social e dei contatti stampa storici verrà rilasciata nelle prossime versioni.
+                            </p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -694,6 +791,90 @@
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
                             <button class="epk-btn-secondary" onclick="chiudiModaleNomine()">ANNULLA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modale Iscrizione Dettagliata Evento -->
+            <div id="epk-iscrizione-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+                <div class="epk-card" style="max-width: 600px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9); margin: auto;">
+                    <h3 id="epk-iscrizione-modal-titolo" class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                        ISCRIZIONE A EVENTO STORICO
+                    </h3>
+                    <input type="hidden" id="epk-iscrizione-modal-evento-id">
+                    
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <!-- Selezione Giorni Presenza -->
+                        <div>
+                            <label class="epk-label" style="margin-bottom: 8px; display: block;">Seleziona i giorni in cui sarai presente: *</label>
+                            <div id="epk-iscrizione-modal-giorni" style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(201, 168, 76, 0.1);">
+                                <!-- Popolato via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Questionario Combattenti (Condizionale) -->
+                        <div id="epk-iscrizione-modal-combattente-fields" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 16px; display: flex; flex-direction: column; gap: 16px;">
+                            <span class="epk-headline" style="font-size: 11px; display: block; color: var(--epk-gold);">INFORMAZIONI AGGIUNTIVE COMBATTENTE</span>
+                            
+                            <!-- Allenatore Abilitante -->
+                            <div>
+                                <label class="epk-label" for="epk-iscrizione-coach">Allenatore che ti ha abilitato: *</label>
+                                <select id="epk-iscrizione-coach" class="epk-input" required>
+                                    <!-- Popolato via JS (da epika_opzioni) -->
+                                </select>
+                            </div>
+
+                            <!-- Armatura -->
+                            <div class="epk-grid-2">
+                                <div>
+                                    <label class="epk-label" for="epk-iscrizione-armatura">Hai un'armatura? *</label>
+                                    <select id="epk-iscrizione-armatura" class="epk-input" required>
+                                        <option value="nessuna">NO / NESSUNA</option>
+                                        <option value="leggera">SÌ, LEGGERA</option>
+                                        <option value="pesante">SÌ, PESANTE</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="epk-label" for="epk-iscrizione-arciere">Sei un arciere? *</label>
+                                    <select id="epk-iscrizione-arciere" class="epk-input" required>
+                                        <option value="nessuno">NO</option>
+                                        <option value="puro">SÌ, PURO (solo arco e pugnale)</option>
+                                        <option value="ibrido">SÌ, IBRIDO (arco, pugnale + altre armi)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Abilitazioni Speciali / Armi -->
+                            <div>
+                                <label class="epk-label" style="margin-bottom: 8px; display: block;">Abilitazioni speciali / Armi portate all'evento:</label>
+                                <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(201, 168, 76, 0.1);">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                        <input type="checkbox" id="epk-wp-giavellotto" style="cursor: pointer;"> Giavellotti
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                        <input type="checkbox" id="epk-wp-spada-lunga" style="cursor: pointer;"> Spade Lunghe
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                        <input type="checkbox" id="epk-wp-lancia" style="cursor: pointer;"> Lancia
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                                        <input type="checkbox" id="epk-wp-sperimentali" style="cursor: pointer;" onchange="toggleArmiSperimentaliDesc(this.checked)"> Armi Sperimentali
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Descrizione Armi Sperimentali (Condizionale) -->
+                            <div id="epk-iscrizione-modal-sperimentali-desc-container" class="epk-hidden">
+                                <label class="epk-label" for="epk-iscrizione-sperimentali-desc">Descrizione armi sperimentali: *</label>
+                                <textarea id="epk-iscrizione-sperimentali-desc" class="epk-input" style="height: 60px; font-family: sans-serif;" placeholder="Fornisci dettagli sull'arma sperimentale..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Bottoni -->
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; border-top: 1px solid var(--epk-gold-dim); padding-top: 16px;">
+                            <button class="epk-btn-secondary" onclick="chiudiModaleIscrizione()">ANNULLA</button>
+                            <button class="epk-btn" onclick="salvaIscrizioneDettagliata()" style="padding: 10px 20px; font-size: 11px;">CONFERMA ISCRIZIONE</button>
                         </div>
                     </div>
                 </div>
@@ -857,6 +1038,6 @@
 
     </div>
 
-    <script src="epika.js?v=1.02.12"></script>
+    <script src="epika.js?v=1.02.13"></script>
 </body>
 </html>

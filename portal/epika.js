@@ -110,12 +110,33 @@ async function initPortal() {
             console.error("Errore recupero gruppi gestiti:", e);
         }
 
-        // Gestione switcher di vista (per admin e capogruppo)
-        if (isEpikaAdmin || isCapogruppo) {
+        // Determina se l'utente appartiene a qualche direttivo/gruppo di lavoro
+        const gLavoroIds = (epikaProfile && Array.isArray(epikaProfile.gruppo_lavoro_ids)) ? epikaProfile.gruppo_lavoro_ids.map(Number) : [];
+        const hasDirettivoEpika = gLavoroIds.includes(1);
+        const hasDirettivoScab = gLavoroIds.includes(2);
+        const hasDirettivoLogistica = gLavoroIds.includes(3);
+        const hasDirettivoMarketing = gLavoroIds.includes(4);
+        const isCapogruppoLavoro = isCapogruppo || gLavoroIds.includes(5) || gLavoroIds.includes(6) || gLavoroIds.includes(7) || gLavoroIds.includes(9);
+
+        // Gestione switcher di vista (per admin, capogruppo e direttivi)
+        const haQualcheRuoloSpeciale = isEpikaAdmin || isCapogruppoLavoro || hasDirettivoEpika || hasDirettivoScab || hasDirettivoLogistica || hasDirettivoMarketing;
+        if (haQualcheRuoloSpeciale) {
             const adminSwitcher = document.getElementById('epk-admin-switcher');
             adminSwitcher.innerHTML = '<option value="athlete">VISTA ATLETA</option>';
-            if (isCapogruppo) {
+            if (isCapogruppoLavoro) {
                 adminSwitcher.innerHTML += '<option value="capogruppo">VISTA CAPOGRUPPO</option>';
+            }
+            if (hasDirettivoEpika) {
+                adminSwitcher.innerHTML += '<option value="direttivo_epika">VISTA DIRETTIVO EPIKA</option>';
+            }
+            if (hasDirettivoScab) {
+                adminSwitcher.innerHTML += '<option value="direttivo_scab">VISTA DIRETTIVO SCAB</option>';
+            }
+            if (hasDirettivoLogistica) {
+                adminSwitcher.innerHTML += '<option value="direttivo_logistica">VISTA DIRETTIVO LOGISTICA</option>';
+            }
+            if (hasDirettivoMarketing) {
+                adminSwitcher.innerHTML += '<option value="direttivo_marketing">VISTA DIRETTIVO MARKETING</option>';
             }
             if (isEpikaAdmin) {
                 adminSwitcher.innerHTML += '<option value="admin">VISTA AMMINISTRATORE</option>';
@@ -124,9 +145,19 @@ async function initPortal() {
             
             // Se l'URL contiene parametri, seleziona direttamente la vista
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('admin') === 'true' && isEpikaAdmin) {
+            const viewParam = urlParams.get('view');
+            const adminParam = urlParams.get('admin');
+            if (adminParam === 'true' && isEpikaAdmin) {
                 adminSwitcher.value = 'admin';
-            } else if (urlParams.get('view') === 'capogruppo' && isCapogruppo) {
+            } else if (viewParam === 'direttivo_epika' && hasDirettivoEpika) {
+                adminSwitcher.value = 'direttivo_epika';
+            } else if (viewParam === 'direttivo_scab' && hasDirettivoScab) {
+                adminSwitcher.value = 'direttivo_scab';
+            } else if (viewParam === 'direttivo_logistica' && hasDirettivoLogistica) {
+                adminSwitcher.value = 'direttivo_logistica';
+            } else if (viewParam === 'direttivo_marketing' && hasDirettivoMarketing) {
+                adminSwitcher.value = 'direttivo_marketing';
+            } else if (viewParam === 'capogruppo' && isCapogruppoLavoro) {
                 adminSwitcher.value = 'capogruppo';
             }
         }
@@ -140,7 +171,7 @@ async function initPortal() {
             document.getElementById('epk-user-battle-name').textContent = `~ ${epikaProfile.nome_di_battaglia} ~`;
             
             const viewMode = document.getElementById('epk-admin-switcher').value || 'athlete';
-            if (viewMode === 'admin') {
+            if (viewMode === 'admin' || viewMode.startsWith('direttivo_')) {
                 document.getElementById('epk-admin').classList.remove('epk-hidden');
                 await renderAdminDashboard();
             } else if (viewMode === 'capogruppo') {
@@ -175,7 +206,7 @@ async function switchEpikaView(view) {
     document.getElementById('epk-admin').classList.add('epk-hidden');
     document.getElementById('epk-capogruppo').classList.add('epk-hidden');
     
-    if (view === 'admin') {
+    if (view === 'admin' || view.startsWith('direttivo_')) {
         document.getElementById('epk-admin').classList.remove('epk-hidden');
         await renderAdminDashboard();
     } else if (view === 'capogruppo') {
@@ -462,8 +493,8 @@ async function caricaEventiDisponibili() {
             .from('epika_eventi')
             .select('*')
             .eq('attivo', true)
-            .gte('data_evento', todayStr)
-            .order('data_evento', { ascending: true });
+            .gte('data_fine', todayStr)
+            .order('data_inizio', { ascending: true });
 
         if (eError) throw eError;
 
@@ -485,11 +516,13 @@ async function caricaEventiDisponibili() {
         listContainer.innerHTML = '';
         eventi.forEach(evt => {
             const isIscritto = iscrizioniSet.has(evt.id);
-            const dataFormattata = formattaData(evt.data_evento);
+            const dataInizioF = formattaData(evt.data_inizio);
+            const dataFineF = formattaData(evt.data_fine);
+            const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
             
             const btnHtml = isIscritto 
                 ? `<button class="epk-btn-secondary" style="border-color: var(--epk-gold); color: var(--epk-gold); cursor: default;" disabled>ISCRITTO ✓</button>`
-                : `<button class="epk-btn" onclick="iscrivitiEvento('${evt.id}')">ISCRIVITI</button>`;
+                : `<button class="epk-btn" onclick="apriModaleIscrizione('${evt.id}', '${evt.data_inizio}', '${evt.data_fine}')">ISCRIVITI</button>`;
 
             listContainer.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(201, 168, 76, 0.2); padding: 16px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; margin: 0;">
@@ -512,13 +545,146 @@ async function caricaEventiDisponibili() {
     }
 }
 
-async function iscrivitiEvento(eventoId) {
+async function apriModaleIscrizione(eventoId, dataInizio, dataFine) {
+    try {
+        document.getElementById('epk-iscrizione-modal-evento-id').value = eventoId;
+        
+        // Genera i giorni di presenza
+        const giorniContainer = document.getElementById('epk-iscrizione-modal-giorni');
+        giorniContainer.innerHTML = '';
+        
+        const inizioDate = new Date(dataInizio);
+        const fineDate = new Date(dataFine);
+        const dateArray = [];
+        let currentDate = new Date(inizioDate);
+        while (currentDate <= fineDate) {
+            dateArray.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        dateArray.forEach(d => {
+            const dateStr = d.toISOString().split('T')[0];
+            const dataFormattata = formattaData(dateStr);
+            giorniContainer.innerHTML += `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
+                    <input type="checkbox" name="giorni-presenza-check" value="${dateStr}" checked style="cursor: pointer;"> ${dataFormattata}
+                </label>
+            `;
+        });
+
+        // Carica la lista allenatori
+        const coachSelect = document.getElementById('epk-iscrizione-coach');
+        coachSelect.innerHTML = '<option value="">SELEZIONA ALLENATORE...</option>';
+        const { data: allenatori, error: coachError } = await supabaseClient
+            .from('epika_opzioni')
+            .select('*')
+            .eq('tipo', 'allenatore')
+            .eq('attivo', true)
+            .order('valore', { ascending: true });
+
+        if (!coachError && allenatori) {
+            allenatori.forEach(c => {
+                coachSelect.innerHTML += `<option value="${c.id}">${c.valore.toUpperCase()}</option>`;
+            });
+        }
+
+        // Mostra campi combattente se applicabile
+        const isCombattente = currentUserProfile && currentUserProfile.ruolo_combattimento === 'combattente';
+        const combattenteFields = document.getElementById('epk-iscrizione-modal-combattente-fields');
+        
+        if (isCombattente) {
+            combattenteFields.classList.remove('epk-hidden');
+            if (currentUserProfile.allenatore_id) {
+                coachSelect.value = currentUserProfile.allenatore_id;
+            }
+        } else {
+            combattenteFields.classList.add('epk-hidden');
+        }
+
+        // Resetta campi armi speciali
+        document.getElementById('epk-wp-giavellotto').checked = false;
+        document.getElementById('epk-wp-spada-lunga').checked = false;
+        document.getElementById('epk-wp-lancia').checked = false;
+        document.getElementById('epk-wp-sperimentali').checked = false;
+        document.getElementById('epk-iscrizione-armatura').value = 'nessuna';
+        document.getElementById('epk-iscrizione-arciere').value = 'nessuno';
+        document.getElementById('epk-iscrizione-sperimentali-desc').value = '';
+        document.getElementById('epk-iscrizione-modal-sperimentali-desc-container').classList.add('epk-hidden');
+
+        document.getElementById('epk-iscrizione-modal').classList.remove('epk-hidden');
+    } catch (e) {
+        console.error("Errore apertura modale iscrizione:", e);
+    }
+}
+
+function chiudiModaleIscrizione() {
+    document.getElementById('epk-iscrizione-modal').classList.add('epk-hidden');
+}
+
+function toggleArmiSperimentaliDesc(checked) {
+    const descContainer = document.getElementById('epk-iscrizione-modal-sperimentali-desc-container');
+    if (checked) {
+        descContainer.classList.remove('epk-hidden');
+    } else {
+        descContainer.classList.add('epk-hidden');
+    }
+}
+
+async function salvaIscrizioneDettagliata() {
+    const eventoId = document.getElementById('epk-iscrizione-modal-evento-id').value;
+    const checkedGiorni = Array.from(document.querySelectorAll('input[name="giorni-presenza-check"]:checked')).map(cb => cb.value);
+    
+    if (checkedGiorni.length === 0) {
+        alert("Devi selezionare almeno un giorno di presenza.");
+        return;
+    }
+
+    const isCombattente = currentUserProfile && currentUserProfile.ruolo_combattimento === 'combattente';
+    let coachId = null;
+    let armatura = 'nessuna';
+    let arciere = 'nessuno';
+    let armiSpeciali = [];
+    let descSperimentali = null;
+
+    if (isCombattente) {
+        coachId = document.getElementById('epk-iscrizione-coach').value;
+        if (!coachId) {
+            alert("Seleziona l'allenatore che ti ha abilitato.");
+            return;
+        }
+        coachId = parseInt(coachId);
+        armatura = document.getElementById('epk-iscrizione-armatura').value;
+        arciere = document.getElementById('epk-iscrizione-arciere').value;
+        
+        if (document.getElementById('epk-wp-giavellotto').checked) armiSpeciali.push('giavellotto');
+        if (document.getElementById('epk-wp-spada-lunga').checked) armiSpeciali.push('spada_lunga');
+        if (document.getElementById('epk-wp-lancia').checked) armiSpeciali.push('lancia');
+        if (document.getElementById('epk-wp-sperimentali').checked) {
+            armiSpeciali.push('armi_sperimentali');
+            descSperimentali = document.getElementById('epk-iscrizione-sperimentali-desc').value.trim();
+            if (!descSperimentali) {
+                alert("Fornisci una descrizione per l'arma sperimentale.");
+                return;
+            }
+        }
+    }
+
+    const dettagliPayload = {
+        allenatore_id: coachId,
+        armatura: armatura,
+        arciere: arciere,
+        armi_speciali: armiSpeciali,
+        descrizione_sperimentali: descSperimentali
+    };
+
     try {
         const { error } = await supabaseClient
             .from('epika_iscrizioni_eventi')
             .insert({
                 evento_id: eventoId,
-                utente_id: currentUser.id
+                utente_id: currentUser.id,
+                giorni_presenza: checkedGiorni,
+                dettagli: dettagliPayload
             });
 
         if (error) {
@@ -528,12 +694,13 @@ async function iscrivitiEvento(eventoId) {
                 throw error;
             }
         } else {
-            alert("Iscrizione completata con successo!");
+            alert("Iscrizione registrata con successo!");
+            chiudiModaleIscrizione();
             await caricaEventiDisponibili();
         }
     } catch (e) {
-        console.error("Errore iscrizione evento:", e);
-        alert("Impossibile completare l'iscrizione. Riprova più tardi.");
+        console.error("Errore salvataggio iscrizione:", e);
+        alert("Errore durante il salvataggio dell'iscrizione. Riprova.");
     }
 }
 
@@ -552,6 +719,54 @@ function formattaData(dateStr) {
 
 let activeAdminTab = 'dash';
 
+function isReadOnly() {
+    const viewMode = document.getElementById('epk-admin-switcher').value || 'athlete';
+    return viewMode.startsWith('direttivo_');
+}
+
+function configureAdminTabs() {
+    const viewMode = document.getElementById('epk-admin-switcher').value || 'athlete';
+    
+    const allBtns = {
+        dash: document.getElementById('epk-adm-btn-dash'),
+        direttivi: document.getElementById('epk-adm-btn-direttivi'),
+        scab: document.getElementById('epk-adm-btn-scab'),
+        gruppi: document.getElementById('epk-adm-btn-gruppi'),
+        popoli: document.getElementById('epk-adm-btn-popoli'),
+        eventi: document.getElementById('epk-adm-btn-eventi'),
+        generale: document.getElementById('epk-adm-btn-generale'),
+        logistica: document.getElementById('epk-adm-btn-logistica'),
+        marketing: document.getElementById('epk-adm-btn-marketing')
+    };
+
+    // Nascondi tutto inizialmente
+    Object.values(allBtns).forEach(btn => { if (btn) btn.classList.add('epk-hidden'); });
+
+    // Definisci quali tab sono visibili in base alla vista
+    let visibleTabs = [];
+    if (viewMode === 'admin') {
+        visibleTabs = ['dash', 'direttivi', 'scab', 'gruppi', 'popoli', 'eventi', 'generale'];
+    } else if (viewMode === 'direttivo_epika') {
+        visibleTabs = ['dash', 'direttivi', 'scab', 'gruppi', 'popoli', 'eventi', 'generale'];
+    } else if (viewMode === 'direttivo_scab') {
+        visibleTabs = ['scab', 'eventi'];
+    } else if (viewMode === 'direttivo_logistica') {
+        visibleTabs = ['eventi', 'logistica'];
+    } else if (viewMode === 'direttivo_marketing') {
+        visibleTabs = ['eventi', 'marketing'];
+    }
+
+    // Mostra i bottoni visibili
+    visibleTabs.forEach(tab => {
+        if (allBtns[tab]) allBtns[tab].classList.remove('epk-hidden');
+    });
+
+    // Se il tab attivo non è tra quelli visibili, seleziona il primo visibile
+    if (!visibleTabs.includes(activeAdminTab) && visibleTabs.length > 0) {
+        activeAdminTab = visibleTabs[0];
+    }
+}
+
 async function renderAdminDashboard() {
     try {
         // Carica dati lookup (gruppi storici, popoli, allenatori) in cache globale
@@ -567,6 +782,9 @@ async function renderAdminDashboard() {
         if (!glError) {
             gruppiLavoro = gruppiL || [];
         }
+
+        // Configura visibilità tab
+        configureAdminTabs();
 
         // Carica il tab attivo
         switchAdminTab(activeAdminTab);
@@ -742,11 +960,11 @@ async function renderTesseratiNomineInverso() {
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 ${g.id === 1 ? `
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <input type="checkbox" id="chk-adm-${g.id}-${m.id}" ${m.is_admin_epika ? 'checked' : ''} onchange="salvaStatoAdminInverso('${m.id}', this.checked)" style="cursor: pointer; transform: scale(0.9);">
+                                    <input type="checkbox" id="chk-adm-${g.id}-${m.id}" ${m.is_admin_epika ? 'checked' : ''} onchange="salvaStatoAdminInverso('${m.id}', this.checked)" style="cursor: pointer; transform: scale(0.9);" ${isReadOnly() ? 'disabled' : ''}>
                                     <label for="chk-adm-${g.id}-${m.id}" style="font-size: 8px; font-weight: bold; color: var(--epk-gold); cursor: pointer; text-transform: uppercase;">ADMIN</label>
                                 </div>
                                 ` : ''}
-                                ${!isAutoCompiled ? `
+                                ${(!isAutoCompiled && !isReadOnly()) ? `
                                 <button class="epk-btn-secondary" style="font-size: 8px; padding: 2px 6px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="rimuoviNominaLavoroInverso('${m.id}', ${g.id})">
                                     RIMUOVI
                                 </button>
@@ -759,7 +977,7 @@ async function renderTesseratiNomineInverso() {
             let actionButtonHTML = '';
             if (isAutoCompiled) {
                 actionButtonHTML = `<div style="font-size: 9px; text-align: center; margin-top: 8px; color: #71717a; font-style: italic; border: 1px dashed rgba(255,255,255,0.05); padding: 6px;">Gestito tramite la scheda Gruppi Storici</div>`;
-            } else {
+            } else if (!isReadOnly()) {
                 actionButtonHTML = `<button class="epk-btn-secondary" style="font-size: 9px; width: 100%; text-align: center; margin-top: 8px; border-color: var(--epk-gold); color: var(--epk-gold);" onclick="apriModaleNomina(${g.id}, '${g.nome.replace(/'/g, "\\'")}')">
                     + AGGIUNGI COMPONENTE
                 </button>`;
@@ -1059,9 +1277,23 @@ function renderSCABAbbinamenti(abbinamentiMap) {
             allievi_ids: (abb.allievi_ids || []).filter(id => soggettiAllievi.some(x => x.id === id))
         };
 
+        const isDisabledAttr = isReadOnly() ? 'disabled' : '';
+        const actionBtnPalHtml = isReadOnly() ? '-' : `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <button class="epk-btn" style="font-size: 8px; padding: 6px; width: 100%; border-radius: 2px;" onclick="salvaAbbinamentoSCAB(${s.id}, 'palestra')">SALVA</button>
+                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px; width: 100%; border-radius: 2px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="pulisciAbbinamentoSCAB(${s.id})">PULISCI</button>
+            </div>`;
+        const actionBtnCentroHtml = isReadOnly() ? '-' : `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <button class="epk-btn" style="font-size: 8px; padding: 6px; width: 100%; border-radius: 2px;" onclick="salvaAbbinamentoSCAB(${s.id}, 'centro_pratica')">SALVA</button>
+                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px; width: 100%; border-radius: 2px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="pulisciAbbinamentoSCAB(${s.id})">PULISCI</button>
+            </div>`;
+        const addBtnCoHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'co')">+</button>`;
+        const addBtnAllHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'all')">+</button>`;
+
         if (s.tipo === 'palestra') {
-            const refSelect = `<select id="select-pal-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiAllenatori, abb.allenatore_ref_id)}</select>`;
-            const valSelect = `<select id="select-pal-val-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiValidatori, abb.validatore_id)}</select>`;
+            const refSelect = `<select id="select-pal-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;" ${isDisabledAttr}>${generaOpzioniSoggetti(soggettiAllenatori, abb.allenatore_ref_id)}</select>`;
+            const valSelect = `<select id="select-pal-val-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;" ${isDisabledAttr}>${generaOpzioniSoggetti(soggettiValidatori, abb.validatore_id)}</select>`;
 
             palestreBody.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -1070,24 +1302,21 @@ function renderSCABAbbinamenti(abbinamentiMap) {
                     <td style="padding: 8px;">${valSelect}</td>
                     <td style="padding: 8px;">
                         <div id="container-co-${s.id}" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
-                        <button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'co')">+</button>
+                        ${addBtnCoHtml}
                         <div id="add-co-${s.id}" class="epk-hidden" style="margin-top:4px;"></div>
                     </td>
                     <td style="padding: 8px;">
                         <div id="container-all-${s.id}" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
-                        <button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'all')">+</button>
+                        ${addBtnAllHtml}
                         <div id="add-all-${s.id}" class="epk-hidden" style="margin-top:4px;"></div>
                     </td>
                     <td style="padding: 8px;">
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <button class="epk-btn" style="font-size: 8px; padding: 6px; width: 100%; border-radius: 2px;" onclick="salvaAbbinamentoSCAB(${s.id}, 'palestra')">SALVA</button>
-                            <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px; width: 100%; border-radius: 2px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="pulisciAbbinamentoSCAB(${s.id})">PULISCI</button>
-                        </div>
+                        ${actionBtnPalHtml}
                     </td>
                 </tr>`;
         } else {
-            const allRefSelect = `<select id="select-cp-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiAllievi, abb.allievo_ref_id)}</select>`;
-            const alnSelect = `<select id="select-cp-aln-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;">${generaOpzioniSoggetti(soggettiAllenatori, abb.allenatore_ref_id)}</select>`;
+            const allRefSelect = `<select id="select-cp-ref-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;" ${isDisabledAttr}>${generaOpzioniSoggetti(soggettiAllievi, abb.allievo_ref_id)}</select>`;
+            const alnSelect = `<select id="select-cp-aln-${s.id}" class="epk-input" style="padding: 4px; font-size: 11px;" ${isDisabledAttr}>${generaOpzioniSoggetti(soggettiAllenatori, abb.allenatore_ref_id)}</select>`;
 
             centriBody.innerHTML += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -1096,14 +1325,11 @@ function renderSCABAbbinamenti(abbinamentiMap) {
                     <td style="padding: 8px;">${alnSelect}</td>
                     <td style="padding: 8px;">
                         <div id="container-all-${s.id}" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
-                        <button class="epk-btn-secondary" style="font-size: 10px; padding: 2px 6px; margin-top: 4px;" onclick="mostraSelectAggiunta(${s.id}, 'all')">+</button>
+                        ${addBtnAllHtml}
                         <div id="add-all-${s.id}" class="epk-hidden" style="margin-top:4px;"></div>
                     </td>
                     <td style="padding: 8px;">
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <button class="epk-btn" style="font-size: 8px; padding: 6px; width: 100%; border-radius: 2px;" onclick="salvaAbbinamentoSCAB(${s.id}, 'centro_pratica')">SALVA</button>
-                            <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px; width: 100%; border-radius: 2px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="pulisciAbbinamentoSCAB(${s.id})">PULISCI</button>
-                        </div>
+                        ${actionBtnCentroHtml}
                     </td>
                 </tr>`;
         }
@@ -1139,10 +1365,11 @@ function renderTokens(strutturaId, tipo) {
     ids.forEach(id => {
         const sogg = sorgente.find(x => x.id === id);
         if (sogg) {
+            const removeBtnHtml = isReadOnly() ? '' : `<span style="cursor: pointer; color: #ff4d4d; font-weight: bold;" onclick="rimuoviToken(${strutturaId}, '${tipo}', ${id})">&times;</span>`;
             container.innerHTML += `
                 <div style="background: rgba(201,168,76,0.1); border: 1px solid var(--epk-gold); padding: 2px 6px; font-size: 10px; border-radius: 2px; display: flex; align-items: center; gap: 4px;">
                     ${sogg.valore.toUpperCase()}
-                    <span style="cursor: pointer; color: #ff4d4d; font-weight: bold;" onclick="rimuoviToken(${strutturaId}, '${tipo}', ${id})">&times;</span>
+                    ${removeBtnHtml}
                 </div>`;
         }
     });
@@ -1448,22 +1675,33 @@ async function toggleStatoSoggettoRuolo(id, statoAttuale) {
 async function renderEventiAdmin() {
     const container = document.getElementById('adm-eventi-lista');
     try {
+        const btnNuovo = document.querySelector('#epk-adm-tab-eventi button[onclick="mostraFormCreaEvento()"]');
+        if (btnNuovo) {
+            if (isReadOnly()) btnNuovo.classList.add('epk-hidden');
+            else btnNuovo.classList.remove('epk-hidden');
+        }
+
         const { data: eventi, error } = await supabaseClient
             .from('epika_eventi')
             .select('*')
-            .order('data_evento', { ascending: false });
+            .order('data_inizio', { ascending: false });
 
         if (error) throw error;
 
         container.innerHTML = '';
         (eventi || []).forEach(evt => {
-            const dataFormattata = formattaData(evt.data_evento);
+            const dataInizioF = formattaData(evt.data_inizio);
+            const dataFineF = formattaData(evt.data_fine);
+            const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
             const statusStyle = evt.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             const statusText = evt.attivo ? 'DISATTIVA' : 'ATTIVA';
 
+            const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})">${statusText}</button>`;
+            const presenzeBtnText = isReadOnly() ? 'VEDI PRESENZE' : 'GESTISCI PRESENZE';
+
             container.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <div>
                             <span class="epk-headline" style="font-size: 14px; color: var(--epk-gold);">${evt.titolo.toUpperCase()}</span>
                             <span style="font-size: 10px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.5); uppercase; margin-top: 2px;">
@@ -1471,8 +1709,9 @@ async function renderEventiAdmin() {
                             </span>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button class="epk-btn" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">GESTISCI PRESENZE</button>
-                            <button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})">${statusText}</button>
+                            <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #1e3a8a; border-color: #3b82f6;" onclick="mostraDashboardEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.data_inizio}', '${evt.data_fine}')">DASHBOARD</button>
+                            <button class="epk-btn" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
+                            ${toggleBtnHtml}
                         </div>
                     </div>
                 </div>`;
@@ -1484,9 +1723,11 @@ async function renderEventiAdmin() {
 }
 
 function mostraFormCreaEvento() {
+    if (isReadOnly()) return;
     document.getElementById('adm-evento-form-container').classList.remove('epk-hidden');
-    // Set default date check
-    document.getElementById('evt-data').value = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('evt-data-inizio').value = todayStr;
+    document.getElementById('evt-data-fine').value = todayStr;
 }
 
 function nascondiFormCreaEvento() {
@@ -1494,14 +1735,21 @@ function nascondiFormCreaEvento() {
 }
 
 async function salvaEventoStorico() {
+    if (isReadOnly()) return;
     const titolo = document.getElementById('evt-titolo').value.trim();
     const luogo = document.getElementById('evt-luogo').value.trim();
-    const data = document.getElementById('evt-data').value;
+    const dataInizio = document.getElementById('evt-data-inizio').value;
+    const dataFine = document.getElementById('evt-data-fine').value;
     const tipo = document.getElementById('evt-tipo').value;
     const descrizione = document.getElementById('evt-descrizione').value.trim();
 
-    if (!titolo || !luogo || !data || !tipo) {
+    if (!titolo || !luogo || !dataInizio || !dataFine || !tipo) {
         alert("Compila tutti i campi obbligatori dell'evento.");
+        return;
+    }
+
+    if (new Date(dataFine) < new Date(dataInizio)) {
+        alert("La data di fine non può essere precedente alla data di inizio.");
         return;
     }
 
@@ -1511,7 +1759,8 @@ async function salvaEventoStorico() {
             .insert({
                 titolo: titolo,
                 luogo: luogo,
-                data_evento: data,
+                data_inizio: dataInizio,
+                data_fine: dataFine,
                 tipo_evento: tipo,
                 descrizione: descrizione || null
             });
@@ -1642,6 +1891,231 @@ async function togglePresenzaAtleta(eventoId, utenteId, statoAttuale) {
 
 function nascondiPannelloPresenze() {
     document.getElementById('adm-presenze-panel').classList.add('epk-hidden');
+}
+
+let dashboardIscrittiCache = [];
+
+async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFine) {
+    const panel = document.getElementById('adm-dashboard-evento-panel');
+    document.getElementById('adm-dashboard-evento-titolo').textContent = `STATISTICHE & DETTAGLI EVENTO: ${eventoTitolo.toUpperCase()}`;
+    document.getElementById('adm-dashboard-evento-id').value = eventoId;
+    document.getElementById('evt-dashboard-search').value = '';
+
+    panel.classList.remove('epk-hidden');
+    panel.scrollIntoView({ behavior: 'smooth' });
+
+    const tableBody = document.getElementById('evt-dashboard-table-body');
+    tableBody.innerHTML = '<tr><td colspan="8" style="padding: 15px; text-align: center; text-transform: uppercase; color: gray;">Caricamento dati...</td></tr>';
+
+    try {
+        // 1. Carica iscrizioni con profili
+        const { data: iscritti, error: errIsc } = await supabaseClient
+            .from('epika_iscrizioni_eventi')
+            .select(`
+                utente_id,
+                giorni_presenza,
+                dettagli,
+                profilo:epika_profili(nome_di_battaglia, ruolo_combattimento, gruppo_storico_id)
+            `)
+            .eq('evento_id', eventoId);
+
+        if (errIsc) throw errIsc;
+
+        if (!iscritti || iscritti.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="8" style="padding: 15px; text-align: center; text-transform: uppercase; color: #ff4d4d;">Nessun iscritto a questo evento.</td></tr>';
+            document.getElementById('evt-stat-totale').textContent = '0';
+            document.getElementById('evt-stat-ruoli').innerHTML = 'COMBATTENTI: 0<br>NON COMBATTENTI: 0';
+            document.getElementById('evt-stat-combattimento').innerHTML = 'ARMATURA LEGGERA: 0 | PESANTE: 0 | NO: 0<br>ARCIERI PURI: 0 | IBRIDI: 0 | NO: 0';
+            document.getElementById('evt-stat-armi').innerHTML = 'GIAVELLOTTI: 0 | SPADA LUNGA: 0 | LANCIA: 0 | SPERIMENTALI: 0';
+            document.getElementById('evt-giorni-presenze-container').innerHTML = '';
+            dashboardIscrittiCache = [];
+            return;
+        }
+
+        // 2. Carica anagrafiche utenti
+        const uids = iscritti.map(i => i.utente_id);
+        const { data: utentiD } = await supabaseClient
+            .from('utenti')
+            .select('id, nome, cognome')
+            .in('id', uids);
+        
+        const nomiReali = {};
+        (utentiD || []).forEach(u => { nomiReali[u.id] = `${u.nome} ${u.cognome}`; });
+
+        // 3. Carica gruppi storici
+        const { data: gruppiS } = await supabaseClient
+            .from('epika_gruppi_storici')
+            .select('id, nome');
+        
+        const gruppiMappa = {};
+        (gruppiS || []).forEach(g => { gruppiMappa[g.id] = g.nome; });
+
+        // 4. Carica allenatori
+        const { data: allenatori } = await supabaseClient
+            .from('epika_opzioni')
+            .select('id, valore')
+            .eq('tipo', 'allenatore');
+        
+        const coachMappa = {};
+        (allenatori || []).forEach(c => { coachMappa[c.id] = c.valore; });
+
+        // Elabora statistiche
+        let totale = iscritti.length;
+        let combattenti = 0;
+        let nonCombattenti = 0;
+        let armLeggera = 0;
+        let armPesante = 0;
+        let armNessuna = 0;
+        let arcPuro = 0;
+        let arcIbrido = 0;
+        let arcNo = 0;
+        let giavellotti = 0;
+        let spadeLunghe = 0;
+        let lancia = 0;
+        let sperimentali = 0;
+
+        const giorniPresenzaMappa = {};
+        const inizioD = new Date(dataInizio);
+        const fineD = new Date(dataFine);
+        let currD = new Date(inizioD);
+        while (currD <= fineD) {
+            giorniPresenzaMappa[currD.toISOString().split('T')[0]] = 0;
+            currD.setDate(currD.getDate() + 1);
+        }
+
+        dashboardIscrittiCache = iscritti.map(isc => {
+            const nomeReale = nomiReali[isc.utente_id] || 'NON TROVATO';
+            const profilo = isc.profilo || {};
+            const nomeStorico = profilo.nome_di_battaglia || 'NON DI BATTAGLIA';
+            const ruolo = profilo.ruolo_combattimento || 'non_combattente';
+            const gruppoNome = gruppiMappa[profilo.gruppo_storico_id] || 'MERCENARI';
+            
+            const giorni = Array.isArray(isc.giorni_presenza) ? isc.giorni_presenza : [];
+            giorni.forEach(g => {
+                if (giorniPresenzaMappa[g] !== undefined) {
+                    giorniPresenzaMappa[g]++;
+                }
+            });
+
+            const dett = isc.dettagli || {};
+            const coachNome = coachMappa[dett.allenatore_id] || 'N/D';
+            const arm = dett.armatura || 'nessuna';
+            const arc = dett.arciere || 'nessuno';
+            const armiS = Array.isArray(dett.armi_speciali) ? dett.armi_speciali : [];
+            const descSper = dett.descrizione_sperimentali || '';
+
+            if (ruolo === 'combattente') {
+                combattenti++;
+                if (arm === 'leggera') armLeggera++;
+                else if (arm === 'pesante') armPesante++;
+                else armNessuna++;
+
+                if (arc === 'puro') arcPuro++;
+                else if (arc === 'ibrido') arcIbrido++;
+                else arcNo++;
+
+                if (armiS.includes('giavellotto')) giavellotti++;
+                if (armiS.includes('spada_lunga')) spadeLunghe++;
+                if (armiS.includes('lancia')) lancia++;
+                if (armiS.includes('armi_sperimentali')) sperimentali++;
+            } else {
+                nonCombattenti++;
+            }
+
+            return {
+                nome_storico: nomeStorico,
+                nome_reale: nomeReale,
+                gruppo: gruppoNome,
+                ruolo: ruolo,
+                giorni: giorni.map(formattaData).join(', '),
+                coach: coachNome,
+                armatura: arm,
+                arciere: arc,
+                armi_speciali: armiS,
+                descrizione_sperimentali: descSper
+            };
+        });
+
+        // Aggiorna widget statistiche
+        document.getElementById('evt-stat-totale').textContent = totale;
+        document.getElementById('evt-stat-ruoli').innerHTML = `COMBATTENTI: ${combattenti}<br>NON COMBATTENTI: ${nonCombattenti}`;
+        document.getElementById('evt-stat-combattimento').innerHTML = `ARMATURA LEGGERA: ${armLeggera} | PESANTE: ${armPesante} | NO: ${armNessuna}<br>ARCIERI PURI: ${arcPuro} | IBRIDI: ${arcIbrido} | NO: ${arcNo}`;
+        document.getElementById('evt-stat-armi').innerHTML = `GIAVELLOTTI: ${giavellotti} | SPADE LUNGHE: ${spadeLunghe} | LANCIA: ${lancia} | SPERIMENTALI: ${sperimentali}`;
+
+        // Aggiorna giorni presenza
+        const giorniCont = document.getElementById('evt-giorni-presenze-container');
+        giorniCont.innerHTML = '';
+        Object.keys(giorniPresenzaMappa).sort().forEach(g => {
+            const dataF = formattaData(g);
+            const count = giorniPresenzaMappa[g];
+            giorniCont.innerHTML += `
+                <div style="background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.15); padding: 8px 12px; border-radius: 2px; text-align: center; min-width: 90px;">
+                    <span style="font-size: 9px; display: block; color: rgba(245, 230, 200, 0.6); font-family: monospace;">${dataF}</span>
+                    <span style="font-size: 14px; font-weight: bold; color: var(--epk-gold); display: block; margin-top: 2px;">${count}</span>
+                </div>
+            `;
+        });
+
+        filtraPartecipantiDashboard();
+
+    } catch (e) {
+        console.error("Errore caricamento dashboard evento:", e);
+        tableBody.innerHTML = '<tr><td colspan="8" style="padding: 15px; text-align: center; text-transform: uppercase; color: red;">Errore caricamento dati.</td></tr>';
+    }
+}
+
+function nascondiDashboardEvento() {
+    document.getElementById('adm-dashboard-evento-panel').classList.add('epk-hidden');
+}
+
+function filtraPartecipantiDashboard() {
+    const query = document.getElementById('evt-dashboard-search').value.toLowerCase().trim();
+    const tableBody = document.getElementById('evt-dashboard-table-body');
+    
+    tableBody.innerHTML = '';
+
+    const filtrati = dashboardIscrittiCache.filter(i => 
+        i.nome_storico.toLowerCase().includes(query) ||
+        i.nome_reale.toLowerCase().includes(query) ||
+        i.gruppo.toLowerCase().includes(query) ||
+        i.ruolo.toLowerCase().includes(query)
+    );
+
+    if (filtrati.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" style="padding: 15px; text-align: center; text-transform: uppercase; color: gray;">Nessun partecipante corrisponde ai filtri.</td></tr>';
+        return;
+    }
+
+    filtrati.forEach(i => {
+        const ruoloF = i.ruolo === 'combattente' ? '<span style="color: var(--epk-gold);">COMBATTENTE</span>' : 'NON COMBATTENTE';
+        let equip = 'N/D';
+        let armiNote = '';
+
+        if (i.ruolo === 'combattente') {
+            const armText = i.armatura === 'nessuna' ? 'NO ARMATURA' : `ARM. ${i.armatura.toUpperCase()}`;
+            const arcText = i.arciere === 'nessuno' ? 'NO ARCIERE' : `ARC. ${i.arciere.toUpperCase()}`;
+            equip = `${armText}<br>${arcText}`;
+            
+            const armiSpecialiFormatted = i.armi_speciali.map(a => a.toUpperCase().replace('_', ' '));
+            if (i.descrizione_sperimentali) {
+                armiSpecialiFormatted.push(`SPERIMENTALE: "${i.descrizione_sperimentali}"`);
+            }
+            armiNote = armiSpecialiFormatted.length > 0 ? armiSpecialiFormatted.join(', ') : 'NESSUNA ABILITAZIONE SPECIALE';
+        }
+
+        tableBody.innerHTML += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                <td style="padding: 10px; font-weight: bold; color: var(--epk-gold);">${i.nome_storico.toUpperCase()}</td>
+                <td style="padding: 10px; color: rgba(245, 230, 200, 0.7);">${i.nome_reale.toUpperCase()}</td>
+                <td style="padding: 10px; text-transform: uppercase;">${i.gruppo}</td>
+                <td style="padding: 10px; font-family: monospace;">${ruoloF}</td>
+                <td style="padding: 10px; font-family: monospace; font-size: 10px; color: rgba(245, 230, 200, 0.6);">${i.giorni}</td>
+                <td style="padding: 10px; text-transform: uppercase;">${i.ruolo === 'combattente' ? i.coach : '-'}</td>
+                <td style="padding: 10px; line-height: 1.4; font-size: 10px;">${equip}</td>
+                <td style="padding: 10px; font-size: 10px; color: rgba(245, 230, 200, 0.7); max-width: 250px; overflow-wrap: break-word;">${armiNote}</td>
+            </tr>
+        `;
+    });
 }
 
 // E — Organigramma Dinamico (Mermaid.js)
@@ -1966,6 +2440,13 @@ async function renderPopoliAdmin() {
     const listContainer = document.getElementById('adm-popoli-list');
     if (!listContainer) return;
 
+    // Show/hide creation form
+    const formDiv = document.querySelector('#epk-adm-tab-popoli div[style*="align-items: flex-end"]');
+    if (formDiv) {
+        if (isReadOnly()) formDiv.classList.add('epk-hidden');
+        else formDiv.classList.remove('epk-hidden');
+    }
+
     listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento in corso...</p>';
 
     try {
@@ -1992,20 +2473,22 @@ async function renderPopoliAdmin() {
             const btnContainer = document.createElement('div');
             btnContainer.style = "display: flex; gap: 4px;";
 
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'epk-btn-secondary';
-            toggleBtn.style = `font-size: 8px; padding: 4px 8px; ${p.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);'}`;
-            toggleBtn.textContent = p.attivo ? 'Dis' : 'Att';
-            toggleBtn.onclick = () => toggleStatoPopolo(p.id, !p.attivo);
+            if (!isReadOnly()) {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'epk-btn-secondary';
+                toggleBtn.style = `font-size: 8px; padding: 4px 8px; ${p.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);'}`;
+                toggleBtn.textContent = p.attivo ? 'Dis' : 'Att';
+                toggleBtn.onclick = () => toggleStatoPopolo(p.id, !p.attivo);
 
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'epk-btn-secondary';
-            deleteBtn.style = 'font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);';
-            deleteBtn.textContent = 'Canc';
-            deleteBtn.onclick = () => cancellaPopolo(p.id);
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'epk-btn-secondary';
+                deleteBtn.style = 'font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);';
+                deleteBtn.textContent = 'Canc';
+                deleteBtn.onclick = () => cancellaPopolo(p.id);
 
-            btnContainer.appendChild(toggleBtn);
-            btnContainer.appendChild(deleteBtn);
+                btnContainer.appendChild(toggleBtn);
+                btnContainer.appendChild(deleteBtn);
+            }
 
             row.appendChild(infoText);
             row.appendChild(btnContainer);
@@ -2657,10 +3140,16 @@ async function renderListaGeneraleAdmin() {
     const tbody = document.getElementById('adm-generale-table-body');
     if (!tbody) return;
     
+    // Hide/show save button based on read-only status
+    const saveBtn = document.querySelector('#epk-adm-tab-generale button[onclick="salvaTuttaLaListaGenerale()"]');
+    if (saveBtn) {
+        if (isReadOnly()) saveBtn.classList.add('epk-hidden');
+        else saveBtn.classList.remove('epk-hidden');
+    }
+
     tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 12px;">Caricamento lista generale...</td></tr>';
     
     try {
-        // 1. Carica profili completati
         const { data: profili, error: profError } = await supabaseClient
             .from('epika_profili')
             .select('*, utenti(nome, cognome)')
@@ -2668,14 +3157,12 @@ async function renderListaGeneraleAdmin() {
             
         if (profError) throw profError;
         
-        // 2. Carica storico organico
         const { data: storico, error: storicoError } = await supabaseClient
             .from('epika_storico_organico')
             .select('*');
             
         if (storicoError) throw storicoError;
         
-        // 3. Carica gruppi storici per i selettori e per il filtro
         const { data: gruppi, error: gruppiError } = await supabaseClient
             .from('epika_gruppi_storici')
             .select('id, nome')
@@ -2688,7 +3175,6 @@ async function renderListaGeneraleAdmin() {
         listaGeneraleStorico = storico || [];
         listaGeneraleGruppi = gruppi || [];
         
-        // Popola il selettore del filtro gruppi
         const groupFilterSel = document.getElementById('gen-filter-gruppo');
         if (groupFilterSel) {
             groupFilterSel.innerHTML = '<option value="">TUTTI I GRUPPI 2026</option>';
@@ -2697,7 +3183,6 @@ async function renderListaGeneraleAdmin() {
             });
         }
         
-        // Disegna la tabella
         disegnaTabellaListaGenerale();
         
     } catch (e) {
@@ -2763,15 +3248,16 @@ function disegnaTabellaListaGenerale() {
         const isFallback = !row2026;
         const selectStyle = isFallback ? "opacity: 0.65; font-style: italic; border-color: rgba(251, 191, 36, 0.2);" : "border-color: var(--epk-gold);";
         
+        const disabledSelect = isReadOnly() ? 'disabled' : '';
         // Select Ruolo
-        let ruoloSelect = `<select class="gen-ruolo epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 100px; ${selectStyle}" onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
+        let ruoloSelect = `<select class="gen-ruolo epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 100px; ${selectStyle}" ${disabledSelect} onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
         ruoloSelect += `<option value="" ${!ruoloAttivo ? 'selected' : ''}>NESSUNO</option>`;
         ruoloSelect += `<option value="combattente" ${ruoloAttivo === 'combattente' ? 'selected' : ''}>COMBATTENTE</option>`;
         ruoloSelect += `<option value="non_combattente" ${ruoloAttivo === 'non_combattente' ? 'selected' : ''}>NON COMBATTENTE</option>`;
         ruoloSelect += `</select>`;
         
         // Select Gruppo
-        let gruppoSelect = `<select class="gen-gruppo epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 110px; ${selectStyle}" onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
+        let gruppoSelect = `<select class="gen-gruppo epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 110px; ${selectStyle}" ${disabledSelect} onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
         gruppoSelect += `<option value="" ${!gruppoIdAttivo ? 'selected' : ''}>NESSUNO</option>`;
         listaGeneraleGruppi.forEach(g => {
             const selected = (gruppoIdAttivo && Number(g.id) === Number(gruppoIdAttivo)) ? 'selected' : '';
@@ -2808,6 +3294,7 @@ function toggleOrdinamentoListaGenerale() {
 }
 
 async function salvaTuttaLaListaGenerale() {
+    if (isReadOnly()) return;
     const ruoliSelects = document.querySelectorAll('.gen-ruolo');
     const gruppiSelects = document.querySelectorAll('.gen-gruppo');
     
