@@ -283,7 +283,6 @@ async function renderAthleteDashboard() {
             .select(`
                 *,
                 gruppo_storico:epika_gruppi_storici(nome),
-                gruppo_lavoro:epika_gruppi_lavoro(nome),
                 allenatore:epika_opzioni(valore)
             `)
             .eq('id', currentUser.id)
@@ -301,7 +300,16 @@ async function renderAthleteDashboard() {
         document.getElementById('epk-prof-popolo').textContent = prof.popolo;
         document.getElementById('epk-prof-ruolo').textContent = prof.ruolo_combattimento.replace('_', ' ');
         document.getElementById('epk-prof-allenatore').textContent = prof.allenatore ? prof.allenatore.valore : '-';
-        document.getElementById('epk-prof-lavoro').textContent = prof.gruppo_lavoro ? prof.gruppo_lavoro.nome : 'NESSUN INCARICO';
+
+        // Carica nomi dei gruppi di lavoro
+        const { data: gruppiL } = await supabaseClient.from('epika_gruppi_lavoro').select('id, nome');
+        const gruppiLMap = {};
+        (gruppiL || []).forEach(g => { gruppiLMap[g.id] = g.nome; });
+        const workGroups = (prof.gruppo_lavoro_ids || [])
+            .map(id => gruppiLMap[id])
+            .filter(Boolean)
+            .join(', ');
+        document.getElementById('epk-prof-lavoro').textContent = workGroups.toUpperCase() || 'NESSUN INCARICO';
 
         const currentYear = new Date().getFullYear();
         const anniServizio = currentYear - prof.primo_anno_partecipazione + 1;
@@ -528,12 +536,19 @@ async function renderTesseratiNomineInverso() {
             t.nome_reale = utentiMappa[t.id] || 'N/D';
         });
 
-        // Raggruppa i profili per gruppo_lavoro_id
+        // Raggruppa i profili per gruppo_lavoro_ids
         const membriPerGruppo = {};
         tesseratiCache.forEach(p => {
-            const gid = p.gruppo_lavoro_id || 0; // 0 = Senza nomina
-            if (!membriPerGruppo[gid]) membriPerGruppo[gid] = [];
-            membriPerGruppo[gid].push(p);
+            const gids = p.gruppo_lavoro_ids || [];
+            if (gids.length === 0) {
+                if (!membriPerGruppo[0]) membriPerGruppo[0] = [];
+                membriPerGruppo[0].push(p);
+            } else {
+                gids.forEach(gid => {
+                    if (!membriPerGruppo[gid]) membriPerGruppo[gid] = [];
+                    membriPerGruppo[gid].push(p);
+                });
+            }
         });
 
         container.innerHTML = '';
@@ -559,7 +574,7 @@ async function renderTesseratiNomineInverso() {
                                     <input type="checkbox" id="chk-adm-${g.id}-${m.id}" ${m.is_admin_epika ? 'checked' : ''} onchange="salvaStatoAdminInverso('${m.id}', this.checked)" style="cursor: pointer; transform: scale(0.9);">
                                     <label for="chk-adm-${g.id}-${m.id}" style="font-size: 8px; font-weight: bold; color: var(--epk-gold); cursor: pointer; text-transform: uppercase;">ADMIN</label>
                                 </div>
-                                <button class="epk-btn-secondary" style="font-size: 8px; padding: 2px 6px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="rimuoviNominaLavoroInverso('${m.id}')">
+                                <button class="epk-btn-secondary" style="font-size: 8px; padding: 2px 6px; color: #ff4d4d; border-color: rgba(255,77,77,0.3);" onclick="rimuoviNominaLavoroInverso('${m.id}', ${g.id})">
                                     RIMUOVI
                                 </button>
                             </div>
@@ -615,7 +630,8 @@ function filtraTesseratiNomina() {
     
     // Filtra i tesserati: non devono far parte del gruppo attivo e devono matchare il nome
     const filtered = tesseratiCache.filter(t => {
-        if (t.gruppo_lavoro_id === gruppoId) return false;
+        const gids = t.gruppo_lavoro_ids || [];
+        if (gids.includes(gruppoId)) return false;
         if (!searchVal) return true;
         
         const battleMatch = t.nome_di_battaglia && t.nome_di_battaglia.toUpperCase().includes(searchVal);
@@ -644,12 +660,16 @@ function filtraTesseratiNomina() {
 // Chiamate API Supabase per il salvataggio
 async function salvaNominaLavoroInverso(utenteId, gruppoId) {
     try {
-        const { error } = await supabaseClient
-            .from('epika_profili')
-            .update({ gruppo_lavoro_id: gruppoId })
-            .eq('id', utenteId);
-            
-        if (error) throw error;
+        const tesserato = tesseratiCache.find(t => t.id === utenteId);
+        const currentGids = tesserato ? (tesserato.gruppo_lavoro_ids || []) : [];
+        if (!currentGids.includes(gruppoId)) {
+            const newGids = [...currentGids, gruppoId];
+            const { error } = await supabaseClient
+                .from('epika_profili')
+                .update({ gruppo_lavoro_ids: newGids })
+                .eq('id', utenteId);
+            if (error) throw error;
+        }
         
         chiudiModaleNomine();
         await renderTesseratiNomineInverso();
@@ -660,14 +680,18 @@ async function salvaNominaLavoroInverso(utenteId, gruppoId) {
     }
 }
 
-async function rimuoviNominaLavoroInverso(utenteId) {
+async function rimuoviNominaLavoroInverso(utenteId, gruppoId) {
     try {
-        const { error } = await supabaseClient
-            .from('epika_profili')
-            .update({ gruppo_lavoro_id: null })
-            .eq('id', utenteId);
-            
-        if (error) throw error;
+        const tesserato = tesseratiCache.find(t => t.id === utenteId);
+        if (tesserato) {
+            const currentGids = tesserato.gruppo_lavoro_ids || [];
+            const newGids = currentGids.filter(id => id !== gruppoId);
+            const { error } = await supabaseClient
+                .from('epika_profili')
+                .update({ gruppo_lavoro_ids: newGids })
+                .eq('id', utenteId);
+            if (error) throw error;
+        }
         
         await renderTesseratiNomineInverso();
         await renderOrganigrammaMermaid();
@@ -1061,14 +1085,19 @@ function switchScabSubTab(subTab) {
     document.getElementById('scab-panel-abbinamenti').classList.add('epk-hidden');
     document.getElementById('scab-panel-anagrafica').classList.add('epk-hidden');
     document.getElementById('scab-panel-allenatori').classList.add('epk-hidden');
+    
     document.getElementById('scab-tab-btn-abbinamenti').style.borderColor = 'transparent';
     document.getElementById('scab-tab-btn-abbinamenti').style.color = 'var(--epk-parchment)';
-    document.getElementById('scab-tab-btn-anagrafica').style.borderColor = 'transparent';
-    document.getElementById('scab-tab-btn-anagrafica').style.color = 'var(--epk-parchment)';
-    document.getElementById('scab-tab-btn-allenatori').style.borderColor = 'transparent';
-    document.getElementById('scab-tab-btn-allenatori').style.color = 'var(--epk-parchment)';
+    document.getElementById('scab-tab-btn-palestre-centri').style.borderColor = 'transparent';
+    document.getElementById('scab-tab-btn-palestre-centri').style.color = 'var(--epk-parchment)';
+    document.getElementById('scab-tab-btn-ruoli').style.borderColor = 'transparent';
+    document.getElementById('scab-tab-btn-ruoli').style.color = 'var(--epk-parchment)';
 
-    const btn = document.getElementById(`scab-tab-btn-${subTab}`);
+    let btnId = 'scab-tab-btn-abbinamenti';
+    if (subTab === 'anagrafica') btnId = 'scab-tab-btn-palestre-centri';
+    else if (subTab === 'allenatori') btnId = 'scab-tab-btn-ruoli';
+
+    const btn = document.getElementById(btnId);
     if (btn) {
         btn.style.borderColor = 'var(--epk-gold)';
         btn.style.color = 'var(--epk-gold)';
@@ -1081,8 +1110,8 @@ function switchScabSubTab(subTab) {
 }
 
 
-// A — Gestione Allenatori (CRUD)
-async function renderAllenatoriAdmin() {
+// A — Gestione Ruoli (CRUD)
+async function renderRuoliAdmin() {
     const container = document.getElementById('adm-allenatori-list');
     try {
         const { data: soggetti, error } = await supabaseClient
@@ -1174,98 +1203,7 @@ async function toggleStatoSoggettoRuolo(id, statoAttuale) {
     }
 }
 
-// B — Gestione Nomine Gruppi di Lavoro e Admin
-async function renderTesseratiNomine() {
-    const container = document.getElementById('adm-tesserati-nomine-list');
-    try {
-        // Query di tutti i profili EPIKA registrati
-        const { data: profili, error } = await supabaseClient
-            .from('epika_profili')
-            .select('*')
-            .eq('profilo_completato', true)
-            .order('nome_di_battaglia', { ascending: true });
 
-        if (error) throw error;
-
-        // Recupera le anagrafiche reali degli utenti
-        const uids = (profili || []).map(p => p.id);
-        let utentiMappa = {};
-        if (uids.length > 0) {
-            const { data: utentiD } = await supabaseClient
-                .from('utenti')
-                .select('id, nome, cognome')
-                .in('id', uids);
-            (utentiD || []).forEach(u => { utentiMappa[u.id] = `${u.nome} ${u.cognome}`; });
-        }
-
-        container.innerHTML = '';
-        (profili || []).forEach(p => {
-            const realName = utentiMappa[p.id] || 'N/D';
-            
-            // Crea le opzioni per la dropdown dei gruppi di lavoro
-            let optHTML = '<option value="">-- NESSUNO --</option>';
-            gruppiLavoro.forEach(g => {
-                const selected = p.gruppo_lavoro_id === g.id ? 'selected' : '';
-                optHTML += `<option value="${g.id}" ${selected}>${g.nome.toUpperCase()}</option>`;
-            });
-
-            container.innerHTML += `
-                <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); padding: 12px; display: flex; flex-direction: column; gap: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); font-family: 'Cinzel', serif;">${p.nome_di_battaglia}</span>
-                            <span style="font-size: 10px; display: block; color: rgba(245, 230, 200, 0.5); uppercase; margin-top: 2px;">Real: ${realName.toUpperCase()}</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <input type="checkbox" id="check-admin-${p.id}" ${p.is_admin_epika ? 'checked' : ''} onchange="salvaStatoAdmin('${p.id}', this.checked)" style="cursor: pointer;">
-                            <label for="check-admin-${p.id}" style="font-size: 9px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase; cursor: pointer;">ADMIN</label>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="epk-label" style="font-size: 8px; margin-bottom: 2px;">Gruppo Lavoro</label>
-                        <select class="epk-input" style="padding: 6px; font-size: 11px; text-transform: uppercase;" onchange="salvaNominaLavoro('${p.id}', this.value)">
-                            ${optHTML}
-                        </select>
-                    </div>
-                </div>`;
-        });
-
-    } catch (err) {
-        console.error("Errore caricamento nomine admin:", err);
-    }
-}
-
-async function salvaNominaLavoro(utenteId, gruppoLavoroId) {
-    try {
-        const val = gruppoLavoroId ? parseInt(gruppoLavoroId) : null;
-        const { error } = await supabaseClient
-            .from('epika_profili')
-            .update({ gruppo_lavoro_id: val })
-            .eq('id', utenteId);
-
-        if (error) throw error;
-        
-        // Rigenera l'organigramma Mermaid per riflettere le modifiche
-        await renderOrganigrammaMermaid();
-    } catch (e) {
-        console.error("Errore salvataggio nomina:", e);
-    }
-}
-
-async function salvaStatoAdmin(utenteId, isChecked) {
-    try {
-        const { error } = await supabaseClient
-            .from('epika_profili')
-            .update({ is_admin_epika: isChecked })
-            .eq('id', utenteId);
-
-        if (error) throw error;
-        alert(`Privilegi amministratore EPIKA aggiornati.`);
-    } catch (e) {
-        console.error("Errore salvataggio stato admin:", e);
-        alert("Errore durante l'aggiornamento dei ruoli amministrativi.");
-    }
-}
 
 // C — Gestione Eventi Storici (CRUD)
 async function renderEventiAdmin() {
@@ -1485,19 +1423,21 @@ async function renderOrganigrammaMermaid() {
         // Carica tutti i profili EPIKA nominati a un gruppo di lavoro
         const { data: profili, error: pError } = await supabaseClient
             .from('epika_profili')
-            .select('nome_di_battaglia, gruppo_lavoro_id')
-            .eq('profilo_completato', true)
-            .not('gruppo_lavoro_id', 'is', null);
+            .select('nome_di_battaglia, gruppo_lavoro_ids')
+            .eq('profilo_completato', true);
 
         if (pError) throw pError;
 
         // Raggruppa i profili per gruppo di lavoro ID
         const membriMappa = {};
         (profili || []).forEach(p => {
-            if (!membriMappa[p.gruppo_lavoro_id]) {
-                membriMappa[p.gruppo_lavoro_id] = [];
-            }
-            membriMappa[p.gruppo_lavoro_id].push(p.nome_di_battaglia);
+            const gids = p.gruppo_lavoro_ids || [];
+            gids.forEach(gid => {
+                if (!membriMappa[gid]) {
+                    membriMappa[gid] = [];
+                }
+                membriMappa[gid].push(p.nome_di_battaglia);
+            });
         });
 
         // Genera la definizione del grafo Mermaid
