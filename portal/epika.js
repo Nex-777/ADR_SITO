@@ -10,6 +10,7 @@ let currentUser = null;
 let currentUserProfile = null;
 let gruppiStorici = [];
 let popoliList = [];
+let allenatoriLista = [];
 let gruppiLavoro = [];
 let isEpikaAdmin = false;
 let tesseratiCache = [];
@@ -252,7 +253,7 @@ async function caricaLookupDati() {
             throw aError;
         }
 
-        const allenatoriLista = allenatori || [];
+        allenatoriLista = allenatori || [];
 
         const selectAllenatore = document.getElementById('fa-allenatore');
         if (selectAllenatore) {
@@ -403,6 +404,175 @@ async function handleFirstAccessSubmit(e) {
         console.error("Errore salvataggio profilo epika:", err);
         alert("Impossibile salvare il profilo storico. Riprova o contatta l'amministrazione.");
     }
+}
+
+// ===========================================================================
+// FUNZIONI DI MODIFICA PROFILO & REGISTRO (AUDIT)
+// ===========================================================================
+
+let originalProfileData = {};
+
+async function apriModaleModificaProfilo() {
+    try {
+        const { data: prof, error } = await supabaseClient
+            .from('epika_profili')
+            .select('*')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+
+        if (error || !prof) {
+            console.error("Errore caricamento profilo per modifica:", error);
+            alert("Impossibile caricare i dati del profilo.");
+            return;
+        }
+
+        originalProfileData = {
+            gruppo_storico_id: prof.gruppo_storico_id,
+            popolo: prof.popolo,
+            ruolo_combattimento: prof.ruolo_combattimento,
+            allenatore_id: prof.allenatore_id
+        };
+
+        const selectGruppo = document.getElementById('edit-gruppo-storico');
+        selectGruppo.innerHTML = '';
+        gruppiStorici.forEach(g => {
+            selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+        });
+        selectGruppo.value = prof.gruppo_storico_id || '';
+
+        const selectPopolo = document.getElementById('edit-popolo');
+        selectPopolo.innerHTML = '';
+        popoliList.forEach(p => {
+            selectPopolo.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+        });
+        selectPopolo.value = prof.popolo || '';
+
+        document.getElementById('edit-ruolo-combattimento').value = prof.ruolo_combattimento || 'combattente';
+
+        const selectAllenatore = document.getElementById('edit-allenatore');
+        selectAllenatore.innerHTML = '';
+        allenatoriLista.forEach(a => {
+            selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`;
+        });
+        selectAllenatore.value = prof.allenatore_id || '';
+
+        onEditGruppoStoricoChange();
+
+        document.getElementById('epk-edit-profile-modal').classList.remove('epk-hidden');
+    } catch (err) {
+        console.error("Errore apriModaleModificaProfilo:", err);
+    }
+}
+
+function chiudiModaleModificaProfilo() {
+    document.getElementById('epk-edit-profile-modal').classList.add('epk-hidden');
+}
+
+function onEditGruppoStoricoChange() {
+    const selectGruppo = document.getElementById('edit-gruppo-storico');
+    const selectPopolo = document.getElementById('edit-popolo');
+    const gruppoId = parseInt(selectGruppo.value);
+    const gruppoScelto = gruppiStorici.find(g => g.id === gruppoId);
+
+    if (gruppoScelto) {
+        if (gruppoScelto.popolo) {
+            selectPopolo.value = gruppoScelto.popolo;
+            selectPopolo.disabled = true;
+        } else {
+            selectPopolo.disabled = false;
+        }
+    }
+}
+
+async function salvaModificheProfilo() {
+    const gruppoStoricoId = parseInt(document.getElementById('edit-gruppo-storico').value);
+    const selectPopolo = document.getElementById('edit-popolo');
+    const popolo = selectPopolo.value;
+    const ruoloCombattimento = document.getElementById('edit-ruolo-combattimento').value;
+    const allenatoreId = parseInt(document.getElementById('edit-allenatore').value);
+
+    if (
+        gruppoStoricoId === originalProfileData.gruppo_storico_id &&
+        popolo === originalProfileData.popolo &&
+        ruoloCombattimento === originalProfileData.ruolo_combattimento &&
+        allenatoreId === originalProfileData.allenatore_id
+    ) {
+        chiudiModaleModificaProfilo();
+        return;
+    }
+
+    const saveBtn = document.getElementById('edit-profile-save-btn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'SALVATAGGIO...';
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_profili')
+            .update({
+                gruppo_storico_id: gruppoStoricoId,
+                popolo: popolo,
+                ruolo_combattimento: ruoloCombattimento,
+                allenatore_id: allenatoreId
+            })
+            .eq('id', currentUser.id);
+
+        if (error) throw error;
+
+        alert("Profilo aggiornato con successo!");
+        chiudiModaleModificaProfilo();
+        await renderAthleteDashboard();
+    } catch (err) {
+        console.error("Errore durante il salvataggio del profilo:", err);
+        alert("Errore durante il salvataggio. Riprova più tardi.");
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'SALVA MODIFICHE';
+    }
+}
+
+async function apriModaleRegistroModifiche() {
+    try {
+        const tbody = document.getElementById('epk-registro-tbody');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px;">Caricamento in corso...</td></tr>';
+
+        document.getElementById('epk-modifiche-registro-modal').classList.remove('epk-hidden');
+
+        const { data: logs, error } = await supabaseClient
+            .from('epika_registro_modifiche_profilo')
+            .select('*')
+            .eq('profilo_id', currentUser.id)
+            .order('data_modifica', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento registro modifiche:", error);
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: red;">Errore durante il caricamento.</td></tr>';
+            return;
+        }
+
+        if (!logs || logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 16px; color: gray;">Nessuna modifica registrata.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        logs.forEach(log => {
+            const dataStr = new Date(log.data_modifica).toLocaleString('it-IT');
+            tbody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 8px 4px; color: white;">${dataStr}</td>
+                    <td style="padding: 8px 4px; color: var(--epk-gold); font-weight: bold;">${log.campo}</td>
+                    <td style="padding: 8px 4px; color: rgba(255,255,255,0.6);">${log.valore_precedente}</td>
+                    <td style="padding: 8px 4px; color: white; font-weight: bold;">${log.valore_nuovo}</td>
+                </tr>
+            `;
+        });
+    } catch (err) {
+        console.error("Errore apriModaleRegistroModifiche:", err);
+    }
+}
+
+function chiudiModaleRegistroModifiche() {
+    document.getElementById('epk-modifiche-registro-modal').classList.add('epk-hidden');
 }
 
 // ===========================================================================

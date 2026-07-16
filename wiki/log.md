@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-16] ingest | Modifica Profilo Atleta e Registro delle Modifiche (v1.02.17)
+- **Database (Supabase DDL):** Applicata la migrazione `migration_epika_registro_modifiche.sql`. Creata la tabella `epika_registro_modifiche_profilo` con politiche RLS di sola lettura proprietario/admin. Definito un trigger `trg_log_epika_profilo_updates` che registra in automatico i cambi di Gruppo Storico, Popolo, Ruolo Combattimento e Allenatore, risolvendo gli ID nei corrispettivi valori testuali per garantire immutabilità dello storico.
+- **HTML (epika.html):** Aggiunti i pulsanti "MODIFICA" e "STORICO MODIFICHE" nella scheda del personaggio dell'atleta. Creati i modali `#epk-edit-profile-modal` per la modifica dei campi e `#epk-modifiche-registro-modal` con la tabella per visualizzare il log modifiche.
+- **JS (epika.js):** Spostata la lista degli allenatori `allenatoriLista` a livello globale. Implementate le funzioni `apriModaleModificaProfilo()`, `onEditGruppoStoricoChange()`, `salvaModificheProfilo()` e `apriModaleRegistroModifiche()` con caricamento asincrono on-demand (lazy-load) dei log dal database.
+
 ## [2026-07-16] ingest | Date Eventi Range, Iscrizione Dettagliata JSONB e Viste Direttivi Condizionali (v1.02.16)
 - **Database (Supabase DDL):** Applicata la migrazione `migration_epika_eventi_v2.sql` che introduce `data_inizio` e `data_fine` per gli eventi, e aggiunge le colonne `giorni_presenza` (array di date) e `dettagli` (JSONB) alle iscrizioni. Aggiornate le policy RLS per consentire la lettura dei profili, degli utenti e delle anagrafiche ai membri dei direttivi.
 - **HTML (epika.html):** Sostituito l'input data singolo del form di creazione con i campi `Data Inizio` e `Data Fine`. Aggiunto il modale `#epk-iscrizione-modal` con il questionario per i combattenti e la selezione dei giorni di presenza. Aggiunti i tab e sidebar button per Logistica e Marketing.

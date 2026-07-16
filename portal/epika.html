@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.16">
+    <link rel="stylesheet" href="epika.css?v=1.02.17">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.16"></script>
+    <script src="config.js?v=1.02.17"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.02.16</span>
+            <span class="epk-version-badge">Vs. 1.02.17</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -115,9 +115,12 @@
                 
                 <!-- Scheda Personaggio -->
                 <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
-                    <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
-                        SCHEDA PERSONAGGIO
-                    </h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 8px;">
+                        <h2 class="epk-headline" style="margin: 0; font-size: 16px;">
+                            SCHEDA PERSONAGGIO
+                        </h2>
+                        <button class="epk-btn" id="epk-btn-edit-profile" onclick="apriModaleModificaProfilo()" style="padding: 4px 8px; font-size: 10px;">MODIFICA</button>
+                    </div>
                     <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px; text-transform: uppercase;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
                             <span style="color: rgba(245, 230, 200, 0.6);">NOME REALE:</span>
@@ -146,6 +149,9 @@
                         <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
                             <span style="color: rgba(245, 230, 200, 0.6);">GRUPPO DI LAVORO:</span>
                             <span id="epk-prof-lavoro" style="font-weight: bold; color: var(--epk-gold);">-</span>
+                        </div>
+                        <div style="margin-top: 10px; text-align: right;">
+                            <button class="epk-btn-secondary" onclick="apriModaleRegistroModifiche()" style="padding: 6px 12px; font-size: 10px;">STORICO MODIFICHE</button>
                         </div>
                     </div>
                 </div>
@@ -1039,6 +1045,85 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.02.16"></script>
+    <!-- Modale Modifica Profilo -->
+    <div id="epk-edit-profile-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+        <div class="epk-card" style="max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9); margin: auto;">
+            <h3 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                MODIFICA SCHEDA PERSONAGGIO
+            </h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Gruppo Storico -->
+                <div>
+                    <label class="epk-label" for="edit-gruppo-storico">Gruppo Storico *</label>
+                    <select id="edit-gruppo-storico" class="epk-input" onchange="onEditGruppoStoricoChange()">
+                        <!-- Popolato via JS -->
+                    </select>
+                </div>
+
+                <!-- Popolo -->
+                <div>
+                    <label class="epk-label" for="edit-popolo">Popolo / Cultura *</label>
+                    <select id="edit-popolo" class="epk-input">
+                        <!-- Popolato via JS -->
+                    </select>
+                </div>
+
+                <!-- Ruolo Combattimento -->
+                <div>
+                    <label class="epk-label" for="edit-ruolo-combattimento">Ruolo Combattimento *</label>
+                    <select id="edit-ruolo-combattimento" class="epk-input">
+                        <option value="combattente">COMBATTENTE</option>
+                        <option value="non_combattente">NON COMBATTENTE</option>
+                    </select>
+                </div>
+
+                <!-- Allenatore -->
+                <div>
+                    <label class="epk-label" for="edit-allenatore">Allenatore di Riferimento *</label>
+                    <select id="edit-allenatore" class="epk-input">
+                        <!-- Popolato via JS -->
+                    </select>
+                </div>
+
+                <!-- Bottoni -->
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; border-top: 1px solid var(--epk-gold-dim); padding-top: 16px;">
+                    <button class="epk-btn-secondary" onclick="chiudiModaleModificaProfilo()">ANNULLA</button>
+                    <button id="edit-profile-save-btn" class="epk-btn" onclick="salvaModificheProfilo()" style="padding: 10px 20px; font-size: 11px;">SALVA MODIFICHE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Registro Modifiche -->
+    <div id="epk-modifiche-registro-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+        <div class="epk-card" style="max-width: 700px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9); margin: auto;">
+            <h3 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                REGISTRO DELLE MODIFICHE
+            </h3>
+            
+            <div style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-transform: uppercase;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--epk-gold); text-align: left; color: var(--epk-gold);">
+                            <th style="padding: 8px 4px;">Data</th>
+                            <th style="padding: 8px 4px;">Campo</th>
+                            <th style="padding: 8px 4px;">Valore Precedente</th>
+                            <th style="padding: 8px 4px;">Valore Nuovo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="epk-registro-tbody">
+                        <!-- Popolato via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; border-top: 1px solid var(--epk-gold-dim); padding-top: 16px;">
+                <button class="epk-btn" onclick="chiudiModaleRegistroModifiche()" style="padding: 8px 16px; font-size: 11px;">CHIUDI</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="epika.js?v=1.02.17"></script>
 </body>
 </html>

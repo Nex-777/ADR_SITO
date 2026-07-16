@@ -93,6 +93,15 @@ Stores confirmed event attendance (used to calculate member statistics on the fl
 *   `confermato_da` (UUID FK to `utenti.id`)
 *   Unique index on `(evento_id, utente_id)`
 
+### 8. `public.epika_registro_modifiche_profilo`
+Stores audit logs for athlete profile modifications (such as historical group, people/culture, combat role, and reference coach).
+*   `id` (BIGINT PK)
+*   `profilo_id` (UUID FK to `epika_profili.id` ON DELETE CASCADE)
+*   `campo` (TEXT) - Name of the modified field
+*   `valore_precedente` (TEXT)
+*   `valore_nuovo` (TEXT)
+*   `data_modifica` (TIMESTAMPTZ DEFAULT NOW())
+
 ---
 
 ## 🔒 Row Level Security (RLS)
@@ -101,3 +110,4 @@ Stores confirmed event attendance (used to calculate member statistics on the fl
 - Profiles (`epika_profili`): Select allowed for the owner, President, `is_admin_epika = TRUE`, or any Capogruppo/Vice Capogruppo of the profile's current or historical group (to access member lists and cronologia mandati). Update allowed only for the owner, President, or `is_admin_epika = TRUE`. Insert allowed only for the owner.
 - Events (`epika_eventi`): Read allowed for all authenticated users. Writes/Delete restricted to admins.
 - Signups & Attendance: Select/write restricted to owner/admin where appropriate.
+- Audit Log (`epika_registro_modifiche_profilo`): Select allowed for the profile owner, President, or users with `is_admin_epika = TRUE`. Write operations restricted to database trigger only.
