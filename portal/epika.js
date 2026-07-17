@@ -2016,6 +2016,9 @@ async function mostraPannelloPresenze(eventoId, eventoTitolo) {
     document.getElementById('adm-presenze-titolo').textContent = `CONFERMA PRESENZE: ${eventoTitolo.toUpperCase()}`;
     document.getElementById('adm-presenze-evento-id').value = eventoId;
     
+    // Nascondi dashboard se aperta
+    document.getElementById('adm-dashboard-evento-panel').classList.add('epk-hidden');
+    
     panel.classList.remove('epk-hidden');
     panel.scrollIntoView({ behavior: 'smooth' });
 
@@ -2113,7 +2116,10 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
     document.getElementById('adm-dashboard-evento-titolo').textContent = `STATISTICHE & DETTAGLI EVENTO: ${eventoTitolo.toUpperCase()}`;
     document.getElementById('adm-dashboard-evento-id').value = eventoId;
     document.getElementById('evt-dashboard-search').value = '';
-
+    
+    // Nascondi presenze se aperto
+    document.getElementById('adm-presenze-panel').classList.add('epk-hidden');
+ 
     panel.classList.remove('epk-hidden');
     panel.scrollIntoView({ behavior: 'smooth' });
 
