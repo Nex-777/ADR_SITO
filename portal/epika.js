@@ -731,8 +731,8 @@ async function renderAthleteDashboard() {
             .from('epika_profili')
             .select(`
                 *,
-                gruppo_storico:epika_gruppi_storici!gruppo_storico_id(nome),
-                allenatore:epika_opzioni(valore)
+                gruppo_storico:gruppo_storico_id(nome),
+                allenatore:allenatore_id(valore)
             `)
             .eq('id', currentUser.id)
             .maybeSingle();

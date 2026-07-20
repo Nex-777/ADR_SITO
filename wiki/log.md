@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-20] ingest | Risolto query di join in renderAthleteDashboard (v1.02.27)
+- **JS (epika.js):** Aggiornata la query `renderAthleteDashboard` sostituendo i join espliciti su `epika_gruppi_storici` ed `epika_opzioni` con i join PostgREST basati sulle colonne FK `gruppo_storico_id` e `allenatore_id` per risolvere il blocco dovuto alla presenza di chiavi esterne multiple e ripristinare il corretto caricamento dei dati dell'atleta.
+- Incrementata la versione globale a `1.02.27`.
+
 ## [2026-07-20] ingest | Popolo nel Registro Generale Componenti (v1.02.26)
 - **Database (Supabase):** Aggiunta la colonna `popolo TEXT` a `epika_storico_organico` per consentire il tracciamento storico dell'appartenenza culturale dei mercenari per ciascun anno sociale.
 - **HTML (epika.html):** Aggiunto il selettore `#gen-filter-popolo` nella barra filtri della Lista Generale e aggiornato l'intestazione di colonna in `2026 (Ruolo / Gruppo / Popolo)`.
