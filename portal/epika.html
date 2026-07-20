@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.22">
+    <link rel="stylesheet" href="epika.css?v=1.02.23">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.22"></script>
+    <script src="config.js?v=1.02.23"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.02.22</span>
+            <span class="epk-version-badge">Vs. 1.02.23</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -39,6 +39,16 @@
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()">CHIUDI</button>
         </div>
     </header>
+
+    <!-- Banner Simulazione Admin -->
+    <div id="epk-simulation-banner" class="epk-hidden" style="background: rgba(201, 168, 76, 0.15); border-bottom: 2px solid var(--epk-gold); padding: 8px 16px; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 11px; text-transform: uppercase;">
+        <span style="font-weight: bold; color: var(--epk-gold);">Simulazione:</span>
+        <select id="epk-sim-subject-select" class="epk-input" style="width: auto; padding: 4px; font-size: 10px; font-weight: bold; height: auto;">
+            <!-- Popolato via JS -->
+        </select>
+        <button class="epk-btn" style="padding: 4px 8px; font-size: 9px;" onclick="applicaSimulazione()">VISUALIZZA</button>
+        <button class="epk-btn-secondary" style="padding: 4px 8px; font-size: 9px; border-color: #ef4444; color: #ef4444;" onclick="chiudiSimulazione()">CHIUDI</button>
+    </div>
 
     <!-- Main Container -->
     <div class="epk-container">
@@ -961,6 +971,42 @@
             </div>
         </section>
 
+        <!-- 5. Vista Allenatori -->
+        <section id="epk-allenatore" class="epk-hidden">
+            <div class="epk-card">
+                <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    DASHBOARD ALLENATORE
+                </h2>
+                <div id="epk-allenatore-content">
+                    <!-- Popolato da JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Vista Allievi All. -->
+        <section id="epk-allievo" class="epk-hidden">
+            <div class="epk-card">
+                <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    DASHBOARD ALLIEVO ALLENATORE
+                </h2>
+                <div id="epk-allievo-content">
+                    <!-- Popolato da JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Vista Validatori -->
+        <section id="epk-validatore" class="epk-hidden">
+            <div class="epk-card">
+                <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    DASHBOARD VALIDATORE
+                </h2>
+                <div id="epk-validatore-content">
+                    <!-- Popolato da JS -->
+                </div>
+            </div>
+        </section>
+
     </div>
 
     <!-- Modale Iscrizione Dettagliata Evento -->
@@ -1126,6 +1172,30 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.02.22"></script>
+    <!-- Modale Associazione Account Reale (SCAB) -->
+    <div id="epk-modal-binding" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+        <div class="epk-card" style="max-width: 450px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9); margin: auto;">
+            <h3 class="epk-headline" id="binding-modal-title" style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                ASSOCIA ACCOUNT REALE
+            </h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                    <label class="epk-label" for="binding-utente-select">Seleziona Account Reale</label>
+                    <select id="binding-utente-select" class="epk-input">
+                        <!-- Popolato via JS -->
+                    </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; border-top: 1px solid var(--epk-gold-dim); padding-top: 16px;">
+                    <button class="epk-btn-secondary" onclick="chiudiModaleBinding()">ANNULLA</button>
+                    <button id="binding-remove-btn" class="epk-btn-secondary" onclick="rimuoviBindingAccount()" style="border-color: #ef4444; color: #ef4444; display: none;">RIMUOVI ASSOCIAZIONE</button>
+                    <button id="binding-save-btn" class="epk-btn" onclick="salvaBindingAccount()" style="padding: 10px 20px; font-size: 11px;">SALVA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="epika.js?v=1.02.23"></script>
 </body>
 </html>

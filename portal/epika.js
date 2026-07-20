@@ -22,6 +22,10 @@ let abbinamentiState = {};
 let managedGroups = [];
 let isCapogruppo = false;
 let currentManagedGroupId = null;
+let currentScabRuolo = null;
+let currentScabOpzioneId = null;
+let simulatedScabOpzioneId = null; // Per la simulazione admin
+
 
 document.addEventListener('DOMContentLoaded', () => {
     initPortal();
@@ -111,6 +115,25 @@ async function initPortal() {
             console.error("Errore recupero gruppi gestiti:", e);
         }
 
+        // Rilevamento ruolo SCAB per utente reale
+        try {
+            const { data: scabRecord } = await supabaseClient
+                .from('epika_opzioni')
+                .select('id, tipo')
+                .eq('utente_id', currentUser.id)
+                .in('tipo', ['allenatore', 'scab_validatore', 'scab_allievo_allenatore'])
+                .maybeSingle();
+
+            if (scabRecord) {
+                currentScabRuolo = scabRecord.tipo;
+                currentScabOpzioneId = scabRecord.id;
+                console.log("Rilevato ruolo SCAB:", currentScabRuolo, "ID opzione:", currentScabOpzioneId);
+            }
+        } catch (e) {
+            console.error("Errore recupero ruolo SCAB utente:", e);
+        }
+
+
         // Determina se l'utente appartiene a qualche direttivo/gruppo di lavoro
         const gLavoroIds = (epikaProfile && Array.isArray(epikaProfile.gruppo_lavoro_ids)) ? epikaProfile.gruppo_lavoro_ids.map(Number) : [];
         const hasDirettivoEpika = gLavoroIds.includes(1);
@@ -119,8 +142,8 @@ async function initPortal() {
         const hasDirettivoMarketing = gLavoroIds.includes(4);
         const isCapogruppoLavoro = isCapogruppo || gLavoroIds.includes(5) || gLavoroIds.includes(6) || gLavoroIds.includes(7) || gLavoroIds.includes(9);
 
-        // Gestione switcher di vista (per admin, capogruppo e direttivi)
-        const haQualcheRuoloSpeciale = isEpikaAdmin || isCapogruppoLavoro || hasDirettivoEpika || hasDirettivoScab || hasDirettivoLogistica || hasDirettivoMarketing;
+        // Gestione switcher di vista (per admin, capogruppo, direttivi e ruoli SCAB)
+        const haQualcheRuoloSpeciale = isEpikaAdmin || isCapogruppoLavoro || hasDirettivoEpika || hasDirettivoScab || hasDirettivoLogistica || hasDirettivoMarketing || !!currentScabRuolo;
         if (haQualcheRuoloSpeciale) {
             const adminSwitcher = document.getElementById('epk-admin-switcher');
             adminSwitcher.innerHTML = '<option value="athlete">VISTA ATLETA</option>';
@@ -139,8 +162,20 @@ async function initPortal() {
             if (hasDirettivoMarketing) {
                 adminSwitcher.innerHTML += '<option value="direttivo_marketing">VISTA DIRETTIVO MARKETING</option>';
             }
+            if (currentScabRuolo === 'allenatore') {
+                adminSwitcher.innerHTML += '<option value="allenatore">VISTA ALLENATORE</option>';
+            }
+            if (currentScabRuolo === 'scab_allievo_allenatore') {
+                adminSwitcher.innerHTML += '<option value="allievo_allenatore">VISTA ALLIEVO ALL.</option>';
+            }
+            if (currentScabRuolo === 'scab_validatore') {
+                adminSwitcher.innerHTML += '<option value="validatore">VISTA VALIDATORE</option>';
+            }
             if (isEpikaAdmin) {
                 adminSwitcher.innerHTML += '<option value="admin">VISTA AMMINISTRATORE</option>';
+                adminSwitcher.innerHTML += '<option value="simula_allenatore">🔍 SIMULA ALLENATORE</option>';
+                adminSwitcher.innerHTML += '<option value="simula_allievo">🔍 SIMULA ALLIEVO ALL.</option>';
+                adminSwitcher.innerHTML += '<option value="simula_validatore">🔍 SIMULA VALIDATORE</option>';
             }
             adminSwitcher.classList.remove('epk-hidden');
             
@@ -160,6 +195,12 @@ async function initPortal() {
                 adminSwitcher.value = 'direttivo_marketing';
             } else if (viewParam === 'capogruppo' && isCapogruppoLavoro) {
                 adminSwitcher.value = 'capogruppo';
+            } else if (viewParam === 'allenatore' && currentScabRuolo === 'allenatore') {
+                adminSwitcher.value = 'allenatore';
+            } else if (viewParam === 'allievo_allenatore' && currentScabRuolo === 'scab_allievo_allenatore') {
+                adminSwitcher.value = 'allievo_allenatore';
+            } else if (viewParam === 'validatore' && currentScabRuolo === 'scab_validatore') {
+                adminSwitcher.value = 'validatore';
             }
         }
 
@@ -178,6 +219,17 @@ async function initPortal() {
             } else if (viewMode === 'capogruppo') {
                 document.getElementById('epk-capogruppo').classList.remove('epk-hidden');
                 await renderCapogruppoDashboard(currentManagedGroupId);
+            } else if (viewMode === 'allenatore') {
+                document.getElementById('epk-allenatore').classList.remove('epk-hidden');
+                await renderAllenatoreDashboard(currentScabOpzioneId);
+            } else if (viewMode === 'allievo_allenatore') {
+                document.getElementById('epk-allievo').classList.remove('epk-hidden');
+                await renderAllievoAllenatoreDashboard(currentScabOpzioneId);
+            } else if (viewMode === 'validatore') {
+                document.getElementById('epk-validatore').classList.remove('epk-hidden');
+                await renderValidatoreDashboard(currentScabOpzioneId);
+            } else if (viewMode.startsWith('simula_')) {
+                mostraSimulationBanner(viewMode);
             } else {
                 document.getElementById('epk-main').classList.remove('epk-hidden');
                 await renderAthleteDashboard();
@@ -203,9 +255,19 @@ async function initPortal() {
 
 // Switch tra Vista Atleta, Vista Capogruppo e Vista Amministratore
 async function switchEpikaView(view) {
+    // Nascondi tutto
     document.getElementById('epk-main').classList.add('epk-hidden');
     document.getElementById('epk-admin').classList.add('epk-hidden');
     document.getElementById('epk-capogruppo').classList.add('epk-hidden');
+    document.getElementById('epk-allenatore').classList.add('epk-hidden');
+    document.getElementById('epk-allievo').classList.add('epk-hidden');
+    document.getElementById('epk-validatore').classList.add('epk-hidden');
+    
+    // Chiudi banner simulazione se non stiamo simulando
+    if (!view.startsWith('simula_')) {
+        document.getElementById('epk-simulation-banner').classList.add('epk-hidden');
+        simulatedScabOpzioneId = null;
+    }
     
     if (view === 'admin' || view.startsWith('direttivo_')) {
         document.getElementById('epk-admin').classList.remove('epk-hidden');
@@ -213,10 +275,92 @@ async function switchEpikaView(view) {
     } else if (view === 'capogruppo') {
         document.getElementById('epk-capogruppo').classList.remove('epk-hidden');
         await renderCapogruppoDashboard(currentManagedGroupId);
+    } else if (view === 'allenatore') {
+        document.getElementById('epk-allenatore').classList.remove('epk-hidden');
+        await renderAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+    } else if (view === 'allievo_allenatore') {
+        document.getElementById('epk-allievo').classList.remove('epk-hidden');
+        await renderAllievoAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+    } else if (view === 'validatore') {
+        document.getElementById('epk-validatore').classList.remove('epk-hidden');
+        await renderValidatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+    } else if (view.startsWith('simula_')) {
+        await mostraSimulationBanner(view);
     } else {
         document.getElementById('epk-main').classList.remove('epk-hidden');
         await renderAthleteDashboard();
     }
+}
+
+// Logiche del Banner di Simulazione Admin
+async function mostraSimulationBanner(tipoSimula) {
+    const banner = document.getElementById('epk-simulation-banner');
+    const select = document.getElementById('epk-sim-subject-select');
+    if (!banner || !select) return;
+
+    banner.classList.remove('epk-hidden');
+    select.innerHTML = '<option value="" disabled selected>Caricamento...</option>';
+
+    let dbTipo = '';
+    if (tipoSimula === 'simula_allenatore') dbTipo = 'allenatore';
+    else if (tipoSimula === 'simula_allievo') dbTipo = 'scab_allievo_allenatore';
+    else if (tipoSimula === 'simula_validatore') dbTipo = 'scab_validatore';
+
+    try {
+        const { data: soggetti, error } = await supabaseClient
+            .from('epika_opzioni')
+            .select('id, valore')
+            .eq('tipo', dbTipo)
+            .eq('attivo', true)
+            .order('valore', { ascending: true });
+
+        if (error) throw error;
+
+        select.innerHTML = '<option value="" disabled selected>SCEGLI SOGGETTO...</option>';
+        (soggetti || []).forEach(s => {
+            select.innerHTML += `<option value="${s.id}">${s.valore.toUpperCase()}</option>`;
+        });
+    } catch (e) {
+        console.error("Errore caricamento soggetti simulazione:", e);
+        select.innerHTML = '<option value="">Errore caricamento</option>';
+    }
+}
+
+async function applicaSimulazione() {
+    const val = document.getElementById('epk-sim-subject-select').value;
+    if (!val) {
+        alert("Seleziona prima un soggetto da simulare.");
+        return;
+    }
+    
+    simulatedScabOpzioneId = parseInt(val);
+    const viewMode = document.getElementById('epk-admin-switcher').value;
+
+    // Nascondi container attivi
+    document.getElementById('epk-allenatore').classList.add('epk-hidden');
+    document.getElementById('epk-allievo').classList.add('epk-hidden');
+    document.getElementById('epk-validatore').classList.add('epk-hidden');
+
+    if (viewMode === 'simula_allenatore') {
+        document.getElementById('epk-allenatore').classList.remove('epk-hidden');
+        await renderAllenatoreDashboard(simulatedScabOpzioneId);
+    } else if (viewMode === 'simula_allievo') {
+        document.getElementById('epk-allievo').classList.remove('epk-hidden');
+        await renderAllievoAllenatoreDashboard(simulatedScabOpzioneId);
+    } else if (viewMode === 'simula_validatore') {
+        document.getElementById('epk-validatore').classList.remove('epk-hidden');
+        await renderValidatoreDashboard(simulatedScabOpzioneId);
+    }
+}
+
+function chiudiSimulazione() {
+    document.getElementById('epk-simulation-banner').classList.add('epk-hidden');
+    simulatedScabOpzioneId = null;
+    
+    // Ritorna alla vista atleta di default o amministratore
+    const switcher = document.getElementById('epk-admin-switcher');
+    switcher.value = isEpikaAdmin ? 'admin' : 'athlete';
+    switchEpikaView(switcher.value);
 }
 
 // Caricamento dati dalle tabelle lookup
@@ -1741,9 +1885,13 @@ function switchScabSubTab(subTab) {
 }
 
 
-// A — Gestione Ruoli (CRUD)
+// Modifica variabili globali di binding
+let currentBindingOpzioneId = null;
+let currentBindingSoggettoNome = "";
+let currentBindingTipo = "";
+
+// A — Gestione Ruoli (CRUD con Binding Account)
 async function renderRuoliAdmin() {
-    const container = document.getElementById('adm-allenatori-list');
     try {
         const { data: soggetti, error } = await supabaseClient
             .from('epika_opzioni')
@@ -1765,9 +1913,19 @@ async function renderRuoliAdmin() {
             const activeText = s.attivo ? 'Dis' : 'Att';
             const activeStyle = s.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             
+            // Icona di binding a seconda se utente_id è presente
+            const isBound = !!s.utente_id;
+            const bindingIconColor = isBound ? '#22c55e' : '#888';
+            const bindingTitle = isBound ? 'Account Reale Collegato (Clicca per modificare/scollegare)' : 'Nessun Account Collegato (Clicca per collegare)';
+            
             const html = `
                 <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.valore.toUpperCase()}</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.valore.toUpperCase()}</span>
+                        <span style="cursor: pointer; color: ${bindingIconColor}; font-size: 14px;" title="${bindingTitle}" onclick="apriModaleBinding(${s.id}, '${s.valore.replace(/'/g, "\\'")}', '${s.tipo}', ${s.utente_id ? `'${s.utente_id}'` : 'null'})">
+                            ${isBound ? '🔗' : '➕'}
+                        </span>
+                    </div>
                     <div style="display: flex; gap: 4px;">
                         <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoSoggettoRuolo('${s.id}', ${s.attivo})">
                             ${activeText}
@@ -1785,6 +1943,129 @@ async function renderRuoliAdmin() {
 
     } catch (err) {
         console.error("Errore caricamento ruoli admin:", err);
+    }
+}
+
+// Gestione Modale Binding Account Reale
+async function apriModaleBinding(opzioneId, nomeSoggetto, tipo, utenteIdCorrente) {
+    currentBindingOpzioneId = opzioneId;
+    currentBindingSoggettoNome = nomeSoggetto;
+    currentBindingTipo = tipo;
+
+    document.getElementById('binding-modal-title').textContent = `ASSOCIA ACCOUNT A ${nomeSoggetto.toUpperCase()}`;
+
+    const select = document.getElementById('binding-utente-select');
+    select.innerHTML = '<option value="" disabled selected>Caricamento utenti...</option>';
+
+    document.getElementById('epk-modal-binding').classList.remove('epk-hidden');
+
+    try {
+        // Recupera tutti gli utenti reali
+        const { data: utentiD, error } = await supabaseClient
+            .from('utenti')
+            .select('id, nome, cognome');
+
+        if (error) throw error;
+
+        // Recupera profili epika per vedere i nomi di battaglia
+        const { data: profiliD } = await supabaseClient
+            .from('epika_profili')
+            .select('id, nome_di_battaglia');
+
+        const profiliMap = {};
+        (profiliD || []).forEach(p => {
+            profiliMap[p.id] = p.nome_di_battaglia;
+        });
+
+        select.innerHTML = '<option value="">-- SELEZIONA UTENTE --</option>';
+        (utentiD || []).forEach(u => {
+            const nomeDiBattaglia = profiliMap[u.id] ? ` (${profiliMap[u.id]})` : ' (Nessun profilo Epika)';
+            const sel = u.id === utenteIdCorrente ? 'selected' : '';
+            select.innerHTML += `<option value="${u.id}" ${sel}>${u.nome.toUpperCase()} ${u.cognome.toUpperCase()}${nomeDiBattaglia}</option>`;
+        });
+
+        // Mostra o nasconde bottone rimozione
+        const removeBtn = document.getElementById('binding-remove-btn');
+        if (utenteIdCorrente) {
+            removeBtn.style.display = 'inline-block';
+        } else {
+            removeBtn.style.display = 'none';
+        }
+
+    } catch (e) {
+        console.error("Errore caricamento utenti per binding:", e);
+        select.innerHTML = '<option value="">Errore caricamento utenti</option>';
+    }
+}
+
+function chiudiModaleBinding() {
+    document.getElementById('epk-modal-binding').classList.add('epk-hidden');
+    currentBindingOpzioneId = null;
+    currentBindingSoggettoNome = "";
+    currentBindingTipo = "";
+}
+
+async function salvaBindingAccount() {
+    if (!currentBindingOpzioneId) return;
+
+    const utenteId = document.getElementById('binding-utente-select').value;
+    if (!utenteId) {
+        alert("Seleziona un utente prima di salvare.");
+        return;
+    }
+
+    try {
+        // Ottieni eventuale epika_profilo_id per cache
+        const { data: prof } = await supabaseClient
+            .from('epika_profili')
+            .select('id')
+            .eq('id', utenteId)
+            .maybeSingle();
+
+        const { error } = await supabaseClient
+            .from('epika_opzioni')
+            .update({
+                utente_id: utenteId,
+                profilo_epika_id: prof ? prof.id : null
+            })
+            .eq('id', currentBindingOpzioneId);
+
+        if (error) throw error;
+
+        alert("Associazione salvata con successo!");
+        chiudiModaleBinding();
+        await renderRuoliAdmin();
+        await renderSCABTab();
+
+    } catch (e) {
+        console.error("Errore salvataggio binding:", e);
+        alert("Errore durante il salvataggio dell'associazione.");
+    }
+}
+
+async function rimuoviBindingAccount() {
+    if (!currentBindingOpzioneId) return;
+    if (!confirm(`Scollegare l'account reale da ${currentBindingSoggettoNome.toUpperCase()}?`)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_opzioni')
+            .update({
+                utente_id: null,
+                profilo_epika_id: null
+            })
+            .eq('id', currentBindingOpzioneId);
+
+        if (error) throw error;
+
+        alert("Associazione rimossa.");
+        chiudiModaleBinding();
+        await renderRuoliAdmin();
+        await renderSCABTab();
+
+    } catch (e) {
+        console.error("Errore rimozione binding:", e);
+        alert("Errore durante la rimozione.");
     }
 }
 
@@ -3566,4 +3847,201 @@ async function salvaTuttaLaListaGenerale() {
         alert("Errore durante il salvataggio della lista generale.");
     }
 }
+
+// ===========================================================================
+// FUNZIONI DI RENDER PER LE NUOVE VISTE SCAB
+// ===========================================================================
+
+async function renderAllenatoreDashboard(opzioneId) {
+    const container = document.getElementById('epk-allenatore-content');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento atleti...</div>';
+
+    try {
+        // Carica tutti i profili che hanno questo allenatore_id
+        const { data: atleti, error } = await supabaseClient
+            .from('epika_profili')
+            .select('nome_di_battaglia, popolo, ruolo_combattimento, primo_anno_partecipazione, epika_gruppi_storici(nome)')
+            .eq('allenatore_id', opzioneId)
+            .eq('profilo_completato', true)
+            .order('nome_di_battaglia', { ascending: true });
+
+        if (error) throw error;
+
+        if (!atleti || atleti.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Nessun atleta ti ha inserito come suo allenatore nel portale.</div>';
+            return;
+        }
+
+        let html = `
+            <div style="overflow-x: auto; margin-top: 16px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; text-transform: uppercase;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold);">
+                            <th style="padding: 10px;">Nome di Battaglia</th>
+                            <th style="padding: 10px;">Gruppo Storico</th>
+                            <th style="padding: 10px;">Cultura / Popolo</th>
+                            <th style="padding: 10px;">Ruolo Militare</th>
+                            <th style="padding: 10px;">Primo Anno Part.</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+        atleti.forEach(a => {
+            const gruppoNome = a.epika_gruppi_storici ? a.epika_gruppi_storici.nome : 'N/D';
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${a.nome_di_battaglia}</td>
+                    <td style="padding: 10px;">${gruppoNome}</td>
+                    <td style="padding: 10px;">${a.popolo || 'N/D'}</td>
+                    <td style="padding: 10px;">${a.ruolo_combattimento}</td>
+                    <td style="padding: 10px; text-align: center;">${a.primo_anno_partecipazione}</td>
+                </tr>`;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>`;
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Errore caricamento atleti allenatore:", e);
+        container.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento della lista atleti.</div>';
+    }
+}
+
+async function renderAllievoAllenatoreDashboard(opzioneId) {
+    const container = document.getElementById('epk-allievo-content');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento abbinamenti...</div>';
+
+    try {
+        // Carica tutti gli abbinamenti
+        const { data: abbinamenti, error } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .select('*, struttura:struttura_id(nome, tipo), allenatore:allenatore_ref_id(valore), validatore:validatore_id(valore)');
+
+        if (error) throw error;
+
+        // Filtra lato client
+        const mieiAbbinamenti = (abbinamenti || []).filter(a => 
+            Number(a.allievo_ref_id) === Number(opzioneId) ||
+            (Array.isArray(a.allievi_ids) && a.allievi_ids.map(Number).includes(Number(opzioneId)))
+        );
+
+        if (mieiAbbinamenti.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Non risulti abbinato a nessuna struttura SCAB al momento.</div>';
+            return;
+        }
+
+        let html = `
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;">`;
+
+        mieiAbbinamenti.forEach(a => {
+            const strutturaNome = a.struttura ? a.struttura.nome.toUpperCase() : 'N/D';
+            const strutturaTipo = a.struttura ? (a.struttura.tipo === 'palestra' ? 'PALESTRA' : 'CENTRO PRATICA') : 'N/D';
+            const allenatoreCapo = a.allenatore ? a.allenatore.valore.toUpperCase() : 'NESSUNO';
+            const validatore = a.validatore ? a.validatore.valore.toUpperCase() : 'N/D';
+
+            html += `
+                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 6px;">
+                        <span style="font-weight: bold; color: var(--epk-gold); font-size: 13px;">${strutturaNome}</span>
+                        <span style="font-size: 9px; padding: 2px 6px; background: rgba(201, 168, 76, 0.2); border-radius: 2px;">${strutturaTipo}</span>
+                    </div>
+                    <div style="font-size: 11px; display: flex; flex-direction: column; gap: 4px; text-transform: uppercase;">
+                        <div><strong style="color: var(--epk-gold-dim);">Allenatore Capo:</strong> ${allenatoreCapo}</div>
+                        <div><strong style="color: var(--epk-gold-dim);">Validatore:</strong> ${validatore}</div>
+                    </div>
+                </div>`;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Errore caricamento abbinamenti allievo:", e);
+        container.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento degli abbinamenti.</div>';
+    }
+}
+
+async function renderValidatoreDashboard(opzioneId) {
+    const container = document.getElementById('epk-validatore-content');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento strutture...</div>';
+
+    try {
+        // Carica soggetti e abbinamenti
+        const { data: soggetti, error: sErr } = await supabaseClient
+            .from('epika_opzioni')
+            .select('id, valore, tipo')
+            .in('tipo', ['allenatore', 'scab_allievo_allenatore']);
+
+        if (sErr) throw sErr;
+
+        const soggettiMap = {};
+        (soggetti || []).forEach(s => {
+            soggettiMap[s.id] = s.valore.toUpperCase();
+        });
+
+        const { data: abbinamenti, error: aErr } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .select('*, struttura:struttura_id(nome, tipo)')
+            .eq('validatore_id', opzioneId);
+
+        if (aErr) throw aErr;
+
+        if (!abbinamenti || abbinamenti.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Non sei registrato come validatore per nessuna palestra o centro.</div>';
+            return;
+        }
+
+        let html = `
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">`;
+
+        abbinamenti.forEach(a => {
+            const strutturaNome = a.struttura ? a.struttura.nome.toUpperCase() : 'N/D';
+            const allenatoreCapo = a.allenatore_ref_id ? soggettiMap[a.allenatore_ref_id] : 'NESSUNO';
+            
+            // Co-allenatori
+            const coAllenatori = (a.allenatori_co_ids || [])
+                .map(id => soggettiMap[id])
+                .filter(Boolean)
+                .join(', ') || 'NESSUNO';
+
+            // Allievi
+            const allievoRef = a.allievo_ref_id ? soggettiMap[a.allievo_ref_id] : 'NESSUNO';
+            const allieviAltri = (a.allievi_ids || [])
+                .map(id => soggettiMap[id])
+                .filter(Boolean)
+                .join(', ') || 'NESSUNO';
+
+            html += `
+                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+                    <div style="font-size: 14px; font-weight: bold; color: var(--epk-gold); border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 6px; text-transform: uppercase;">
+                        ${strutturaNome}
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 11px; text-transform: uppercase;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div><strong style="color: var(--epk-gold-dim);">Allenatore Principale:</strong> ${allenatoreCapo}</div>
+                            <div><strong style="color: var(--epk-gold-dim);">Co-Allenatori:</strong> ${coAllenatori}</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div><strong style="color: var(--epk-gold-dim);">Allievo Referente:</strong> ${allievoRef}</div>
+                            <div><strong style="color: var(--epk-gold-dim);">Altri Allievi:</strong> ${allieviAltri}</div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+
+    } catch (e) {
+        console.error("Errore caricamento strutture validatore:", e);
+        container.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento delle strutture.</div>';
+    }
+}
+
 
