@@ -116,17 +116,19 @@ async function initPortal() {
         }
 
         // Rilevamento ruolo SCAB per utente reale
+        // Usa limit(1) invece di maybeSingle() per gestire il caso in cui
+        // uno stesso utente sia abbinato a più ruoli (es. allenatore + validatore)
         try {
-            const { data: scabRecord } = await supabaseClient
+            const { data: scabRecords, error: scabErr } = await supabaseClient
                 .from('epika_opzioni')
                 .select('id, tipo')
                 .eq('utente_id', currentUser.id)
                 .in('tipo', ['allenatore', 'scab_validatore', 'scab_allievo_allenatore'])
-                .maybeSingle();
+                .limit(1);
 
-            if (scabRecord) {
-                currentScabRuolo = scabRecord.tipo;
-                currentScabOpzioneId = scabRecord.id;
+            if (!scabErr && scabRecords && scabRecords.length > 0) {
+                currentScabRuolo = scabRecords[0].tipo;
+                currentScabOpzioneId = scabRecords[0].id;
                 console.log("Rilevato ruolo SCAB:", currentScabRuolo, "ID opzione:", currentScabOpzioneId);
             }
         } catch (e) {
@@ -3859,9 +3861,11 @@ async function renderAllenatoreDashboard(opzioneId) {
 
     try {
         // Carica tutti i profili che hanno questo allenatore_id
+        // Nota: alias esplicito "gruppo_storico:gruppo_storico_id" richiesto da PostgREST
+        // per disambiguare il join quando ci sono più FK verso la stessa tabella
         const { data: atleti, error } = await supabaseClient
             .from('epika_profili')
-            .select('nome_di_battaglia, popolo, ruolo_combattimento, primo_anno_partecipazione, epika_gruppi_storici(nome)')
+            .select('nome_di_battaglia, popolo, ruolo_combattimento, primo_anno_partecipazione, gruppo_storico:gruppo_storico_id(nome)')
             .eq('allenatore_id', opzioneId)
             .eq('profilo_completato', true)
             .order('nome_di_battaglia', { ascending: true });
@@ -3888,7 +3892,7 @@ async function renderAllenatoreDashboard(opzioneId) {
                     <tbody>`;
 
         atleti.forEach(a => {
-            const gruppoNome = a.epika_gruppi_storici ? a.epika_gruppi_storici.nome : 'N/D';
+            const gruppoNome = a.gruppo_storico ? a.gruppo_storico.nome : 'N/D';
             html += `
                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${a.nome_di_battaglia}</td>
