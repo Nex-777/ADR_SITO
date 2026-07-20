@@ -1,0 +1,1132 @@
+[
+  {
+    "nome": "AFGHANISTAN",
+    "codiceCatastale": "Z200",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ALBANIA",
+    "codiceCatastale": "Z100",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ALGERIA",
+    "codiceCatastale": "Z301",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ANDORRA",
+    "codiceCatastale": "Z101",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ANGOLA",
+    "codiceCatastale": "Z302",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ANGUILLA (ISOLA)",
+    "codiceCatastale": "Z529",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ANTIGUA E BARBUDA",
+    "codiceCatastale": "Z532",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ANTILLE OLANDESI (SUDAMERICANE)",
+    "codiceCatastale": "Z501",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ARABIA SAUDITA",
+    "codiceCatastale": "Z203",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ARGENTINA",
+    "codiceCatastale": "Z600",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ARMENIA",
+    "codiceCatastale": "Z252",
+    "sigla": "EE"
+  },
+  {
+    "nome": "AUSTRALIA",
+    "codiceCatastale": "Z700",
+    "sigla": "EE"
+  },
+  {
+    "nome": "AUSTRIA",
+    "codiceCatastale": "Z102",
+    "sigla": "EE"
+  },
+  {
+    "nome": "AZERBAIGIAN",
+    "codiceCatastale": "Z253",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BAHAMA",
+    "codiceCatastale": "Z502",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BAHREIN",
+    "codiceCatastale": "Z204",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BANGLADESH",
+    "codiceCatastale": "Z249",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BARBADOS",
+    "codiceCatastale": "Z522",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BELGIO",
+    "codiceCatastale": "Z103",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BELIZE",
+    "codiceCatastale": "Z512",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BENIN",
+    "codiceCatastale": "Z314",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BERMUDA (ISOLE)",
+    "codiceCatastale": "Z400",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BHUTAN",
+    "codiceCatastale": "Z205",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BIELORUSSIA=RUSSIA BIANCA",
+    "codiceCatastale": "Z139",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BOLIVIA",
+    "codiceCatastale": "Z601",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BOSNIA ED ERZEGOVINA",
+    "codiceCatastale": "Z153",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BOTSWANA",
+    "codiceCatastale": "Z358",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BRASILE",
+    "codiceCatastale": "Z602",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BRUNEI",
+    "codiceCatastale": "Z207",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BULGARIA",
+    "codiceCatastale": "Z104",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BURKINA",
+    "codiceCatastale": "Z354",
+    "sigla": "EE"
+  },
+  {
+    "nome": "BURUNDI",
+    "codiceCatastale": "Z305",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CAMBOGIA",
+    "codiceCatastale": "Z208",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CAMERUN",
+    "codiceCatastale": "Z306",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CANADA",
+    "codiceCatastale": "Z401",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CAPO VERDE",
+    "codiceCatastale": "Z307",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CAYMAN (ISOLE)",
+    "codiceCatastale": "Z530",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CECA REPUBBLICA",
+    "codiceCatastale": "Z156",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CENTRAFRICANA REPUBBLICA",
+    "codiceCatastale": "Z308",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CHRISTMAS (ISOLA)",
+    "codiceCatastale": "Z702",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CIAD",
+    "codiceCatastale": "Z309",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CILE",
+    "codiceCatastale": "Z603",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CINA REPUBBLICA POPOLARE",
+    "codiceCatastale": "Z210",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CIPRO",
+    "codiceCatastale": "Z211",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CITTA' DEL VATICANO",
+    "codiceCatastale": "Z106",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COCOS (ISOLE)",
+    "codiceCatastale": "Z212",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COLOMBIA",
+    "codiceCatastale": "Z604",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COMORE",
+    "codiceCatastale": "Z310",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CONGO REPUBBLICA DEMOCRATICA",
+    "codiceCatastale": "Z312",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CONGO REPUBBLICA POPOLARE",
+    "codiceCatastale": "Z311",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COOK (ISOLE)",
+    "codiceCatastale": "Z703",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COREA DEL NORD",
+    "codiceCatastale": "Z214",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COREA DEL SUD",
+    "codiceCatastale": "Z213",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COSTA D'AVORIO",
+    "codiceCatastale": "Z313",
+    "sigla": "EE"
+  },
+  {
+    "nome": "COSTA RICA",
+    "codiceCatastale": "Z503",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CROAZIA",
+    "codiceCatastale": "Z149",
+    "sigla": "EE"
+  },
+  {
+    "nome": "CUBA",
+    "codiceCatastale": "Z504",
+    "sigla": "EE"
+  },
+  {
+    "nome": "DANIMARCA",
+    "codiceCatastale": "Z107",
+    "sigla": "EE"
+  },
+  {
+    "nome": "DOMINICA (ISOLA)",
+    "codiceCatastale": "Z526",
+    "sigla": "EE"
+  },
+  {
+    "nome": "DOMINICANA REPUBBLICA",
+    "codiceCatastale": "Z505",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ECUADOR",
+    "codiceCatastale": "Z605",
+    "sigla": "EE"
+  },
+  {
+    "nome": "EGITTO",
+    "codiceCatastale": "Z336",
+    "sigla": "EE"
+  },
+  {
+    "nome": "EL SALVADOR",
+    "codiceCatastale": "Z506",
+    "sigla": "EE"
+  },
+  {
+    "nome": "EMIRATI ARABI UNITI",
+    "codiceCatastale": "Z215",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ERITREA",
+    "codiceCatastale": "Z368",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ESTONIA",
+    "codiceCatastale": "Z144",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ETIOPIA",
+    "codiceCatastale": "Z315",
+    "sigla": "EE"
+  },
+  {
+    "nome": "FAER OER (ISOLE)",
+    "codiceCatastale": "Z108",
+    "sigla": "EE"
+  },
+  {
+    "nome": "FIGI=VITI (ISOLE)",
+    "codiceCatastale": "Z704",
+    "sigla": "EE"
+  },
+  {
+    "nome": "FILIPPINE",
+    "codiceCatastale": "Z216",
+    "sigla": "EE"
+  },
+  {
+    "nome": "FINLANDIA",
+    "codiceCatastale": "Z109",
+    "sigla": "EE"
+  },
+  {
+    "nome": "FRANCIA",
+    "codiceCatastale": "Z110",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GABON",
+    "codiceCatastale": "Z316",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GAMBIA",
+    "codiceCatastale": "Z317",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GEORGIA",
+    "codiceCatastale": "Z254",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GERMANIA",
+    "codiceCatastale": "Z112",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GHANA",
+    "codiceCatastale": "Z318",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GIAMAICA",
+    "codiceCatastale": "Z507",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GIAPPONE",
+    "codiceCatastale": "Z219",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GIBILTERRA",
+    "codiceCatastale": "Z113",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GIBUTI",
+    "codiceCatastale": "Z361",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GIORDANIA",
+    "codiceCatastale": "Z220",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GR. BRET. - IRLANDA DEL NORD (REGNO UNITO)",
+    "codiceCatastale": "Z114",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GRECIA",
+    "codiceCatastale": "Z115",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GRENADA",
+    "codiceCatastale": "Z524",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GROENLANDIA",
+    "codiceCatastale": "Z402",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUADALUPA",
+    "codiceCatastale": "Z508",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUAM (ISOLA)",
+    "codiceCatastale": "Z706",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUATEMALA",
+    "codiceCatastale": "Z509",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUAYANA=GUIANA FRANCESE",
+    "codiceCatastale": "Z607",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUINEA BISSAU",
+    "codiceCatastale": "Z320",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUINEA EQUATORIALE",
+    "codiceCatastale": "Z321",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUINEA REPUBBLICA POPOLARE",
+    "codiceCatastale": "Z319",
+    "sigla": "EE"
+  },
+  {
+    "nome": "GUYANA",
+    "codiceCatastale": "Z606",
+    "sigla": "EE"
+  },
+  {
+    "nome": "HAITI",
+    "codiceCatastale": "Z510",
+    "sigla": "EE"
+  },
+  {
+    "nome": "HONDURAS",
+    "codiceCatastale": "Z511",
+    "sigla": "EE"
+  },
+  {
+    "nome": "HONG KONG",
+    "codiceCatastale": "Z221",
+    "sigla": "EE"
+  },
+  {
+    "nome": "INDIA",
+    "codiceCatastale": "Z222",
+    "sigla": "EE"
+  },
+  {
+    "nome": "INDONESIA",
+    "codiceCatastale": "Z223",
+    "sigla": "EE"
+  },
+  {
+    "nome": "IRAN",
+    "codiceCatastale": "Z224",
+    "sigla": "EE"
+  },
+  {
+    "nome": "IRAQ",
+    "codiceCatastale": "Z225",
+    "sigla": "EE"
+  },
+  {
+    "nome": "IRLANDA",
+    "codiceCatastale": "Z116",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ISLANDA",
+    "codiceCatastale": "Z117",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ISOLE VERGINI AMERICANE",
+    "codiceCatastale": "Z520",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ISOLE VERGINI BRITANNICHE",
+    "codiceCatastale": "Z525",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ISRAELE",
+    "codiceCatastale": "Z226",
+    "sigla": "EE"
+  },
+  {
+    "nome": "IUGOSLAVIA",
+    "codiceCatastale": "Z118",
+    "sigla": "EE"
+  },
+  {
+    "nome": "KAZAKISTAN",
+    "codiceCatastale": "Z255",
+    "sigla": "EE"
+  },
+  {
+    "nome": "KENYA",
+    "codiceCatastale": "Z322",
+    "sigla": "EE"
+  },
+  {
+    "nome": "KIRGHIZISTAN",
+    "codiceCatastale": "Z256",
+    "sigla": "EE"
+  },
+  {
+    "nome": "KIRIBATI",
+    "codiceCatastale": "Z731",
+    "sigla": "EE"
+  },
+  {
+    "nome": "KUWAIT",
+    "codiceCatastale": "Z227",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LAOS",
+    "codiceCatastale": "Z228",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LESOTHO",
+    "codiceCatastale": "Z359",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LETTONIA",
+    "codiceCatastale": "Z145",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LIBANO",
+    "codiceCatastale": "Z229",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LIBERIA",
+    "codiceCatastale": "Z325",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LIBIA",
+    "codiceCatastale": "Z326",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LIECHTENSTEIN",
+    "codiceCatastale": "Z119",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LITUANIA",
+    "codiceCatastale": "Z146",
+    "sigla": "EE"
+  },
+  {
+    "nome": "LUSSEMBURGO",
+    "codiceCatastale": "Z120",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MACAO",
+    "codiceCatastale": "Z231",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MACEDONIA",
+    "codiceCatastale": "Z148",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MADAGASCAR",
+    "codiceCatastale": "Z327",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MALAWI",
+    "codiceCatastale": "Z328",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MALAYSIA",
+    "codiceCatastale": "Z247",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MALDIVE",
+    "codiceCatastale": "Z232",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MALI",
+    "codiceCatastale": "Z329",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MALTA",
+    "codiceCatastale": "Z121",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MARIANNE (ISOLE) (SETTENTRIONALI?)",
+    "codiceCatastale": "Z710",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MAROCCO",
+    "codiceCatastale": "Z330",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MARSHALL (ISOLE)",
+    "codiceCatastale": "Z711",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MARTINICA",
+    "codiceCatastale": "Z513",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MAURITANIA",
+    "codiceCatastale": "Z331",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MAURIZIO (ISOLE)",
+    "codiceCatastale": "Z332",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MAYOTTE",
+    "codiceCatastale": "Z360",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MESSICO",
+    "codiceCatastale": "Z514",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MICRONESIA STATI FEDERATI",
+    "codiceCatastale": "Z735",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MOLDAVIA",
+    "codiceCatastale": "Z140",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MONACO",
+    "codiceCatastale": "Z123",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MONGOLIA",
+    "codiceCatastale": "Z233",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MONTSERRAT (ISOLA)",
+    "codiceCatastale": "Z531",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MOZAMBICO",
+    "codiceCatastale": "Z333",
+    "sigla": "EE"
+  },
+  {
+    "nome": "MYANMAR = BIRMANIA",
+    "codiceCatastale": "Z206",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NAMIBIA",
+    "codiceCatastale": "Z300",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NAURU",
+    "codiceCatastale": "Z713",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NEPAL",
+    "codiceCatastale": "Z234",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NICARAGUA",
+    "codiceCatastale": "Z515",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NIGER",
+    "codiceCatastale": "Z334",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NIGERIA",
+    "codiceCatastale": "Z335",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NIUE (ATOLLO)",
+    "codiceCatastale": "Z714",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NORFOLK (ISOLE)",
+    "codiceCatastale": "Z715",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NORVEGIA",
+    "codiceCatastale": "Z125",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NUOVA CALEDONIA (ISOLE E DIPENDENZE)",
+    "codiceCatastale": "Z716",
+    "sigla": "EE"
+  },
+  {
+    "nome": "NUOVA ZELANDA",
+    "codiceCatastale": "Z719",
+    "sigla": "EE"
+  },
+  {
+    "nome": "OMAN",
+    "codiceCatastale": "Z235",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PAESI BASSI",
+    "codiceCatastale": "Z126",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PAKISTAN",
+    "codiceCatastale": "Z236",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PALAU REPUBBLICA",
+    "codiceCatastale": "Z734",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PANAMA'",
+    "codiceCatastale": "Z516",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PAPUA NUOVA GUINEA",
+    "codiceCatastale": "Z730",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PARAGUAY",
+    "codiceCatastale": "Z610",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PERU'",
+    "codiceCatastale": "Z611",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PITCAIRN (E DIPENDENZE)",
+    "codiceCatastale": "Z722",
+    "sigla": "EE"
+  },
+  {
+    "nome": "POLINESIA FRANCESE (ISOLE)",
+    "codiceCatastale": "Z723",
+    "sigla": "EE"
+  },
+  {
+    "nome": "POLONIA",
+    "codiceCatastale": "Z127",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PORTOGALLO",
+    "codiceCatastale": "Z128",
+    "sigla": "EE"
+  },
+  {
+    "nome": "PUERTO RICO (STATO LIBERO ASSOCIATO)",
+    "codiceCatastale": "Z518",
+    "sigla": "EE"
+  },
+  {
+    "nome": "QATAR",
+    "codiceCatastale": "Z237",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ROMANIA",
+    "codiceCatastale": "Z129",
+    "sigla": "EE"
+  },
+  {
+    "nome": "RUANDA",
+    "codiceCatastale": "Z338",
+    "sigla": "EE"
+  },
+  {
+    "nome": "RUSSIA=FEDERAZIONE RUSSA",
+    "codiceCatastale": "Z154",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAINT KITTS E NEVIS=S. CHRISTOPHER E NEVIS",
+    "codiceCatastale": "Z533",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAINT LUCIA",
+    "codiceCatastale": "Z527",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAINT PIERRE ET MIQUELON (ISOLE)",
+    "codiceCatastale": "Z403",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAINT VINCENT E GRENADINE",
+    "codiceCatastale": "Z528",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SALOMONE",
+    "codiceCatastale": "Z724",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAMOA",
+    "codiceCatastale": "Z726",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAMOA SWAIN (AMERICANE)",
+    "codiceCatastale": "Z725",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAN MARINO",
+    "codiceCatastale": "Z130",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SANT’ELENA",
+    "codiceCatastale": "Z340",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SAO TOME' E PRINCIPE (ISOLE)",
+    "codiceCatastale": "Z341",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SEICELLE (ISOLE)",
+    "codiceCatastale": "Z342",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SENEGAL",
+    "codiceCatastale": "Z343",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SIERRA LEONE",
+    "codiceCatastale": "Z344",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SINGAPORE",
+    "codiceCatastale": "Z248",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SIRIA",
+    "codiceCatastale": "Z240",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SLOVACCA REPUBBLICA",
+    "codiceCatastale": "Z155",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SLOVENIA",
+    "codiceCatastale": "Z150",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SOMALIA",
+    "codiceCatastale": "Z345",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SPAGNA",
+    "codiceCatastale": "Z131",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SRI LANKA",
+    "codiceCatastale": "Z209",
+    "sigla": "EE"
+  },
+  {
+    "nome": "STATI UNITI D'AMERICA",
+    "codiceCatastale": "Z404",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SUDAFRICANA REPUBBLICA",
+    "codiceCatastale": "Z347",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SUDAN",
+    "codiceCatastale": "Z348",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SURINAME",
+    "codiceCatastale": "Z608",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SVEZIA",
+    "codiceCatastale": "Z132",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SVIZZERA",
+    "codiceCatastale": "Z133",
+    "sigla": "EE"
+  },
+  {
+    "nome": "SWAZILAND",
+    "codiceCatastale": "Z349",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TAGIKISTAN",
+    "codiceCatastale": "Z257",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TAIWAN = FORMOSA",
+    "codiceCatastale": "Z217",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TANZANIA",
+    "codiceCatastale": "Z357",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TERRITORI AUSTRALI E ANTARTICI FRANCESI",
+    "codiceCatastale": "",
+    "sigla": "EE"
+  },
+  {
+    "nome": "THAILANDIA",
+    "codiceCatastale": "Z241",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TIMOR (ISOLA) - ORIENTALE",
+    "codiceCatastale": "Z242",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TOGO",
+    "codiceCatastale": "Z351",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TOKELAU (ISOLE)",
+    "codiceCatastale": "Z727",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TONGA",
+    "codiceCatastale": "Z728",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TRINIDAD E TOBAGO",
+    "codiceCatastale": "Z612",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TUNISIA",
+    "codiceCatastale": "Z352",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TURCHIA",
+    "codiceCatastale": "Z243",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TURKEMENISTAN",
+    "codiceCatastale": "Z258",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TURKS E CAICOS (ISOLE)",
+    "codiceCatastale": "Z519",
+    "sigla": "EE"
+  },
+  {
+    "nome": "TUVALU",
+    "codiceCatastale": "Z732",
+    "sigla": "EE"
+  },
+  {
+    "nome": "UCRAINA",
+    "codiceCatastale": "Z138",
+    "sigla": "EE"
+  },
+  {
+    "nome": "UGANDA",
+    "codiceCatastale": "Z353",
+    "sigla": "EE"
+  },
+  {
+    "nome": "UNGHERIA",
+    "codiceCatastale": "Z134",
+    "sigla": "EE"
+  },
+  {
+    "nome": "URUGUAY",
+    "codiceCatastale": "Z613",
+    "sigla": "EE"
+  },
+  {
+    "nome": "UZBEKISTAN",
+    "codiceCatastale": "Z259",
+    "sigla": "EE"
+  },
+  {
+    "nome": "VANUATU",
+    "codiceCatastale": "Z733",
+    "sigla": "EE"
+  },
+  {
+    "nome": "VENEZUELA",
+    "codiceCatastale": "Z614",
+    "sigla": "EE"
+  },
+  {
+    "nome": "VIETNAM",
+    "codiceCatastale": "Z251",
+    "sigla": "EE"
+  },
+  {
+    "nome": "WALLIS E FUTUNA (ISOLE)",
+    "codiceCatastale": "Z729",
+    "sigla": "EE"
+  },
+  {
+    "nome": "YEMEN",
+    "codiceCatastale": "Z246",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ZAMBIA",
+    "codiceCatastale": "Z355",
+    "sigla": "EE"
+  },
+  {
+    "nome": "ZIMBABWE",
+    "codiceCatastale": "Z337",
+    "sigla": "EE"
+  }
+]

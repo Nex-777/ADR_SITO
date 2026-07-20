@@ -179,7 +179,8 @@ export default async function handler(req, res) {
                 sesso: sesso,
                 data_nascita: profile.data_nascita,
                 provincia_nascita: profile.luogo_nascita_provincia,
-                comune_nascita: profile.luogo_nascita_comune
+                comune_nascita: profile.luogo_nascita_comune,
+                stato_nascita: profile.luogo_nascita_provincia === 'EE' ? profile.luogo_nascita_comune : 'Italia'
             }, { onConflict: 'codice_fiscale' })
             .select('id')
             .single();

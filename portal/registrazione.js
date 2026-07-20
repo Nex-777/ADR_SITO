@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.02.24"
+                VERSION: "1.02.25"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -62,6 +62,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
         // --- 4. Cascading Address & Birthplace Load ---
         let comuniData = [];
+        let statiData = [];
         const selectProvincia = document.getElementById('provincia');
         const selectComune = document.getElementById('comune');
         const selectCap = document.getElementById('cap');
@@ -71,9 +72,13 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
         async function loadItalianComuni() {
             try {
-                // Fetch from local comuni.json dataset to respect Content Security Policy
-                const res = await fetch('./comuni.json');
-                comuniData = await res.json();
+                // Fetch datasets in parallel
+                const [resComuni, resStati] = await Promise.all([
+                    fetch('./comuni.json'),
+                    fetch('./stati.json')
+                ]);
+                comuniData = await resComuni.json();
+                statiData = await resStati.json();
                 
                 // Map unique provinces
                 const provinces = {};
@@ -99,9 +104,16 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         optNas.textContent = `${nome} (${sigla})`;
                         selectProvinciaNascita.appendChild(optNas);
                     });
+
+                // Aggiungi l'opzione Estero (EE) per la nascita
+                const optNasEE = document.createElement('option');
+                optNasEE.value = 'EE';
+                optNasEE.textContent = 'Estero (EE)';
+                selectProvinciaNascita.appendChild(optNasEE);
+
             } catch (err) {
-                console.error("Errore caricamento database comuni:", err);
-                alert("Errore nel caricamento del database comuni italiani. Ricarica la pagina.");
+                console.error("Errore caricamento database comuni/stati:", err);
+                alert("Errore nel caricamento del database geografico. Ricarica la pagina.");
             }
         }
 
@@ -149,16 +161,25 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
             if (!sigla) return;
 
-            const filteredComuni = comuniData
-                .filter(c => c.sigla === sigla)
-                .sort((a, b) => a.nome.localeCompare(b.nome));
+            if (sigla === 'EE') {
+                statiData.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.nome;
+                    opt.textContent = s.nome;
+                    selectComuneNascita.appendChild(opt);
+                });
+            } else {
+                const filteredComuni = comuniData
+                    .filter(c => c.sigla === sigla)
+                    .sort((a, b) => a.nome.localeCompare(b.nome));
 
-            filteredComuni.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.nome;
-                opt.textContent = c.nome;
-                selectComuneNascita.appendChild(opt);
-            });
+                filteredComuni.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.nome;
+                    opt.textContent = c.nome;
+                    selectComuneNascita.appendChild(opt);
+                });
+            }
 
             selectComuneNascita.disabled = false;
         });
@@ -256,31 +277,45 @@ function togglePasswordVisibility(inputId, buttonEl) {
             }
 
             // Luogo di nascita (comune e provincia)
-            if (comuniData && comuniData.length > 0) {
-                const codeCf = cf.substring(11, 15);
-                const matchedComune = comuniData.find(c => c.codiceCatastale && c.codiceCatastale.toUpperCase() === codeCf);
-                if (matchedComune) {
-                    const siglaNas = matchedComune.sigla;
-                    const nomeComune = matchedComune.nome;
+            const codeCf = cf.substring(11, 15);
+            let matchedBirthPlace = null;
+            let isForeign = codeCf.startsWith('Z');
 
-                    // Imposta provincia di nascita
-                    if (selectProvinciaNascita.value !== siglaNas) {
-                        selectProvinciaNascita.value = siglaNas;
-                        // Ricarica la lista dei comuni per questa provincia
-                        selectProvinciaNascita.dispatchEvent(new Event('change'));
-                    }
-
-                    // Imposta comune di nascita
-                    if (selectComuneNascita.value !== nomeComune) {
-                        selectComuneNascita.value = nomeComune;
-                        selectComuneNascita.dispatchEvent(new Event('change'));
-                    }
+            if (isForeign) {
+                if (statiData && statiData.length > 0) {
+                    matchedBirthPlace = statiData.find(s => s.codiceCatastale && s.codiceCatastale.toUpperCase() === codeCf);
+                }
+            } else {
+                if (comuniData && comuniData.length > 0) {
+                    matchedBirthPlace = comuniData.find(c => c.codiceCatastale && c.codiceCatastale.toUpperCase() === codeCf);
                 }
             }
 
-            cfStatus.textContent = "✓ CODICE FISCALE VALIDO E DATI COMPILATI";
-            cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-green-500 font-bold";
-            inputCF.setCustomValidity("");
+            if (matchedBirthPlace) {
+                const siglaNas = matchedBirthPlace.sigla;
+                const nomeComune = matchedBirthPlace.nome;
+
+                // Imposta provincia di nascita
+                if (selectProvinciaNascita.value !== siglaNas) {
+                    selectProvinciaNascita.value = siglaNas;
+                    // Ricarica la lista dei comuni per questa provincia
+                    selectProvinciaNascita.dispatchEvent(new Event('change'));
+                }
+
+                // Imposta comune di nascita
+                if (selectComuneNascita.value !== nomeComune) {
+                    selectComuneNascita.value = nomeComune;
+                    selectComuneNascita.dispatchEvent(new Event('change'));
+                }
+
+                cfStatus.textContent = "✓ CODICE FISCALE VALIDO E DATI COMPILATI";
+                cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-green-500 font-bold";
+                inputCF.setCustomValidity("");
+            } else {
+                cfStatus.textContent = "✗ CODICE FISCALE VALIDO MA LUOGO DI NASCITA NON TROVATO";
+                cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-yellow-500 font-bold";
+                inputCF.setCustomValidity("Luogo di nascita non trovato per questo Codice Fiscale.");
+            }
         }
 
         inputCF.addEventListener('input', verifyCfCoherence);
