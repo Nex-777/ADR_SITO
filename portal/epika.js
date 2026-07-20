@@ -483,12 +483,12 @@ function onGruppoStoricoChange() {
     const gruppoScelto = gruppiStorici.find(g => g.id === gruppoId);
 
     if (gruppoScelto) {
-        if (gruppoScelto.popolo) {
+        if (gruppoScelto.popolo && gruppoScelto.popolo !== 'MERCENARI') {
             // Gruppo con popolo predefinito
             selectPopolo.value = gruppoScelto.popolo;
             selectPopolo.disabled = true;
         } else {
-            // Mercenari (popolo nullo nel seed): sblocca selezione
+            // Mercenari: sblocca selezione
             selectPopolo.value = "";
             selectPopolo.disabled = false;
         }
@@ -621,7 +621,7 @@ function onEditGruppoStoricoChange() {
     const gruppoScelto = gruppiStorici.find(g => g.id === gruppoId);
 
     if (gruppoScelto) {
-        if (gruppoScelto.popolo) {
+        if (gruppoScelto.popolo && gruppoScelto.popolo !== 'MERCENARI') {
             selectPopolo.value = gruppoScelto.popolo;
             selectPopolo.disabled = true;
         } else {
