@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.02.21"
+                VERSION: "1.02.22"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -78,9 +78,10 @@
                 if (anag.certificati_medici.length === 0) return null;
                 // Ordina primariamente per created_at (data caricamento) decrescente per ottenere l'ultimo caricato
                 const sorted = [...anag.certificati_medici].sort((a, b) => {
-                    const valA = a.created_at || a.data_scadenza || a.data_rilascio || '1970-01-01';
-                    const valB = b.created_at || b.data_scadenza || b.data_rilascio || '1970-01-01';
-                    return new Date(valB) - new Date(valA);
+                    const tsA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                    const tsB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    if (tsB !== tsA) return tsB - tsA;
+                    return (b.id || '').localeCompare(a.id || '');
                 });
                 return sorted[0];
             }
@@ -1084,7 +1085,8 @@
                                 file_url,
                                 stato_validazione,
                                 note_ai,
-                                confidence_score
+                                confidence_score,
+                                created_at
                             )
                         )
                     `);
@@ -1232,7 +1234,8 @@
                                 medico_rilascio,
                                 file_url,
                                 stato_validazione,
-                                note_ai
+                                note_ai,
+                                created_at
                             ),
                             documenti_identita (
                                 id,
