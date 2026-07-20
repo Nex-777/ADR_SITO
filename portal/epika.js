@@ -3684,6 +3684,14 @@ async function renderListaGeneraleAdmin() {
                 groupFilterSel.innerHTML += `<option value="${g.id}">${g.nome.toUpperCase()}</option>`;
             });
         }
+
+        const popoloFilterSel = document.getElementById('gen-filter-popolo');
+        if (popoloFilterSel) {
+            popoloFilterSel.innerHTML = '<option value="">TUTTI I POPOLI 2026</option>';
+            popoliList.forEach(p => {
+                popoloFilterSel.innerHTML += `<option value="${p.nome}">${p.nome.toUpperCase()}</option>`;
+            });
+        }
         
         disegnaTabellaListaGenerale();
         
@@ -3700,6 +3708,7 @@ function disegnaTabellaListaGenerale() {
     const query = (document.getElementById('gen-search-input')?.value || '').toLowerCase().trim();
     const ruoloFilter = document.getElementById('gen-filter-ruolo')?.value || '';
     const gruppoFilter = document.getElementById('gen-filter-gruppo')?.value || '';
+    const popoloFilter = document.getElementById('gen-filter-popolo')?.value || '';
 
     // 1. Applica Filtri
     let filtrati = listaGeneraleProfili.filter(p => {
@@ -3713,9 +3722,11 @@ function disegnaTabellaListaGenerale() {
         const row2026 = listaGeneraleStorico.find(s => s.profilo_id === p.id && s.anno_sociale === 2026);
         const ruolo2026 = row2026 ? row2026.ruolo_combattimento : p.ruolo_combattimento;
         const gruppoId2026 = row2026 ? row2026.gruppo_storico_id : p.gruppo_storico_id;
+        const popolo2026 = row2026 ? row2026.popolo : p.popolo;
 
         if (ruoloFilter && ruolo2026 !== ruoloFilter) return false;
         if (gruppoFilter && String(gruppoId2026) !== String(gruppoFilter)) return false;
+        if (popoloFilter && popolo2026 !== popoloFilter) return false;
 
         return true;
     });
@@ -3746,6 +3757,7 @@ function disegnaTabellaListaGenerale() {
         const row2026 = listaGeneraleStorico.find(s => s.profilo_id === p.id && s.anno_sociale === 2026);
         const ruoloAttivo = row2026 ? row2026.ruolo_combattimento : p.ruolo_combattimento;
         const gruppoIdAttivo = row2026 ? row2026.gruppo_storico_id : p.gruppo_storico_id;
+        const popoloAttivo = row2026 ? row2026.popolo : p.popolo;
         
         const isFallback = !row2026;
         const selectStyle = isFallback ? "opacity: 0.65; font-style: italic; border-color: rgba(251, 191, 36, 0.2);" : "border-color: var(--epk-gold);";
@@ -3767,6 +3779,15 @@ function disegnaTabellaListaGenerale() {
         });
         gruppoSelect += `</select>`;
 
+        // Select Popolo
+        let popoloSelect = `<select class="gen-popolo epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 110px; ${selectStyle}" ${disabledSelect} onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
+        popoloSelect += `<option value="" ${!popoloAttivo ? 'selected' : ''}>NESSUNO</option>`;
+        popoliList.forEach(pop => {
+            const selected = (popoloAttivo && pop.nome === popoloAttivo) ? 'selected' : '';
+            popoloSelect += `<option value="${pop.nome}" ${selected}>${pop.nome.toUpperCase()}</option>`;
+        });
+        popoloSelect += `</select>`;
+
         tr.innerHTML = `
             <td style="padding: 10px; text-align: center; color: var(--epk-gold-dim); font-weight: bold;">${rowNum}</td>
             <td style="padding: 10px;">
@@ -3779,6 +3800,7 @@ function disegnaTabellaListaGenerale() {
                 <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
                     ${ruoloSelect}
                     ${gruppoSelect}
+                    ${popoloSelect}
                 </div>
             </td>
         `;
@@ -3799,6 +3821,7 @@ async function salvaTuttaLaListaGenerale() {
     if (isReadOnly()) return;
     const ruoliSelects = document.querySelectorAll('.gen-ruolo');
     const gruppiSelects = document.querySelectorAll('.gen-gruppo');
+    const popoliSelects = document.querySelectorAll('.gen-popolo');
     
     const rowsToUpsert = [];
     const map = {};
@@ -3821,6 +3844,16 @@ async function salvaTuttaLaListaGenerale() {
             map[key] = { profilo_id: uid, anno_sociale: year };
         }
         map[key].gruppo_storico_id = sel.value ? parseInt(sel.value) : null;
+    });
+
+    popoliSelects.forEach(sel => {
+        const uid = sel.getAttribute('data-uid');
+        const year = parseInt(sel.getAttribute('data-year'));
+        const key = `${uid}_${year}`;
+        if (!map[key]) {
+            map[key] = { profilo_id: uid, anno_sociale: year };
+        }
+        map[key].popolo = sel.value || null;
     });
     
     for (const key in map) {
