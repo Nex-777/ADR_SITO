@@ -964,11 +964,27 @@ function aggiornaInlinerOrari() {
     // 2. Rimuovi tutti i contenitori di orario esistenti nelle righe
     document.querySelectorAll('.epk-time-wrapper').forEach(el => el.remove());
 
-    // 3. Trova le checkbox selezionate ordinate per data
-    const checkedCheckboxes = Array.from(document.querySelectorAll('input[name="giorni-presenza-check"]:checked'));
-    if (checkedCheckboxes.length === 0) return;
+    // 3. Gestione selezione ininterrotta
+    const allCheckboxes = Array.from(document.querySelectorAll('input[name="giorni-presenza-check"]'));
+    const checkedCheckboxes = allCheckboxes.filter(cb => cb.checked);
 
-    const checkedDates = checkedCheckboxes.map(cb => cb.value).sort();
+    if (checkedCheckboxes.length > 0) {
+        const checkedDates = checkedCheckboxes.map(cb => cb.value).sort();
+        const firstDate = checkedDates[0];
+        const lastDate = checkedDates[checkedDates.length - 1];
+
+        // Forza a true tutte le checkbox tra la prima e l'ultima data (intervallo ininterrotto)
+        allCheckboxes.forEach(cb => {
+            if (cb.value >= firstDate && cb.value <= lastDate) {
+                cb.checked = true;
+            }
+        });
+    }
+
+    const finalChecked = allCheckboxes.filter(cb => cb.checked);
+    if (finalChecked.length === 0) return;
+
+    const checkedDates = finalChecked.map(cb => cb.value).sort();
     const firstDate = checkedDates[0];
     const lastDate = checkedDates[checkedDates.length - 1];
 
@@ -1128,6 +1144,17 @@ async function salvaIscrizioneDettagliata() {
     if (checkedGiorni.length === 0) {
         alert("Devi selezionare almeno un giorno di presenza.");
         return;
+    }
+
+    // Controllo sicurezza intervallo ininterrotto
+    for (let i = 1; i < checkedGiorni.length; i++) {
+        const prev = new Date(checkedGiorni[i - 1]);
+        const curr = new Date(checkedGiorni[i]);
+        const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+        if (diffDays !== 1) {
+            alert("Il periodo di presenza deve essere ininterrotto. Non è possibile deselezionare giorni intermedi.");
+            return;
+        }
     }
 
     const firstDate = checkedGiorni[0];
