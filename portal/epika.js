@@ -4967,6 +4967,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
                     <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${i.equipaggiamento}</td>
                     <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${i.stato_pagamento}</td>
                 </tr>`;
+        });
     } catch (e) {
         console.error("Errore dettagli partecipanti validatore:", e);
         tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
@@ -4974,7 +4975,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
 }
 
 // ============================================================
-// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.00)
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.02)
 // ============================================================
 let contabilitaState = {
     eventi: [],
