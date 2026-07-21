@@ -211,6 +211,20 @@ async function initPortal() {
         // Nascondi loader iniziale
         document.getElementById('epk-loader').classList.add('epk-hidden');
 
+        // Gestione ritorno dal pagamento Stripe per evento Epika
+        const eventPayment = urlParams.get('event_payment');
+        if (eventPayment === 'success') {
+            setTimeout(() => {
+                alert('✅ Iscrizione registrata con successo! Il pagamento è stato confermato.');
+            }, 500);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (eventPayment === 'cancel') {
+            setTimeout(() => {
+                alert('⚠️ Pagamento annullato. L\'iscrizione all\'evento non è stata completata.');
+            }, 500);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
         if (epikaProfile && epikaProfile.profilo_completato) {
             // Profilo già completato, mostra dashboard
             currentUserProfile = epikaProfile;
@@ -349,13 +363,13 @@ async function applicaSimulazione() {
 
     if (viewMode === 'simula_allenatore') {
         document.getElementById('epk-allenatore').classList.remove('epk-hidden');
-        await renderAllenatoreDashboard(simulatedScabOpzioneId);
+        switchAllenatoreTab('atleti');
     } else if (viewMode === 'simula_allievo') {
         document.getElementById('epk-allievo').classList.remove('epk-hidden');
-        await renderAllievoAllenatoreDashboard(simulatedScabOpzioneId);
+        switchAllievoTab('abbinamenti');
     } else if (viewMode === 'simula_validatore') {
         document.getElementById('epk-validatore').classList.remove('epk-hidden');
-        await renderValidatoreDashboard(simulatedScabOpzioneId);
+        switchValidatoreTab('strutture');
     }
 }
 
@@ -4281,12 +4295,10 @@ async function getAllenatoreAllieviIds(opzioneId) {
     try {
         const { data: abbinamenti } = await supabaseClient
             .from('epika_scab_abbinamenti')
-            .select('*');
+            .select('*')
+            .or(`allenatore_ref_id.eq.${opzioneId},allenatori_co_ids.cs.{${opzioneId}}`);
 
-        const mieiAbb = (abbinamenti || []).filter(a => 
-            Number(a.allenatore_ref_id) === Number(opzioneId) ||
-            (Array.isArray(a.allenatori_co_ids) && a.allenatori_co_ids.map(Number).includes(Number(opzioneId)))
-        );
+        const mieiAbb = abbinamenti || [];
 
         const opzioniAllieviIds = [];
         mieiAbb.forEach(a => {
@@ -4329,12 +4341,10 @@ async function getAllievoCoachAllieviIds(opzioneId) {
     try {
         const { data: abbinamenti } = await supabaseClient
             .from('epika_scab_abbinamenti')
-            .select('*');
+            .select('*')
+            .or(`allievo_ref_id.eq.${opzioneId},allievi_ids.cs.{${opzioneId}}`);
 
-        const mieiAbb = (abbinamenti || []).filter(a => 
-            Number(a.allievo_ref_id) === Number(opzioneId) ||
-            (Array.isArray(a.allievi_ids) && a.allievi_ids.map(Number).includes(Number(opzioneId)))
-        );
+        const mieiAbb = abbinamenti || [];
 
         mieiAbb.forEach(a => {
             if (a.allenatore_ref_id) coaches.add(Number(a.allenatore_ref_id));
