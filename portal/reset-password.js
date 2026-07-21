@@ -31,7 +31,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.02.29"
+        VERSION: "1.02.30"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
@@ -76,6 +76,14 @@ function showErrorMessage(msg) {
     }
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    const pwdInput = document.getElementById('password');
+    const pwdContainer = document.getElementById('password-checklist');
+    if (pwdInput && pwdContainer && typeof setupPasswordChecklist === 'function') {
+        setupPasswordChecklist(pwdInput, pwdContainer);
+    }
+});
+
 const form = document.getElementById('reset-form');
 const messageEl = document.getElementById('message');
 const btn = document.getElementById('submit-btn');
@@ -87,6 +95,16 @@ if (form) {
         
         const p1 = document.getElementById('password').value;
         const p2 = document.getElementById('confirm-password').value;
+
+        if (typeof checkPasswordComplexity === 'function') {
+            const pwdRes = checkPasswordComplexity(p1);
+            if (!pwdRes.ok) {
+                messageEl.textContent = 'LA PASSWORD NON RISPETTA I REQUISITI: ' + pwdRes.errors.join(', ').toUpperCase();
+                messageEl.className = 'text-xs text-primary font-bold uppercase block text-center mb-4';
+                messageEl.classList.remove('hidden');
+                return;
+            }
+        }
 
         if (p1 !== p2) {
             messageEl.textContent = 'LE PASSWORD NON COINCIDONO.';

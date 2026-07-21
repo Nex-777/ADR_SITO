@@ -118,7 +118,50 @@ export default async function handler(req, res) {
             }
 
             // 3. Gestisci logica specifica in base all'oggetto del pagamento
-            if (eventId) {
+            if (session.metadata?.tipo === 'epika_evento') {
+                const bozzaId = session.metadata?.bozza_id;
+                if (!bozzaId) {
+                    throw new Error("Manca bozza_id per pagamento evento Epika");
+                }
+
+                // Recupera la bozza di iscrizione
+                const { data: bozza, error: bozzaError } = await supabase
+                    .from('epika_iscrizioni_bozza')
+                    .select('*')
+                    .eq('id', bozzaId)
+                    .maybeSingle();
+
+                if (bozzaError || !bozza) {
+                    throw new Error("Bozza di iscrizione non trovata o scaduta per id: " + bozzaId);
+                }
+
+                // Inserisci l'iscrizione definitiva
+                const { error: insertError } = await supabase
+                    .from('epika_iscrizioni_eventi')
+                    .insert({
+                        evento_id: bozza.evento_id,
+                        utente_id: bozza.utente_id,
+                        giorni_presenza: bozza.giorni_presenza,
+                        data_ora_arrivo: bozza.data_ora_arrivo,
+                        data_ora_ripartenza: bozza.data_ora_ripartenza,
+                        dettagli: bozza.dettagli,
+                        codice_transazione: stripePaymentId,
+                        ricevuta_id: recData.id
+                    });
+
+                if (insertError) {
+                    throw new Error("Errore inserimento iscrizione definitiva Epika: " + insertError.message);
+                }
+
+                // Elimina la bozza temporanea
+                await supabase
+                    .from('epika_iscrizioni_bozza')
+                    .delete()
+                    .eq('id', bozzaId);
+
+                console.log(`Iscritto utente Epika ${bozza.utente_id} all'evento ${bozza.evento_id} tramite bozza.`);
+
+            } else if (eventId) {
                 const renew = session.metadata?.renew === 'true';
                 const nomePiano = session.metadata?.nomePiano;
                 const dataInizioCorso = session.metadata?.dataInizioCorso || new Date().toISOString().split('T')[0];

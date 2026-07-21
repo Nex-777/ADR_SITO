@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.02.29"
+                VERSION: "1.02.30"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -800,6 +800,17 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     alert("Seleziona la provincia e il comune di nascita.");
                     return false;
                 }
+
+                // Check password complexity
+                const pwdInput = document.getElementById('password');
+                if (pwdInput && typeof checkPasswordComplexity === 'function') {
+                    const pwdRes = checkPasswordComplexity(pwdInput.value);
+                    if (!pwdRes.ok) {
+                        alert("La password non rispetta i requisiti di sicurezza:\n- " + pwdRes.errors.join("\n- "));
+                        pwdInput.focus();
+                        return false;
+                    }
+                }
             } else if (step === 2) {
                 // Check Membership type
                 if (!selectedAdesione) {
@@ -1218,17 +1229,11 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
             try {
                 const chosenPassword = document.getElementById('password').value;
-                const pwdErrors = [];
-                if (!chosenPassword) {
-                    pwdErrors.push("La password è obbligatoria.");
-                } else {
-                    if (chosenPassword.length < 8) pwdErrors.push("Almeno 8 caratteri");
-                    if (!/[A-Z]/.test(chosenPassword)) pwdErrors.push("Almeno una lettera maiuscola");
-                    if (!/[a-z]/.test(chosenPassword)) pwdErrors.push("Almeno una lettera minuscola");
-                    if (!/[0-9]/.test(chosenPassword)) pwdErrors.push("Almeno un numero");
-                }
-                if (pwdErrors.length > 0) {
-                    throw new Error("La password non rispetta i requisiti di sicurezza:\n- " + pwdErrors.join("\n- "));
+                const pwdRes = typeof checkPasswordComplexity === 'function' 
+                    ? checkPasswordComplexity(chosenPassword) 
+                    : { ok: chosenPassword.length >= 8, errors: ["Password non valida"] };
+                if (!pwdRes.ok) {
+                    throw new Error("La password non rispetta i requisiti di sicurezza:\n- " + pwdRes.errors.join("\n- "));
                 }
                 
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
@@ -1731,6 +1736,14 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('submit', function(event) {
             event.preventDefault();
         });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pwdInput = document.getElementById('password');
+    const pwdContainer = document.getElementById('password-checklist');
+    if (pwdInput && pwdContainer && typeof setupPasswordChecklist === 'function') {
+        setupPasswordChecklist(pwdInput, pwdContainer);
     }
 });
 

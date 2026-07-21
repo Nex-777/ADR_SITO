@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.31">
+    <link rel="stylesheet" href="epika.css?v=1.02.30">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.31"></script>
+    <script src="config.js?v=1.02.30"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.02.29</span>
+            <span class="epk-version-badge">Vs. 1.02.30</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -624,6 +624,10 @@
                                                 <option value="altro">ALTRO / EVENTO GENERALE</option>
                                             </select>
                                         </div>
+                                        <div>
+                                            <label class="epk-label">Costo Evento (€) *</label>
+                                            <input type="number" step="0.01" min="0" id="evt-costo" class="epk-input" value="0.00" required>
+                                        </div>
                                     </div>
                                     <div>
                                         <label class="epk-label">Descrizione Evento</label>
@@ -837,6 +841,9 @@
                     <button id="epk-capo-btn-iscritti" class="epk-sidebar-btn" onclick="switchCapoTab('iscritti')">
                         ISCRITTI AL GRUPPO
                     </button>
+                    <button id="epk-capo-btn-eventi" class="epk-sidebar-btn" onclick="switchCapoTab('eventi')">
+                        EVENTI
+                    </button>
                 </aside>
 
                 <!-- Content Area -->
@@ -970,6 +977,38 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Tab 3: Eventi Storici e Iscritti -->
+                    <div id="epk-capo-tab-eventi" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                EVENTI STORICI & PARTECIPAZIONE GRUPPO
+                            </h2>
+                            <div id="epk-capo-eventi-lista" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                                <!-- Elenco eventi -->
+                            </div>
+                            <div id="epk-capo-evento-dettagli-panel" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 20px;">
+                                <h3 id="epk-capo-evento-dettagli-titolo" class="epk-headline" style="font-size: 14px; margin-bottom: 12px; color: var(--epk-gold);">PARTECIPANTI EVENTO</h3>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; text-transform: uppercase;">
+                                        <thead>
+                                            <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold);">
+                                                <th style="padding: 10px;">Atleta</th>
+                                                <th style="padding: 10px;">Ruolo</th>
+                                                <th style="padding: 10px;">Presenza Giorni</th>
+                                                <th style="padding: 10px;">Arrivo / Ripartenza</th>
+                                                <th style="padding: 10px;">Equipaggiamento e Abilitazioni</th>
+                                                <th style="padding: 10px;">Pagamento</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="epk-capo-evento-iscritti-body">
+                                            <!-- Popolato dinamicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     
                 </div>
             </div>
@@ -977,36 +1016,186 @@
 
         <!-- 5. Vista Allenatori -->
         <section id="epk-allenatore" class="epk-hidden">
-            <div class="epk-card">
-                <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
-                    DASHBOARD ALLENATORE
-                </h2>
-                <div id="epk-allenatore-content">
-                    <!-- Popolato da JS -->
+            <div class="epk-admin-layout">
+                <!-- Sidebar -->
+                <aside class="epk-admin-sidebar">
+                    <button id="epk-all-btn-atleti" class="epk-sidebar-btn active" onclick="switchAllenatoreTab('atleti')">
+                        ATLETI ALLENATI
+                    </button>
+                    <button id="epk-all-btn-eventi" class="epk-sidebar-btn" onclick="switchAllenatoreTab('eventi')">
+                        EVENTI
+                    </button>
+                </aside>
+
+                <!-- Content Area -->
+                <div class="epk-admin-content">
+                    <!-- Tab 1: Atleti -->
+                    <div id="epk-all-tab-atleti" class="epk-admin-tab-panel">
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                SOGGETTI ASSEGNATI ALL'ALLENATORE
+                            </h2>
+                            <div id="epk-allenatore-content">
+                                <!-- Popolato da JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Eventi -->
+                    <div id="epk-all-tab-eventi" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                EVENTI STORICI & PARTECIPAZIONE ALLIEVI
+                            </h2>
+                            <div id="epk-allenatore-eventi-lista" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                                <!-- Elenco eventi -->
+                            </div>
+                            <div id="epk-allenatore-evento-dettagli-panel" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 20px;">
+                                <h3 id="epk-allenatore-evento-dettagli-titolo" class="epk-headline" style="font-size: 14px; margin-bottom: 12px; color: var(--epk-gold);">ALLIEVI ISCRITTI ALL'EVENTO</h3>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; text-transform: uppercase;">
+                                        <thead>
+                                            <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold);">
+                                                <th style="padding: 10px;">Atleta</th>
+                                                <th style="padding: 10px;">Ruolo</th>
+                                                <th style="padding: 10px;">Presenza Giorni</th>
+                                                <th style="padding: 10px;">Arrivo / Ripartenza</th>
+                                                <th style="padding: 10px;">Equipaggiamento e Abilitazioni</th>
+                                                <th style="padding: 10px;">Pagamento</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="epk-allenatore-evento-iscritti-body">
+                                            <!-- Popolato dinamicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- 6. Vista Allievi All. -->
         <section id="epk-allievo" class="epk-hidden">
-            <div class="epk-card">
-                <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
-                    DASHBOARD ALLIEVO ALLENATORE
-                </h2>
-                <div id="epk-allievo-content">
-                    <!-- Popolato da JS -->
+            <div class="epk-admin-layout">
+                <!-- Sidebar -->
+                <aside class="epk-admin-sidebar">
+                    <button id="epk-alv-btn-abbinamenti" class="epk-sidebar-btn active" onclick="switchAllievoTab('abbinamenti')">
+                        ABBINAMENTI SCAB
+                    </button>
+                    <button id="epk-alv-btn-eventi" class="epk-sidebar-btn" onclick="switchAllievoTab('eventi')">
+                        EVENTI
+                    </button>
+                </aside>
+
+                <!-- Content Area -->
+                <div class="epk-admin-content">
+                    <!-- Tab 1: Abbinamenti -->
+                    <div id="epk-allievo-tab-abbinamenti" class="epk-admin-tab-panel">
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                ABBINAMENTI SCAB ASSEGNATI
+                            </h2>
+                            <div id="epk-allievo-content">
+                                <!-- Popolato da JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Eventi -->
+                    <div id="epk-allievo-tab-eventi" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                EVENTI STORICI & PARTECIPAZIONE ALLIEVI (Rif. Coach)
+                            </h2>
+                            <div id="epk-allievo-eventi-lista" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                                <!-- Elenco eventi -->
+                            </div>
+                            <div id="epk-allievo-evento-dettagli-panel" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 20px;">
+                                <h3 id="epk-allievo-evento-dettagli-titolo" class="epk-headline" style="font-size: 14px; margin-bottom: 12px; color: var(--epk-gold);">ALLIEVI ISCRITTI ALL'EVENTO</h3>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; text-transform: uppercase;">
+                                        <thead>
+                                            <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold);">
+                                                <th style="padding: 10px;">Atleta</th>
+                                                <th style="padding: 10px;">Ruolo</th>
+                                                <th style="padding: 10px;">Presenza Giorni</th>
+                                                <th style="padding: 10px;">Arrivo / Ripartenza</th>
+                                                <th style="padding: 10px;">Equipaggiamento e Abilitazioni</th>
+                                                <th style="padding: 10px;">Pagamento</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="epk-allievo-evento-iscritti-body">
+                                            <!-- Popolato dinamicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- 7. Vista Validatori -->
         <section id="epk-validatore" class="epk-hidden">
-            <div class="epk-card">
-                <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
-                    DASHBOARD VALIDATORE
-                </h2>
-                <div id="epk-validatore-content">
-                    <!-- Popolato da JS -->
+            <div class="epk-admin-layout">
+                <!-- Sidebar -->
+                <aside class="epk-admin-sidebar">
+                    <button id="epk-val-btn-strutture" class="epk-sidebar-btn active" onclick="switchValidatoreTab('strutture')">
+                        STRUTTURE VALIDATE
+                    </button>
+                    <button id="epk-val-btn-eventi" class="epk-sidebar-btn" onclick="switchValidatoreTab('eventi')">
+                        EVENTI
+                    </button>
+                </aside>
+
+                <!-- Content Area -->
+                <div class="epk-admin-content">
+                    <!-- Tab 1: Strutture -->
+                    <div id="epk-validatore-tab-strutture" class="epk-admin-tab-panel">
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                STRUTTURE SCAB VALIDATE
+                            </h2>
+                            <div id="epk-validatore-content">
+                                <!-- Popolato da JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Eventi -->
+                    <div id="epk-validatore-tab-eventi" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card">
+                            <h2 class="epk-headline" style="margin-top: 0; font-size: 18px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                                EVENTI STORICI & PARTECIPAZIONE ATLETI VALIDATI
+                            </h2>
+                            <div id="epk-validatore-eventi-lista" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                                <!-- Elenco eventi -->
+                            </div>
+                            <div id="epk-validatore-evento-dettagli-panel" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 20px;">
+                                <h3 id="epk-validatore-evento-dettagli-titolo" class="epk-headline" style="font-size: 14px; margin-bottom: 12px; color: var(--epk-gold);">ATLETI ISCRITTI ALL'EVENTO</h3>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; text-transform: uppercase;">
+                                        <thead>
+                                            <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold);">
+                                                <th style="padding: 10px;">Atleta</th>
+                                                <th style="padding: 10px;">Ruolo</th>
+                                                <th style="padding: 10px;">Presenza Giorni</th>
+                                                <th style="padding: 10px;">Arrivo / Ripartenza</th>
+                                                <th style="padding: 10px;">Equipaggiamento e Abilitazioni</th>
+                                                <th style="padding: 10px;">Pagamento</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="epk-validatore-evento-iscritti-body">
+                                            <!-- Popolato dinamicamente -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1027,6 +1216,18 @@
                     <label class="epk-label" style="margin-bottom: 8px; display: block;">Seleziona i giorni in cui sarai presente: *</label>
                     <div id="epk-iscrizione-modal-giorni" style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(201, 168, 76, 0.1);">
                         <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <!-- Date e Ore Arrivo/Ripartenza Previsti -->
+                <div class="epk-grid-2">
+                    <div>
+                        <label class="epk-label" for="epk-iscrizione-arrivo">Data/Ora Arrivo Previsto: *</label>
+                        <input type="datetime-local" id="epk-iscrizione-arrivo" class="epk-input" required>
+                    </div>
+                    <div>
+                        <label class="epk-label" for="epk-iscrizione-ripartenza">Data/Ora Ripartenza Prevista: *</label>
+                        <input type="datetime-local" id="epk-iscrizione-ripartenza" class="epk-input" required>
                     </div>
                 </div>
 
@@ -1200,6 +1401,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.02.31"></script>
+    <script src="epika.js?v=1.02.30"></script>
 </body>
 </html>

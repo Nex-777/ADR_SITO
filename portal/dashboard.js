@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.02.29"
+                VERSION: "1.02.30"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5641,6 +5641,14 @@
             const newPwd = document.getElementById('user-new-password').value;
             const confPwd = document.getElementById('user-confirm-password').value;
 
+            if (typeof checkPasswordComplexity === 'function') {
+                const pwdRes = checkPasswordComplexity(newPwd);
+                if (!pwdRes.ok) {
+                    alert("La password non rispetta i requisiti di sicurezza:\n- " + pwdRes.errors.join("\n- "));
+                    return;
+                }
+            }
+
             if (newPwd !== confPwd) {
                 alert("Le password non coincidono.");
                 return;
@@ -7230,6 +7238,11 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('form-user-password');
     if (el) {
+        const pwdInput = document.getElementById('user-new-password');
+        const pwdContainer = document.getElementById('dashboard-password-checklist');
+        if (pwdInput && pwdContainer && typeof setupPasswordChecklist === 'function') {
+            setupPasswordChecklist(pwdInput, pwdContainer);
+        }
         el.addEventListener('submit', function(event) {
             event.preventDefault();
             updateUserPassword(event)

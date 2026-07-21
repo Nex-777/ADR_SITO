@@ -225,13 +225,13 @@ async function initPortal() {
                 await renderCapogruppoDashboard(currentManagedGroupId);
             } else if (viewMode === 'allenatore') {
                 document.getElementById('epk-allenatore').classList.remove('epk-hidden');
-                await renderAllenatoreDashboard(currentScabOpzioneId);
+                switchAllenatoreTab('atleti');
             } else if (viewMode === 'allievo_allenatore') {
                 document.getElementById('epk-allievo').classList.remove('epk-hidden');
-                await renderAllievoAllenatoreDashboard(currentScabOpzioneId);
+                switchAllievoTab('abbinamenti');
             } else if (viewMode === 'validatore') {
                 document.getElementById('epk-validatore').classList.remove('epk-hidden');
-                await renderValidatoreDashboard(currentScabOpzioneId);
+                switchValidatoreTab('strutture');
             } else if (viewMode.startsWith('simula_')) {
                 mostraSimulationBanner(viewMode);
             } else {
@@ -283,13 +283,13 @@ async function switchEpikaView(view) {
         await renderCapogruppoDashboard(currentManagedGroupId);
     } else if (view === 'allenatore') {
         document.getElementById('epk-allenatore').classList.remove('epk-hidden');
-        await renderAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+        switchAllenatoreTab('atleti');
     } else if (view === 'allievo_allenatore') {
         document.getElementById('epk-allievo').classList.remove('epk-hidden');
-        await renderAllievoAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+        switchAllievoTab('abbinamenti');
     } else if (view === 'validatore') {
         document.getElementById('epk-validatore').classList.remove('epk-hidden');
-        await renderValidatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+        switchValidatoreTab('strutture');
     } else if (view.startsWith('simula_')) {
         await mostraSimulationBanner(view);
     } else {
@@ -914,7 +914,7 @@ async function caricaEventiDisponibili() {
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <span class="epk-headline" style="font-size: 14px; display: block; color: var(--epk-gold);">${evt.titolo.toUpperCase()}</span>
                         <span style="font-size: 10px; font-family: monospace; color: rgba(245, 230, 200, 0.6); uppercase">
-                            📅 ${dataFormattata} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'NON SPECIFICATO'}
+                            📅 ${dataFormattata} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'NON SPECIFICATO'} | 💰 QUOTA: ${parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO'}
                         </span>
                         ${evt.descrizione ? `<p style="font-size: 11px; margin: 6px 0 0 0; color: rgba(245, 230, 200, 0.8);">${evt.descrizione}</p>` : ''}
                     </div>
@@ -981,12 +981,19 @@ async function apriModaleIscrizione(eventoId, dataInizio, dataFine) {
             combattenteFields.classList.remove('epk-hidden');
             if (currentUserProfile.allenatore_id) {
                 coachSelect.value = currentUserProfile.allenatore_id;
+                coachSelect.disabled = true;
+                coachSelect.style.pointerEvents = 'none';
+            } else {
+                coachSelect.disabled = false;
+                coachSelect.style.pointerEvents = 'auto';
             }
         } else {
             combattenteFields.classList.add('epk-hidden');
         }
 
-        // Resetta campi armi speciali
+        // Resetta campi date e armi speciali
+        document.getElementById('epk-iscrizione-arrivo').value = '';
+        document.getElementById('epk-iscrizione-ripartenza').value = '';
         document.getElementById('epk-wp-giavellotto').checked = false;
         document.getElementById('epk-wp-spada-lunga').checked = false;
         document.getElementById('epk-wp-lancia').checked = false;
@@ -1016,11 +1023,27 @@ function toggleArmiSperimentaliDesc(checked) {
 }
 
 async function salvaIscrizioneDettagliata() {
+    const btn = document.querySelector('#epk-iscrizione-modal button[onclick="salvaIscrizioneDettagliata()"]');
+    const originalText = btn ? btn.innerHTML : "CONFERMA ISCRIZIONE";
+    
     const eventoId = document.getElementById('epk-iscrizione-modal-evento-id').value;
     const checkedGiorni = Array.from(document.querySelectorAll('input[name="giorni-presenza-check"]:checked')).map(cb => cb.value);
     
     if (checkedGiorni.length === 0) {
         alert("Devi selezionare almeno un giorno di presenza.");
+        return;
+    }
+
+    const dataOraArrivo = document.getElementById('epk-iscrizione-arrivo').value;
+    const dataOraRipartenza = document.getElementById('epk-iscrizione-ripartenza').value;
+
+    if (!dataOraArrivo || !dataOraRipartenza) {
+        alert("Inserisci data e ora previsti di arrivo e ripartenza.");
+        return;
+    }
+
+    if (new Date(dataOraRipartenza) <= new Date(dataOraArrivo)) {
+        alert("La data di ripartenza deve essere successiva alla data di arrivo.");
         return;
     }
 
@@ -1062,30 +1085,60 @@ async function salvaIscrizioneDettagliata() {
         descrizione_sperimentali: descSperimentali
     };
 
-    try {
-        const { error } = await supabaseClient
-            .from('epika_iscrizioni_eventi')
-            .insert({
-                evento_id: eventoId,
-                utente_id: currentUser.id,
-                giorni_presenza: checkedGiorni,
-                dettagli: dettagliPayload
-            });
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "Elaborazione...";
+    }
 
-        if (error) {
-            if (error.code === '23505') {
-                alert("Sei già iscritto a questo evento!");
-            } else {
-                throw error;
-            }
-        } else {
+    try {
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        const session = sessionData?.session;
+        const token = session?.access_token;
+        
+        if (!token) {
+            throw new Error("Sessione scaduta. Effettua nuovamente il login.");
+        }
+
+        const apiBase = APP_CONFIG.API_BASE_URL || "";
+        const response = await fetch(`${apiBase}/api/create-epika-event-checkout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                eventId: eventoId,
+                giorni_presenza: checkedGiorni,
+                data_ora_arrivo: new Date(dataOraArrivo).toISOString(),
+                data_ora_ripartenza: new Date(dataOraRipartenza).toISOString(),
+                dettagli: dettagliPayload
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.status !== 200) {
+            throw new Error(data.error || "Errore durante la creazione dell'iscrizione.");
+        }
+
+        if (data.free) {
             alert("Iscrizione registrata con successo!");
             chiudiModaleIscrizione();
             await caricaEventiDisponibili();
+        } else if (data.url) {
+            window.location.href = data.url;
+        } else {
+            throw new Error("Risposta del server non valida.");
         }
+
     } catch (e) {
         console.error("Errore salvataggio iscrizione:", e);
-        alert("Errore durante il salvataggio dell'iscrizione. Riprova.");
+        alert(e.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
 }
 
@@ -2228,7 +2281,7 @@ async function renderEventiAdmin() {
                         <div>
                             <span class="epk-headline" style="font-size: 14px; color: var(--epk-gold);">${evt.titolo.toUpperCase()}</span>
                             <span style="font-size: 10px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.5); uppercase; margin-top: 2px;">
-                                📅 ${dataFormattata} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')}
+                                📅 ${dataFormattata} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')} | 💰 COSTO: €${parseFloat(evt.costo || 0).toFixed(2)}
                             </span>
                         </div>
                         <div style="display: flex; gap: 8px;">
@@ -2252,6 +2305,7 @@ function mostraFormCreaEvento() {
     const todayStr = new Date().toISOString().split('T')[0];
     document.getElementById('evt-data-inizio').value = todayStr;
     document.getElementById('evt-data-fine').value = todayStr;
+    document.getElementById('evt-costo').value = '0.00';
 }
 
 function nascondiFormCreaEvento() {
@@ -2265,6 +2319,7 @@ async function salvaEventoStorico() {
     const dataInizio = document.getElementById('evt-data-inizio').value;
     const dataFine = document.getElementById('evt-data-fine').value;
     const tipo = document.getElementById('evt-tipo').value;
+    const costo = parseFloat(document.getElementById('evt-costo').value) || 0;
     const descrizione = document.getElementById('evt-descrizione').value.trim();
 
     if (!titolo || !luogo || !dataInizio || !dataFine || !tipo) {
@@ -2286,6 +2341,7 @@ async function salvaEventoStorico() {
                 data_inizio: dataInizio,
                 data_fine: dataFine,
                 tipo_evento: tipo,
+                costo: costo,
                 descrizione: descrizione || null
             });
 
@@ -2298,6 +2354,7 @@ async function salvaEventoStorico() {
         document.getElementById('evt-titolo').value = '';
         document.getElementById('evt-luogo').value = '';
         document.getElementById('evt-descrizione').value = '';
+        document.getElementById('evt-costo').value = '0.00';
 
         await renderEventiAdmin();
 
@@ -3470,6 +3527,8 @@ function switchCapoTab(tab) {
         renderCapoDatiGruppo();
     } else if (tab === 'iscritti') {
         renderCapoIscrittiGruppo();
+    } else if (tab === 'eventi') {
+        renderCapoEventi();
     }
 }
 
@@ -4147,6 +4206,624 @@ async function renderValidatoreDashboard(opzioneId) {
     } catch (e) {
         console.error("Errore caricamento strutture validatore:", e);
         container.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento delle strutture.</div>';
+    }
+}
+
+// ===========================================================================
+// TAB SWITCHERS PER LE VISTE RUOLO (SCAB)
+// ===========================================================================
+
+let activeAllenatoreTab = 'atleti';
+function switchAllenatoreTab(tab) {
+    activeAllenatoreTab = tab;
+    document.querySelectorAll('#epk-allenatore .epk-sidebar-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#epk-allenatore .epk-admin-tab-panel').forEach(panel => panel.classList.add('epk-hidden'));
+    
+    const btn = document.getElementById(`epk-all-btn-${tab}`);
+    if (btn) btn.classList.add('active');
+    
+    const panel = document.getElementById(`epk-all-tab-${tab}`);
+    if (panel) panel.classList.remove('epk-hidden');
+    
+    if (tab === 'atleti') {
+        renderAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+    } else if (tab === 'eventi') {
+        renderAllenatoreEventi();
+    }
+}
+
+let activeAllievoTab = 'abbinamenti';
+function switchAllievoTab(tab) {
+    activeAllievoTab = tab;
+    document.querySelectorAll('#epk-allievo .epk-sidebar-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#epk-allievo .epk-admin-tab-panel').forEach(panel => panel.classList.add('epk-hidden'));
+    
+    const btn = document.getElementById(`epk-alv-btn-${tab}`);
+    if (btn) btn.classList.add('active');
+    
+    const panel = document.getElementById(`epk-allievo-tab-${tab}`);
+    if (panel) panel.classList.remove('epk-hidden');
+    
+    if (tab === 'abbinamenti') {
+        renderAllievoAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+    } else if (tab === 'eventi') {
+        renderAllievoEventi();
+    }
+}
+
+let activeValidatoreTab = 'strutture';
+function switchValidatoreTab(tab) {
+    activeValidatoreTab = tab;
+    document.querySelectorAll('#epk-validatore .epk-sidebar-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#epk-validatore .epk-admin-tab-panel').forEach(panel => panel.classList.add('epk-hidden'));
+    
+    const btn = document.getElementById(`epk-val-btn-${tab}`);
+    if (btn) btn.classList.add('active');
+    
+    const panel = document.getElementById(`epk-validatore-tab-${tab}`);
+    if (panel) panel.classList.remove('epk-hidden');
+    
+    if (tab === 'strutture') {
+        renderValidatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+    } else if (tab === 'eventi') {
+        renderValidatoreEventi();
+    }
+}
+
+// ===========================================================================
+// FUNZIONI SUPPORTO FILTRAGGIO ATLETI (SCAB)
+// ===========================================================================
+
+async function getAllenatoreAllieviIds(opzioneId) {
+    const allieviIds = new Set();
+    if (!opzioneId) return [];
+
+    try {
+        const { data: abbinamenti } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .select('*');
+
+        const mieiAbb = (abbinamenti || []).filter(a => 
+            Number(a.allenatore_ref_id) === Number(opzioneId) ||
+            (Array.isArray(a.allenatori_co_ids) && a.allenatori_co_ids.map(Number).includes(Number(opzioneId)))
+        );
+
+        const opzioniAllieviIds = [];
+        mieiAbb.forEach(a => {
+            if (a.allievo_ref_id) opzioniAllieviIds.push(Number(a.allievo_ref_id));
+            if (Array.isArray(a.allievi_ids)) {
+                a.allievi_ids.map(Number).forEach(id => opzioniAllieviIds.push(id));
+            }
+        });
+
+        if (opzioniAllieviIds.length > 0) {
+            const { data: opzioni } = await supabaseClient
+                .from('epika_opzioni')
+                .select('utente_id')
+                .in('id', opzioniAllieviIds);
+            
+            (opzioni || []).forEach(o => {
+                if (o.utente_id) allieviIds.add(o.utente_id);
+            });
+        }
+
+        const { data: profili } = await supabaseClient
+            .from('epika_profili')
+            .select('id')
+            .eq('allenatore_id', opzioneId);
+
+        (profili || []).forEach(p => {
+            allieviIds.add(p.id);
+        });
+    } catch (e) {
+        console.error("Errore risoluzione allievi allenatore:", e);
+    }
+
+    return Array.from(allieviIds);
+}
+
+async function getAllievoCoachAllieviIds(opzioneId) {
+    const coaches = new Set();
+    if (!opzioneId) return [];
+
+    try {
+        const { data: abbinamenti } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .select('*');
+
+        const mieiAbb = (abbinamenti || []).filter(a => 
+            Number(a.allievo_ref_id) === Number(opzioneId) ||
+            (Array.isArray(a.allievi_ids) && a.allievi_ids.map(Number).includes(Number(opzioneId)))
+        );
+
+        mieiAbb.forEach(a => {
+            if (a.allenatore_ref_id) coaches.add(Number(a.allenatore_ref_id));
+        });
+    } catch (e) {
+        console.error("Errore risoluzione coach di riferimento:", e);
+    }
+
+    const allieviIds = new Set();
+    for (const coachId of coaches) {
+        const list = await getAllenatoreAllieviIds(coachId);
+        list.forEach(id => allieviIds.add(id));
+    }
+
+    return Array.from(allieviIds);
+}
+
+async function getValidatoreAllieviIds(opzioneId) {
+    const coaches = new Set();
+    if (!opzioneId) return [];
+
+    try {
+        const { data: abbinamenti } = await supabaseClient
+            .from('epika_scab_abbinamenti')
+            .select('*')
+            .eq('validatore_id', opzioneId);
+
+        (abbinamenti || []).forEach(a => {
+            if (a.allenatore_ref_id) coaches.add(Number(a.allenatore_ref_id));
+            if (Array.isArray(a.allenatori_co_ids)) {
+                a.allenatori_co_ids.map(Number).forEach(id => coaches.add(id));
+            }
+        });
+    } catch (e) {
+        console.error("Errore risoluzione coach per validatore:", e);
+    }
+
+    const allieviIds = new Set();
+    for (const coachId of coaches) {
+        const list = await getAllenatoreAllieviIds(coachId);
+        list.forEach(id => allieviIds.add(id));
+    }
+
+    return Array.from(allieviIds);
+}
+
+// ===========================================================================
+// FUNZIONE DETTAGLI PARTECIPANTI (JOIN & MAPPING)
+// ===========================================================================
+
+async function fetchIscrittiEventoDettagli(eventoId) {
+    const { data: iscritti, error: errIsc } = await supabaseClient
+        .from('epika_iscrizioni_eventi')
+        .select(`
+            utente_id,
+            giorni_presenza,
+            data_ora_arrivo,
+            data_ora_ripartenza,
+            codice_transazione,
+            ricevuta_id,
+            dettagli,
+            profilo:epika_profili(nome_di_battaglia, ruolo_combattimento, gruppo_storico_id, allenatore_id)
+        `)
+        .eq('evento_id', eventoId);
+
+    if (errIsc) throw errIsc;
+    if (!iscritti || iscritti.length === 0) return [];
+
+    const uids = iscritti.map(i => i.utente_id);
+    const { data: utentiD } = await supabaseClient
+        .from('utenti')
+        .select('id, nome, cognome')
+        .in('id', uids);
+    
+    const nomiReali = {};
+    (utentiD || []).forEach(u => { nomiReali[u.id] = `${u.nome} ${u.cognome}`; });
+
+    const { data: allD } = await supabaseClient
+        .from('epika_opzioni')
+        .select('id, valore')
+        .eq('tipo', 'allenatore');
+    
+    const allenatoriMappa = {};
+    (allD || []).forEach(a => { allenatoriMappa[a.id] = a.valore; });
+
+    return iscritti.map(i => {
+        const prof = i.profilo || {};
+        const dett = i.dettagli || {};
+        
+        let equip = 'NESSUNO';
+        if (prof.ruolo_combattimento === 'combattente') {
+            const armi = Array.isArray(dett.armi_speciali) ? dett.armi_speciali.join(', ') : '';
+            const armatura = dett.armatura ? `ARMATURA: ${dett.armatura}` : '';
+            const arciere = dett.arciere ? `ARCIERE: ${dett.arciere}` : '';
+            const coach = dett.allenatore_id ? `ABILITATO DA: ${allenatoriMappa[dett.allenatore_id] || 'N/D'}` : '';
+            const spDesc = dett.descrizione_sperimentali ? `(SPERIMENTALE: ${dett.descrizione_sperimentali})` : '';
+            equip = [armatura, arciere, armi, spDesc, coach].filter(Boolean).join(' | ');
+        }
+
+        return {
+            utente_id: i.utente_id,
+            nome_di_battaglia: prof.nome_di_battaglia || 'N/D',
+            nome_reale: nomiReali[i.utente_id] || 'N/D',
+            ruolo: prof.ruolo_combattimento || 'non_combattente',
+            giorni: i.giorni_presenza || [],
+            arrivo: i.data_ora_arrivo,
+            ripartenza: i.data_ora_ripartenza,
+            equipaggiamento: equip,
+            stato_pagamento: i.ricevuta_id ? 'PAGATO ✓' : 'ATTESA PAGAMENTO ⏳',
+            gruppo_storico_id: prof.gruppo_storico_id,
+            allenatore_id: prof.allenatore_id
+        };
+    });
+}
+
+// ===========================================================================
+// FUNZIONI DI EVENTI / TABELLA DETTAGLI PER CAPOGRUPPO
+// ===========================================================================
+
+async function renderCapoEventi() {
+    const listContainer = document.getElementById('epk-capo-eventi-lista');
+    const detailsPanel = document.getElementById('epk-capo-evento-dettagli-panel');
+    if (!listContainer) return;
+    
+    listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento eventi...</div>';
+    detailsPanel.classList.add('epk-hidden');
+
+    try {
+        const { data: eventi, error } = await supabaseClient
+            .from('epika_eventi')
+            .select('*')
+            .order('data_inizio', { ascending: false });
+
+        if (error) throw error;
+
+        if (!eventi || eventi.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Nessun evento in programma.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        eventi.forEach(evt => {
+            const dataInizioF = formattaData(evt.data_inizio);
+            const dataFineF = formattaData(evt.data_fine);
+            const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
+            const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+
+            listContainer.innerHTML += `
+                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
+                    <div>
+                        <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
+                        <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
+                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                        </span>
+                    </div>
+                    <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoCapo('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
+                </div>`;
+        });
+    } catch (e) {
+        console.error("Errore caricamento eventi capogruppo:", e);
+        listContainer.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento della lista eventi.</div>';
+    }
+}
+
+async function mostraIscrittiEventoCapo(eventoId, eventoTitolo) {
+    const tableBody = document.getElementById('epk-capo-evento-iscritti-body');
+    const detailsPanel = document.getElementById('epk-capo-evento-dettagli-panel');
+    const title = document.getElementById('epk-capo-evento-dettagli-titolo');
+    
+    title.textContent = `PARTECIPANTI DEL GRUPPO ALL'EVENTO: ${eventoTitolo.toUpperCase()}`;
+    tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: gray;">Caricamento partecipanti...</td></tr>';
+    detailsPanel.classList.remove('epk-hidden');
+    detailsPanel.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
+        const iscrittiGruppo = tuttiIscritti.filter(i => Number(i.gruppo_storico_id) === Number(currentManagedGroupId));
+
+        if (iscrittiGruppo.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ff4d4d;">NESSUN PARTECIPANTE DEL TUO GRUPPO ISCRITTO A QUESTO EVENTO.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        iscrittiGruppo.forEach(i => {
+            const formatDatetime = (dt) => dt ? new Date(dt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/D';
+            const arrivoText = formatDatetime(i.arrivo);
+            const ripartenzaText = formatDatetime(i.ripartenza);
+            const giorniText = (i.giorni || []).map(formattaData).join(', ');
+            const pagBadgeStyle = i.stato_pagamento.includes('PAGATO') ? 'color: #22c55e;' : 'color: #eab308;';
+
+            tableBody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${i.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${i.nome_reale}</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${i.ruolo}</span></td>
+                    <td style="padding: 10px; font-size: 10px;">${giorniText}</td>
+                    <td style="padding: 10px; font-size: 10px;">ARR: ${arrivoText}<br>PART: ${ripartenzaText}</td>
+                    <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${i.equipaggiamento}</td>
+                    <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${i.stato_pagamento}</td>
+                </tr>`;
+        });
+    } catch (e) {
+        console.error("Errore dettagli partecipanti capogruppo:", e);
+        tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
+    }
+}
+
+// ===========================================================================
+// FUNZIONI DI EVENTI / TABELLA DETTAGLI PER ALLENATORE
+// ===========================================================================
+
+async function renderAllenatoreEventi() {
+    const listContainer = document.getElementById('epk-allenatore-eventi-lista');
+    const detailsPanel = document.getElementById('epk-allenatore-evento-dettagli-panel');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento eventi...</div>';
+    detailsPanel.classList.add('epk-hidden');
+
+    try {
+        const { data: eventi, error } = await supabaseClient
+            .from('epika_eventi')
+            .select('*')
+            .order('data_inizio', { ascending: false });
+
+        if (error) throw error;
+
+        if (!eventi || eventi.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Nessun evento in programma.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        eventi.forEach(evt => {
+            const dataInizioF = formattaData(evt.data_inizio);
+            const dataFineF = formattaData(evt.data_fine);
+            const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
+            const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+
+            listContainer.innerHTML += `
+                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
+                    <div>
+                        <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
+                        <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
+                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                        </span>
+                    </div>
+                    <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoAllenatore('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
+                </div>`;
+        });
+    } catch (e) {
+        console.error("Errore caricamento eventi allenatore:", e);
+        listContainer.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento della lista eventi.</div>';
+    }
+}
+
+async function mostraIscrittiEventoAllenatore(eventoId, eventoTitolo) {
+    const tableBody = document.getElementById('epk-allenatore-evento-iscritti-body');
+    const detailsPanel = document.getElementById('epk-allenatore-evento-dettagli-panel');
+    const title = document.getElementById('epk-allenatore-evento-dettagli-titolo');
+
+    title.textContent = `ALLIEVI ISCRITTI ALL'EVENTO: ${eventoTitolo.toUpperCase()}`;
+    tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: gray;">Caricamento partecipanti...</td></tr>';
+    detailsPanel.classList.remove('epk-hidden');
+    detailsPanel.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        const coachOpzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const allieviIds = await getAllenatoreAllieviIds(coachOpzioneId);
+        
+        const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
+        const iscrittiAllenatore = tuttiIscritti.filter(i => allieviIds.includes(i.utente_id));
+
+        if (iscrittiAllenatore.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ff4d4d;">NESSUN TUO ALLIEVO ISCRITTO A QUESTO EVENTO.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        iscrittiAllenatore.forEach(i => {
+            const formatDatetime = (dt) => dt ? new Date(dt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/D';
+            const arrivoText = formatDatetime(i.arrivo);
+            const ripartenzaText = formatDatetime(i.ripartenza);
+            const giorniText = (i.giorni || []).map(formattaData).join(', ');
+            const pagBadgeStyle = i.stato_pagamento.includes('PAGATO') ? 'color: #22c55e;' : 'color: #eab308;';
+
+            tableBody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${i.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${i.nome_reale}</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${i.ruolo}</span></td>
+                    <td style="padding: 10px; font-size: 10px;">${giorniText}</td>
+                    <td style="padding: 10px; font-size: 10px;">ARR: ${arrivoText}<br>PART: ${ripartenzaText}</td>
+                    <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${i.equipaggiamento}</td>
+                    <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${i.stato_pagamento}</td>
+                </tr>`;
+        });
+    } catch (e) {
+        console.error("Errore dettagli partecipanti allenatore:", e);
+        tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
+    }
+}
+
+// ===========================================================================
+// FUNZIONI DI EVENTI / TABELLA DETTAGLI PER ALLIEVO ALLENATORE
+// ===========================================================================
+
+async function renderAllievoEventi() {
+    const listContainer = document.getElementById('epk-allievo-eventi-lista');
+    const detailsPanel = document.getElementById('epk-allievo-evento-dettagli-panel');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento eventi...</div>';
+    detailsPanel.classList.add('epk-hidden');
+
+    try {
+        const { data: eventi, error } = await supabaseClient
+            .from('epika_eventi')
+            .select('*')
+            .order('data_inizio', { ascending: false });
+
+        if (error) throw error;
+
+        if (!eventi || eventi.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Nessun evento in programma.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        eventi.forEach(evt => {
+            const dataInizioF = formattaData(evt.data_inizio);
+            const dataFineF = formattaData(evt.data_fine);
+            const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
+            const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+
+            listContainer.innerHTML += `
+                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
+                    <div>
+                        <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
+                        <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
+                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                        </span>
+                    </div>
+                    <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoAllievo('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
+                </div>`;
+        });
+    } catch (e) {
+        console.error("Errore caricamento eventi allievo:", e);
+        listContainer.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento della lista eventi.</div>';
+    }
+}
+
+async function mostraIscrittiEventoAllievo(eventoId, eventoTitolo) {
+    const tableBody = document.getElementById('epk-allievo-evento-iscritti-body');
+    const detailsPanel = document.getElementById('epk-allievo-evento-dettagli-panel');
+    const title = document.getElementById('epk-allievo-evento-dettagli-titolo');
+
+    title.textContent = `ALLIEVI CO-ALLENATORI ISCRITTI ALL'EVENTO: ${eventoTitolo.toUpperCase()}`;
+    tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: gray;">Caricamento partecipanti...</td></tr>';
+    detailsPanel.classList.remove('epk-hidden');
+    detailsPanel.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        const alvOpzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const allieviIds = await getAllievoCoachAllieviIds(alvOpzioneId);
+        
+        const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
+        const iscrittiAllievo = tuttiIscritti.filter(i => allieviIds.includes(i.utente_id));
+
+        if (iscrittiAllievo.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ff4d4d;">NESSUN ALLIEVO DEL CO-ALLENATORE DI RIFERIMENTO ISCRITTO A QUESTO EVENTO.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        iscrittiAllievo.forEach(i => {
+            const formatDatetime = (dt) => dt ? new Date(dt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/D';
+            const arrivoText = formatDatetime(i.arrivo);
+            const ripartenzaText = formatDatetime(i.ripartenza);
+            const giorniText = (i.giorni || []).map(formattaData).join(', ');
+            const pagBadgeStyle = i.stato_pagamento.includes('PAGATO') ? 'color: #22c55e;' : 'color: #eab308;';
+
+            tableBody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${i.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${i.nome_reale}</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${i.ruolo}</span></td>
+                    <td style="padding: 10px; font-size: 10px;">${giorniText}</td>
+                    <td style="padding: 10px; font-size: 10px;">ARR: ${arrivoText}<br>PART: ${ripartenzaText}</td>
+                    <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${i.equipaggiamento}</td>
+                    <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${i.stato_pagamento}</td>
+                </tr>`;
+        });
+    } catch (e) {
+        console.error("Errore dettagli partecipanti allievo:", e);
+        tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
+    }
+}
+
+// ===========================================================================
+// FUNZIONI DI EVENTI / TABELLA DETTAGLI PER VALIDATORE
+// ===========================================================================
+
+async function renderValidatoreEventi() {
+    const listContainer = document.getElementById('epk-validatore-eventi-lista');
+    const detailsPanel = document.getElementById('epk-validatore-evento-dettagli-panel');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento eventi...</div>';
+    detailsPanel.classList.add('epk-hidden');
+
+    try {
+        const { data: eventi, error } = await supabaseClient
+            .from('epika_eventi')
+            .select('*')
+            .order('data_inizio', { ascending: false });
+
+        if (error) throw error;
+
+        if (!eventi || eventi.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Nessun evento in programma.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+        eventi.forEach(evt => {
+            const dataInizioF = formattaData(evt.data_inizio);
+            const dataFineF = formattaData(evt.data_fine);
+            const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
+            const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+
+            listContainer.innerHTML += `
+                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
+                    <div>
+                        <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
+                        <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
+                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                        </span>
+                    </div>
+                    <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoValidatore('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
+                </div>`;
+        });
+    } catch (e) {
+        console.error("Errore caricamento eventi validatore:", e);
+        listContainer.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento della lista eventi.</div>';
+    }
+}
+
+async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
+    const tableBody = document.getElementById('epk-validatore-evento-iscritti-body');
+    const detailsPanel = document.getElementById('epk-validatore-evento-dettagli-panel');
+    const title = document.getElementById('epk-validatore-evento-dettagli-titolo');
+
+    title.textContent = `ATLETI VALIDATI ISCRITTI ALL'EVENTO: ${eventoTitolo.toUpperCase()}`;
+    tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: gray;">Caricamento partecipanti...</td></tr>';
+    detailsPanel.classList.remove('epk-hidden');
+    detailsPanel.scrollIntoView({ behavior: 'smooth' });
+
+    try {
+        const valOpzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const allieviIds = await getValidatoreAllieviIds(valOpzioneId);
+        
+        const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
+        const iscrittiValidatore = tuttiIscritti.filter(i => allieviIds.includes(i.utente_id));
+
+        if (iscrittiValidatore.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ff4d4d;">NESSUN ATLETA SOTTO LA TUA VALIDAZIONE ISCRITTO A QUESTO EVENTO.</td></tr>';
+            return;
+        }
+
+        tableBody.innerHTML = '';
+        iscrittiValidatore.forEach(i => {
+            const formatDatetime = (dt) => dt ? new Date(dt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/D';
+            const arrivoText = formatDatetime(i.arrivo);
+            const ripartenzaText = formatDatetime(i.ripartenza);
+            const giorniText = (i.giorni || []).map(formattaData).join(', ');
+            const pagBadgeStyle = i.stato_pagamento.includes('PAGATO') ? 'color: #22c55e;' : 'color: #eab308;';
+
+            tableBody.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${i.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${i.nome_reale}</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${i.ruolo}</span></td>
+                    <td style="padding: 10px; font-size: 10px;">${giorniText}</td>
+                    <td style="padding: 10px; font-size: 10px;">ARR: ${arrivoText}<br>PART: ${ripartenzaText}</td>
+                    <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${i.equipaggiamento}</td>
+                    <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${i.stato_pagamento}</td>
+                </tr>`;
+        });
+    } catch (e) {
+        console.error("Errore dettagli partecipanti validatore:", e);
+        tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
     }
 }
 
