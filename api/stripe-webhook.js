@@ -124,11 +124,12 @@ export default async function handler(req, res) {
                     throw new Error("Manca bozza_id per pagamento evento Epika");
                 }
 
-                // Recupera la bozza di iscrizione
+                // Recupera la bozza di iscrizione (solo se non ancora scaduta)
                 const { data: bozza, error: bozzaError } = await supabase
                     .from('epika_iscrizioni_bozza')
                     .select('*')
                     .eq('id', bozzaId)
+                    .gt('expires_at', new Date().toISOString())
                     .maybeSingle();
 
                 if (bozzaError || !bozza) {

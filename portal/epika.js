@@ -212,7 +212,9 @@ async function initPortal() {
         document.getElementById('epk-loader').classList.add('epk-hidden');
 
         // Gestione ritorno dal pagamento Stripe per evento Epika
-        const eventPayment = urlParams.get('event_payment');
+        // urlParams qui è sicuramente disponibile perché dichiarata subito dopo
+        const allUrlParams = new URLSearchParams(window.location.search);
+        const eventPayment = allUrlParams.get('event_payment');
         if (eventPayment === 'success') {
             setTimeout(() => {
                 alert('✅ Iscrizione registrata con successo! Il pagamento è stato confermato.');
@@ -4521,6 +4523,9 @@ async function mostraIscrittiEventoCapo(eventoId, eventoTitolo) {
 
     try {
         const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
+        // currentManagedGroupId è l'ID del gruppo storico (da epika_gruppi_storici).
+        // Il profilo atleta ha gruppo_storico_id che è la FK verso la stessa tabella.
+        // Il confronto è quindi diretto e corretto.
         const iscrittiGruppo = tuttiIscritti.filter(i => Number(i.gruppo_storico_id) === Number(currentManagedGroupId));
 
         if (iscrittiGruppo.length === 0) {
