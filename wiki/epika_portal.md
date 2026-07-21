@@ -107,7 +107,7 @@ Stores audit logs for athlete profile modifications (such as historical group, p
 ## 🔒 Row Level Security (RLS)
 
 - Lookups (`epika_gruppi_storici`, `epika_gruppi_lavoro`, `epika_opzioni`): Read access to all authenticated users. Write/Delete restricted to President or users with `is_admin_epika = TRUE`.
-- Profiles (`epika_profili`): Select allowed for the owner, President, `is_admin_epika = TRUE`, or any Capogruppo/Vice Capogruppo of the profile's current or historical group (to access member lists and cronologia mandati). Update allowed only for the owner, President, or `is_admin_epika = TRUE`. Insert allowed only for the owner.
+- Profiles (`epika_profili`): Select allowed for the owner, President, `is_admin_epika = TRUE`, or any Capogruppo/Vice Capogruppo of the profile's current or historical group (to access member lists and cronologia mandati). Update allowed only for the owner, President, or `is_admin_epika = TRUE`. Insert allowed only for the owner. Validated by `BEFORE INSERT OR UPDATE` trigger `trg_check_epika_tessera_ruolo` to prevent base card holders from enrolling as `combattente` and to automatically nullify `allenatore_id` for `non_combattente`.
 - Events (`epika_eventi`): Read allowed for all authenticated users. Writes/Delete restricted to admins.
 - Signups & Attendance: Select/write restricted to owner/admin where appropriate.
 - Audit Log (`epika_registro_modifiche_profilo`): Select allowed for the profile owner, President, or users with `is_admin_epika = TRUE`. Write operations restricted to database trigger only.

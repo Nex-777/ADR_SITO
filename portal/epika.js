@@ -8,6 +8,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 let currentUserProfile = null;
+let currentUserTessera = null;
 let gruppiStorici = [];
 let popoliList = [];
 let allenatoriLista = [];
@@ -58,7 +59,7 @@ async function initPortal() {
         // Recupera info utente reale ed enum dei ruoli Adrenalina
         const { data: userData, error: userError } = await supabaseClient
             .from('utenti')
-            .select('nome, cognome, ruolo')
+            .select('nome, cognome, ruolo, tipo_tessera')
             .eq('id', currentUser.id)
             .maybeSingle();
 
@@ -69,6 +70,7 @@ async function initPortal() {
 
         if (userData) {
             document.getElementById('epk-user-real-name').textContent = `${userData.nome} ${userData.cognome}`;
+            currentUserTessera = userData.tipo_tessera || null;
         } else {
             console.warn("Nessun record trovato in utenti per ID:", currentUser.id);
         }
@@ -240,6 +242,8 @@ async function initPortal() {
             // Primo accesso o profilo incompleto, popola e mostra il form
             console.log("Nessun profilo completato trovato. Mostro form primo accesso.");
             await caricaLookupDati();
+            applicaRestrizioneTessera('fa-ruolo-combattimento');
+            onFaRuoloChange();
             document.getElementById('epk-first-access').classList.remove('epk-hidden');
         }
 
@@ -506,10 +510,16 @@ async function handleFirstAccessSubmit(e) {
     
     const selectPopolo = document.getElementById('fa-popolo');
     const popolo = selectPopolo.value;
-    const allenatoreId = parseInt(document.getElementById('fa-allenatore').value);
+    const allenatoreSelect = document.getElementById('fa-allenatore');
+    const allenatoreId = ruoloCombattimento === 'combattente' && allenatoreSelect.value ? parseInt(allenatoreSelect.value) : null;
 
-    if (!nomeBattaglia || !ruoloCombattimento || !primoAnno || !gruppoStoricoId || !popolo || !allenatoreId) {
+    if (!nomeBattaglia || !ruoloCombattimento || !primoAnno || !gruppoStoricoId || !popolo) {
         alert("Compila tutti i campi obbligatori.");
+        return;
+    }
+
+    if (ruoloCombattimento === 'combattente' && !allenatoreId) {
+        alert("Seleziona l'allenatore di riferimento obbligatorio per i combattenti.");
         return;
     }
 
@@ -603,6 +613,8 @@ async function apriModaleModificaProfilo() {
         selectAllenatore.value = prof.allenatore_id || '';
 
         onEditGruppoStoricoChange();
+        applicaRestrizioneTessera('edit-ruolo-combattimento');
+        onEditRuoloChange();
 
         document.getElementById('epk-edit-profile-modal').classList.remove('epk-hidden');
     } catch (err) {
@@ -635,7 +647,8 @@ async function salvaModificheProfilo() {
     const selectPopolo = document.getElementById('edit-popolo');
     const popolo = selectPopolo.value;
     const ruoloCombattimento = document.getElementById('edit-ruolo-combattimento').value;
-    const allenatoreId = parseInt(document.getElementById('edit-allenatore').value);
+    const allenatoreSelect = document.getElementById('edit-allenatore');
+    const allenatoreId = (ruoloCombattimento === 'combattente' && allenatoreSelect.value) ? parseInt(allenatoreSelect.value) : null;
 
     if (
         gruppoStoricoId === originalProfileData.gruppo_storico_id &&
@@ -674,6 +687,54 @@ async function salvaModificheProfilo() {
         saveBtn.disabled = false;
         saveBtn.textContent = 'SALVA MODIFICHE';
     }
+}
+
+// Helper per gestire visibilità ed obbligatorietà allenatore
+function gestisciVisibilitaAllenatore(ruoloVal, selectId, containerId) {
+    const container = document.getElementById(containerId);
+    const select = document.getElementById(selectId);
+    if (!container || !select) return;
+
+    if (ruoloVal === 'non_combattente') {
+        container.classList.add('epk-hidden');
+        select.removeAttribute('required');
+        select.value = '';
+    } else {
+        container.classList.remove('epk-hidden');
+        select.setAttribute('required', 'required');
+    }
+}
+
+// Restrizione opzioni ruolo in base alla tessera utente
+function applicaRestrizioneTessera(selectRuoloId) {
+    const selectRuolo = document.getElementById(selectRuoloId);
+    if (!selectRuolo) return;
+
+    const tessera = (currentUserTessera || '').toLowerCase();
+    const isBase = (tessera.includes('base') || tessera.includes('silver') || tessera.includes('gold')) && !tessera.includes('integrativa');
+
+    if (isBase) {
+        selectRuolo.value = 'non_combattente';
+        Array.from(selectRuolo.options).forEach(opt => {
+            if (opt.value === 'combattente') {
+                opt.disabled = true;
+            }
+        });
+    } else {
+        Array.from(selectRuolo.options).forEach(opt => {
+            opt.disabled = false;
+        });
+    }
+}
+
+function onFaRuoloChange() {
+    const ruolo = document.getElementById('fa-ruolo-combattimento').value;
+    gestisciVisibilitaAllenatore(ruolo, 'fa-allenatore', 'container-fa-allenatore');
+}
+
+function onEditRuoloChange() {
+    const ruolo = document.getElementById('edit-ruolo-combattimento').value;
+    gestisciVisibilitaAllenatore(ruolo, 'edit-allenatore', 'container-edit-allenatore');
 }
 
 async function apriModaleRegistroModifiche() {

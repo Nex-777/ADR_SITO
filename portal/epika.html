@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.29">
+    <link rel="stylesheet" href="epika.css?v=1.02.30">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.29"></script>
+    <script src="config.js?v=1.02.30"></script>
 </head>
 <body class="epk-body">
 
@@ -75,7 +75,7 @@
                     <div class="epk-grid-2">
                         <div>
                             <label class="epk-label" for="fa-ruolo-combattimento">Ruolo Combattimento *</label>
-                            <select id="fa-ruolo-combattimento" class="epk-input" required>
+                            <select id="fa-ruolo-combattimento" class="epk-input" onchange="onFaRuoloChange()" required>
                                 <option value="" disabled selected>SELEZIONA</option>
                                 <option value="combattente">COMBATTENTE</option>
                                 <option value="non_combattente">NON COMBATTENTE</option>
@@ -104,7 +104,7 @@
                         </div>
                     </div>
 
-                    <div>
+                    <div id="container-fa-allenatore">
                         <label class="epk-label" for="fa-allenatore">Allenatore di Riferimento *</label>
                         <select id="fa-allenatore" class="epk-input" required>
                             <option value="" disabled selected>SELEZIONA</option>
@@ -1124,14 +1124,14 @@
                 <!-- Ruolo Combattimento -->
                 <div>
                     <label class="epk-label" for="edit-ruolo-combattimento">Ruolo Combattimento *</label>
-                    <select id="edit-ruolo-combattimento" class="epk-input">
+                    <select id="edit-ruolo-combattimento" class="epk-input" onchange="onEditRuoloChange()">
                         <option value="combattente">COMBATTENTE</option>
                         <option value="non_combattente">NON COMBATTENTE</option>
                     </select>
                 </div>
 
                 <!-- Allenatore -->
-                <div>
+                <div id="container-edit-allenatore">
                     <label class="epk-label" for="edit-allenatore">Allenatore di Riferimento *</label>
                     <select id="edit-allenatore" class="epk-input">
                         <!-- Popolato via JS -->
@@ -1200,6 +1200,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.02.29"></script>
+    <script src="epika.js?v=1.02.30"></script>
 </body>
 </html>

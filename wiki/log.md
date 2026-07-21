@@ -4,6 +4,22 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-21] ingest | Validazione Tessera Base e Visibilità Allenatore Epika (v1.02.30)
+- **Database (Supabase DDL):** Creata migrazione `supabase/migration_epika_validazione_tessera.sql` con la funzione trigger `check_epika_tessera_ruolo()` ed il trigger `BEFORE INSERT OR UPDATE` su `epika_profili`. Impedisce ai possessori di tessera base di registrarsi/modificarsi come `combattente` ed azzera `allenatore_id` per `non_combattente`.
+- **Frontend HTML (`portal/epika.html`):** Aggiunti gli ID contenitore `container-fa-allenatore` e `container-edit-allenatore` per consentire il toggling dinamico del blocco allenatore.
+- **Frontend JS (`portal/epika.js`):** 
+  - Inclusione di `tipo_tessera` nella query `checkAuthAndLoad`.
+  - Creazione funzioni `applicaRestrizioneTessera()`, `gestisciVisibilitaAllenatore()`, `onFaRuoloChange()`, `onEditRuoloChange()`.
+  - Risolto bug critico in `handleFirstAccessSubmit` per sbloccare l'iscrizione dei non combattenti.
+  - Sincronizzazione visibilità e nullificazione esplicita di `allenatore_id` sia nel Primo Accesso che nel modale Modifica Profilo.
+
+## [2026-07-21] ingest | Validazione Centralizzata Complessità Password e Checklist UX
+- **JS (portal/password-validator.js):** Creato modulo centralizzato per la validazione della password (min 8 caratteri, maiuscola, minuscola, numero, carattere speciale) e la gestione dinamica della checklist UI con feedback in tempo reale.
+- **Frontend (registrazione, reset-password, dashboard):** Integrate le funzioni del validatore in tutti i moduli del portale dove si crea o modifica una password:
+  - `registrazione.html` / `registrazione.js`: Blocco immediato al passaggio dallo Step 1 allo Step 2 e validazione pre-submit.
+  - `reset-password.html` / `reset-password.js`: Checklist dinamica e blocco al submit del form di recupero password.
+  - `dashboard.html` / `dashboard.js`: Corretto `minlength` da 6 a 8, aggiunta checklist dinamica e blocco prima di `updateUserPassword`.
+
 ## [2026-07-20] ingest | Sblocco Selezione Popolo per Gruppo Mercenari (v1.02.29)
 - **Database (Supabase):** Aggiornato il campo `popolo` del gruppo `MERCENARI` nella tabella `epika_gruppi_storici` a `NULL` (prima conteneva la stringa `'MERCENARI'`), in modo che il sistema riconosca correttamente che i membri di questo gruppo possono scegliere liberamente la propria cultura.
 - **JS (portal/epika.js):** Aggiornate le funzioni `onGruppoStoricoChange()` e `onEditGruppoStoricoChange()` per gestire il caso in cui il popolo del gruppo scelto sia nullo o esplicitamente `'MERCENARI'`, sbloccando la scelta del popolo e svuotando la selezione in modo che l'utente debba selezionare una cultura valida e attiva.
