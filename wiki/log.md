@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-21] ingest | Tasto Collegamento Regolamento SCAB in Vista Atleta (v1.03.01)
+- **HTML (epika.html):** Aggiunto il pulsante di collegamento esterno "📜 REGOLAMENTO SCAB" a fianco di "STORICO MODIFICHE" nella scheda del personaggio dell'atleta (`SCHEDA PERSONAGGIO`), puntando al documento Google Docs del regolamento SCAB.
+- **Versione:** Incrementata la versione dell'applicazione a `v1.03.01`.
+
 ## [2026-07-21] ingest | Nuova Dashboard Contabilità & Bilancio Eventi (v1.03.00)
 - **Database (Supabase):** Eseguita la DDL per aggiungere la colonna `evento_id` a `registro_spese` e `ricevute_pagamenti` consentendo l'imputazione contabile diretta di entrate ed uscite agli eventi EPIKA.
 - **HTML (epika.html):** Aggiunto il pulsante `CONTABILITÀ` nel menu Admin, il tab panel `#epk-adm-tab-contabilita` con card KPI (*Incasso Lordo*, *Spese Totali*, *Utile Netto*, *Ricevute*), la barra dei filtri di periodo, la tabella di bilancio per evento, e i modali *Registra Spesa*, *Registra Incasso Manuale* e *Dettaglio Bilancio Evento*.
