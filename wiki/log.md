@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-21] fix | Hardening Trigger Tessera e Sanitizzazione DB (v1.02.31)
+- **Audit Finding (Fix 1 — Dati Pregressi):** Rilevato 1 record in `epika_profili` con `ruolo_combattimento = 'non_combattente'` e `allenatore_id IS NOT NULL` (dato anomalo pre-trigger). Eseguito `UPDATE` di sanitizzazione che ha azzerato il campo. Risultato: 0 anomalie residue.
+- **Audit Finding (Fix 2 — Robustezza Trigger DB):** Riscritta la funzione `check_epika_tessera_ruolo()` sostituendo la logica `ILIKE '%base%'` fragile con una **whitelist esplicita** `TESSERE_COMBATTENTI = ARRAY['tessera_integrativa_a', 'tessera_integrativa_b']`. Il messaggio di errore ora include il valore della tessera attuale per facilitare il debug. Verificato con test diretto su DB.
+- **Audit Finding (Fix 2 — Robustezza Frontend):** Aggiornata la funzione `applicaRestrizioneTessera()` in `epika.js` con la costante `TESSERE_COMBATTENTI` allineata al trigger DB. Utenti con `currentUserTessera === null` sono ora correttamente bloccati dall'opzione combattente anche lato frontend.
+- **File aggiornati:** `supabase/migration_epika_validazione_tessera.sql`, `portal/epika.js`, `portal/epika.html`.
+
 ## [2026-07-21] ingest | Validazione Tessera Base e Visibilità Allenatore Epika (v1.02.30)
 - **Database (Supabase DDL):** Creata migrazione `supabase/migration_epika_validazione_tessera.sql` con la funzione trigger `check_epika_tessera_ruolo()` ed il trigger `BEFORE INSERT OR UPDATE` su `epika_profili`. Impedisce ai possessori di tessera base di registrarsi/modificarsi come `combattente` ed azzera `allenatore_id` per `non_combattente`.
 - **Frontend HTML (`portal/epika.html`):** Aggiunti gli ID contenitore `container-fa-allenatore` e `container-edit-allenatore` per consentire il toggling dinamico del blocco allenatore.

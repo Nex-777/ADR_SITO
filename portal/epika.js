@@ -705,15 +705,22 @@ function gestisciVisibilitaAllenatore(ruoloVal, selectId, containerId) {
     }
 }
 
-// Restrizione opzioni ruolo in base alla tessera utente
+// Restrizione opzioni ruolo in base alla tessera utente.
+// WHITELIST: solo le tessere in questo array abilitano il ruolo combattente.
+// Aggiornare qui quando si aggiungono nuovi tipi di tessera integrativa.
+const TESSERE_COMBATTENTI = ['tessera_integrativa_a', 'tessera_integrativa_b'];
+
 function applicaRestrizioneTessera(selectRuoloId) {
     const selectRuolo = document.getElementById(selectRuoloId);
     if (!selectRuolo) return;
 
-    const tessera = (currentUserTessera || '').toLowerCase();
-    const isBase = (tessera.includes('base') || tessera.includes('silver') || tessera.includes('gold')) && !tessera.includes('integrativa');
+    // Un utente può essere combattente SOLO se la sua tessera è nella whitelist.
+    // Utenti con currentUserTessera === null (es. soci puri senza tessera sportiva)
+    // vengono trattati come "non abilitati al combattimento".
+    const isAbilitatoCombattente = currentUserTessera !== null && TESSERE_COMBATTENTI.includes(currentUserTessera);
 
-    if (isBase) {
+    if (!isAbilitatoCombattente) {
+        // Forza su non_combattente e disabilita l'opzione combattente
         selectRuolo.value = 'non_combattente';
         Array.from(selectRuolo.options).forEach(opt => {
             if (opt.value === 'combattente') {
@@ -721,6 +728,7 @@ function applicaRestrizioneTessera(selectRuoloId) {
             }
         });
     } else {
+        // Tessera integrativa: sblocca tutte le opzioni
         Array.from(selectRuolo.options).forEach(opt => {
             opt.disabled = false;
         });
