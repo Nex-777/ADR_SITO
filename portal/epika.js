@@ -1116,7 +1116,7 @@ async function salvaIscrizioneDettagliata() {
         }
 
         const apiBase = APP_CONFIG.API_BASE_URL || "";
-        const response = await fetch(`${apiBase}/api/create-epika-event-checkout`, {
+        const response = await fetch(`${apiBase}/api/create-checkout-session`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
