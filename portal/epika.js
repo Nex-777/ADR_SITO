@@ -946,10 +946,88 @@ async function caricaEventiDisponibili() {
     }
 }
 
+// State per gli orari inline nel form di iscrizione
+let currentOraArrivo = '';
+let currentOraRipartenza = '';
+let currentEventoDataInizio = '';
+let currentEventoDataFine = '';
+let currentEventoOraArrivoMin = '09:00';
+let currentEventoOraRipartenzaMax = '18:00';
+
+function aggiornaInlinerOrari() {
+    // 1. Salva valori correnti se già digitati
+    const inpArr = document.getElementById('epk-time-arrivo');
+    const inpRip = document.getElementById('epk-time-ripartenza');
+    if (inpArr && inpArr.value) currentOraArrivo = inpArr.value;
+    if (inpRip && inpRip.value) currentOraRipartenza = inpRip.value;
+
+    // 2. Rimuovi tutti i contenitori di orario esistenti nelle righe
+    document.querySelectorAll('.epk-time-wrapper').forEach(el => el.remove());
+
+    // 3. Trova le checkbox selezionate ordinate per data
+    const checkedCheckboxes = Array.from(document.querySelectorAll('input[name="giorni-presenza-check"]:checked'));
+    if (checkedCheckboxes.length === 0) return;
+
+    const checkedDates = checkedCheckboxes.map(cb => cb.value).sort();
+    const firstDate = checkedDates[0];
+    const lastDate = checkedDates[checkedDates.length - 1];
+
+    // Se non abbiamo ancora orari in memoria, usiamo gli orari limite dell'evento
+    if (!currentOraArrivo) currentOraArrivo = currentEventoOraArrivoMin || '09:00';
+    if (!currentOraRipartenza) currentOraRipartenza = currentEventoOraRipartenzaMax || '18:00';
+
+    // 4. Inserisci input per Primo Giorno (Ora Arrivo)
+    const firstRowInput = document.querySelector(`input[name="giorni-presenza-check"][value="${firstDate}"]`);
+    const firstRowLabel = firstRowInput ? firstRowInput.closest('label') : null;
+    if (firstRowLabel) {
+        const minAttr = (firstDate === currentEventoDataInizio && currentEventoOraArrivoMin) ? `min="${currentEventoOraArrivoMin}"` : '';
+        const arrHtml = `
+            <div class="epk-time-wrapper" style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px;">
+                <span style="font-size: 10px; color: var(--epk-gold); text-transform: uppercase;">Ora Arrivo:</span>
+                <input type="time" id="epk-time-arrivo" class="epk-input" ${minAttr} value="${currentOraArrivo}" style="width: 105px; padding: 2px 6px; font-size: 11px;" required oninput="currentOraArrivo = this.value">
+            </div>
+        `;
+        firstRowLabel.insertAdjacentHTML('beforeend', arrHtml);
+    }
+
+    // 5. Inserisci input per Ultimo Giorno (Ora Ripartenza)
+    const lastRowInput = document.querySelector(`input[name="giorni-presenza-check"][value="${lastDate}"]`);
+    const lastRowLabel = lastRowInput ? lastRowInput.closest('label') : null;
+    if (lastRowLabel) {
+        const maxAttr = (lastDate === currentEventoDataFine && currentEventoOraRipartenzaMax) ? `max="${currentEventoOraRipartenzaMax}"` : '';
+        const ripHtml = `
+            <div class="epk-time-wrapper" style="margin-left: ${firstDate === lastDate ? '8px' : 'auto'}; display: inline-flex; align-items: center; gap: 6px;">
+                <span style="font-size: 10px; color: var(--epk-gold); text-transform: uppercase;">Ora Ripartenza:</span>
+                <input type="time" id="epk-time-ripartenza" class="epk-input" ${maxAttr} value="${currentOraRipartenza}" style="width: 105px; padding: 2px 6px; font-size: 11px;" required oninput="currentOraRipartenza = this.value">
+            </div>
+        `;
+        lastRowLabel.insertAdjacentHTML('beforeend', ripHtml);
+    }
+}
+
 async function apriModaleIscrizione(eventoId, dataInizio, dataFine) {
     try {
         document.getElementById('epk-iscrizione-modal-evento-id').value = eventoId;
         
+        currentEventoDataInizio = dataInizio;
+        currentEventoDataFine = dataFine;
+        currentEventoOraArrivoMin = '09:00';
+        currentEventoOraRipartenzaMax = '18:00';
+        currentOraArrivo = '';
+        currentOraRipartenza = '';
+
+        // Recupera orari limite dell'evento da Supabase
+        const { data: evt } = await supabaseClient
+            .from('epika_eventi')
+            .select('ora_arrivo_min, ora_ripartenza_max')
+            .eq('id', eventoId)
+            .maybeSingle();
+
+        if (evt) {
+            if (evt.ora_arrivo_min) currentEventoOraArrivoMin = evt.ora_arrivo_min.slice(0, 5);
+            if (evt.ora_ripartenza_max) currentEventoOraRipartenzaMax = evt.ora_ripartenza_max.slice(0, 5);
+        }
+
         // Genera i giorni di presenza
         const giorniContainer = document.getElementById('epk-iscrizione-modal-giorni');
         giorniContainer.innerHTML = '';
@@ -967,11 +1045,15 @@ async function apriModaleIscrizione(eventoId, dataInizio, dataFine) {
             const dateStr = d.toISOString().split('T')[0];
             const dataFormattata = formattaData(dateStr);
             giorniContainer.innerHTML += `
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer;">
-                    <input type="checkbox" name="giorni-presenza-check" value="${dateStr}" checked style="cursor: pointer;"> ${dataFormattata}
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; cursor: pointer; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.02);">
+                    <input type="checkbox" name="giorni-presenza-check" value="${dateStr}" checked style="cursor: pointer;" onchange="aggiornaInlinerOrari()">
+                    <span>${dataFormattata}</span>
                 </label>
             `;
         });
+
+        // Renderizza per la prima volta gli orari inline
+        aggiornaInlinerOrari();
 
         // Carica la lista allenatori
         const coachSelect = document.getElementById('epk-iscrizione-coach');
@@ -1007,9 +1089,7 @@ async function apriModaleIscrizione(eventoId, dataInizio, dataFine) {
             combattenteFields.classList.add('epk-hidden');
         }
 
-        // Resetta campi date e armi speciali
-        document.getElementById('epk-iscrizione-arrivo').value = '';
-        document.getElementById('epk-iscrizione-ripartenza').value = '';
+        // Resetta armi speciali
         document.getElementById('epk-wp-giavellotto').checked = false;
         document.getElementById('epk-wp-spada-lunga').checked = false;
         document.getElementById('epk-wp-lancia').checked = false;
@@ -1043,23 +1123,40 @@ async function salvaIscrizioneDettagliata() {
     const originalText = btn ? btn.innerHTML : "CONFERMA ISCRIZIONE";
     
     const eventoId = document.getElementById('epk-iscrizione-modal-evento-id').value;
-    const checkedGiorni = Array.from(document.querySelectorAll('input[name="giorni-presenza-check"]:checked')).map(cb => cb.value);
+    const checkedGiorni = Array.from(document.querySelectorAll('input[name="giorni-presenza-check"]:checked')).map(cb => cb.value).sort();
     
     if (checkedGiorni.length === 0) {
         alert("Devi selezionare almeno un giorno di presenza.");
         return;
     }
 
-    const dataOraArrivo = document.getElementById('epk-iscrizione-arrivo').value;
-    const dataOraRipartenza = document.getElementById('epk-iscrizione-ripartenza').value;
+    const firstDate = checkedGiorni[0];
+    const lastDate = checkedGiorni[checkedGiorni.length - 1];
 
-    if (!dataOraArrivo || !dataOraRipartenza) {
-        alert("Inserisci data e ora previsti di arrivo e ripartenza.");
+    const oraArrivo = document.getElementById('epk-time-arrivo')?.value || currentOraArrivo;
+    const oraRipartenza = document.getElementById('epk-time-ripartenza')?.value || currentOraRipartenza;
+
+    if (!oraArrivo || !oraRipartenza) {
+        alert("Inserisci l'orario di arrivo e di ripartenza.");
         return;
     }
 
+    // Controlli vincoli orario min e max
+    if (firstDate === currentEventoDataInizio && currentEventoOraArrivoMin && oraArrivo < currentEventoOraArrivoMin) {
+        alert(`L'evento inizia alle ${currentEventoOraArrivoMin}. Per il primo giorno non puoi indicare un orario di arrivo precedente.`);
+        return;
+    }
+
+    if (lastDate === currentEventoDataFine && currentEventoOraRipartenzaMax && oraRipartenza > currentEventoOraRipartenzaMax) {
+        alert(`L'evento termina alle ${currentEventoOraRipartenzaMax}. Per l'ultimo giorno non puoi indicare un orario di ripartenza successivo.`);
+        return;
+    }
+
+    const dataOraArrivo = `${firstDate}T${oraArrivo}:00`;
+    const dataOraRipartenza = `${lastDate}T${oraRipartenza}:00`;
+
     if (new Date(dataOraRipartenza) <= new Date(dataOraArrivo)) {
-        alert("La data di ripartenza deve essere successiva alla data di arrivo.");
+        alert("La data e ora di ripartenza deve essere successiva alla data e ora di arrivo.");
         return;
     }
 
@@ -2297,7 +2394,7 @@ async function renderEventiAdmin() {
                         <div>
                             <span class="epk-headline" style="font-size: 14px; color: var(--epk-gold);">${evt.titolo.toUpperCase()}</span>
                             <span style="font-size: 10px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.5); uppercase; margin-top: 2px;">
-                                📅 ${dataFormattata} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')} | 💰 COSTO: €${parseFloat(evt.costo || 0).toFixed(2)}
+                                📅 ${dataFormattata} | ⏰ INIZIO: ${evt.ora_arrivo_min ? evt.ora_arrivo_min.slice(0, 5) : '09:00'} - FINE: ${evt.ora_ripartenza_max ? evt.ora_ripartenza_max.slice(0, 5) : '18:00'} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')} | 💰 COSTO: €${parseFloat(evt.costo || 0).toFixed(2)}
                             </span>
                         </div>
                         <div style="display: flex; gap: 8px;">
@@ -2322,6 +2419,8 @@ function mostraFormCreaEvento() {
     document.getElementById('evt-data-inizio').value = todayStr;
     document.getElementById('evt-data-fine').value = todayStr;
     document.getElementById('evt-costo').value = '0.00';
+    if (document.getElementById('evt-ora-arrivo-min')) document.getElementById('evt-ora-arrivo-min').value = '09:00';
+    if (document.getElementById('evt-ora-ripartenza-max')) document.getElementById('evt-ora-ripartenza-max').value = '18:00';
 }
 
 function nascondiFormCreaEvento() {
@@ -2336,6 +2435,8 @@ async function salvaEventoStorico() {
     const dataFine = document.getElementById('evt-data-fine').value;
     const tipo = document.getElementById('evt-tipo').value;
     const costo = parseFloat(document.getElementById('evt-costo').value) || 0;
+    const oraArrivoMin = document.getElementById('evt-ora-arrivo-min') ? document.getElementById('evt-ora-arrivo-min').value : '09:00';
+    const oraRipartenzaMax = document.getElementById('evt-ora-ripartenza-max') ? document.getElementById('evt-ora-ripartenza-max').value : '18:00';
     const descrizione = document.getElementById('evt-descrizione').value.trim();
 
     if (!titolo || !luogo || !dataInizio || !dataFine || !tipo) {
@@ -2358,6 +2459,8 @@ async function salvaEventoStorico() {
                 data_fine: dataFine,
                 tipo_evento: tipo,
                 costo: costo,
+                ora_arrivo_min: oraArrivoMin || '09:00',
+                ora_ripartenza_max: oraRipartenzaMax || '18:00',
                 descrizione: descrizione || null
             });
 
