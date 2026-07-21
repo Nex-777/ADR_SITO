@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.02.36">
+    <link rel="stylesheet" href="epika.css?v=1.03.00">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.02.36"></script>
+    <script src="config.js?v=1.03.00"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.02.36</span>
+            <span class="epk-version-badge">Vs. 1.03.00</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -230,6 +230,9 @@
                     </button>
                     <button id="epk-adm-btn-generale" class="epk-sidebar-btn" onclick="switchAdminTab('generale')">
                         LISTA GENERALE
+                    </button>
+                    <button id="epk-adm-btn-contabilita" class="epk-sidebar-btn" onclick="switchAdminTab('contabilita')">
+                        CONTABILITÀ
                     </button>
                     <button id="epk-adm-btn-logistica" class="epk-sidebar-btn epk-hidden" onclick="switchAdminTab('logistica')">
                         LOGISTICA
@@ -773,6 +776,91 @@
                                     </thead>
                                     <tbody id="adm-generale-table-body">
                                         <!-- Popolato dinamicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 7: Contabilità & Bilancio Eventi -->
+                    <div id="epk-adm-tab-contabilita" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <h2 class="epk-headline" style="margin: 0; font-size: 16px;">
+                                        CONTABILITÀ & BILANCIO EVENTI
+                                    </h2>
+                                    <p style="font-size: 11px; color: rgba(245, 230, 200, 0.7); margin: 4px 0 0 0;">
+                                        Rendicontazione finanziaria, incassi, spese e bilancio d'esercizio degli eventi EPIKA
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button class="epk-btn" onclick="apriModaleIncassoManuale()" style="padding: 6px 12px; font-size: 10px;">+ REGISTRA INCASSO</button>
+                                    <button class="epk-btn-secondary" onclick="apriModaleNuovaSpesa()" style="padding: 6px 12px; font-size: 10px; border-color: #a53b3b; color: #ff8d8d;">+ REGISTRA SPESA</button>
+                                    <button class="epk-btn-secondary" onclick="esportaCSVContabilita()" style="padding: 6px 12px; font-size: 10px;">ESPORTA CSV</button>
+                                </div>
+                            </div>
+
+                            <!-- Top KPI Cards -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.2); padding: 12px; border-radius: 4px;">
+                                    <span style="font-size: 10px; font-weight: bold; color: var(--epk-gold-dim); text-transform: uppercase;">Incasso Lordo Totale</span>
+                                    <div id="cnt-kpi-incassi" style="font-size: 20px; font-weight: bold; color: #4ade80; margin-top: 4px;">€ 0,00</div>
+                                    <span style="font-size: 9px; color: #888;">Entrate registrate</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.2); padding: 12px; border-radius: 4px;">
+                                    <span style="font-size: 10px; font-weight: bold; color: var(--epk-gold-dim); text-transform: uppercase;">Spese Totali</span>
+                                    <div id="cnt-kpi-spese" style="font-size: 20px; font-weight: bold; color: #f87171; margin-top: 4px;">€ 0,00</div>
+                                    <span style="font-size: 9px; color: #888;">Uscite documentate</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.2); padding: 12px; border-radius: 4px;">
+                                    <span style="font-size: 10px; font-weight: bold; color: var(--epk-gold-dim); text-transform: uppercase;">Utile Netto</span>
+                                    <div id="cnt-kpi-utile" style="font-size: 20px; font-weight: bold; color: var(--epk-gold); margin-top: 4px;">€ 0,00</div>
+                                    <span id="cnt-kpi-margine-pct" style="font-size: 9px; color: #aaa;">Margine: 0%</span>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.2); padding: 12px; border-radius: 4px;">
+                                    <span style="font-size: 10px; font-weight: bold; color: var(--epk-gold-dim); text-transform: uppercase;">Ricevute Saldate</span>
+                                    <div id="cnt-kpi-ricevute" style="font-size: 20px; font-weight: bold; color: #fff; margin-top: 4px;">0</div>
+                                    <span style="font-size: 9px; color: #888;">Transazioni elaborate</span>
+                                </div>
+                            </div>
+
+                            <!-- Control Bar: Filtri e Ricerca -->
+                            <div style="display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border: 1px solid rgba(251, 191, 36, 0.1); flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <label style="font-size: 10px; color: var(--epk-gold);">DA:</label>
+                                    <input type="date" id="cnt-filter-start" class="epk-input" style="font-size: 11px; padding: 4px 6px; width: auto;" onchange="applicaFiltriContabilita()">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <label style="font-size: 10px; color: var(--epk-gold);">A:</label>
+                                    <input type="date" id="cnt-filter-end" class="epk-input" style="font-size: 11px; padding: 4px 6px; width: auto;" onchange="applicaFiltriContabilita()">
+                                </div>
+                                <button class="epk-btn-secondary" onclick="setFilterPresetContabilita('2026')" style="font-size: 9px; padding: 4px 8px;">ANNO 2026</button>
+                                <button class="epk-btn-secondary" onclick="setFilterPresetContabilita('30g')" style="font-size: 9px; padding: 4px 8px;">ULTIMI 30 GG</button>
+                                <button class="epk-btn-secondary" onclick="setFilterPresetContabilita('tutto')" style="font-size: 9px; padding: 4px 8px;">TUTTO</button>
+                                
+                                <input type="text" id="cnt-search-input" class="epk-input" placeholder="Cerca evento o atleta..." style="font-size: 11px; flex: 1; min-width: 160px; padding: 4px 8px;" oninput="applicaFiltriContabilita()">
+                            </div>
+
+                            <!-- Tabella Ripartizione Per Evento -->
+                            <div style="overflow-x: auto;">
+                                <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif;">
+                                            <th style="padding: 10px; width: 40px; text-align: center;">N.</th>
+                                            <th style="padding: 10px;">Titolo Evento</th>
+                                            <th style="padding: 10px;">Date</th>
+                                            <th style="padding: 10px; text-align: right;">Ticket (€)</th>
+                                            <th style="padding: 10px; text-align: center;">Iscritti</th>
+                                            <th style="padding: 10px; text-align: center;">Paganti</th>
+                                            <th style="padding: 10px; text-align: right;">Incasso (€)</th>
+                                            <th style="padding: 10px; text-align: right;">Spese (€)</th>
+                                            <th style="padding: 10px; text-align: right;">Utile Netto (€)</th>
+                                            <th style="padding: 10px; text-align: center;">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cnt-tbody-eventi">
+                                        <!-- Popolato via JS -->
                                     </tbody>
                                 </table>
                             </div>
@@ -1399,6 +1487,171 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.02.36"></script>
+    <!-- Modale Registra Incasso Manuale -->
+    <div id="cnt-modal-incasso" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+        <div class="epk-card" style="width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <h3 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                REGISTRA INCASSO MANUALE
+            </h3>
+            <form onsubmit="salvaIncassoManuale(event)" style="display: flex; flex-direction: column; gap: 14px;">
+                <div>
+                    <label class="epk-label">Evento di Riferimento *</label>
+                    <select id="cnt-inc-evento" class="epk-input" required>
+                        <option value="">Seleziona Evento...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="epk-label">Atleta / Tesserato (Opzionale)</label>
+                    <select id="cnt-inc-atleta" class="epk-input">
+                        <option value="">Nessuno / Incasso Esterno</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label class="epk-label">Importo (€) *</label>
+                        <input type="number" step="0.01" min="0.01" id="cnt-inc-importo" class="epk-input" placeholder="Es. 50.00" required>
+                    </div>
+                    <div>
+                        <label class="epk-label">Metodo di Pagamento *</label>
+                        <select id="cnt-inc-metodo" class="epk-input" required>
+                            <option value="CONTANTI">CONTANTI</option>
+                            <option value="BONIFICO">BONIFICO BANCARIO</option>
+                            <option value="POS">POS / CARTA SUL POSTO</option>
+                            <option value="ALTRO">ALTRO</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="epk-label">Data Pagamento *</label>
+                    <input type="date" id="cnt-inc-data" class="epk-input" required>
+                </div>
+                <div>
+                    <label class="epk-label">Causale / Note *</label>
+                    <input type="text" id="cnt-inc-causale" class="epk-input" placeholder="Es. Iscrizione Masada Contanti" required>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button type="button" class="epk-btn-secondary" onclick="chiudiModaleIncassoManuale()">ANNULLA</button>
+                    <button type="submit" class="epk-btn">SALVA INCASSO</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale Registra Spesa -->
+    <div id="cnt-modal-spesa" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+        <div class="epk-card" style="width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <h3 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px; color: #ff8d8d;">
+                REGISTRA NUOVA SPESA
+            </h3>
+            <form onsubmit="salvaNuovaSpesa(event)" style="display: flex; flex-direction: column; gap: 14px;">
+                <div>
+                    <label class="epk-label">Evento Imputato (Opzionale)</label>
+                    <select id="cnt-sps-evento" class="epk-input">
+                        <option value="">Spesa Generale Associazione</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="epk-label">Titolo Spesa / Descrizione *</label>
+                    <input type="text" id="cnt-sps-titolo" class="epk-input" placeholder="Es. Noleggio Service Audio" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label class="epk-label">Importo (€) *</label>
+                        <input type="number" step="0.01" min="0.01" id="cnt-sps-importo" class="epk-input" placeholder="Es. 150.00" required>
+                    </div>
+                    <div>
+                        <label class="epk-label">Categoria *</label>
+                        <select id="cnt-sps-categoria" class="epk-input" required>
+                            <option value="LOGISTICA">LOGISTICA & TRASPORTI</option>
+                            <option value="NOLEGGIO">NOLEGGIO ATTREZZATURE</option>
+                            <option value="CIBO">CIBO & CATERING</option>
+                            <option value="MATERIALI">MATERIALI & CONSUMABILI</option>
+                            <option value="MARKETING">MARKETING & STAMPA</option>
+                            <option value="ASSICURAZIONE">ASSICURAZIONE & PERMESSI</option>
+                            <option value="ALTRO">ALTRO</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="epk-label">Data Spesa *</label>
+                    <input type="date" id="cnt-sps-data" class="epk-input" required>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button type="button" class="epk-btn-secondary" onclick="chiudiModaleNuovaSpesa()">ANNULLA</button>
+                    <button type="submit" class="epk-btn" style="background: #8b1e1e; border-color: #e54d4d; color: white;">SALVA SPESA</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale Dettaglio Bilancio Evento -->
+    <div id="cnt-modal-dettaglio" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; overflow-y: auto;">
+        <div class="epk-card" style="width: 100%; max-width: 850px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                <h3 id="cnt-det-titolo" class="epk-headline" style="margin: 0; font-size: 16px;">DETTAGLIO BILANCIO EVENTO</h3>
+                <button class="epk-btn-secondary" onclick="chiudiDettaglioBilancioEvento()" style="padding: 4px 8px; font-size: 10px;">X CHIUDI</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px;">
+                <div>
+                    <span style="font-size: 9px; color: #aaa;">ENTRATE LORDE</span>
+                    <div id="cnt-det-kpi-incassi" style="font-size: 16px; font-weight: bold; color: #4ade80;">€ 0,00</div>
+                </div>
+                <div>
+                    <span style="font-size: 9px; color: #aaa;">USCITE/SPESE</span>
+                    <div id="cnt-det-kpi-spese" style="font-size: 16px; font-weight: bold; color: #f87171;">€ 0,00</div>
+                </div>
+                <div>
+                    <span style="font-size: 9px; color: #aaa;">UTILE NETTO</span>
+                    <div id="cnt-det-kpi-utile" style="font-size: 16px; font-weight: bold; color: var(--epk-gold);">€ 0,00</div>
+                </div>
+            </div>
+
+            <!-- Tab Switcher Entrate / Uscite -->
+            <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(251, 191, 36, 0.2);">
+                <button id="cnt-det-tab-btn-entrate" class="epk-btn" onclick="switchDettaglioEventoTab('entrate')" style="font-size: 10px; padding: 6px 12px;">ENTRATE / RICEVUTE</button>
+                <button id="cnt-det-tab-btn-uscite" class="epk-btn-secondary" onclick="switchDettaglioEventoTab('uscite')" style="font-size: 10px; padding: 6px 12px;">USCITE / SPESE</button>
+            </div>
+
+            <!-- Tab Content 1: Entrate -->
+            <div id="cnt-det-tab-entrate">
+                <div style="overflow-x: auto; max-height: 300px;">
+                    <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+                        <thead>
+                            <tr style="color: var(--epk-gold); border-bottom: 1px solid var(--epk-gold-dim);">
+                                <th style="padding: 6px;">Data</th>
+                                <th style="padding: 6px;">Atleta</th>
+                                <th style="padding: 6px;">Metodo</th>
+                                <th style="padding: 6px; text-align: right;">Importo (€)</th>
+                                <th style="padding: 6px;">Codice Transazione / N. Ricevuta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cnt-det-tbody-entrate"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Uscite -->
+            <div id="cnt-det-tab-uscite" class="epk-hidden">
+                <div style="overflow-x: auto; max-height: 300px;">
+                    <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px;">
+                        <thead>
+                            <tr style="color: #f87171; border-bottom: 1px solid rgba(248, 113, 113, 0.3);">
+                                <th style="padding: 6px;">Data</th>
+                                <th style="padding: 6px;">Titolo / Descrizione</th>
+                                <th style="padding: 6px;">Categoria</th>
+                                <th style="padding: 6px; text-align: right;">Importo (€)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cnt-det-tbody-uscite"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="epika.js?v=1.03.00"></script>
 </body>
 </html>

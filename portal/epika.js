@@ -1401,6 +1401,8 @@ function switchAdminTab(tab) {
         renderEventiAdmin();
     } else if (tab === 'generale') {
         renderListaGeneraleAdmin();
+    } else if (tab === 'contabilita') {
+        renderContabilitaAdmin();
     }
 }
 
@@ -4965,11 +4967,491 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
                     <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${i.equipaggiamento}</td>
                     <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${i.stato_pagamento}</td>
                 </tr>`;
-        });
     } catch (e) {
         console.error("Errore dettagli partecipanti validatore:", e);
         tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
     }
 }
+
+// ============================================================
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.00)
+// ============================================================
+let contabilitaState = {
+    eventi: [],
+    iscrizioni: [],
+    ricevute: [],
+    spese: [],
+    profili: []
+};
+let contabilitaEventoSelezionatoId = null;
+
+async function renderContabilitaAdmin() {
+    const tbody = document.getElementById('cnt-tbody-eventi');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 15px; color: gray;">Caricamento dati contabili in corso...</td></tr>';
+
+    try {
+        // 1. Carica dati in parallelo da Supabase
+        const [resEventi, resIscrizioni, resRicevute, resSpese, resProfili] = await Promise.all([
+            supabaseClient.from('epika_eventi').select('*').order('data_inizio', { ascending: false }),
+            supabaseClient.from('epika_iscrizioni_eventi').select('*'),
+            supabaseClient.from('ricevute_pagamenti').select('*'),
+            supabaseClient.from('registro_spese').select('*'),
+            supabaseClient.from('epika_profili').select('id, nome_di_battaglia')
+        ]);
+
+        if (resEventi.error) throw resEventi.error;
+        if (resIscrizioni.error) throw resIscrizioni.error;
+        if (resRicevute.error) throw resRicevute.error;
+        if (resSpese.error) throw resSpese.error;
+        if (resProfili.error) throw resProfili.error;
+
+        contabilitaState.eventi = resEventi.data || [];
+        contabilitaState.iscrizioni = resIscrizioni.data || [];
+        contabilitaState.ricevute = resRicevute.data || [];
+        contabilitaState.spese = resSpese.data || [];
+        contabilitaState.profili = resProfili.data || [];
+
+        // Popola i selettori degli eventi nei modali
+        popolaSelettoriEventiContabilita();
+
+        // Applica i filtri e disegna la dashboard
+        applicaFiltriContabilita();
+    } catch (err) {
+        console.error("Errore durante il caricamento della contabilità:", err);
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 15px; color: red;">Errore durante il caricamento dei dati contabili.</td></tr>';
+    }
+}
+
+function popolaSelettoriEventiContabilita() {
+    const selInc = document.getElementById('cnt-inc-evento');
+    const selSps = document.getElementById('cnt-sps-evento');
+    const selAtl = document.getElementById('cnt-inc-atleta');
+
+    if (selInc) {
+        selInc.innerHTML = '<option value="">Seleziona Evento...</option>' +
+            contabilitaState.eventi.map(e => `<option value="${e.id}">${e.titolo}</option>`).join('');
+    }
+    if (selSps) {
+        selSps.innerHTML = '<option value="">Spesa Generale Associazione</option>' +
+            contabilitaState.eventi.map(e => `<option value="${e.id}">${e.titolo}</option>`).join('');
+    }
+    if (selAtl) {
+        selAtl.innerHTML = '<option value="">Nessuno / Incasso Esterno</option>' +
+            contabilitaState.profili.map(p => `<option value="${p.id}">${p.nome_di_battaglia}</option>`).join('');
+    }
+}
+
+function setFilterPresetContabilita(preset) {
+    const startInput = document.getElementById('cnt-filter-start');
+    const endInput = document.getElementById('cnt-filter-end');
+
+    if (preset === '2026') {
+        if (startInput) startInput.value = '2026-01-01';
+        if (endInput) endInput.value = '2026-12-31';
+    } else if (preset === '30g') {
+        const d = new Date();
+        if (endInput) endInput.value = d.toISOString().split('T')[0];
+        d.setDate(d.getDate() - 30);
+        if (startInput) startInput.value = d.toISOString().split('T')[0];
+    } else if (preset === 'tutto') {
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
+    }
+    applicaFiltriContabilita();
+}
+
+function applicaFiltriContabilita() {
+    const startDateVal = document.getElementById('cnt-filter-start')?.value;
+    const endDateVal = document.getElementById('cnt-filter-end')?.value;
+    const searchText = (document.getElementById('cnt-search-input')?.value || '').trim().toLowerCase();
+
+    const startDate = startDateVal ? new Date(startDateVal) : null;
+    const endDate = endDateVal ? new Date(endDateVal + 'T23:59:59') : null;
+
+    // Filtra ricevute in base alla data
+    const ricevuteFiltrate = contabilitaState.ricevute.filter(r => {
+        if (!r.data_pagamento) return true;
+        const dt = new Date(r.data_pagamento);
+        if (startDate && dt < startDate) return false;
+        if (endDate && dt > endDate) return false;
+        return true;
+    });
+
+    // Filtra spese in base alla data
+    const speseFiltrate = contabilitaState.spese.filter(s => {
+        if (!s.data_spesa) return true;
+        const dt = new Date(s.data_spesa);
+        if (startDate && dt < startDate) return false;
+        if (endDate && dt > endDate) return false;
+        return true;
+    });
+
+    // Filtra eventi in base al testo o alle date
+    const eventiFiltrati = contabilitaState.eventi.filter(e => {
+        if (searchText && !e.titolo.toLowerCase().includes(searchText)) {
+            // Verifica se la ricerca corrisponde al nome di un atleta pagante dell'evento
+            const iscrizioniEv = contabilitaState.iscrizioni.filter(i => i.evento_id === e.id);
+            const haAtleta = iscrizioniEv.some(i => {
+                const p = contabilitaState.profili.find(pr => pr.id === i.utente_id);
+                return p && p.nome_di_battaglia.toLowerCase().includes(searchText);
+            });
+            if (!haAtleta) return false;
+        }
+        return true;
+    });
+
+    // Calcolo KPI complessivi
+    let totIncassi = 0;
+    let totSpese = 0;
+    let totRicevuteCount = ricevuteFiltrate.length;
+
+    ricevuteFiltrate.forEach(r => { totIncassi += (parseFloat(r.importo) || 0); });
+    speseFiltrate.forEach(s => { totSpese += (parseFloat(s.importo) || 0); });
+
+    const utileNetto = totIncassi - totSpese;
+    const marginePct = totIncassi > 0 ? ((utileNetto / totIncassi) * 100).toFixed(1) : 0;
+
+    // Aggiorna KPI DOM
+    const kpiInc = document.getElementById('cnt-kpi-incassi');
+    const kpiSps = document.getElementById('cnt-kpi-spese');
+    const kpiUtl = document.getElementById('cnt-kpi-utile');
+    const kpiMrg = document.getElementById('cnt-kpi-margine-pct');
+    const kpiRcv = document.getElementById('cnt-kpi-ricevute');
+
+    if (kpiInc) kpiInc.innerText = `€ ${totIncassi.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (kpiSps) kpiSps.innerText = `€ ${totSpese.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (kpiUtl) {
+        kpiUtl.innerText = `€ ${utileNetto.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        kpiUtl.style.color = utileNetto >= 0 ? 'var(--epk-gold)' : '#f87171';
+    }
+    if (kpiMrg) kpiMrg.innerText = `Margine: ${marginePct}%`;
+    if (kpiRcv) kpiRcv.innerText = totRicevuteCount;
+
+    // Render Tabella Eventi
+    const tbody = document.getElementById('cnt-tbody-eventi');
+    if (!tbody) return;
+
+    if (eventiFiltrati.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 15px; color: gray;">Nessun evento trovato con i filtri attuali.</td></tr>';
+        return;
+    }
+
+    let rowsHtml = '';
+    eventiFiltrati.forEach((ev, idx) => {
+        const costVal = parseFloat(ev.costo) || 0;
+        const iscrizioniEv = contabilitaState.iscrizioni.filter(i => i.evento_id === ev.id);
+        const totalIscritti = iscrizioniEv.length;
+
+        // Trova ricevute dell'evento (tramite iscrizione o tramite evento_id diretto)
+        const ricevutaIds = iscrizioniEv.map(i => i.ricevuta_id).filter(Boolean);
+        const ricevuteEv = contabilitaState.ricevute.filter(r => ricevutaIds.includes(r.id) || r.evento_id === ev.id);
+        
+        let incassoEv = 0;
+        ricevuteEv.forEach(r => { incassoEv += (parseFloat(r.importo) || 0); });
+
+        // Spese dell'evento
+        const speseEvList = contabilitaState.spese.filter(s => s.evento_id === ev.id);
+        let speseEv = 0;
+        speseEvList.forEach(s => { speseEv += (parseFloat(s.importo) || 0); });
+
+        const utileEv = incassoEv - speseEv;
+        const pagantiCount = ricevuteEv.length;
+
+        const dataInizioStr = ev.data_inizio ? new Date(ev.data_inizio).toLocaleDateString('it-IT') : '-';
+        const dataFineStr = ev.data_fine ? new Date(ev.data_fine).toLocaleDateString('it-IT') : '-';
+        const dateStr = `${dataInizioStr} - ${dataFineStr}`;
+
+        const utileColor = utileEv > 0 ? '#4ade80' : (utileEv < 0 ? '#f87171' : '#aaa');
+
+        rowsHtml += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 10px; text-align: center; font-weight: bold; color: var(--epk-gold-dim);">${idx + 1}</td>
+                <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${ev.titolo}</td>
+                <td style="padding: 10px; font-size: 10px; color: #bbb;">${dateStr}</td>
+                <td style="padding: 10px; text-align: right;">€ ${costVal.toFixed(2)}</td>
+                <td style="padding: 10px; text-align: center; font-weight: bold;">${totalIscritti}</td>
+                <td style="padding: 10px; text-align: center; color: #4ade80;">${pagantiCount}</td>
+                <td style="padding: 10px; text-align: right; font-weight: bold; color: #4ade80;">€ ${incassoEv.toFixed(2)}</td>
+                <td style="padding: 10px; text-align: right; color: #f87171;">€ ${speseEv.toFixed(2)}</td>
+                <td style="padding: 10px; text-align: right; font-weight: bold; color: ${utileColor};">€ ${utileEv.toFixed(2)}</td>
+                <td style="padding: 10px; text-align: center;">
+                    <button class="epk-btn-secondary" onclick="apriDettaglioBilancioEvento('${ev.id}')" style="font-size: 9px; padding: 4px 8px;">DETTAGLIO</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rowsHtml;
+}
+
+// ------------------------------------------------------------
+// MODALI INCASSI E SPESE MANUALE
+// ------------------------------------------------------------
+function apriModaleIncassoManuale() {
+    const modal = document.getElementById('cnt-modal-incasso');
+    if (modal) {
+        modal.classList.remove('epk-hidden');
+        document.getElementById('cnt-inc-data').value = new Date().toISOString().split('T')[0];
+    }
+}
+
+function chiudiModaleIncassoManuale() {
+    const modal = document.getElementById('cnt-modal-incasso');
+    if (modal) modal.classList.add('epk-hidden');
+}
+
+async function salvaIncassoManuale(e) {
+    e.preventDefault();
+    const eventoId = document.getElementById('cnt-inc-evento').value;
+    const utenteId = document.getElementById('cnt-inc-atleta').value || null;
+    const importo = parseFloat(document.getElementById('cnt-inc-importo').value);
+    const metodo = document.getElementById('cnt-inc-metodo').value;
+    const dataPagamento = document.getElementById('cnt-inc-data').value;
+    const causale = document.getElementById('cnt-inc-causale').value.trim();
+
+    if (!eventoId || !importo || !metodo || !dataPagamento || !causale) {
+        alert("Compila tutti i campi obbligatori.");
+        return;
+    }
+
+    try {
+        const annoFiscale = new Date(dataPagamento).getFullYear();
+        const numRicevuta = Math.floor(1000 + Math.random() * 9000);
+
+        const { data: ricData, error: ricErr } = await supabaseClient
+            .from('ricevute_pagamenti')
+            .insert([{
+                numero_ricevuta: numRicevuta,
+                anno_fiscale: annoFiscale,
+                utente_id: utenteId,
+                evento_id: eventoId,
+                importo: importo,
+                causale: causale,
+                data_pagamento: dataPagamento,
+                metodo_pagamento: metodo,
+                codice_transazione: `MANUAL_${Date.now()}`
+            }])
+            .select()
+            .single();
+
+        if (ricErr) throw ricErr;
+
+        alert("Incasso manuale registrato con successo!");
+        chiudiModaleIncassoManuale();
+        renderContabilitaAdmin();
+    } catch (err) {
+        console.error("Errore salvaIncassoManuale:", err);
+        alert("Errore durante il salvataggio dell'incasso: " + err.message);
+    }
+}
+
+function apriModaleNuovaSpesa() {
+    const modal = document.getElementById('cnt-modal-spesa');
+    if (modal) {
+        modal.classList.remove('epk-hidden');
+        document.getElementById('cnt-sps-data').value = new Date().toISOString().split('T')[0];
+    }
+}
+
+function chiudiModaleNuovaSpesa() {
+    const modal = document.getElementById('cnt-modal-spesa');
+    if (modal) modal.classList.add('epk-hidden');
+}
+
+async function salvaNuovaSpesa(e) {
+    e.preventDefault();
+    const eventoId = document.getElementById('cnt-sps-evento').value || null;
+    const titolo = document.getElementById('cnt-sps-titolo').value.trim();
+    const importo = parseFloat(document.getElementById('cnt-sps-importo').value);
+    const categoria = document.getElementById('cnt-sps-categoria').value;
+    const dataSpesa = document.getElementById('cnt-sps-data').value;
+
+    if (!titolo || !importo || !categoria || !dataSpesa) {
+        alert("Compila tutti i campi obbligatori.");
+        return;
+    }
+
+    try {
+        const { error: spsErr } = await supabaseClient
+            .from('registro_spese')
+            .insert([{
+                evento_id: eventoId,
+                titolo: titolo,
+                importo: importo,
+                categoria: categoria,
+                data_spesa: dataSpesa,
+                registrato_da: currentUser.id
+            }]);
+
+        if (spsErr) throw spsErr;
+
+        alert("Spesa registrata con successo!");
+        chiudiModaleNuovaSpesa();
+        renderContabilitaAdmin();
+    } catch (err) {
+        console.error("Errore salvaNuovaSpesa:", err);
+        alert("Errore durante il salvataggio della spesa: " + err.message);
+    }
+}
+
+// ------------------------------------------------------------
+// DETTAGLIO BILANCIO EVENTO (MODAL / DRAWER)
+// ------------------------------------------------------------
+function apriDettaglioBilancioEvento(eventoId) {
+    contabilitaEventoSelezionatoId = eventoId;
+    const ev = contabilitaState.eventi.find(e => e.id === eventoId);
+    if (!ev) return;
+
+    const modal = document.getElementById('cnt-modal-dettaglio');
+    const titolo = document.getElementById('cnt-det-titolo');
+
+    if (titolo) titolo.innerText = `DETTAGLIO BILANCIO: ${ev.titolo.toUpperCase()}`;
+
+    // Filtra entrate ed uscite per questo evento
+    const iscrizioniEv = contabilitaState.iscrizioni.filter(i => i.evento_id === eventoId);
+    const ricevutaIds = iscrizioniEv.map(i => i.ricevuta_id).filter(Boolean);
+    const ricevuteEv = contabilitaState.ricevute.filter(r => ricevutaIds.includes(r.id) || r.evento_id === eventoId);
+    const speseEv = contabilitaState.spese.filter(s => s.evento_id === eventoId);
+
+    let totInc = 0;
+    let totSps = 0;
+    ricevuteEv.forEach(r => { totInc += (parseFloat(r.importo) || 0); });
+    speseEv.forEach(s => { totSps += (parseFloat(s.importo) || 0); });
+    const utileNetto = totInc - totSps;
+
+    const kpiInc = document.getElementById('cnt-det-kpi-incassi');
+    const kpiSps = document.getElementById('cnt-det-kpi-spese');
+    const kpiUtl = document.getElementById('cnt-det-kpi-utile');
+
+    if (kpiInc) kpiInc.innerText = `€ ${totInc.toFixed(2)}`;
+    if (kpiSps) kpiSps.innerText = `€ ${totSps.toFixed(2)}`;
+    if (kpiUtl) {
+        kpiUtl.innerText = `€ ${utileNetto.toFixed(2)}`;
+        kpiUtl.style.color = utileNetto >= 0 ? 'var(--epk-gold)' : '#f87171';
+    }
+
+    // Render Entrate
+    const tbodyEntrate = document.getElementById('cnt-det-tbody-entrate');
+    if (tbodyEntrate) {
+        if (ricevuteEv.length === 0) {
+            tbodyEntrate.innerHTML = '<tr><td colspan="5" style="padding: 10px; text-align: center; color: gray;">Nessun incasso registrato per questo evento.</td></tr>';
+        } else {
+            tbodyEntrate.innerHTML = ricevuteEv.map(r => {
+                const prof = contabilitaState.profili.find(p => p.id === r.utente_id);
+                const nomeAtleta = prof ? prof.nome_di_battaglia : 'Incasso Diretto / Esterno';
+                const dataPag = r.data_pagamento ? new Date(r.data_pagamento).toLocaleDateString('it-IT') : '-';
+                const codice = r.codice_transazione || (r.numero_ricevuta ? `Ric. N.${r.numero_ricevuta}` : 'N/D');
+
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 6px;">${dataPag}</td>
+                        <td style="padding: 6px; font-weight: bold; color: var(--epk-parchment);">${nomeAtleta}</td>
+                        <td style="padding: 6px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${r.metodo_pagamento || 'STRIPE'}</span></td>
+                        <td style="padding: 6px; text-align: right; color: #4ade80; font-weight: bold;">€ ${(parseFloat(r.importo) || 0).toFixed(2)}</td>
+                        <td style="padding: 6px; font-size: 9px; color: #aaa;">${codice}</td>
+                    </tr>`;
+            }).join('');
+        }
+    }
+
+    // Render Uscite
+    const tbodyUscite = document.getElementById('cnt-det-tbody-uscite');
+    if (tbodyUscite) {
+        if (speseEv.length === 0) {
+            tbodyUscite.innerHTML = '<tr><td colspan="4" style="padding: 10px; text-align: center; color: gray;">Nessuna spesa registrata per questo evento.</td></tr>';
+        } else {
+            tbodyUscite.innerHTML = speseEv.map(s => {
+                const dataSps = s.data_spesa ? new Date(s.data_spesa).toLocaleDateString('it-IT') : '-';
+
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 6px;">${dataSps}</td>
+                        <td style="padding: 6px; font-weight: bold; color: var(--epk-parchment);">${s.titolo}</td>
+                        <td style="padding: 6px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0; background: rgba(248, 113, 113, 0.2); border-color: #f87171; color: #f87171;">${s.categoria}</span></td>
+                        <td style="padding: 6px; text-align: right; color: #f87171; font-weight: bold;">€ ${(parseFloat(s.importo) || 0).toFixed(2)}</td>
+                    </tr>`;
+            }).join('');
+        }
+    }
+
+    switchDettaglioEventoTab('entrate');
+    if (modal) modal.classList.remove('epk-hidden');
+}
+
+function switchDettaglioEventoTab(tab) {
+    const tabEntrate = document.getElementById('cnt-det-tab-entrate');
+    const tabUscite = document.getElementById('cnt-det-tab-uscite');
+    const btnEntrate = document.getElementById('cnt-det-tab-btn-entrate');
+    const btnUscite = document.getElementById('cnt-det-tab-btn-uscite');
+
+    if (tab === 'entrate') {
+        if (tabEntrate) tabEntrate.classList.remove('epk-hidden');
+        if (tabUscite) tabUscite.classList.add('epk-hidden');
+        if (btnEntrate) { btnEntrate.className = 'epk-btn'; }
+        if (btnUscite) { btnUscite.className = 'epk-btn-secondary'; }
+    } else {
+        if (tabEntrate) tabEntrate.classList.add('epk-hidden');
+        if (tabUscite) tabUscite.classList.remove('epk-hidden');
+        if (btnEntrate) { btnEntrate.className = 'epk-btn-secondary'; }
+        if (btnUscite) { btnUscite.className = 'epk-btn'; }
+    }
+}
+
+function chiudiDettaglioBilancioEvento() {
+    const modal = document.getElementById('cnt-modal-dettaglio');
+    if (modal) modal.classList.add('epk-hidden');
+}
+
+// ------------------------------------------------------------
+// ESPORTAZIONE REPORT CSV
+// ------------------------------------------------------------
+function esportaCSVContabilita() {
+    if (!contabilitaState.eventi || contabilitaState.eventi.length === 0) {
+        alert("Nessun dato da esportare.");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "N,TITOLO EVENTO,DATA INIZIO,DATA FINE,TICKET EUR,ISCRITTI TOTALI,PAGANTI,INCASSO LORDO EUR,SPESE TOTATORI EUR,UTILE NETTO EUR\n";
+
+    contabilitaState.eventi.forEach((ev, idx) => {
+        const iscrizioniEv = contabilitaState.iscrizioni.filter(i => i.evento_id === ev.id);
+        const ricevutaIds = iscrizioniEv.map(i => i.ricevuta_id).filter(Boolean);
+        const ricevuteEv = contabilitaState.ricevute.filter(r => ricevutaIds.includes(r.id) || r.evento_id === ev.id);
+        const speseEvList = contabilitaState.spese.filter(s => s.evento_id === ev.id);
+
+        let incassoEv = 0;
+        let speseEv = 0;
+        ricevuteEv.forEach(r => { incassoEv += (parseFloat(r.importo) || 0); });
+        speseEvList.forEach(s => { speseEv += (parseFloat(s.importo) || 0); });
+        const utileEv = incassoEv - speseEv;
+
+        const row = [
+            idx + 1,
+            `"${ev.titolo.replace(/"/g, '""')}"`,
+            ev.data_inizio || '',
+            ev.data_fine || '',
+            (parseFloat(ev.costo) || 0).toFixed(2),
+            iscrizioniEv.length,
+            ricevuteEv.length,
+            incassoEv.toFixed(2),
+            speseEv.toFixed(2),
+            utileEv.toFixed(2)
+        ];
+
+        csvContent += row.join(",") + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Rendiconto_Contabile_EPIKA_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 
 
