@@ -420,7 +420,9 @@ async function caricaLookupDati() {
         if (selectGruppo) {
             selectGruppo.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
             gruppiStorici.forEach(g => {
-                selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+                if (g.stato !== 'sospeso' && g.stato !== 'cancellato') {
+                    selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+                }
             });
         }
 
@@ -628,7 +630,10 @@ async function apriModaleModificaProfilo() {
         const selectGruppo = document.getElementById('edit-gruppo-storico');
         selectGruppo.innerHTML = '<option value="" disabled>-- SELEZIONA GRUPPO --</option>';
         gruppiStorici.forEach(g => {
-            selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+            if (g.stato !== 'sospeso' && g.stato !== 'cancellato' || g.id === prof.gruppo_storico_id) {
+                const labelStatus = g.stato === 'sospeso' ? ' (SOSPESO)' : (g.stato === 'cancellato' ? ' (CANCELLATO)' : '');
+                selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}${labelStatus}</option>`;
+            }
         });
         selectGruppo.value = prof.gruppo_storico_id ? String(prof.gruppo_storico_id) : '';
 
@@ -3128,7 +3133,9 @@ async function renderGruppiStoriciAdmin() {
             if (g.stato === 'in_formazione') {
                 statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); margin-left: 6px; border-radius: 3px;">IN FORMAZIONE</span>';
             } else if (g.stato === 'sospeso') {
-                statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); margin-left: 6px; border-radius: 3px;">SOSPESO</span>';
+                statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); margin-left: 6px; border-radius: 3px;">SOSPESO</span>';
+            } else if (g.stato === 'cancellato') {
+                statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); margin-left: 6px; border-radius: 3px;">CANCELLATO</span>';
             } else {
                 statoLabel = ' <span style="font-size: 9px; padding: 2px 4px; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); margin-left: 6px; border-radius: 3px;">UFFICIALE</span>';
             }
@@ -3534,19 +3541,70 @@ async function apriDettaglioGruppo(gruppoId) {
             vice_capogruppo_id: g.vice_capogruppo_id || null,
             responsabile_iscrizioni_id: g.responsabile_iscrizioni_id || null
         };
+        oldStatoDettaglioGruppo = g.stato || 'ufficiale';
         
         document.getElementById('det-data-formazione-dal').value = g.data_inizio_formazione || '';
-        document.getElementById('det-data-formazione-al').value = g.data_fine_formazione || '';
         document.getElementById('det-data-ufficiale-dal').value = g.data_inizio_ufficiale || '';
-        document.getElementById('det-data-ufficiale-al').value = g.data_fine_ufficiale || '';
         document.getElementById('det-gruppo-stato').value = g.stato || 'ufficiale';
         document.getElementById('det-gruppo-data-stato').value = g.data_stato || '';
         
+        await caricaStoricoStatiGruppo(gruppoId);
         await caricaStoricoRuoliGruppo(gruppoId);
         
     } catch (e) {
         console.error("Errore caricamento dettaglio gruppo:", e);
         alert("Errore durante il caricamento del dettaglio gruppo.");
+    }
+}
+
+let oldStatoDettaglioGruppo = null;
+
+async function caricaStoricoStatiGruppo(gruppoId) {
+    const tbody = document.getElementById('det-storico-stati-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 8px;">Caricamento storico stati...</td></tr>';
+    
+    try {
+        const { data: storico, error } = await supabaseClient
+            .from('epika_gruppi_storico_stati')
+            .select('*')
+            .eq('gruppo_id', gruppoId)
+            .order('data_inizio', { ascending: false });
+            
+        if (error) throw error;
+        
+        if (!storico || storico.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 8px; color: gray;">Nessun cambio di stato registrato.</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        storico.forEach(s => {
+            let statoFormatted = (s.stato || '').toUpperCase().replace('_', ' ');
+            const inizioStr = s.data_inizio ? new Date(s.data_inizio).toLocaleDateString('it-IT') : 'N/D';
+            const fineStr = s.data_fine ? new Date(s.data_fine).toLocaleDateString('it-IT') : 'In corso';
+            
+            let colorStato = '#ffffff';
+            if (s.stato === 'ufficiale') colorStato = '#22c55e';
+            else if (s.stato === 'in_formazione') colorStato = '#3b82f6';
+            else if (s.stato === 'sospeso') colorStato = '#f59e0b';
+            else if (s.stato === 'cancellato') colorStato = '#ef4444';
+
+            const tr = document.createElement('tr');
+            tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
+            tr.innerHTML = `
+                <td style="padding: 8px; color: ${colorStato}; font-weight: bold;">${statoFormatted}</td>
+                <td style="padding: 8px;">${inizioStr}</td>
+                <td style="padding: 8px; ${s.data_fine ? '' : 'color: #22c55e; font-weight: bold;'}">${fineStr}</td>
+                <td style="padding: 8px; color: gray;">${s.note || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+    } catch (e) {
+        console.error("Errore caricamento storico stati:", e);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red; padding: 8px;">Errore caricamento storico stati.</td></tr>';
     }
 }
 
@@ -3698,29 +3756,46 @@ async function salvaRuoliGruppo() {
 async function salvaDateGruppo() {
     const gruppoId = parseInt(document.getElementById('det-gruppo-id').value);
     const dataFormazioneDal = document.getElementById('det-data-formazione-dal').value || null;
-    const dataFormazioneAl = document.getElementById('det-data-formazione-al').value || null;
     const dataUfficialeDal = document.getElementById('det-data-ufficiale-dal').value || null;
-    const dataUfficialeAl = document.getElementById('det-data-ufficiale-al').value || null;
-    const stato = document.getElementById('det-gruppo-stato').value;
-    const dataStato = document.getElementById('det-gruppo-data-stato').value || null;
+    const nuovoStato = document.getElementById('det-gruppo-stato').value;
+    const dataStato = document.getElementById('det-gruppo-data-stato').value || new Date().toISOString().split('T')[0];
     
     try {
         const { error } = await supabaseClient
             .from('epika_gruppi_storici')
             .update({
                 data_inizio_formazione: dataFormazioneDal,
-                data_fine_formazione: dataFormazioneAl,
                 data_inizio_ufficiale: dataUfficialeDal,
-                data_fine_ufficiale: dataUfficialeAl,
-                stato: stato,
+                stato: nuovoStato,
                 data_stato: dataStato
             })
             .eq('id', gruppoId);
             
         if (error) throw error;
         
+        if (oldStatoDettaglioGruppo !== nuovoStato) {
+            // Chiudi eventuale stato aperto in precedenza
+            await supabaseClient
+                .from('epika_gruppi_storico_stati')
+                .update({ data_fine: dataStato })
+                .eq('gruppo_id', gruppoId)
+                .is('data_fine', null);
+
+            // Inserisci nuovo stato nella macchina a stati
+            await supabaseClient
+                .from('epika_gruppi_storico_stati')
+                .insert([{
+                    gruppo_id: gruppoId,
+                    stato: nuovoStato,
+                    data_inizio: dataStato,
+                    data_fine: null,
+                    note: `Stato aggiornato a ${nuovoStato.toUpperCase().replace('_', ' ')}`
+                }]);
+        }
+        
         alert("Dati e stato di attività salvati con successo!");
         await caricaLookupDati();
+        await apriDettaglioGruppo(gruppoId);
         
     } catch (e) {
         console.error("Errore salvataggio dati gruppo:", e);
@@ -4660,6 +4735,7 @@ async function fetchIscrittiEventoDettagli(eventoId) {
         .from('epika_iscrizioni_eventi')
         .select(`
             utente_id,
+            gruppo_storico_id,
             giorni_presenza,
             data_ora_arrivo,
             data_ora_ripartenza,
@@ -4714,7 +4790,7 @@ async function fetchIscrittiEventoDettagli(eventoId) {
             ripartenza: i.data_ora_ripartenza,
             equipaggiamento: equip,
             stato_pagamento: i.ricevuta_id ? 'PAGATO ✓' : 'ATTESA PAGAMENTO ⏳',
-            gruppo_storico_id: prof.gruppo_storico_id,
+            gruppo_storico_id: i.gruppo_storico_id || prof.gruppo_storico_id,
             allenatore_id: prof.allenatore_id
         };
     });
@@ -5117,7 +5193,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
 }
 
 // ============================================================
-// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.06)
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.12)
 // ============================================================
 let contabilitaState = {
     eventi: [],
