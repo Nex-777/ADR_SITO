@@ -901,23 +901,33 @@ function ottieniUrlMappa(evt) {
     return null;
 }
 
-function autoFillLinkMappaDaStorico() {
+async function autoFillLinkMappaDaStorico() {
     const inputLuogo = document.getElementById('evt-luogo');
     const inputLinkMappa = document.getElementById('evt-link-mappa');
     if (!inputLuogo || !inputLinkMappa) return;
     
     if (inputLinkMappa.value.trim() !== '') return;
     
-    const luogoVal = inputLuogo.value.trim().toLowerCase();
-    if (!luogoVal) return;
+    const luogoVal = inputLuogo.value.trim();
+    if (!luogoVal || luogoVal.length < 3) return;
     
-    if (window.eventiStorici && Array.isArray(window.eventiStorici)) {
-        const eventoTrovato = window.eventiStorici.find(e => 
-            e.luogo && e.luogo.trim().toLowerCase() === luogoVal && e.link_mappa && e.link_mappa.trim() !== ''
-        );
-        if (eventoTrovato) {
-            inputLinkMappa.value = eventoTrovato.link_mappa.trim();
+    try {
+        const { data, error } = await supabaseClient
+            .from('epika_eventi')
+            .select('link_mappa')
+            .ilike('luogo', `%${luogoVal}%`)
+            .not('link_mappa', 'is', null)
+            .neq('link_mappa', '')
+            .order('data_inizio', { ascending: false })
+            .limit(1);
+
+        if (!error && data && data.length > 0 && data[0].link_mappa) {
+            if (inputLinkMappa.value.trim() === '') {
+                inputLinkMappa.value = data[0].link_mappa.trim();
+            }
         }
+    } catch (e) {
+        console.error("Errore durante l'auto-completamento del link mappa:", e);
     }
 }
 
@@ -2459,8 +2469,6 @@ async function renderEventiAdmin() {
 
         if (error) throw error;
 
-        window.eventiStorici = eventi || [];
-
         container.innerHTML = '';
         (eventi || []).forEach(evt => {
             const dataInizioF = formattaData(evt.data_inizio);
@@ -2536,6 +2544,10 @@ async function salvaEventoStorico() {
     }
 
     if (linkMappa) {
+        if (linkMappa.toLowerCase().includes('<iframe')) {
+            alert("Sembra che tu abbia incollato il codice HTML di incorporamento (iframe). Per favore incolla solo il link di condivisione di Google Maps (es. https://goo.gl/maps/... o https://maps.app.goo.gl/...).");
+            return;
+        }
         try {
             const urlObj = new URL(linkMappa.startsWith('http') ? linkMappa : `https://${linkMappa}`);
             const host = urlObj.hostname.toLowerCase();
@@ -5069,7 +5081,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
 }
 
 // ============================================================
-// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.05)
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.06)
 // ============================================================
 let contabilitaState = {
     eventi: [],
