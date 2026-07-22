@@ -70,10 +70,26 @@ async function initPortal() {
 
         if (userData) {
             document.getElementById('epk-user-real-name').textContent = `${userData.nome} ${userData.cognome}`;
-            currentUserTessera = userData.tipo_tessera || null;
         } else {
             console.warn("Nessun record trovato in utenti per ID:", currentUser.id);
         }
+
+        // Estrai il livello tessera usando la funzione RPC Postgres centralizzata (Single Source of Truth)
+        try {
+            const { data: tesseraLivello, error: tesseraErr } = await supabaseClient
+                .rpc('get_user_tessera_livello', { p_utente_id: currentUser.id });
+            
+            if (tesseraErr) {
+                console.warn("Errore recupero livello tessera via RPC:", tesseraErr);
+                currentUserTessera = userData ? (userData.tipo_tessera || null) : null;
+            } else {
+                currentUserTessera = tesseraLivello;
+            }
+        } catch (err) {
+            console.error("Eccezione RPC get_user_tessera_livello:", err);
+            currentUserTessera = userData ? (userData.tipo_tessera || null) : null;
+        }
+        console.log("Livello tessera determinato per utente:", currentUserTessera);
 
         // Default value per il primo anno di partecipazione (anno corrente)
         const currentYear = new Date().getFullYear();
@@ -724,7 +740,7 @@ function gestisciVisibilitaAllenatore(ruoloVal, selectId, containerId) {
 // Restrizione opzioni ruolo in base alla tessera utente.
 // WHITELIST: solo le tessere in questo array abilitano il ruolo combattente.
 // Aggiornare qui quando si aggiungono nuovi tipi di tessera integrativa.
-const TESSERE_COMBATTENTI = ['tessera_integrativa_a', 'tessera_integrativa_b'];
+const TESSERE_COMBATTENTI = ['INTEGRATIVA_A', 'INTEGRATIVA_B', 'tessera_integrativa_a', 'tessera_integrativa_b'];
 
 function applicaRestrizioneTessera(selectRuoloId) {
     const selectRuolo = document.getElementById(selectRuoloId);

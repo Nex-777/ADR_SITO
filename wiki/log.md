@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-22] fix | Single Source of Truth RPC Tessera per Epika Combattenti (v1.03.09)
+- **Database (Supabase):** Creata la funzione RPC centralizzata `public.get_user_tessera_livello(p_utente_id UUID)` che interroga in primis `public.registro_tesserati` (con `stato_tesseramento = 'ATTIVO'`) via `public.anagrafiche`, e fa fallback su `public.utenti.tipo_tessera`.
+- **Database Trigger:** Aggiornata la funzione `check_epika_tessera_ruolo` per invocare `get_user_tessera_livello(NEW.id)`, risolvendo definitivamente il problema di blocco sui tesserati attivi il cui campo `utenti.tipo_tessera` era `NULL`.
+- **Frontend (`portal/epika.js`):** In `checkAuthAndLoad`, integrata la chiamata `supabaseClient.rpc('get_user_tessera_livello', ...)` per garantire il 100% di allineamento tra Frontend e Backend (Single Source of Truth). Aggiornata la whitelist di `applicaRestrizioneTessera()`.
+- **Versione:** Incrementata la versione globale dell'applicazione a `v1.03.09`.
+
 ## [2026-07-22] fix | Restrizione Ruolo Combattente Epika basata su Tessera (v1.03.08)
 - **Database (Supabase):** Aggiornato il trigger `trg_check_epika_tessera_ruolo` e la funzione `check_epika_tessera_ruolo` per utilizzare una logica a whitelist (`TESSERE_COMBATTENTI`) al posto di `ILIKE`. Solo chi ha una tessera integrativa può iscriversi come combattente. I tesserati base_silver o base_gold possono iscriversi solo come non_combattente. Gli utenti senza tessera registrata non vengono bloccati.
 - **Sanitizzazione DB:** Eseguito update sui dati pregressi per azzerare `allenatore_id` ai record con `ruolo_combattimento = 'non_combattente'` ed `allenatore_id IS NOT NULL` (1 record corretto).
