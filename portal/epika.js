@@ -728,16 +728,6 @@ async function salvaModificheProfilo() {
             .eq('id', currentUser.id);
 
         if (error) throw error;
-            .from('epika_profili')
-            .update({
-                gruppo_storico_id: gruppoStoricoId,
-                popolo: popolo,
-                ruolo_combattimento: ruoloCombattimento,
-                allenatore_id: allenatoreId
-            })
-            .eq('id', currentUser.id);
-
-        if (error) throw error;
 
         alert("Profilo aggiornato con successo!");
         chiudiModaleModificaProfilo();

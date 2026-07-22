@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-22] fix | Risoluzione SyntaxError JS & Script Versionamento Centralizzato (v1.03.11)
+- **Frontend (`portal/epika.js`)**: Eliminata la riga duplicata `.from('epika_profili')` a riga 731 che causava `Uncaught SyntaxError: Unexpected token '.'` e bloccava il portale Epika sulla schermata "IN ATTESA DEL TEMPIO...".
+- **Architettura Versionamento (`scripts/bump-version.js`)**: Realizzato uno script Node.js permanente per il versionamento dell'intero progetto. Lo script scansiona tutti i file `.html` e `.js` aggiornando sia le query string di cache asset (`?v=1.03.11`) che le etichette di testo stampate a schermo (`Vs. 1.03.11`).
+- **Allineamento Globale**: Eseguito lo script su tutti i moduli (`index.html`, `legal.html`, `privacy.html`, `epika.html`, `dashboard.html`, ecc.) allineando il 100% dei badge visibili del sito a `v1.03.11`.
+
 ## [2026-07-22] fix | Blindatura Modale Modifica Profilo & Ripristino Dati Saccomandi (v1.03.10)
 - **Database (Supabase):** Ripristinati sul profilo di Andrea Saccomandi i dati corretti (`gruppo_storico_id = 6` - Lega Italica, `popolo = 'Sanniti'`, `ruolo_combattimento = 'combattente'`). Rimossi i log di audit errati generati dal salvataggio vuoto del modale.
 - **Frontend (`portal/epika.js`):**
