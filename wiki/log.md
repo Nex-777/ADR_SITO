@@ -4,6 +4,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-22] fix | Blindatura Modale Modifica Profilo & Ripristino Dati Saccomandi (v1.03.10)
+- **Database (Supabase):** Ripristinati sul profilo di Andrea Saccomandi i dati corretti (`gruppo_storico_id = 6` - Lega Italica, `popolo = 'Sanniti'`, `ruolo_combattimento = 'combattente'`). Rimossi i log di audit errati generati dal salvataggio vuoto del modale.
+- **Frontend (`portal/epika.js`):**
+  - **Inizializzazione Modale**: Corretta la funzione `apriModaleModificaProfilo()` per forzare il caricamento preventivo delle lookup se non ancora popolate (`caricaLookupDati()`), prevenendo la perdita dei valori selezionati.
+  - **Placeholder & Tipi**: Aggiunte opzioni placeholder trasparenti nelle select del modale e garantito il casting stringa per i matching dei valori preesistenti (`String(prof.gruppo_storico_id)`).
+  - **Validazione Severa in Salvataggio**: In `salvaModificheProfilo()`, inseriti controlli severi su `isNaN(gruppoStoricoId)`, stringa vuota su `popolo` e mancata selezione dell'allenatore prima di effettuare l'UPDATE. Impedita l'impostazione accidentale a `null` del gruppo storico.
+- **Versione:** Incrementata la versione globale dell'applicazione a `v1.03.10`.
+
 ## [2026-07-22] fix | Single Source of Truth RPC Tessera per Epika Combattenti (v1.03.09)
 - **Database (Supabase):** Creata la funzione RPC centralizzata `public.get_user_tessera_livello(p_utente_id UUID)` che interroga in primis `public.registro_tesserati` (con `stato_tesseramento = 'ATTIVO'`) via `public.anagrafiche`, e fa fallback su `public.utenti.tipo_tessera`.
 - **Database Trigger:** Aggiornata la funzione `check_epika_tessera_ruolo` per invocare `get_user_tessera_livello(NEW.id)`, risolvendo definitivamente il problema di blocco sui tesserati attivi il cui campo `utenti.tipo_tessera` era `NULL`.

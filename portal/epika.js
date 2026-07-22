@@ -602,6 +602,10 @@ let originalProfileData = {};
 
 async function apriModaleModificaProfilo() {
     try {
+        if (!gruppiStorici || gruppiStorici.length === 0 || !allenatoriLista || allenatoriLista.length === 0) {
+            await caricaLookupDati();
+        }
+
         const { data: prof, error } = await supabaseClient
             .from('epika_profili')
             .select('*')
@@ -622,14 +626,14 @@ async function apriModaleModificaProfilo() {
         };
 
         const selectGruppo = document.getElementById('edit-gruppo-storico');
-        selectGruppo.innerHTML = '';
+        selectGruppo.innerHTML = '<option value="" disabled>-- SELEZIONA GRUPPO --</option>';
         gruppiStorici.forEach(g => {
             selectGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
         });
-        selectGruppo.value = prof.gruppo_storico_id || '';
+        selectGruppo.value = prof.gruppo_storico_id ? String(prof.gruppo_storico_id) : '';
 
         const selectPopolo = document.getElementById('edit-popolo');
-        selectPopolo.innerHTML = '';
+        selectPopolo.innerHTML = '<option value="" disabled>-- SELEZIONA POPOLO --</option>';
         popoliList.forEach(p => {
             selectPopolo.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
         });
@@ -638,11 +642,11 @@ async function apriModaleModificaProfilo() {
         document.getElementById('edit-ruolo-combattimento').value = prof.ruolo_combattimento || 'combattente';
 
         const selectAllenatore = document.getElementById('edit-allenatore');
-        selectAllenatore.innerHTML = '';
+        selectAllenatore.innerHTML = '<option value="" selected>-- SELEZIONA ALLENATORE --</option>';
         allenatoriLista.forEach(a => {
             selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`;
         });
-        selectAllenatore.value = prof.allenatore_id || '';
+        selectAllenatore.value = prof.allenatore_id ? String(prof.allenatore_id) : '';
 
         onEditGruppoStoricoChange();
         applicaRestrizioneTessera('edit-ruolo-combattimento');
@@ -675,12 +679,28 @@ function onEditGruppoStoricoChange() {
 }
 
 async function salvaModificheProfilo() {
-    const gruppoStoricoId = parseInt(document.getElementById('edit-gruppo-storico').value);
+    const gruppoStoricoVal = document.getElementById('edit-gruppo-storico').value;
+    const gruppoStoricoId = gruppoStoricoVal ? parseInt(gruppoStoricoVal) : null;
     const selectPopolo = document.getElementById('edit-popolo');
     const popolo = selectPopolo.value;
     const ruoloCombattimento = document.getElementById('edit-ruolo-combattimento').value;
     const allenatoreSelect = document.getElementById('edit-allenatore');
     const allenatoreId = (ruoloCombattimento === 'combattente' && allenatoreSelect.value) ? parseInt(allenatoreSelect.value) : null;
+
+    if (isNaN(gruppoStoricoId) || !gruppoStoricoId) {
+        alert("Seleziona un Gruppo Storico valido.");
+        return;
+    }
+
+    if (!popolo) {
+        alert("Seleziona un Popolo / Cultura valido.");
+        return;
+    }
+
+    if (ruoloCombattimento === 'combattente' && !allenatoreId) {
+        alert("Seleziona l'Allenatore di Riferimento obbligatorio per i combattenti.");
+        return;
+    }
 
     if (
         gruppoStoricoId === originalProfileData.gruppo_storico_id &&
@@ -698,6 +718,16 @@ async function salvaModificheProfilo() {
 
     try {
         const { error } = await supabaseClient
+            .from('epika_profili')
+            .update({
+                gruppo_storico_id: gruppoStoricoId,
+                popolo: popolo,
+                ruolo_combattimento: ruoloCombattimento,
+                allenatore_id: allenatoreId
+            })
+            .eq('id', currentUser.id);
+
+        if (error) throw error;
             .from('epika_profili')
             .update({
                 gruppo_storico_id: gruppoStoricoId,
