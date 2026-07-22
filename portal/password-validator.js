@@ -37,26 +37,26 @@ function setupPasswordChecklist(inputEl, containerEl) {
     // Render HTML structure if container is empty
     if (!containerEl.dataset.initialized) {
         containerEl.innerHTML = `
-            <div class="mt-2 space-y-1 text-[10px] font-mono tracking-wider uppercase bg-black/30 p-2.5 border border-white/10 rounded-sm">
-                <div class="text-[9px] font-bold text-gray-400 mb-1">Requisiti Password:</div>
+            <div class="mt-2 space-y-1 text-[9px] font-mono tracking-wider uppercase bg-black/40 p-2.5 border border-white/10 rounded-sm leading-tight">
+                <div class="font-bold text-gray-400 mb-1 text-[9px]">Requisiti Password:</div>
                 <div id="rule-length" class="flex items-center gap-1.5 text-gray-500 transition-colors">
-                    <span class="material-symbols-outlined text-[12px]">cancel</span>
+                    <span class="material-symbols-outlined text-[14px] shrink-0">cancel</span>
                     <span>Almeno 8 caratteri</span>
                 </div>
                 <div id="rule-upper" class="flex items-center gap-1.5 text-gray-500 transition-colors">
-                    <span class="material-symbols-outlined text-[12px]">cancel</span>
+                    <span class="material-symbols-outlined text-[14px] shrink-0">cancel</span>
                     <span>Almeno una lettera maiuscola (A-Z)</span>
                 </div>
                 <div id="rule-lower" class="flex items-center gap-1.5 text-gray-500 transition-colors">
-                    <span class="material-symbols-outlined text-[12px]">cancel</span>
+                    <span class="material-symbols-outlined text-[14px] shrink-0">cancel</span>
                     <span>Almeno una lettera minuscola (a-z)</span>
                 </div>
                 <div id="rule-number" class="flex items-center gap-1.5 text-gray-500 transition-colors">
-                    <span class="material-symbols-outlined text-[12px]">cancel</span>
+                    <span class="material-symbols-outlined text-[14px] shrink-0">cancel</span>
                     <span>Almeno un numero (0-9)</span>
                 </div>
                 <div id="rule-special" class="flex items-center gap-1.5 text-gray-500 transition-colors">
-                    <span class="material-symbols-outlined text-[12px]">cancel</span>
+                    <span class="material-symbols-outlined text-[14px] shrink-0">cancel</span>
                     <span>Almeno un carattere speciale (!@#$%...)</span>
                 </div>
             </div>

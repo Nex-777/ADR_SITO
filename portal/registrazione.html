@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.03.02"></script>
+    <script src="config.js?v=1.03.03"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -143,7 +143,7 @@
             transform: translateY(0);
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.03.02">
+    <link rel="stylesheet" href="../output.css?v=1.03.03">
 </head>
 <body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen flex flex-col justify-between overflow-x-hidden">
     <div class="noise-overlay"></div>
@@ -156,7 +156,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.02</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.03</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -209,14 +209,31 @@
                             <span id="cf_validation_status" class="text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold">Inserisci il codice fiscale per la verifica formale.</span>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <!-- Data e Luogo di Nascita (3 colonne) -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div class="group">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI NASCITA</label>
-                                <input type="date" id="data_nascita" class="brutalist-input" required="">
+                                <input type="date" id="data_nascita" class="brutalist-input w-full" required="">
                             </div>
                             <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PROVINCIA DI NASCITA</label>
+                                <select id="provincia_nascita" class="brutalist-select w-full" required="">
+                                    <option value="" disabled="" selected="">Seleziona...</option>
+                                </select>
+                            </div>
+                            <div class="group">
+                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COMUNE DI NASCITA</label>
+                                <select id="comune_nascita" class="brutalist-select w-full" required="" disabled="">
+                                    <option value="" disabled="" selected="">Scegli Provincia prima...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Credenziali Accesso (2 colonne) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="group">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">EMAIL</label>
-                                <input type="email" id="email" class="brutalist-input" placeholder="WARRIOR@ADRENALINA.IT" autocomplete="off" required="">
+                                <input type="email" id="email" class="brutalist-input w-full" placeholder="WARRIOR@ADRENALINA.IT" autocomplete="off" required="">
                             </div>
                             <div class="group">
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PASSWORD *</label>
@@ -225,22 +242,8 @@
                                     <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white flex items-center justify-center" id="auto-registrazione-click-1">
                                         <span class="material-symbols-outlined text-lg">visibility</span>
                                     </button>
+                                </div>
                                 <div id="password-checklist"></div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">PROVINCIA DI NASCITA</label>
-                                <select id="provincia_nascita" class="brutalist-select" required="">
-                                    <option value="" disabled="" selected="">Seleziona...</option>
-                                </select>
-                            </div>
-                            <div class="group">
-                                <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">COMUNE DI NASCITA</label>
-                                <select id="comune_nascita" class="brutalist-select" required="" disabled="">
-                                    <option value="" disabled="" selected="">Scegli Provincia prima...</option>
-                                </select>
                             </div>
                         </div>
                     </div>
@@ -720,8 +723,8 @@
     </footer>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.03.02"></script>
-    <script src="registrazione.js?v=1.03.02"></script>
+    <script src="password-validator.js?v=1.03.03"></script>
+    <script src="registrazione.js?v=1.03.03"></script>
 
 
 

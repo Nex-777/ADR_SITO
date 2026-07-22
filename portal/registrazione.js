@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.02"
+                VERSION: "1.03.03"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -292,21 +292,19 @@ function togglePasswordVisibility(inputId, buttonEl) {
             }
 
             if (matchedBirthPlace) {
-                const siglaNas = matchedBirthPlace.sigla;
+                const siglaNas = matchedBirthPlace.sigla || 'EE';
                 const nomeComune = matchedBirthPlace.nome;
 
                 // Imposta provincia di nascita
-                if (selectProvinciaNascita.value !== siglaNas) {
+                if (selectProvinciaNascita.value !== siglaNas || selectComuneNascita.options.length <= 1) {
                     selectProvinciaNascita.value = siglaNas;
                     // Ricarica la lista dei comuni per questa provincia
                     selectProvinciaNascita.dispatchEvent(new Event('change'));
                 }
 
                 // Imposta comune di nascita
-                if (selectComuneNascita.value !== nomeComune) {
-                    selectComuneNascita.value = nomeComune;
-                    selectComuneNascita.dispatchEvent(new Event('change'));
-                }
+                selectComuneNascita.value = nomeComune;
+                selectComuneNascita.disabled = false;
 
                 cfStatus.textContent = "✓ CODICE FISCALE VALIDO E DATI COMPILATI";
                 cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-green-500 font-bold";
@@ -770,6 +768,11 @@ function togglePasswordVisibility(inputId, buttonEl) {
         // Validate current step fields
         function validateStep(step) {
             if (step === 1) {
+                const cfEl = document.getElementById('codice_fiscale');
+                if (cfEl && validateCodiceFiscale(cfEl.value)) {
+                    cfEl.setCustomValidity("");
+                }
+
                 const inputs = step1.querySelectorAll('input[required]:not([type="hidden"]), select[required]');
                 for (let input of inputs) {
                     if (!input.checkValidity()) {
