@@ -886,6 +886,41 @@ async function caricaStatistiche() {
     }
 }
 
+function ottieniUrlMappa(evt) {
+    if (!evt) return null;
+    if (evt.link_mappa && evt.link_mappa.trim() !== '') {
+        let link = evt.link_mappa.trim();
+        if (!link.startsWith('http://') && !link.startsWith('https://')) {
+            link = 'https://' + link;
+        }
+        return link;
+    }
+    if (evt.luogo && evt.luogo.trim() !== '') {
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(evt.luogo.trim())}`;
+    }
+    return null;
+}
+
+function autoFillLinkMappaDaStorico() {
+    const inputLuogo = document.getElementById('evt-luogo');
+    const inputLinkMappa = document.getElementById('evt-link-mappa');
+    if (!inputLuogo || !inputLinkMappa) return;
+    
+    if (inputLinkMappa.value.trim() !== '') return;
+    
+    const luogoVal = inputLuogo.value.trim().toLowerCase();
+    if (!luogoVal) return;
+    
+    if (window.eventiStorici && Array.isArray(window.eventiStorici)) {
+        const eventoTrovato = window.eventiStorici.find(e => 
+            e.luogo && e.luogo.trim().toLowerCase() === luogoVal && e.link_mappa && e.link_mappa.trim() !== ''
+        );
+        if (eventoTrovato) {
+            inputLinkMappa.value = eventoTrovato.link_mappa.trim();
+        }
+    }
+}
+
 async function caricaEventiDisponibili() {
     const listContainer = document.getElementById('epk-eventi-lista');
     try {
@@ -920,9 +955,18 @@ async function caricaEventiDisponibili() {
             const dataInizioF = formattaData(evt.data_inizio);
             const dataFineF = formattaData(evt.data_fine);
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
+            const mapUrl = ottieniUrlMappa(evt);
             
+            const luogoHtml = mapUrl 
+                ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; font-weight: bold;" title="Apri posizione su Google Maps">📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'NON SPECIFICATO'} 🗺️</a>`
+                : `📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'NON SPECIFICATO'}`;
+
+            const navigaBtnHtml = (isIscritto && mapUrl)
+                ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="epk-btn-secondary" style="border-color: var(--epk-gold); color: var(--epk-gold); display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 10px; text-decoration: none; border-radius: 4px; margin-top: 6px;">📍 NAVIGA / MAPPA 🗺️</a>`
+                : '';
+
             const btnHtml = isIscritto 
-                ? `<button class="epk-btn-secondary" style="border-color: var(--epk-gold); color: var(--epk-gold); cursor: default;" disabled>ISCRITTO ✓</button>`
+                ? `<div style="display: flex; flex-direction: column; align-items: flex-end;"><button class="epk-btn-secondary" style="border-color: var(--epk-gold); color: var(--epk-gold); cursor: default;" disabled>ISCRITTO ✓</button>${navigaBtnHtml}</div>`
                 : `<button class="epk-btn" onclick="apriModaleIscrizione('${evt.id}', '${evt.data_inizio}', '${evt.data_fine}')">ISCRIVITI</button>`;
 
             listContainer.innerHTML += `
@@ -930,7 +974,7 @@ async function caricaEventiDisponibili() {
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <span class="epk-headline" style="font-size: 14px; display: block; color: var(--epk-gold);">${evt.titolo.toUpperCase()}</span>
                         <span style="font-size: 10px; font-family: monospace; color: rgba(245, 230, 200, 0.6); uppercase">
-                            📅 ${dataFormattata} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'NON SPECIFICATO'} | 💰 QUOTA: ${parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO'}
+                            📅 ${dataFormattata} | ${luogoHtml} | 💰 QUOTA: ${parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO'}
                         </span>
                         ${evt.descrizione ? `<p style="font-size: 11px; margin: 6px 0 0 0; color: rgba(245, 230, 200, 0.8);">${evt.descrizione}</p>` : ''}
                     </div>
@@ -1032,16 +1076,26 @@ async function apriModaleIscrizione(eventoId, dataInizio, dataFine) {
         currentOraArrivo = '';
         currentOraRipartenza = '';
 
-        // Recupera orari limite dell'evento da Supabase
+        // Recupera dettagli dell'evento da Supabase
         const { data: evt } = await supabaseClient
             .from('epika_eventi')
-            .select('ora_arrivo_min, ora_ripartenza_max')
+            .select('titolo, luogo, link_mappa, ora_arrivo_min, ora_ripartenza_max')
             .eq('id', eventoId)
             .maybeSingle();
 
         if (evt) {
             if (evt.ora_arrivo_min) currentEventoOraArrivoMin = evt.ora_arrivo_min.slice(0, 5);
             if (evt.ora_ripartenza_max) currentEventoOraRipartenzaMax = evt.ora_ripartenza_max.slice(0, 5);
+            
+            const modalTitleEl = document.querySelector('#epk-iscrizione-modal h3');
+            const mapUrl = ottieniUrlMappa(evt);
+            const luogoHtml = mapUrl 
+                ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--epk-gold); text-decoration: underline;">📍 ${evt.luogo ? evt.luogo.toUpperCase() : ''} 🗺️</a>`
+                : (evt.luogo ? `📍 ${evt.luogo.toUpperCase()}` : '');
+            
+            if (modalTitleEl && evt.titolo) {
+                modalTitleEl.innerHTML = `ISCRIZIONE A ${evt.titolo.toUpperCase()}` + (luogoHtml ? `<br><span style="font-size: 11px; font-family: monospace; font-weight: normal;">${luogoHtml}</span>` : '');
+            }
         }
 
         // Genera i giorni di presenza
@@ -2405,6 +2459,8 @@ async function renderEventiAdmin() {
 
         if (error) throw error;
 
+        window.eventiStorici = eventi || [];
+
         container.innerHTML = '';
         (eventi || []).forEach(evt => {
             const dataInizioF = formattaData(evt.data_inizio);
@@ -2412,6 +2468,9 @@ async function renderEventiAdmin() {
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
             const statusStyle = evt.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             const statusText = evt.attivo ? 'DISATTIVA' : 'ATTIVA';
+
+            const mapUrl = ottieniUrlMappa(evt);
+            const mappaBadge = mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--epk-gold); text-decoration: underline;" title="Apri posizione Google Maps">🗺️ MAPPA</a>` : '';
 
             const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})">${statusText}</button>`;
             const deleteBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="cancellaEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">CANCELLA</button>`;
@@ -2423,7 +2482,7 @@ async function renderEventiAdmin() {
                         <div>
                             <span class="epk-headline" style="font-size: 14px; color: var(--epk-gold);">${evt.titolo.toUpperCase()}</span>
                             <span style="font-size: 10px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.5); uppercase; margin-top: 2px;">
-                                📅 ${dataFormattata} | ⏰ INIZIO: ${evt.ora_arrivo_min ? evt.ora_arrivo_min.slice(0, 5) : '09:00'} - FINE: ${evt.ora_ripartenza_max ? evt.ora_ripartenza_max.slice(0, 5) : '18:00'} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')} | 💰 COSTO: €${parseFloat(evt.costo || 0).toFixed(2)}
+                                📅 ${dataFormattata} | ⏰ INIZIO: ${evt.ora_arrivo_min ? evt.ora_arrivo_min.slice(0, 5) : '09:00'} - FINE: ${evt.ora_ripartenza_max ? evt.ora_ripartenza_max.slice(0, 5) : '18:00'} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} ${mappaBadge ? '| ' + mappaBadge : ''} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')} | 💰 COSTO: €${parseFloat(evt.costo || 0).toFixed(2)}
                             </span>
                         </div>
                         <div style="display: flex; gap: 8px;">
@@ -2450,6 +2509,7 @@ function mostraFormCreaEvento() {
     document.getElementById('evt-costo').value = '0.00';
     if (document.getElementById('evt-ora-arrivo-min')) document.getElementById('evt-ora-arrivo-min').value = '09:00';
     if (document.getElementById('evt-ora-ripartenza-max')) document.getElementById('evt-ora-ripartenza-max').value = '18:00';
+    if (document.getElementById('evt-link-mappa')) document.getElementById('evt-link-mappa').value = '';
 }
 
 function nascondiFormCreaEvento() {
@@ -2460,6 +2520,8 @@ async function salvaEventoStorico() {
     if (isReadOnly()) return;
     const titolo = document.getElementById('evt-titolo').value.trim();
     const luogo = document.getElementById('evt-luogo').value.trim();
+    const linkMappaInput = document.getElementById('evt-link-mappa');
+    const linkMappa = linkMappaInput ? linkMappaInput.value.trim() : '';
     const dataInizio = document.getElementById('evt-data-inizio').value;
     const dataFine = document.getElementById('evt-data-fine').value;
     const tipo = document.getElementById('evt-tipo').value;
@@ -2473,6 +2535,20 @@ async function salvaEventoStorico() {
         return;
     }
 
+    if (linkMappa) {
+        try {
+            const urlObj = new URL(linkMappa.startsWith('http') ? linkMappa : `https://${linkMappa}`);
+            const host = urlObj.hostname.toLowerCase();
+            if (!host.includes('google') && !host.includes('goo.gl')) {
+                alert("Il link della mappa deve essere un URL valido di Google Maps (es. https://goo.gl/maps/... o https://maps.app.goo.gl/...)");
+                return;
+            }
+        } catch (e) {
+            alert("Il formato del link Google Maps inserito non è un URL valido.");
+            return;
+        }
+    }
+
     if (new Date(dataFine) < new Date(dataInizio)) {
         alert("La data di fine non può essere precedente alla data di inizio.");
         return;
@@ -2484,6 +2560,7 @@ async function salvaEventoStorico() {
             .insert({
                 titolo: titolo,
                 luogo: luogo,
+                link_mappa: linkMappa || null,
                 data_inizio: dataInizio,
                 data_fine: dataFine,
                 tipo_evento: tipo,
@@ -2501,6 +2578,7 @@ async function salvaEventoStorico() {
         // Reset form inputs
         document.getElementById('evt-titolo').value = '';
         document.getElementById('evt-luogo').value = '';
+        if (document.getElementById('evt-link-mappa')) document.getElementById('evt-link-mappa').value = '';
         document.getElementById('evt-descrizione').value = '';
         document.getElementById('evt-costo').value = '0.00';
 
@@ -4625,13 +4703,17 @@ async function renderCapoEventi() {
             const dataFineF = formattaData(evt.data_fine);
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
             const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+            const mapUrl = ottieniUrlMappa(evt);
+            const luogoHtml = mapUrl 
+                ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;" title="Apri Google Maps">📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} 🗺️</a>`
+                : `📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}`;
 
             listContainer.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
                     <div>
                         <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
                         <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
-                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                            📅 ${dataFormattata}<br>${luogoHtml}<br>💰 QUOTA: ${costoText}
                         </span>
                     </div>
                     <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoCapo('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
@@ -4720,13 +4802,17 @@ async function renderAllenatoreEventi() {
             const dataFineF = formattaData(evt.data_fine);
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
             const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+            const mapUrl = ottieniUrlMappa(evt);
+            const luogoHtml = mapUrl 
+                ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;" title="Apri Google Maps">📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} 🗺️</a>`
+                : `📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}`;
 
             listContainer.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
                     <div>
                         <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
                         <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
-                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                            📅 ${dataFormattata}<br>${luogoHtml}<br>💰 QUOTA: ${costoText}
                         </span>
                     </div>
                     <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoAllenatore('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
@@ -4815,13 +4901,17 @@ async function renderAllievoEventi() {
             const dataFineF = formattaData(evt.data_fine);
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
             const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+            const mapUrl = ottieniUrlMappa(evt);
+            const luogoHtml = mapUrl 
+                ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;" title="Apri Google Maps">📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} 🗺️</a>`
+                : `📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}`;
 
             listContainer.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
                     <div>
                         <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
                         <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
-                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                            📅 ${dataFormattata}<br>${luogoHtml}<br>💰 QUOTA: ${costoText}
                         </span>
                     </div>
                     <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoAllievo('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
@@ -4910,13 +5000,17 @@ async function renderValidatoreEventi() {
             const dataFineF = formattaData(evt.data_fine);
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
             const costoText = parseFloat(evt.costo || 0) > 0 ? `€${parseFloat(evt.costo).toFixed(2)}` : 'GRATUITO';
+            const mapUrl = ottieniUrlMappa(evt);
+            const luogoHtml = mapUrl 
+                ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;" title="Apri Google Maps">📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} 🗺️</a>`
+                : `📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}`;
 
             listContainer.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
                     <div>
                         <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold); display: block;">${evt.titolo.toUpperCase()}</span>
                         <span style="font-size: 9px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.6); margin-top: 4px; text-transform: uppercase;">
-                            📅 ${dataFormattata}<br>📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}<br>💰 QUOTA: ${costoText}
+                            📅 ${dataFormattata}<br>${luogoHtml}<br>💰 QUOTA: ${costoText}
                         </span>
                     </div>
                     <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; margin-top: 8px;" onclick="mostraIscrittiEventoValidatore('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">VEDI PARTECIPANTI</button>
@@ -4975,7 +5069,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
 }
 
 // ============================================================
-// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.03)
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.04)
 // ============================================================
 let contabilitaState = {
     eventi: [],
