@@ -5069,7 +5069,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
 }
 
 // ============================================================
-// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.04)
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.05)
 // ============================================================
 let contabilitaState = {
     eventi: [],
@@ -5102,10 +5102,34 @@ async function renderContabilitaAdmin() {
         if (resSpese.error) throw resSpese.error;
         if (resProfili.error) throw resProfili.error;
 
-        contabilitaState.eventi = resEventi.data || [];
-        contabilitaState.iscrizioni = resIscrizioni.data || [];
-        contabilitaState.ricevute = resRicevute.data || [];
-        contabilitaState.spese = resSpese.data || [];
+        const epikaEventi = resEventi.data || [];
+        const epikaIscrizioni = resIscrizioni.data || [];
+        const allRicevute = resRicevute.data || [];
+        const allSpese = resSpese.data || [];
+
+        const epikaEventiIds = new Set(epikaEventi.map(e => e.id));
+        const epikaRicevutaIdsFromIscrizioni = new Set(epikaIscrizioni.map(i => i.ricevuta_id).filter(Boolean));
+
+        // Filtra solo entrate (ricevute) pertinenti ad Epika
+        const epikaRicevute = allRicevute.filter(r => {
+            if (r.evento_id && epikaEventiIds.has(r.evento_id)) return true;
+            if (epikaRicevutaIdsFromIscrizioni.has(r.id)) return true;
+            if (r.causale && r.causale.toLowerCase().includes('evento storico')) return true;
+            return false;
+        });
+
+        // Filtra solo uscite (spese) pertinenti ad Epika
+        const epikaSpese = allSpese.filter(s => {
+            if (s.evento_id && epikaEventiIds.has(s.evento_id)) return true;
+            if (s.titolo && s.titolo.toLowerCase().includes('epika')) return true;
+            if (s.categoria && s.categoria.toLowerCase().includes('epika')) return true;
+            return false;
+        });
+
+        contabilitaState.eventi = epikaEventi;
+        contabilitaState.iscrizioni = epikaIscrizioni;
+        contabilitaState.ricevute = epikaRicevute;
+        contabilitaState.spese = epikaSpese;
         contabilitaState.profili = resProfili.data || [];
 
         // Popola i selettori degli eventi nei modali
@@ -5129,7 +5153,7 @@ function popolaSelettoriEventiContabilita() {
             contabilitaState.eventi.map(e => `<option value="${e.id}">${e.titolo}</option>`).join('');
     }
     if (selSps) {
-        selSps.innerHTML = '<option value="">Spesa Generale Associazione</option>' +
+        selSps.innerHTML = '<option value="">Spesa Generale Epika</option>' +
             contabilitaState.eventi.map(e => `<option value="${e.id}">${e.titolo}</option>`).join('');
     }
     if (selAtl) {

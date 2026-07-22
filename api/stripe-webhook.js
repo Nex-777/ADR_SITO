@@ -154,6 +154,12 @@ export default async function handler(req, res) {
                     throw new Error("Errore inserimento iscrizione definitiva Epika: " + insertError.message);
                 }
 
+                // Aggiorna la ricevuta inserita precedentemente con l'evento_id dell'evento Epika
+                await supabase
+                    .from('ricevute_pagamenti')
+                    .update({ evento_id: bozza.evento_id })
+                    .eq('id', recData.id);
+
                 // Elimina la bozza temporanea
                 await supabase
                     .from('epika_iscrizioni_bozza')
