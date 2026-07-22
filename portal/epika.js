@@ -3919,10 +3919,10 @@ async function renderCapoDatiGruppo() {
         
         // Date attività
         const formatDate = (d) => d ? new Date(d).toLocaleDateString('it-IT') : 'N/D';
-        document.getElementById('capo-val-formazione-dal').textContent = formatDate(gruppi.data_inizio_formazione);
-        document.getElementById('capo-val-formazione-al').textContent = formatDate(gruppi.data_fine_formazione);
-        document.getElementById('capo-val-ufficiale-dal').textContent = formatDate(gruppi.data_inizio_ufficiale);
-        document.getElementById('capo-val-ufficiale-al').textContent = formatDate(gruppi.data_fine_ufficiale);
+        const elFormDal = document.getElementById('capo-val-formazione-dal');
+        if (elFormDal) elFormDal.textContent = formatDate(gruppi.data_inizio_formazione);
+        const elUffDal = document.getElementById('capo-val-ufficiale-dal');
+        if (elUffDal) elUffDal.textContent = formatDate(gruppi.data_inizio_ufficiale);
         
         // Statistiche
         document.getElementById('capo-stat-partecipati').textContent = "0";
@@ -5193,7 +5193,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
 }
 
 // ============================================================
-// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.12)
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.13)
 // ============================================================
 let contabilitaState = {
     eventi: [],
