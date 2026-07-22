@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-22] fix | Restrizione Ruolo Combattente Epika basata su Tessera (v1.03.08)
+- **Database (Supabase):** Aggiornato il trigger `trg_check_epika_tessera_ruolo` e la funzione `check_epika_tessera_ruolo` per utilizzare una logica a whitelist (`TESSERE_COMBATTENTI`) al posto di `ILIKE`. Solo chi ha una tessera integrativa può iscriversi come combattente. I tesserati base_silver o base_gold possono iscriversi solo come non_combattente. Gli utenti senza tessera registrata non vengono bloccati.
+- **Sanitizzazione DB:** Eseguito update sui dati pregressi per azzerare `allenatore_id` ai record con `ruolo_combattimento = 'non_combattente'` ed `allenatore_id IS NOT NULL` (1 record corretto).
+- **Frontend (`portal/epika.js`):** Aggiornata la funzione `applicaRestrizioneTessera()` per usare la whitelist corrispondente a quella del DB, bloccando preventivamente la selezione del ruolo lato UI.
+- **Versione:** Incrementata la versione globale dell'applicazione a `v1.03.08`.
+
 ## [2026-07-22] ui | Stile Dorato Tasto Portale Epika in Area Tesserato (v1.03.07)
 - **CSS & HTML (`portal/dashboard.html`):** Applicato lo stile oro/bordeaux (`#tab-btn-user-epika`) con bordo `rgba(201, 168, 76, 0.4)`, testo oro `#C9A84C` e sfumatura di sfondo anche al pulsante "PORTALE EPIKA" visibile nella vista tesserato (atleta), rendendolo visivamente identico e coerente con il pulsante "GESTIONE EPIKA" dell'area direttivo. Aggiornato anche lo stile nel menu mobile overlay.
 - **Versione:** Incrementata la versione globale dell'applicazione a `v1.03.07`.
