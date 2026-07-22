@@ -4,6 +4,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-22] ui | Stile Dorato Tasto Portale Epika in Area Tesserato (v1.03.07)
+- **CSS & HTML (`portal/dashboard.html`):** Applicato lo stile oro/bordeaux (`#tab-btn-user-epika`) con bordo `rgba(201, 168, 76, 0.4)`, testo oro `#C9A84C` e sfumatura di sfondo anche al pulsante "PORTALE EPIKA" visibile nella vista tesserato (atleta), rendendolo visivamente identico e coerente con il pulsante "GESTIONE EPIKA" dell'area direttivo. Aggiornato anche lo stile nel menu mobile overlay.
+- **Versione:** Incrementata la versione globale dell'applicazione a `v1.03.07`.
+
 ## [2026-07-22] refactor | Ottimizzazione Robustezza Auto-Fill Mappe & Validazione HTML (v1.03.06)
 - **Auto-Fill Asincrono (`portal/epika.js`):** Sostituito l'uso dello stato globale `window.eventiStorici` con una query asincrona diretta e mirata a Supabase (`.ilike('luogo', ...)` con `.limit(1)`). L'auto-completamento del link Google Maps ora funziona in modo del tutto indipendente dallo stato di caricamento della pagina e dalla nav-bar.
 - **Validazione Form (`portal/epika.js`):** Aggiunta l'intercettazione esplicita del tag `<iframe` nell'input del link mappa per avvisare chiaramente l'utente di incollare il link di condivisione e non il codice di incorporamento HTML.
