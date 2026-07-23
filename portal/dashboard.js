@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.24"
+                VERSION: "1.03.25"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6200,15 +6200,15 @@
 
             if (nomePiano) {
                 const lower = nomePiano.toLowerCase();
-                if (lower.includes('trimestral')) {
+                if (lower.includes('trimest') || lower.includes('3 mes')) {
                     numRate = 3;
                     isRateizzabile = true;
                     tipoAbbonamentoLabel = 'Trimestrale';
-                } else if (lower.includes('semestral')) {
+                } else if (lower.includes('semest') || lower.includes('6 mes')) {
                     numRate = 6;
                     isRateizzabile = true;
                     tipoAbbonamentoLabel = 'Semestrale';
-                } else if (lower.includes('annual')) {
+                } else if (lower.includes('annu') || lower.includes('12 mes')) {
                     numRate = 12;
                     isRateizzabile = true;
                     tipoAbbonamentoLabel = 'Annuale';
