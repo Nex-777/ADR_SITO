@@ -1,6 +1,6 @@
 /**
  * Script di Versionamento Globale per Adrenalina (ESM)
- * Uso: node scripts/bump-version.js 1.03.13
+ * Uso: node scripts/bump-version.js 1.03.15
  */
 
 import fs from 'fs';
@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const targetVersion = process.argv[2];
 
 if (!targetVersion || !/^\d+\.\d+\.\d+$/.test(targetVersion)) {
-    console.error("ERRORE: Specifica una versione valida nel formato X.Y.Z (es: node scripts/bump-version.js 1.03.13)");
+    console.error("ERRORE: Specifica una versione valida nel formato X.Y.Z (es: node scripts/bump-version.js 1.03.15)");
     process.exit(1);
 }
 
