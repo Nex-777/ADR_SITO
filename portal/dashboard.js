@@ -488,7 +488,14 @@
                 document.getElementById('tab-btn-registro_istruttori').classList.remove('hidden');
                 document.getElementById('tab-btn-registro_volontari').classList.remove('hidden');
                 document.getElementById('tab-btn-quote').classList.remove('hidden');
-                document.getElementById('tab-btn-contabilita').classList.remove('hidden');
+                
+                const isContabilitaAdmin = userRoles.includes('presidente') || (typeof currentUser !== 'undefined' && currentUser && (currentUser.email === 'titofabiopaoletti@gmail.com' || currentUser.email === 'nexglg@gmail.com'));
+                if (isContabilitaAdmin) {
+                    document.getElementById('tab-btn-contabilita').classList.remove('hidden');
+                } else {
+                    document.getElementById('tab-btn-contabilita').classList.add('hidden');
+                }
+
                 document.getElementById('tab-btn-logiche').classList.remove('hidden');
                 
                 const isPresidentOrVP = userRoles.some(r => ['presidente', 'vice_presidente'].includes(r));
@@ -5116,12 +5123,21 @@
 
         // Tab Switching Logic
         function switchTab(tabId) {
+            if (tabId === 'contabilita') {
+                const isContabilitaAdmin = typeof userRoles !== 'undefined' && (userRoles.includes('presidente') || (typeof currentUser !== 'undefined' && currentUser && (currentUser.email === 'titofabiopaoletti@gmail.com' || currentUser.email === 'nexglg@gmail.com')));
+                if (!isContabilitaAdmin) {
+                    console.warn("Accesso negato alla Contabilità.");
+                    tabId = 'panoramica';
+                }
+            }
+
             // Nasconde tutti i pannelli
             const panels = document.querySelectorAll('.tab-panel');
             panels.forEach(p => p.classList.add('hidden'));
 
             // Mostra il pannello attivo
-            document.getElementById(`panel-${tabId}`).classList.remove('hidden');
+            const targetPanel = document.getElementById(`panel-${tabId}`);
+            if (targetPanel) targetPanel.classList.remove('hidden');
 
             // Hook per caricamento dati
             if (tabId === 'gestione_corsi') {

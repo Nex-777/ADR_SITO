@@ -1418,6 +1418,7 @@ function configureAdminTabs() {
         popoli: document.getElementById('epk-adm-btn-popoli'),
         eventi: document.getElementById('epk-adm-btn-eventi'),
         generale: document.getElementById('epk-adm-btn-generale'),
+        contabilita: document.getElementById('epk-adm-btn-contabilita'),
         logistica: document.getElementById('epk-adm-btn-logistica'),
         marketing: document.getElementById('epk-adm-btn-marketing')
     };
@@ -1427,8 +1428,8 @@ function configureAdminTabs() {
 
     // Definisci quali tab sono visibili in base alla vista
     let visibleTabs = [];
-    if (viewMode === 'admin') {
-        visibleTabs = ['dash', 'direttivi', 'scab', 'gruppi', 'popoli', 'eventi', 'generale'];
+    if (viewMode === 'admin' && isEpikaAdmin) {
+        visibleTabs = ['dash', 'direttivi', 'scab', 'gruppi', 'popoli', 'eventi', 'generale', 'contabilita'];
     } else if (viewMode === 'direttivo_epika') {
         visibleTabs = ['dash', 'direttivi', 'scab', 'gruppi', 'popoli', 'eventi', 'generale'];
     } else if (viewMode === 'direttivo_scab') {
@@ -1478,6 +1479,11 @@ async function renderAdminDashboard() {
 }
 
 function switchAdminTab(tab) {
+    if (tab === 'contabilita' && !isEpikaAdmin) {
+        console.warn("Accesso negato alla Contabilità per l'utente corrente.");
+        tab = 'dash';
+    }
+
     activeAdminTab = tab;
     
     // Rimuove classe active da tutti i bottoni e nasconde tutti i pannelli dell'admin
@@ -1506,7 +1512,7 @@ function switchAdminTab(tab) {
         renderEventiAdmin();
     } else if (tab === 'generale') {
         renderListaGeneraleAdmin();
-    } else if (tab === 'contabilita') {
+    } else if (tab === 'contabilita' && isEpikaAdmin) {
         renderContabilitaAdmin();
     }
 }

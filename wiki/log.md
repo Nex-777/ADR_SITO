@@ -4,6 +4,11 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-23] fix | Restrizione Accesso Sezione Contabilità ad Admin Tito Fabio (v1.03.14)
+- **Frontend (`portal/epika.html` & `portal/epika.js`)**: Aggiunta classe `epk-hidden` al pulsante sidebar `#epk-adm-btn-contabilita` e registrato il controllo di visibilità in `configureAdminTabs()` per nasconderlo in tutte le viste Direttivo (`direttivo_epika`, `direttivo_scab`, `direttivo_logistica`, `direttivo_marketing`). Inserita guardia runtime in `switchAdminTab('contabilita')` per bloccare l'accesso diretto via JS ai non-admin.
+- **Dashboard (`portal/dashboard.js`)**: Modificata la configurazione dell'Area Direttivo (`currentViewContext === 'board'`) e della funzione `switchTab('contabilita')` per garantire che la tab `#tab-btn-contabilita` sia visibile ed accessibile esclusivamente all'account Admin / Presidente Tito Fabio.
+- **Versione:** Incrementata la versione globale dell'applicazione a `v1.03.14`.
+
 ## [2026-07-22] fix | Risoluzione SyntaxError JS & Script Versionamento Centralizzato (v1.03.13)
 - **Frontend (`portal/epika.js`)**: Eliminata la riga duplicata `.from('epika_profili')` a riga 731 che causava `Uncaught SyntaxError: Unexpected token '.'` e bloccava il portale Epika sulla schermata "IN ATTESA DEL TEMPIO...".
 - **Architettura Versionamento (`scripts/bump-version.js`)**: Realizzato uno script Node.js permanente per il versionamento dell'intero progetto. Lo script scansiona tutti i file `.html` e `.js` aggiornando sia le query string di cache asset (`?v=1.03.13`) che le etichette di testo stampate a schermo (`Vs. 1.03.13`).
