@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.03.15">
+    <link rel="stylesheet" href="epika.css?v=1.03.16">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.03.15"></script>
+    <script src="config.js?v=1.03.16"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.03.15</span>
+            <span class="epk-version-badge">Vs. 1.03.16</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -490,47 +490,58 @@
                                     </div>
                                 </div>
 
-                                <!-- Sezione 2: Periodo di Attività -->
+                                <!-- Sezione 2: Periodo di Attività e Registro Storico Variazioni -->
                                 <div class="epk-card" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); display: flex; flex-direction: column; gap: 16px;">
                                     <div>
-                                        <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 12px;">STATO ATTIVITÀ</h3>
-                                        <div style="margin-bottom: 12px; border-bottom: 1px solid rgba(251,191,36,0.1); padding-bottom: 12px;">
-                                            <div class="epk-grid-2" style="gap: 8px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 12px;">
+                                            <h3 class="epk-headline" style="margin: 0; font-size: 13px;">STATO ATTIVITÀ</h3>
+                                            <div id="det-badge-stato-corrente">
+                                                <span class="epk-version-badge" style="margin: 0; font-size: 10px; padding: 4px 8px; border-color: #22c55e; color: #22c55e;">UFFICIALE</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Form Nuova Variazione -->
+                                        <div style="background: rgba(251, 191, 36, 0.03); border: 1px dashed rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 4px; margin-bottom: 14px;">
+                                            <div style="font-size: 10px; font-weight: bold; color: var(--epk-gold); margin-bottom: 8px;">+ REGISTRA NUOVA VARIAZIONE STATO</div>
+                                            <div class="epk-grid-2" style="gap: 8px; margin-bottom: 8px;">
                                                 <div>
-                                                    <label class="epk-label" for="det-gruppo-stato">Stato Gruppo</label>
-                                                    <select id="det-gruppo-stato" class="epk-input">
+                                                    <label class="epk-label" for="det-nuovo-stato-tipo">Nuovo Stato *</label>
+                                                    <select id="det-nuovo-stato-tipo" class="epk-input" style="font-size: 11px;">
                                                         <option value="in_formazione">IN FORMAZIONE</option>
-                                                        <option value="ufficiale">UFFICIALE</option>
+                                                        <option value="ufficiale" selected>UFFICIALE</option>
                                                         <option value="sospeso">SOSPESO</option>
+                                                        <option value="cancellato">CANCELLATO / SCIOLTO</option>
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label class="epk-label" for="det-gruppo-data-stato">Data Cambio Stato</label>
-                                                    <input type="date" id="det-gruppo-data-stato" class="epk-input">
+                                                    <label class="epk-label" for="det-nuovo-stato-data">Data Inizio (Dal) *</label>
+                                                    <input type="date" id="det-nuovo-stato-data" class="epk-input" style="font-size: 11px;">
                                                 </div>
                                             </div>
+                                            <div style="margin-bottom: 8px;">
+                                                <label class="epk-label" for="det-nuovo-stato-note">Note / Motivazione (Opzionale)</label>
+                                                <input type="text" id="det-nuovo-stato-note" class="epk-input" style="font-size: 11px;" placeholder="Es: Approvazione Assemblea / Sospensione temporanea...">
+                                            </div>
+                                            <button class="epk-btn" onclick="aggiungiVariazioneStatoGruppo()" style="font-size: 10px; width: 100%; padding: 6px;">+ SALVA VARIAZIONE IN REGISTRO</button>
                                         </div>
-                                        <div class="epk-grid-2" style="gap: 8px; margin-bottom: 8px;">
-                                            <div>
-                                                <label class="epk-label">In Formazione Dal</label>
-                                                <input type="date" id="det-data-formazione-dal" class="epk-input">
-                                            </div>
-                                            <div>
-                                                <label class="epk-label">In Formazione Al</label>
-                                                <input type="date" id="det-data-formazione-al" class="epk-input">
-                                            </div>
+
+                                        <!-- Tabella Registro Storico Variazioni -->
+                                        <div style="font-size: 11px; font-weight: bold; color: var(--epk-parchment); margin-bottom: 6px;">CRONOLOGIA VARIAZIONI STATO</div>
+                                        <div style="overflow-x: auto; max-height: 220px; overflow-y: auto;">
+                                            <table class="epk-input" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 10px;">
+                                                <thead>
+                                                    <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif; background: rgba(0,0,0,0.4);">
+                                                        <th style="padding: 6px;">STATO</th>
+                                                        <th style="padding: 6px;">DAL</th>
+                                                        <th style="padding: 6px;">NOTE</th>
+                                                        <th style="padding: 6px; text-align: center;">AZIONI</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="det-storico-stati-table-body">
+                                                    <!-- Popolato via JS -->
+                                                </tbody>
+                                            </table>
                                         </div>
-                                        <div class="epk-grid-2" style="gap: 8px; margin-bottom: 12px;">
-                                            <div>
-                                                <label class="epk-label">Ufficiale Dal</label>
-                                                <input type="date" id="det-data-ufficiale-dal" class="epk-input">
-                                            </div>
-                                            <div>
-                                                <label class="epk-label">Ufficiale Al</label>
-                                                <input type="date" id="det-data-ufficiale-al" class="epk-input">
-                                            </div>
-                                        </div>
-                                        <button class="epk-btn-secondary" onclick="salvaDateGruppo()" style="font-size: 10px; width: 100%;">SALVA DATI ATTIVITÀ</button>
                                     </div>
 
                                     <!-- Statistiche Placeholder -->
@@ -1659,6 +1670,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.03.15"></script>
+    <script src="epika.js?v=1.03.16"></script>
 </body>
 </html>
