@@ -15,7 +15,7 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="sha384-d+vyQ0dYcymoP8ndq2hW7FGC50nqGdXUEgoOUGxbbkAJwZqL7h+jKN0GGgn9hFDS" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.03.16"></script>
+    <script src="config.js?v=1.03.17"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -36,7 +36,7 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.03.16">
+    <link rel="stylesheet" href="../output.css?v=1.03.17">
 </head>
 <body class="min-h-screen flex flex-col justify-between bg-background text-on-surface">
 
@@ -48,7 +48,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.16</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.17</span>
                 <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">PORTALE PAGAMENTI</span>
             </div>
             <a href="/portal/login.html?redirect=/portal/pagamento.html" class="border border-white/20 text-gray-400 hover:text-white px-4 py-2 text-xs font-headline uppercase tracking-wider transition-all">
@@ -82,9 +82,30 @@
                         <span class="text-xs text-white uppercase font-headline font-bold" id="membership-type">-</span>
                     </div>
                     <div class="flex justify-between items-center pt-1">
-                        <span class="text-xs text-gray-400 uppercase font-headline">Importo da Versare</span>
+                        <span class="text-xs text-gray-400 uppercase font-headline">Importo Totale Quota</span>
                         <span class="text-2xl text-primary font-headline font-black" id="total-amount">€0.00</span>
                     </div>
+                </div>
+
+                <!-- Plan Choice Selector (For Quotas >= 100€) -->
+                <div id="installment-selector-container" class="hidden space-y-3 pt-1">
+                    <label class="block text-[11px] text-gray-400 font-headline uppercase tracking-wider font-bold">Scegli la modalità di versamento:</label>
+                    
+                    <label class="flex items-start gap-3 p-3.5 border border-white/20 bg-white/5 cursor-pointer hover:border-primary transition-all rounded-sm">
+                        <input type="radio" name="payment_plan" value="unico" checked class="mt-1 accent-primary">
+                        <div>
+                            <span class="block text-xs font-bold text-white uppercase font-headline">Pagamento in Unica Soluzione</span>
+                            <span class="block text-[10px] text-gray-400 font-mono mt-0.5" id="plan-unico-label">Soluzione unica con Carte, Apple Pay, PayPal o Klarna (3 rate).</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3.5 border border-white/20 bg-white/5 cursor-pointer hover:border-primary transition-all rounded-sm">
+                        <input type="radio" name="payment_plan" value="rateale_12" class="mt-1 accent-primary">
+                        <div>
+                            <span class="block text-xs font-bold text-white uppercase font-headline">Abbonamento Rateale 12 Mesi</span>
+                            <span class="block text-[10px] text-gray-400 font-mono mt-0.5" id="plan-rateale-label">Addebito automatico mensile su Carta o SEPA (IBAN) per 12 mesi.</span>
+                        </div>
+                    </label>
                 </div>
 
                 <!-- Cancel Notification -->
@@ -123,7 +144,7 @@
     </footer>
 
     <!-- Script Logic -->
-    <script src="pagamento.js?v=1.03.16"></script>
+    <script src="pagamento.js?v=1.03.17"></script>
 
 
 </body></html>

@@ -434,7 +434,73 @@ export default async function handler(req, res) {
                 description = `Quota annuale 2026 - ${tipoAdesioneLabel} per ${profile.nome} ${profile.cognome}`;
             }
 
-            // Calcola la quota e la commissione del 2% per le spese di gestione
+            const isInstallment = req.body?.is_installment === true || req.body?.is_installment === 'true';
+
+            if (isInstallment) {
+                // Calcola la rata mensile (12esima parte) e la commissione del 2%
+                const monthlyBaseQuota = Math.round((quota / 12) * 100);
+                const monthlyFeeQuota = Math.round((quota / 12) * 0.02 * 100);
+                const monthlyTotalAmount = monthlyBaseQuota + monthlyFeeQuota;
+                const monthlyTotalStr = (monthlyTotalAmount / 100).toFixed(2);
+
+                const session = await stripe.checkout.sessions.create({
+                    line_items: [
+                        {
+                            price_data: {
+                                currency: 'eur',
+                                product_data: {
+                                    name: `Quota Associativa Annuale (Abbonamento Rateale 12 Mesi)`,
+                                    description: `${description} - Rateizzazione 12 Mesi`,
+                                },
+                                unit_amount: monthlyBaseQuota,
+                                recurring: {
+                                    interval: 'month',
+                                    interval_count: 1
+                                }
+                            },
+                            quantity: 1,
+                        },
+                        {
+                            price_data: {
+                                currency: 'eur',
+                                product_data: {
+                                    name: `Spese di gestione transazione e amministrative (2%)`,
+                                },
+                                unit_amount: monthlyFeeQuota,
+                                recurring: {
+                                    interval: 'month',
+                                    interval_count: 1
+                                }
+                            },
+                            quantity: 1,
+                        },
+                    ],
+                    mode: 'subscription',
+                    customer_email: profile.email,
+                    subscription_data: {
+                        metadata: {
+                            utenteId: utenteId,
+                            is_installment: 'true',
+                            installments_total: '12',
+                            importo_totale_quota: quota.toFixed(2),
+                            importo_rata: monthlyTotalStr,
+                            causale: description
+                        }
+                    },
+                    metadata: {
+                        utenteId: utenteId,
+                        is_installment: 'true',
+                        importo: monthlyTotalStr,
+                        causale: `${description} (Abbonamento Rateale 12 Mesi)`
+                    },
+                    success_url: `${reqOrigin}/portal/dashboard.html?payment=success&type=subscription`,
+                    cancel_url: `${reqOrigin}/portal/pagamento.html?id=${utenteId}&payment=cancel`,
+                });
+
+                return res.status(200).json({ url: session.url });
+            }
+
+            // Calcola la quota e la commissione del 2% per le spese di gestione (Pagamento Unico)
             const baseAmount = Math.round(quota * 100);
             const feeAmount = Math.round(quota * 0.02 * 100);
             const totalAmount = baseAmount + feeAmount;

@@ -118,6 +118,20 @@
                 document.getElementById('membership-type').textContent = userProfile.tipo_adesione ? userProfile.tipo_adesione.replace(/_/g, ' ') : 'Socio';
                 document.getElementById('total-amount').textContent = `€${quota.toFixed(2)}`;
 
+                // Se la quota è >= 100€, mostra l'opzione di rateizzazione in 12 mesi
+                const selectorContainer = document.getElementById('installment-selector-container');
+                if (quota >= 100 && selectorContainer) {
+                    const monthlyBase = (quota / 12);
+                    const monthlyFee = monthlyBase * 0.02;
+                    const monthlyTotal = monthlyBase + monthlyFee;
+
+                    const ratealeLabel = document.getElementById('plan-rateale-label');
+                    if (ratealeLabel) {
+                        ratealeLabel.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese (€${monthlyBase.toFixed(2)} quota + €${monthlyFee.toFixed(2)} spese) per 12 mesi.`;
+                    }
+                    selectorContainer.classList.remove('hidden');
+                }
+
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('payment-content').classList.remove('hidden');
 
@@ -148,6 +162,9 @@
                     throw new Error("Sessione utente scaduta o non valida. Effettua nuovamente l'accesso.");
                 }
 
+                const selectedPlan = document.querySelector('input[name="payment_plan"]:checked')?.value || 'unico';
+                const isInstallment = selectedPlan === 'rateale_12';
+
                 const apiBase = APP_CONFIG.API_BASE_URL || "";
                 const response = await fetch(`${apiBase}/api/create-checkout-session`, {
                     method: 'POST',
@@ -155,7 +172,9 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({
+                        is_installment: isInstallment
+                    })
                 });
 
                 const data = await response.json();

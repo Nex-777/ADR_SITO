@@ -11,7 +11,7 @@ const files = [
     'portal/registrazione.html'
 ];
 
-const newVersion = '1.03.16';
+const newVersion = '1.03.17';
 
 files.forEach(file => {
     const fullPath = path.resolve(file);

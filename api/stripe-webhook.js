@@ -62,11 +62,35 @@ export default async function handler(req, res) {
         const eventId = session.metadata?.eventId;
         const importoStr = session.metadata?.importo;
         const causale = session.metadata?.causale || 'Quota associativa annuale';
-        const stripePaymentId = session.payment_intent;
+        const stripePaymentId = session.payment_intent || session.subscription || session.id;
 
         if (!utenteId) {
             console.error('Errore: Manca utenteId nei metadati della sessione Stripe.');
             return res.status(400).send('Missing utenteId in session metadata');
+        }
+
+        // Se si tratta di un abbonamento in modalità rateale, imposta la cancellazione automatica a 12 mesi
+        if (session.mode === 'subscription' && session.subscription) {
+            try {
+                const stripe = new Stripe(stripeSecretKey);
+                const subId = session.subscription;
+                const subscription = await stripe.subscriptions.retrieve(subId);
+
+                const isInstallment = session.metadata?.is_installment === 'true' || subscription.metadata?.is_installment === 'true';
+                if (isInstallment) {
+                    const startDate = new Date(subscription.created * 1000);
+                    const endDate = new Date(startDate);
+                    endDate.setFullYear(endDate.getFullYear() + 1); // 12 mesi esatti
+                    const cancelAtSeconds = Math.floor(endDate.getTime() / 1000);
+
+                    await stripe.subscriptions.update(subId, {
+                        cancel_at: cancelAtSeconds
+                    });
+                    console.log(`[SUBSCRIPTION WEBHOOK] Impostata cancellazione automatica per subscription ${subId} a data: ${endDate.toISOString()}`);
+                }
+            } catch (subErr) {
+                console.error('❌ Errore impostazione cancel_at per abbonamento Stripe:', subErr);
+            }
         }
 
         try {
