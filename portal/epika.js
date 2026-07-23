@@ -5269,7 +5269,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
 }
 
 // ============================================================
-// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.25)
+// DASHBOARD CONTABILITÀ & BILANCIO EVENTI (v1.03.26)
 // ============================================================
 let contabilitaState = {
     eventi: [],
