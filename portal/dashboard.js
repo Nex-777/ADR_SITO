@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.22"
+                VERSION: "1.03.23"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6075,7 +6075,7 @@
             }
         };
 
-        async function iscrivitiEvento(eventoId, prezzo, renew = false) {
+        window.iscrivitiEvento = async function iscrivitiEvento(eventoId, prezzo, renew = false) {
             try {
                 const select = document.getElementById(`plan-select-${eventoId}`);
                 let prezzoCorrente = prezzo;
@@ -6300,7 +6300,7 @@
             }
         };
 
-        async function disiscriviCorso(iscrizioneId, titolo) {
+        window.disiscriviCorso = async function disiscriviCorso(iscrizioneId, titolo) {
             if (!confirm(`Sei sicuro di volerti cancellare dal corso "${titolo}"?`)) return;
             try {
                 const { error } = await supabaseClient
