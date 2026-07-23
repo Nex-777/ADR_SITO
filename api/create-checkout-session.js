@@ -63,14 +63,14 @@ export default async function handler(req, res) {
         // CASO A: CHECKOUT EVENTO EPIKA RIEVOCATIVO
         // ==========================================
         if (giorni_presenza || req.body.type === 'epika_evento') {
-            // Rate limiting check per epika
+            // Rate limiting check per epika (max 20 tentativi/ora per utente)
             const { data: allowed } = await supabase.rpc('check_rate_limit', {
-                p_key: `epika_event_checkout:${clientIp}`,
-                p_max_requests: 5,
+                p_key: `epika_event_checkout:${utenteId}`,
+                p_max_requests: 20,
                 p_window_seconds: 3600
             });
             if (allowed === false) {
-                return res.status(429).json({ error: 'Troppe richieste di checkout. Riprova più tardi.' });
+                return res.status(429).json({ error: 'Troppe richieste di checkout dal tuo account. Riprova più tardi.' });
             }
 
             if (!eventId) {
@@ -244,14 +244,14 @@ export default async function handler(req, res) {
                 }
             }
 
-            // Rate limiting check
+            // Rate limiting check per utente (max 20 tentativi/ora)
             const { data: allowed } = await supabase.rpc('check_rate_limit', {
-                p_key: `event_checkout:${clientIp}`,
-                p_max_requests: 5,
+                p_key: `event_checkout:${utenteId}`,
+                p_max_requests: 20,
                 p_window_seconds: 3600
             });
             if (allowed === false) {
-                return res.status(429).json({ error: 'Troppe richieste di checkout. Riprova più tardi.' });
+                return res.status(429).json({ error: 'Troppe richieste di checkout dal tuo account. Riprova più tardi.' });
             }
 
             // 1. Recupera le informazioni dell'evento da Supabase

@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.20"
+                VERSION: "1.03.21"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6129,35 +6129,149 @@
                     }
                 }
 
-                // Chiedi all'utente se desidera l'Abbonamento Rateale o il Pagamento in Unica Soluzione
-                let isInstallment = false;
-                let numRate = 12;
-                if (nomePiano) {
-                    const lower = nomePiano.toLowerCase();
-                    if (lower.includes('trimestral')) numRate = 3;
-                    else if (lower.includes('semestral')) numRate = 6;
-                    else if (lower.includes('annual')) numRate = 12;
+                    }
                 }
 
-                if (numRate >= 3) {
-                    isInstallment = confirm(
-                        `Come desideri saldare l'iscrizione per "${nomePiano || 'Corso'}"?\n\n` +
-                        `• Premere OK per ABBONAMENTO RATEALE (${numRate} rate mensili con addebito automatico su Carta o SEPA).\n\n` +
-                        `• Premere ANNULLA per PAGAMENTO IN UNICA SOLUZIONE (Pagamento unico con Carta, Apple Pay, PayPal o Klarna).`
-                    );
-                }
+                // Cerca il titolo dell'evento/corso nella DOM
+                const cardEl = document.getElementById(`price-display-${eventoId}`)?.closest('.border') || document.querySelector(`[data-event-id="${eventoId}"]`);
+                const titleEl = cardEl ? cardEl.querySelector('h3, h4') : null;
+                const titolo = titleEl ? titleEl.textContent.trim() : (nomePiano ? `Iscrizione ${nomePiano}` : 'Iscrizione Corso');
 
-                const res = await fetch(`${APP_CONFIG.API_BASE_URL || ""}/api/create-checkout-session`, {
+                openCheckoutModal({
+                    eventoId: eventoId,
+                    nomePiano: nomePiano,
+                    renew: renew,
+                    dataInizioCorso: dataInizioCorso,
+                    token: token,
+                    titolo: titolo,
+                    prezzo: prezzoCorrente
+                });
+
+            } catch (err) {
+                console.error("Errore iscrizione evento:", err);
+                alert("Errore iscrizione: " + err.message);
+            }
+        }
+
+        // ==========================================
+        // GESTIONE MODAL CUSTOM CHECKOUT CORSI
+        // ==========================================
+        let currentModalCheckoutState = null;
+
+        window.closeCheckoutModal = function() {
+            const modal = document.getElementById('checkout-modal');
+            if (modal) modal.classList.add('hidden');
+            currentModalCheckoutState = null;
+            const errBox = document.getElementById('modal-error-box');
+            if (errBox) errBox.classList.add('hidden');
+        };
+
+        function openCheckoutModal(payload) {
+            currentModalCheckoutState = payload;
+
+            const modal = document.getElementById('checkout-modal');
+            const courseTitle = document.getElementById('modal-course-title');
+            const courseSubtitle = document.getElementById('modal-course-subtitle');
+            const cardUnicoLabel = document.getElementById('modal-card-unico-label');
+            const cardRatealeLabel = document.getElementById('modal-card-rateale-label');
+            const unicoPrice = document.getElementById('modal-unico-price');
+            const ratealePrice = document.getElementById('modal-rateale-price');
+            const ratealeTitle = document.getElementById('modal-rateale-title');
+            const ratealeDesc = document.getElementById('modal-rateale-desc');
+            const errBox = document.getElementById('modal-error-box');
+            const proceedBtn = document.getElementById('modal-proceed-btn');
+
+            if (errBox) errBox.classList.add('hidden');
+            if (proceedBtn) {
+                proceedBtn.disabled = false;
+                proceedBtn.innerHTML = `PROCEDI AL PAGAMENTO CON STRIPE ➔`;
+            }
+
+            const { titolo, prezzo, nomePiano } = payload;
+            if (courseTitle) courseTitle.textContent = titolo || 'Iscrizione Corso';
+
+            // Calcolo Unica Soluzione (+2% spese di gestione)
+            const baseUnico = prezzo;
+            const feeUnico = baseUnico * 0.02;
+            const totalUnico = baseUnico + feeUnico;
+            if (unicoPrice) unicoPrice.textContent = `€${totalUnico.toFixed(2)}`;
+
+            // Verifica deterministica se il piano è rateizzabile (Trimestrale, Semestrale, Annuale)
+            let numRate = 1;
+            let isRateizzabile = false;
+            let tipoAbbonamentoLabel = '';
+
+            if (nomePiano) {
+                const lower = nomePiano.toLowerCase();
+                if (lower.includes('trimestral')) {
+                    numRate = 3;
+                    isRateizzabile = true;
+                    tipoAbbonamentoLabel = 'Trimestrale';
+                } else if (lower.includes('semestral')) {
+                    numRate = 6;
+                    isRateizzabile = true;
+                    tipoAbbonamentoLabel = 'Semestrale';
+                } else if (lower.includes('annual')) {
+                    numRate = 12;
+                    isRateizzabile = true;
+                    tipoAbbonamentoLabel = 'Annuale';
+                }
+            }
+
+            payload.numRate = numRate;
+            payload.isRateizzabile = isRateizzabile;
+
+            if (isRateizzabile && numRate > 1) {
+                const monthlyBase = (prezzo / numRate);
+                const monthlyFee = monthlyBase * 0.02;
+                const monthlyTotal = monthlyBase + monthlyFee;
+
+                if (ratealeTitle) ratealeTitle.textContent = `Abbonamento Rateale ${tipoAbbonamentoLabel} (${numRate} Rate)`;
+                if (ratealePrice) ratealePrice.textContent = `€${monthlyTotal.toFixed(2)} / mese`;
+                if (ratealeDesc) ratealeDesc.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese (€${monthlyBase.toFixed(2)} quota + €${monthlyFee.toFixed(2)} spese) per ${numRate} mesi. Cancellazione automatica a fine contratto.`;
+
+                if (cardRatealeLabel) cardRatealeLabel.classList.remove('hidden');
+
+                const radioRateale = document.querySelector('input[name="modal_payment_plan"][value="rateale"]');
+                if (radioRateale) radioRateale.checked = true;
+            } else {
+                if (cardRatealeLabel) cardRatealeLabel.classList.add('hidden');
+                const radioUnico = document.querySelector('input[name="modal_payment_plan"][value="unico"]');
+                if (radioUnico) radioUnico.checked = true;
+            }
+
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        window.submitModalCheckout = async function() {
+            if (!currentModalCheckoutState) return;
+
+            const proceedBtn = document.getElementById('modal-proceed-btn');
+            const errBox = document.getElementById('modal-error-box');
+
+            if (proceedBtn) {
+                proceedBtn.disabled = true;
+                proceedBtn.innerHTML = `ELABORAZIONE IN CORSO... <div class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>`;
+            }
+            if (errBox) errBox.classList.add('hidden');
+
+            try {
+                const selectedPlan = document.querySelector('input[name="modal_payment_plan"]:checked')?.value || 'unico';
+                const isInstallment = selectedPlan === 'rateale' && currentModalCheckoutState.isRateizzabile;
+                const numRate = isInstallment ? currentModalCheckoutState.numRate : 1;
+
+                const apiBase = APP_CONFIG.API_BASE_URL || "";
+                const res = await fetch(`${apiBase}/api/create-checkout-session`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${currentModalCheckoutState.token}`
                     },
-                    body: JSON.stringify({ 
-                        eventId: eventoId, 
-                        nomePiano: nomePiano, 
-                        renew: renew, 
-                        dataInizioCorso: dataInizioCorso,
+                    body: JSON.stringify({
+                        eventId: currentModalCheckoutState.eventoId,
+                        nomePiano: currentModalCheckoutState.nomePiano,
+                        renew: currentModalCheckoutState.renew,
+                        dataInizioCorso: currentModalCheckoutState.dataInizioCorso,
                         is_installment: isInstallment,
                         num_rate: numRate
                     })
@@ -6165,21 +6279,29 @@
 
                 const data = await res.json();
                 if (!res.ok) {
-                    throw new Error(data.error || 'Errore di rete nell\'avviare il pagamento.');
+                    throw new Error(data.error || 'Errore durante l\'avvio del checkout.');
                 }
 
                 if (data.free) {
                     alert("Ti sei registrato correttamente all'evento gratuito!");
-                    await loadUserEventi();
-                    await loadUserPagamenti();
+                    closeCheckoutModal();
+                    if (typeof loadUserEventi === 'function') await loadUserEventi();
+                    if (typeof loadUserPagamenti === 'function') await loadUserPagamenti();
                 } else if (data.url) {
                     window.location.href = data.url;
                 }
             } catch (err) {
-                console.error("Errore iscrizione evento:", err);
-                alert("Errore iscrizione: " + err.message);
+                console.error("Errore modal checkout:", err);
+                if (errBox) {
+                    errBox.textContent = err.message;
+                    errBox.classList.remove('hidden');
+                }
+                if (proceedBtn) {
+                    proceedBtn.disabled = false;
+                    proceedBtn.innerHTML = `PROCEDI AL PAGAMENTO CON STRIPE ➔`;
+                }
             }
-        }
+        };
 
         async function disiscriviCorso(iscrizioneId, titolo) {
             if (!confirm(`Sei sicuro di volerti cancellare dal corso "${titolo}"?`)) return;
