@@ -118,17 +118,22 @@
                 document.getElementById('membership-type').textContent = userProfile.tipo_adesione ? userProfile.tipo_adesione.replace(/_/g, ' ') : 'Socio';
                 document.getElementById('total-amount').textContent = `€${quota.toFixed(2)}`;
 
-                // Determina il numero massimo di mesi / rate consentiti per il tipo di abbonamento
-                // Annuale: max 12 mesi (quota >= 450€)
-                // Semestrale: max 6 mesi (quota >= 200€)
-                // Trimestrale: max 3 mesi (quota >= 90€)
+                // Determina la modalità rateale in base all'importo della quota:
+                // - Trimestrale (€180): max 3 rate da €60/mese (+ €1,20 spese = €61,20/mese)
+                // - Semestrale (€330): max 6 rate da €55/mese (+ €1,10 spese = €56,10/mese)
+                // - Annuale (€600): max 12 rate da €50/mese (+ €1,00 spese = €51,00/mese)
                 let maxRate = 12;
-                if (quota < 200 && quota >= 90) {
+                let tipoAbbonamento = "Annuale";
+
+                if (quota <= 250) {
                     maxRate = 3;
-                } else if (quota < 450 && quota >= 200) {
+                    tipoAbbonamento = "Trimestrale";
+                } else if (quota <= 450) {
                     maxRate = 6;
+                    tipoAbbonamento = "Semestrale";
                 } else {
                     maxRate = 12;
+                    tipoAbbonamento = "Annuale";
                 }
                 window.currentMaxRate = maxRate;
 
@@ -141,7 +146,7 @@
 
                     const ratealeTitle = document.getElementById('plan-rateale-title');
                     if (ratealeTitle) {
-                        ratealeTitle.textContent = `Abbonamento Rateale (${maxRate} Mesi)`;
+                        ratealeTitle.textContent = `Abbonamento Rateale ${tipoAbbonamento} (${maxRate} Rate)`;
                     }
 
                     const ratealeLabel = document.getElementById('plan-rateale-label');
