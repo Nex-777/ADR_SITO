@@ -118,16 +118,35 @@
                 document.getElementById('membership-type').textContent = userProfile.tipo_adesione ? userProfile.tipo_adesione.replace(/_/g, ' ') : 'Socio';
                 document.getElementById('total-amount').textContent = `€${quota.toFixed(2)}`;
 
-                // Se la quota è >= 100€, mostra l'opzione di rateizzazione in 12 mesi
+                // Determina il numero massimo di mesi / rate consentiti per il tipo di abbonamento
+                // Annuale: max 12 mesi (quota >= 450€)
+                // Semestrale: max 6 mesi (quota >= 200€)
+                // Trimestrale: max 3 mesi (quota >= 90€)
+                let maxRate = 12;
+                if (quota < 200 && quota >= 90) {
+                    maxRate = 3;
+                } else if (quota < 450 && quota >= 200) {
+                    maxRate = 6;
+                } else {
+                    maxRate = 12;
+                }
+                window.currentMaxRate = maxRate;
+
+                // Se la quota consente la rateizzazione (>= 90€)
                 const selectorContainer = document.getElementById('installment-selector-container');
-                if (quota >= 100 && selectorContainer) {
-                    const monthlyBase = (quota / 12);
+                if (quota >= 90 && selectorContainer) {
+                    const monthlyBase = (quota / maxRate);
                     const monthlyFee = monthlyBase * 0.02;
                     const monthlyTotal = monthlyBase + monthlyFee;
 
+                    const ratealeTitle = document.getElementById('plan-rateale-title');
+                    if (ratealeTitle) {
+                        ratealeTitle.textContent = `Abbonamento Rateale (${maxRate} Mesi)`;
+                    }
+
                     const ratealeLabel = document.getElementById('plan-rateale-label');
                     if (ratealeLabel) {
-                        ratealeLabel.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese (€${monthlyBase.toFixed(2)} quota + €${monthlyFee.toFixed(2)} spese) per 12 mesi.`;
+                        ratealeLabel.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese (€${monthlyBase.toFixed(2)} quota + €${monthlyFee.toFixed(2)} spese) per ${maxRate} mesi. Cancellazione automatica alla fine del contratto.`;
                     }
                     selectorContainer.classList.remove('hidden');
                 }
@@ -163,7 +182,8 @@
                 }
 
                 const selectedPlan = document.querySelector('input[name="payment_plan"]:checked')?.value || 'unico';
-                const isInstallment = selectedPlan === 'rateale_12';
+                const isInstallment = selectedPlan === 'rateale';
+                const numRate = isInstallment ? (window.currentMaxRate || 12) : 1;
 
                 const apiBase = APP_CONFIG.API_BASE_URL || "";
                 const response = await fetch(`${apiBase}/api/create-checkout-session`, {
@@ -173,7 +193,8 @@
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        is_installment: isInstallment
+                        is_installment: isInstallment,
+                        num_rate: numRate
                     })
                 });
 

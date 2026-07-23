@@ -437,9 +437,14 @@ export default async function handler(req, res) {
             const isInstallment = req.body?.is_installment === true || req.body?.is_installment === 'true';
 
             if (isInstallment) {
-                // Calcola la rata mensile (12esima parte) e la commissione del 2%
-                const monthlyBaseQuota = Math.round((quota / 12) * 100);
-                const monthlyFeeQuota = Math.round((quota / 12) * 0.02 * 100);
+                // Determina il numero di rate ammesse (massimo 12 per annuale, 6 per semestrale, 3 per trimestrale)
+                let numRate = parseInt(req.body?.num_rate || '12');
+                if (isNaN(numRate) || numRate <= 0) numRate = 12;
+                if (numRate > 12) numRate = 12; // limite massimo annuale
+
+                // Calcola la rata mensile e la commissione del 2%
+                const monthlyBaseQuota = Math.round((quota / numRate) * 100);
+                const monthlyFeeQuota = Math.round((quota / numRate) * 0.02 * 100);
                 const monthlyTotalAmount = monthlyBaseQuota + monthlyFeeQuota;
                 const monthlyTotalStr = (monthlyTotalAmount / 100).toFixed(2);
 
@@ -449,8 +454,8 @@ export default async function handler(req, res) {
                             price_data: {
                                 currency: 'eur',
                                 product_data: {
-                                    name: `Quota Associativa Annuale (Abbonamento Rateale 12 Mesi)`,
-                                    description: `${description} - Rateizzazione 12 Mesi`,
+                                    name: `Quota Associativa (${numRate} Rate Mensili)`,
+                                    description: `${description} - Rateizzazione (${numRate} Mesi)`,
                                 },
                                 unit_amount: monthlyBaseQuota,
                                 recurring: {
@@ -481,7 +486,7 @@ export default async function handler(req, res) {
                         metadata: {
                             utenteId: utenteId,
                             is_installment: 'true',
-                            installments_total: '12',
+                            installments_total: String(numRate),
                             importo_totale_quota: quota.toFixed(2),
                             importo_rata: monthlyTotalStr,
                             causale: description
@@ -490,8 +495,9 @@ export default async function handler(req, res) {
                     metadata: {
                         utenteId: utenteId,
                         is_installment: 'true',
+                        installments_total: String(numRate),
                         importo: monthlyTotalStr,
-                        causale: `${description} (Abbonamento Rateale 12 Mesi)`
+                        causale: `${description} (Abbonamento ${numRate} Rate)`
                     },
                     success_url: `${reqOrigin}/portal/dashboard.html?payment=success&type=subscription`,
                     cancel_url: `${reqOrigin}/portal/pagamento.html?id=${utenteId}&payment=cancel`,

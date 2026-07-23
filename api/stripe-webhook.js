@@ -78,15 +78,16 @@ export default async function handler(req, res) {
 
                 const isInstallment = session.metadata?.is_installment === 'true' || subscription.metadata?.is_installment === 'true';
                 if (isInstallment) {
+                    const numMesi = parseInt(session.metadata?.installments_total || subscription.metadata?.installments_total || '12');
                     const startDate = new Date(subscription.created * 1000);
                     const endDate = new Date(startDate);
-                    endDate.setFullYear(endDate.getFullYear() + 1); // 12 mesi esatti
+                    endDate.setMonth(endDate.getMonth() + (isNaN(numMesi) ? 12 : numMesi));
                     const cancelAtSeconds = Math.floor(endDate.getTime() / 1000);
 
                     await stripe.subscriptions.update(subId, {
                         cancel_at: cancelAtSeconds
                     });
-                    console.log(`[SUBSCRIPTION WEBHOOK] Impostata cancellazione automatica per subscription ${subId} a data: ${endDate.toISOString()}`);
+                    console.log(`[SUBSCRIPTION WEBHOOK] Impostata cancellazione automatica per subscription ${subId} dopo ${numMesi} mesi (data: ${endDate.toISOString()})`);
                 }
             } catch (subErr) {
                 console.error('❌ Errore impostazione cancel_at per abbonamento Stripe:', subErr);
