@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.19"
+                VERSION: "1.03.20"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6129,13 +6129,38 @@
                     }
                 }
 
+                // Chiedi all'utente se desidera l'Abbonamento Rateale o il Pagamento in Unica Soluzione
+                let isInstallment = false;
+                let numRate = 12;
+                if (nomePiano) {
+                    const lower = nomePiano.toLowerCase();
+                    if (lower.includes('trimestral')) numRate = 3;
+                    else if (lower.includes('semestral')) numRate = 6;
+                    else if (lower.includes('annual')) numRate = 12;
+                }
+
+                if (numRate >= 3) {
+                    isInstallment = confirm(
+                        `Come desideri saldare l'iscrizione per "${nomePiano || 'Corso'}"?\n\n` +
+                        `• Premere OK per ABBONAMENTO RATEALE (${numRate} rate mensili con addebito automatico su Carta o SEPA).\n\n` +
+                        `• Premere ANNULLA per PAGAMENTO IN UNICA SOLUZIONE (Pagamento unico con Carta, Apple Pay, PayPal o Klarna).`
+                    );
+                }
+
                 const res = await fetch(`${APP_CONFIG.API_BASE_URL || ""}/api/create-checkout-session`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ eventId: eventoId, nomePiano: nomePiano, renew: renew, dataInizioCorso: dataInizioCorso })
+                    body: JSON.stringify({ 
+                        eventId: eventoId, 
+                        nomePiano: nomePiano, 
+                        renew: renew, 
+                        dataInizioCorso: dataInizioCorso,
+                        is_installment: isInstallment,
+                        num_rate: numRate
+                    })
                 });
 
                 const data = await res.json();

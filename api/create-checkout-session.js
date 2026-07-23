@@ -336,7 +336,85 @@ export default async function handler(req, res) {
 
             const description = `Iscrizione Corso: ${evento.titolo}${causaleDettaglio} per ${profile?.nome || ''} ${profile?.cognome || ''}`;
 
-            // Calcola il prezzo base e la commissione del 2% per le spese di gestione
+            const isInstallment = req.body?.is_installment === true || req.body?.is_installment === 'true';
+
+            if (isInstallment) {
+                let numRate = parseInt(req.body?.num_rate || '12');
+                if (isNaN(numRate) || numRate <= 0) numRate = 12;
+                if (numRate > 12) numRate = 12;
+
+                const monthlyBaseQuota = Math.round((prezzo / numRate) * 100);
+                const monthlyFeeQuota = Math.round((prezzo / numRate) * 0.02 * 100);
+                const monthlyTotalAmount = monthlyBaseQuota + monthlyFeeQuota;
+                const monthlyTotalStr = (monthlyTotalAmount / 100).toFixed(2);
+
+                const session = await stripe.checkout.sessions.create({
+                    line_items: [
+                        {
+                            price_data: {
+                                currency: 'eur',
+                                product_data: {
+                                    name: `Iscrizione Corso (${numRate} Rate Mensili)`,
+                                    description: `${description} - Rateizzazione (${numRate} Mesi)`,
+                                },
+                                unit_amount: monthlyBaseQuota,
+                                recurring: {
+                                    interval: 'month',
+                                    interval_count: 1
+                                }
+                            },
+                            quantity: 1,
+                        },
+                        {
+                            price_data: {
+                                currency: 'eur',
+                                product_data: {
+                                    name: `Spese di gestione transazione e amministrative (2%)`,
+                                },
+                                unit_amount: monthlyFeeQuota,
+                                recurring: {
+                                    interval: 'month',
+                                    interval_count: 1
+                                }
+                            },
+                            quantity: 1,
+                        },
+                    ],
+                    mode: 'subscription',
+                    customer_email: userEmail,
+                    subscription_data: {
+                        metadata: {
+                            utenteId: utenteId,
+                            eventId: eventId,
+                            is_installment: 'true',
+                            installments_total: String(numRate),
+                            importo_totale_quota: prezzo.toFixed(2),
+                            importo_rata: monthlyTotalStr,
+                            causale: description,
+                            renew: renew ? 'true' : 'false',
+                            nomePiano: nomePiano || '',
+                            dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0]
+                        }
+                    },
+                    metadata: {
+                        utenteId: utenteId,
+                        eventId: eventId,
+                        is_installment: 'true',
+                        installments_total: String(numRate),
+                        importo: monthlyTotalStr,
+                        causale: `${description} (Abbonamento ${numRate} Rate)`,
+                        renew: renew ? 'true' : 'false',
+                        nomePiano: nomePiano || '',
+                        dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0]
+                    },
+                    success_url: `${reqOrigin}/portal/dashboard.html?event_payment=success&event_id=${eventId}&type=subscription`,
+                    cancel_url: `${reqOrigin}/portal/dashboard.html?event_payment=cancel`,
+                });
+
+                return res.status(200).json({ url: session.url });
+            }
+
+            // Calcola il prezzo base e la commissione del 2% per le spese di gestione (Pagamento Unico)
             const baseAmount = Math.round(prezzo * 100);
             const feeAmount = Math.round(prezzo * 0.02 * 100);
             const totalAmount = baseAmount + feeAmount;
