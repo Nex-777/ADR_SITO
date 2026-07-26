@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.30"
+                VERSION: "1.03.31"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -8026,10 +8026,16 @@ async function apriDossierTesserato(utente_id) {
         const tessContainer = document.getElementById('dossier-tesseramento-container');
         if (tess) {
             tessContainer.innerHTML = `
-                <div><p class="text-[10px] text-gray-500 uppercase">Tessera CSEN</p><p class="text-sm text-white font-bold">${tess.numero_tessera_csen || 'IN ATTESA'}</p></div>
-                <div><p class="text-[10px] text-gray-500 uppercase">Adesione</p><p class="text-sm text-white">${tess.tipo_adesione || '-'}</p></div>
-                <div><p class="text-[10px] text-gray-500 uppercase">Quota Totale</p><p class="text-sm text-white">€${tess.quota_totale || '0'}</p></div>
-                <div><p class="text-[10px] text-gray-500 uppercase">Data Richiesta</p><p class="text-sm text-white">${tess.created_at ? new Date(tess.created_at).toLocaleDateString('it-IT') : '-'}</p></div>
+                <div>
+                    <p class="text-[10px] text-gray-500 uppercase">Tessera CSEN</p>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <p id="dossier-tessera-csen" class="text-sm text-white font-bold">${tess.numero_tessera_csen || 'IN ATTESA'}</p>
+                        ${tess.numero_tessera_csen ? `<button onclick="copyDossierText('dossier-tessera-csen', this)" class="text-gray-500 hover:text-primary transition-colors opacity-60 hover:opacity-100 p-0.5 rounded shrink-0" title="Copia Tessera CSEN"><span class="material-symbols-outlined text-[13px] block">content_copy</span></button>` : ''}
+                    </div>
+                </div>
+                <div><p class="text-[10px] text-gray-500 uppercase">Adesione</p><p class="text-sm text-white mt-0.5">${tess.tipo_adesione || '-'}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase">Quota Totale</p><p class="text-sm text-white mt-0.5">€${tess.quota_totale || '0'}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase">Data Richiesta</p><p class="text-sm text-white mt-0.5">${tess.created_at ? new Date(tess.created_at).toLocaleDateString('it-IT') : '-'}</p></div>
             `;
         } else {
             tessContainer.innerHTML = `<div class="col-span-4 text-gray-500 text-xs italic">Nessun dato di tesseramento trovato</div>`;
@@ -8053,27 +8059,19 @@ async function apriDossierTesserato(utente_id) {
         const { data: atti, error: errAtti } = await supabaseClient
             .from('atti_adesione')
             .select('*')
-            .eq('utente_id', utente_id)
-            .single();
+            .eq('utente_id', utente_id);
         
         let modHtml = '';
-        if (atti) {
-            if (atti.url_pdf_csen_iscrizione) {
+        if (atti && atti.length > 0) {
+            atti.forEach(atto => {
                 modHtml += `
                     <div class="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">description</span> Iscrizione CSEN</span>
-                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_iscrizione)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded">VEDI FILE</button>
+                        <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">description</span> ${escapeHtml(atto.tipo_atto || 'Atto')}</span>
+                        <button onclick="openSignedFile('modulistica', '${escapeHtml(atto.file_url)}')" class="bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold px-3 py-1 transition-all uppercase rounded">VEDI FILE</button>
                     </div>`;
-            }
-            if (atti.url_pdf_csen_informativa) {
-                modHtml += `
-                    <div class="flex items-center justify-between mt-2">
-                        <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">privacy_tip</span> Informativa CSEN</span>
-                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_informativa)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded">VEDI FILE</button>
-                    </div>`;
-            }
+            });
         }
-        if (!modHtml) modHtml = `<span class="text-gray-500 text-xs italic">Nessuna modulistica firmata digitalmente trovata</span>`;
+        if (!modHtml) modHtml = `<span class="text-gray-500 text-xs italic">Nessun modulo compilato</span>`;
         modContainer.innerHTML = modHtml;
 
         // CERTIFICATI MEDICI
@@ -8152,6 +8150,49 @@ async function apriDossierTesserato(utente_id) {
         console.error("Errore apertura dossier:", err);
         alert("Errore nell'apertura del dossier: " + err.message);
     }
+}
+
+function copyDossierText(targetId, btn) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    const text = el.textContent ? el.textContent.trim() : '';
+    if (!text || text === '-' || text === 'ND') return;
+
+    const onSuccess = () => {
+        if (!btn) return;
+        const icon = btn.querySelector('.material-symbols-outlined');
+        if (icon) {
+            const originalText = icon.textContent;
+            icon.textContent = 'check';
+            icon.classList.add('text-green-400');
+            setTimeout(() => {
+                icon.textContent = originalText;
+                icon.classList.remove('text-green-400');
+            }, 1500);
+        }
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(() => fallbackCopy(text, onSuccess));
+    } else {
+        fallbackCopy(text, onSuccess);
+    }
+}
+
+function fallbackCopy(text, onSuccess) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        onSuccess();
+    } catch(e) {
+        console.error('Copy failed:', e);
+    }
+    document.body.removeChild(textarea);
 }
 
         async function popolaSelectTesserati() {

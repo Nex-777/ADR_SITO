@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-26] feat | Icona Copia negli Appunti per i Campi del Dossier Socio (v1.03.31)
+- **UI Dossier Socio**: Aggiunta un'icona non invasiva `content_copy` affianco a ogni campo di Allegato 1 (Nome Cognome, Email, Cellulare, Residenza, Contatto Emergenza, Codice Fiscale, Sesso, Data di Nascita, Luogo di Nascita, Dati Tutore Legale, Numero Tessera CSEN).
+- **Clipboard Helper (`copyDossierText`)**: Creata funzione JS per la copia istantanea negli appunti con feedback visivo temporaneo (l'icona cambia in una spunta verde `check` per 1.5 secondi) e fallback automatico per i browser che non supportano l'API `navigator.clipboard`.
+- **Versione:** Incrementata la versione globale a `v1.03.31`.
+
 ---
 
 ## [2026-07-26] fix | Inversione Numerazione Lista Generale Componenti (v1.03.30)
