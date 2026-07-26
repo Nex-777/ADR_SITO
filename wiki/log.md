@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-26] fix | Gestione Certificati Ludico-Ricreativi e Sospensione Tesseramento (v1.03.32)
+- **Backend (`api/validate.js`)**:
+  - Aggiornato il prompt AI Gemini con vincolo positivo stringente: il certificato DEVE contenere esplicitamente almeno uno dei termini "AGONISTICO", "AGONISTICI", "NON AGONISTICO", "NON AGONISTICI". Documenti con diciture "ludico-motoria" o "ludico-ricreativa" vengono ora marcati come `ROSSO`.
+  - Alla transizione dello stato certificato a `ROSSO`, l'API aggiorna automaticamente `registro_tesserati.stato_tesseramento = 'SOSPESO'` per gli utenti in stato `ATTIVO` o `IN_ELABORAZIONE` e invia un'email di avviso di sospensione.
+- **Frontend (`portal/dashboard.js`)**:
+  - Aggiunta l'azione rapida `ANNULLA / RIFIUTA` nel Registro Tesserati per permettere al Direttivo di annullare un certificato approvato o in uso.
+  - Aggiunti i pulsanti di gestione manuale `APPROVA` / `RIFIUTA` nel modale Dossier Tesserato per ciascun certificato.
+- **Versione**: Incrementata la versione globale a `v1.03.32`.
+
+---
+
 ## [2026-07-26] feat | Icona Copia negli Appunti per i Campi del Dossier Socio (v1.03.31)
 - **UI Dossier Socio**: Aggiunta un'icona non invasiva `content_copy` affianco a ogni campo di Allegato 1 (Nome Cognome, Email, Cellulare, Residenza, Contatto Emergenza, Codice Fiscale, Sesso, Data di Nascita, Luogo di Nascita, Dati Tutore Legale, Numero Tessera CSEN).
 - **Clipboard Helper (`copyDossierText`)**: Creata funzione JS per la copia istantanea negli appunti con feedback visivo temporaneo (l'icona cambia in una spunta verde `check` per 1.5 secondi) e fallback automatico per i browser che non supportano l'API `navigator.clipboard`.

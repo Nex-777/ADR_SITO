@@ -179,15 +179,24 @@ IMPORTANTE: La data odierna è il ${todayStr}. Utilizzala come punto di riferime
 Devi estrarre le date esatte scritte sul documento. Ignora qualsiasi altra informazione esterna.
 Se le date presenti sul certificato indicano che è scaduto rispetto a oggi, lo stato DEVE essere "ROSSO".
 
+REQUISITO FONDAMENTALE SULLE DICITURE DI IDONEITÀ:
+Affinché il certificato sia valido per il tesseramento sportivo, sul documento DEVE ESSERE PRESENTE IN MODO CHIARO ED ESPLICITO almeno una delle seguenti parole/diciture (senza distinzione tra maiuscole e minuscole):
+- "AGONISTICO"
+- "AGONISTICI"
+- "NON AGONISTICO"
+- "NON AGONISTICI"
+
+Se il certificato NON contiene nessuna di queste parole esplicite (ad esempio se riporta soltanto "attività ludico-motoria", "ludico-ricreativa", "attività amatoriale" o altre diciture prive dei termini sopra indicati), il certificato NON È VALIDO ai fini del tesseramento sportivo e lo stato DEVE essere tassativamente "ROSSO".
+
 Devi estrarre le seguenti informazioni in formato JSON STRICT:
 1. data_emissione (formato YYYY-MM-DD, la data in cui il certificato è stato rilasciato)
 2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato)
-3. agonistico (booleano)
-4. stato (stringa: "VERDE" se il certificato è originale, chiaramente leggibile e in corso di validità rispetto a oggi; "GIALLO" se c'è qualcosa di incomprensibile o non si legge bene; "ROSSO" se il certificato è chiaramente scaduto rispetto a oggi o non è un certificato medico).
+3. agonistico (booleano, true se specifica idoneità agonistica, false se specifica non agonistica)
+4. stato (stringa: "VERDE" se il certificato è originale, leggibile, in corso di validità e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se c'è qualcosa di incomprensibile o non si legge bene; "ROSSO" se il certificato è scaduto rispetto a oggi, non contiene la dicitura obbligatoria o non è un certificato medico).
 5. note (una breve spiegazione del perché hai assegnato quello stato).
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
-{"data_emissione": "2023-10-15", "data_scadenza": "2024-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato valido e leggibile."}
+{"data_emissione": "2023-10-15", "data_scadenza": "2024-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico valido e leggibile."}
                 `;
 
                 const response = await ai.models.generateContent({
@@ -235,12 +244,16 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                             html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il tuo certificato medico è stato approvato!</p><p style="color:#aaa;font-size:13px">Puoi ora procedere al pagamento della quota associativa di <strong>€${quota.toFixed(2)}</strong> per completare la tua iscrizione:</p><a href="https://portal.adrenalinaclub.it/portal/pagamento.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">PAGA ORA LA QUOTA</a></div>`
                         });
                     }
-                } else if (finalStatus === 'ROSSO' && userEmail) {
-                    await sendEmail({
-                        to: userEmail,
-                        subject: 'Problema con il tuo Certificato Medico - Richiesta di ricaricamento',
-                        html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il certificato medico caricato è stato rifiutato.</p><p style="color:#aaa;font-size:13px">Motivazione: <strong>${finalNotes}</strong></p><a href="https://portal.adrenalinaclub.it/portal/dashboard.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">RICARICA CERTIFICATO MEDICO</a></div>`
-                    });
+                } else if (finalStatus === 'ROSSO') {
+                    await supabase.from('registro_tesserati').update({ stato_tesseramento: 'SOSPESO' })
+                        .eq('anagrafica_id', targetAnagraficaId).in('stato_tesseramento', ['ATTIVO', 'IN_ELABORAZIONE']);
+                    if (userEmail) {
+                        await sendEmail({
+                            to: userEmail,
+                            subject: 'Certificato Medico Non Valido - Tesseramento Sospeso',
+                            html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il certificato medico caricato è stato rifiutato.</p><p style="color:#aaa;font-size:13px">Motivazione: <strong>${finalNotes}</strong></p><p style="color:#f87171;font-size:13px;font-weight:bold;margin-top:15px">Il tuo tesseramento è stato temporaneamente SOSPESO. Carica al più presto un certificato medico in corso di validità (Non Agonistico o Agonistico) per riattivare il tuo profilo.</p><a href="https://portal.adrenalinaclub.it/portal/dashboard.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">RICARICA CERTIFICATO MEDICO</a></div>`
+                        });
+                    }
                 }
             }
 

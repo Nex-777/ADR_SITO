@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.31"
+                VERSION: "1.03.32"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1934,6 +1934,7 @@
                     isCertVerde = certInfo.stato_validazione === 'VERDE' && !scaduto;
                     let color = scaduto ? 'text-primary' : 'text-green-500';
                     let statusLabel = '';
+                    let adminCertAction = '';
                     if (certInfo.stato_validazione === 'ROSSO') {
                         color = 'text-primary';
                         statusLabel = '<br><span class="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">RIFIUTATO</span>';
@@ -1945,9 +1946,12 @@
                         statusLabel = '<br><span class="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold">ATTESA AI</span>';
                     } else {
                         statusLabel = '<br><span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">VALIDATO</span>';
+                        if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                            adminCertAction = `<br><button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" class="text-[8px] text-red-400 hover:text-red-300 underline font-bold uppercase mt-1 cursor-pointer">ANNULLA / RIFIUTA</button>`;
+                        }
                     }
                     const certBarHtml = generateProgressBarHtml(certInfo.data_scadenza);
-                    certHtml = `<a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="tess-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}<br>
+                    certHtml = `<a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="tess-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}${adminCertAction}<br>
                                 <span class="text-[10px] text-gray-400">Scadenza: ${escapeHtml(formatToItalianDate(certInfo.data_scadenza))}</span>
                                 ${certBarHtml}`;
                 }
@@ -8089,8 +8093,24 @@ async function apriDossierTesserato(utente_id) {
             if (certs && certs.length > 0) {
                 certs.forEach(c => {
                     const scaduto = isCertificatoScaduto(c.data_scadenza);
-                    if (!scaduto) hasActiveCert = true;
-                    const statusBadge = scaduto ? '<span class="bg-red-500/20 text-red-500 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">SCADUTO</span>' : '<span class="bg-green-500/20 text-green-500 border border-green-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">ATTIVO</span>';
+                    if (!scaduto && c.stato_validazione === 'VERDE') hasActiveCert = true;
+                    let valBadgeHtml = '';
+                    if (c.stato_validazione === 'ROSSO') valBadgeHtml = '<span class="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">RIFIUTATO</span>';
+                    else if (c.stato_validazione === 'GIALLO') valBadgeHtml = '<span class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">ATTESA REVISIONE</span>';
+                    else if (c.stato_validazione === 'VERDE') valBadgeHtml = '<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">VALIDATO</span>';
+                    
+                    const statusBadge = scaduto ? '<span class="bg-red-500/20 text-red-500 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">SCADUTO</span>' : valBadgeHtml;
+                    
+                    let adminDossierBtns = '';
+                    if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                        adminDossierBtns = `
+                            <div class="flex items-center gap-1 mt-1">
+                                ${c.stato_validazione !== 'VERDE' ? `<button onclick="if(confirm('Approvare il certificato medico?')) validaCertificatoManual('${c.id}', 'VERDE')" class="bg-green-500/20 border border-green-500/40 text-green-400 hover:bg-green-600 hover:text-white text-[9px] font-bold px-2 py-0.5 transition-all uppercase rounded">APPROVA</button>` : ''}
+                                ${c.stato_validazione !== 'ROSSO' ? `<button onclick="validaCertificatoManual('${c.id}', 'ROSSO')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white text-[9px] font-bold px-2 py-0.5 transition-all uppercase rounded">RIFIUTA</button>` : ''}
+                            </div>
+                        `;
+                    }
+
                     certHtml += `
                         <div class="flex items-center justify-between border-b border-white/5 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
                             <div>
@@ -8099,6 +8119,7 @@ async function apriDossierTesserato(utente_id) {
                                     ${statusBadge}
                                 </div>
                                 <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${escapeHtml(formatToItalianDate(c.data_scadenza))}</div>
+                                ${adminDossierBtns}
                             </div>
                             <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded flex-shrink-0">VEDI FILE</button>
                         </div>`;
