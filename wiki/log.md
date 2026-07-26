@@ -28,6 +28,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
   - Aggiunti i pulsanti di gestione manuale `APPROVA` / `RIFIUTA` nel modale Dossier Tesserato per ciascun certificato.
 - **Versione**: Incrementata la versione globale a `v1.03.32`.
 
+## [2026-07-26] refactor | Dashboard Istruttori Card UI & Rimozione Presenze (v1.03.34)
+- **Database (`iscrizioni_eventi` & `vw_stato_atleta_corso`)**: Aggiunte colonne `abbonamento_scelto` e `tipo_pagamento` per tracciare il piano scelto e la modalità di pagamento (a rate / unica rata). Aggiornata la vista atleta/corso per esporli.
+- **Webhook Stripe (`api/stripe-webhook.js`) & Checkout (`api/create-checkout-session.js`)**: Aggiornata la scrittura del database per salvare automaticamente il piano e la modalità di pagamento.
+- **UI Istruttori (`portal/dashboard.html` & `portal/dashboard.js`)**: Eliminato l'intero vecchio sistema di presenze (appello, date, storico lezioni, pulsante salva presenze). Trasformato l'elenco tesserati del corso in una lista a Card Espandibili pensata per mobile/tablet che mostra con massima chiarezza: Tesserato, Stato CSEN (Badge), Stato Certificato Medico (Semaforo con barra temporale a 12 step), Piano Abbonamento, Tipo Pagamento, Data Iscrizione e Data Scadenza Corso.
+- **Versione:** Incrementata la versione globale a `v1.03.34`.
+
 ---
 
 ## [2026-07-26] feat | Icona Copia negli Appunti per i Campi del Dossier Socio (v1.03.31)

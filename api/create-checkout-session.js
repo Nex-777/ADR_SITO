@@ -323,7 +323,9 @@ export default async function handler(req, res) {
                         evento_id: eventId,
                         utente_id: utenteId,
                         stato_pagamento: 'GRATUITO',
-                        data_inizio_corso: dataInizioCorso || new Date().toISOString().split('T')[0]
+                        data_inizio_corso: dataInizioCorso || new Date().toISOString().split('T')[0],
+                        abbonamento_scelto: nomePiano || 'Mese',
+                        tipo_pagamento: 'GRATUITO'
                     });
 
                 if (insertError) {

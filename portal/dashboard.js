@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.33"
+                VERSION: "1.03.34"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -4780,16 +4780,6 @@
             document.getElementById('instructor-course-detail-title').textContent = title.toUpperCase();
             document.getElementById('instructor-course-detail-subtitle').textContent = `ORARIO: ${orariStr.toUpperCase()} | LUOGO: ${luogo.toUpperCase()}`;
 
-            // Reset tabs
-            toggleInstructorRegistroTab('registro');
-
-            // Imposta data a oggi se vuota o non settata
-            const dateInput = document.getElementById('instructor-presence-date');
-            if (dateInput && !dateInput.value) {
-                const today = new Date().toISOString().split('T')[0];
-                dateInput.value = today;
-            }
-
             await loadRegistroIscritti();
         }
 
@@ -4806,25 +4796,19 @@
         }
 
         function toggleInstructorRegistroTab(tab) {
-            const regTab = document.getElementById('instructor-tab-registro');
-            const storTab = document.getElementById('instructor-tab-storico');
-            const regBtn = document.getElementById('instructor-registro-tab-btn');
-            const storBtn = document.getElementById('instructor-storico-tab-btn');
-
-            if (tab === 'registro') {
-                if (regTab) regTab.classList.remove('hidden');
-                if (storTab) storTab.classList.add('hidden');
-                if (regBtn) regBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase bg-primary text-white transition-all";
-                if (storBtn) storBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase text-gray-400 hover:text-white transition-all";
-                loadRegistroIscritti();
-            } else {
-                if (regTab) regTab.classList.add('hidden');
-                if (storTab) storTab.classList.remove('hidden');
-                if (regBtn) regBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase text-gray-400 hover:text-white transition-all";
-                if (storBtn) storBtn.className = "px-3 py-1.5 font-headline text-xs font-bold uppercase bg-primary text-white transition-all";
-                loadStoricoPresenze();
-            }
+            loadRegistroIscritti();
         }
+
+        window.toggleAthleteCard = function(utenteId) {
+            const details = document.getElementById(`details-card-${utenteId}`);
+            const icon = document.getElementById(`icon-card-${utenteId}`);
+            if (details) {
+                details.classList.toggle('hidden');
+                if (icon) {
+                    icon.classList.toggle('rotate-180');
+                }
+            }
+        };
 
         window.modificaScadenzaCorso = async function(iscrizioneId, nuovaData) {
             try {
@@ -4851,17 +4835,12 @@
         async function loadRegistroIscritti() {
             if (!instructorSelectedCourseId) return;
 
-            const tbody = document.getElementById('instructor-iscritti-body');
-            const countDisplay = document.getElementById('instructor-presence-count');
-            const dateInput = document.getElementById('instructor-presence-date');
+            const container = document.getElementById('instructor-iscritti-cards');
+            if (!container) return;
 
-            if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-500">Caricamento iscritti...</td></tr>';
-
-            const dataSelezionata = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            container.innerHTML = '<div class="p-6 text-center text-gray-500 font-mono text-xs uppercase bg-black/40 border border-white/10">Caricamento tesserati in corso...</div>';
 
             try {
-                // 1. Fetch from VIEW
                 const { data: atleti, error: errAtleti } = await supabaseClient
                     .from('vw_stato_atleta_corso')
                     .select('*')
@@ -4870,213 +4849,160 @@
 
                 if (errAtleti) throw errAtleti;
 
-                // 2. Fetch presences for selected date
-                const { data: presenze, error: errPresenze } = await supabaseClient
-                    .from('presenze_eventi')
-                    .select('utente_id, presente')
-                    .eq('evento_id', instructorSelectedCourseId)
-                    .eq('data_lezione', dataSelezionata);
-
-                if (errPresenze) throw errPresenze;
-
                 instructorStudentsData = atleti || [];
-                instructorPresencesData = {};
-                presenze.forEach(p => {
-                    instructorPresencesData[p.utente_id] = p.presente;
-                });
 
                 if (instructorStudentsData.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-gray-500">Nessun atleta iscritto a questo corso.</td></tr>';
-                    if (countDisplay) countDisplay.textContent = '0 / 0';
+                    container.innerHTML = `
+                        <div class="p-8 text-center text-gray-500 font-mono text-xs uppercase bg-black/40 border border-white/10">
+                            <span class="material-symbols-outlined text-3xl mb-2 text-gray-600">group_off</span>
+                            <p class="font-headline font-bold">Nessun tesserato iscritto a questo corso</p>
+                        </div>
+                    `;
                     return;
                 }
 
-                tbody.innerHTML = '';
-                let presentiCount = 0;
+                container.innerHTML = '';
 
                 instructorStudentsData.forEach(atl => {
-                    const isPresente = instructorPresencesData[atl.utente_id] === true;
-                    if (isPresente) presentiCount++;
-
-                    // Warning per certificato non valido
-                    const warningStyle = !atl.cert_valido ? 'border-l-4 border-red-500 bg-red-500/5' : '';
-                    const certTooltip = !atl.cert_valido ? 'title="⚠ CERTIFICATO MEDICO NON IN REGOLA O SCADUTO"' : '';
-
-                    // Badge Rendering
-                    const badgeOrario = atl.orario_libero 
-                        ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold">ORARIO LIBERO</span>'
-                        : '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">ORARIO CORSO</span>';
-
-                    const badgeQuotaCorso = atl.stato_pagamento === 'PAGATO'
-                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">PAGATO</span>'
-                        : (atl.stato_pagamento === 'GRATUITO' ? '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold">GRATUITO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">DA PAGARE</span>');
-
+                    // Badge CSEN
                     const badgeCsen = atl.stato_tesseramento === 'ATTIVO'
-                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold">ATTIVO</span>'
-                        : (atl.stato_tesseramento === 'SOSPESO' ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold">SOSPESO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold">SCADUTO</span>');
+                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">ATTIVO</span>'
+                        : (atl.stato_tesseramento === 'SOSPESO' ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">SOSPESO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">SCADUTO</span>');
 
-                    // Scadenza corso editabile per istruttore
-                    const scadenzaVal = atl.data_scadenza_corso || '';
-                    const handIcon = atl.scadenza_modificata_a_mano ? ' ✋' : '';
-                    const courseBarHtml = generateProgressBarHtml(scadenzaVal);
-                    const scadenzaHtml = `
-                        <div class="flex flex-col items-center">
-                            <div class="flex items-center justify-center gap-1">
-                                <input type="date" value="${scadenzaVal}" onchange="modificaScadenzaCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
-                                <span title="Modificata a mano" class="text-xs font-sans">${handIcon}</span>
-                            </div>
-                            ${courseBarHtml}
-                        </div>
-                    `;
-
-                    // Certificato Semaforo
-                    let semaforoCert = '';
-                    let testoScadenza = 'MANCANTE';
+                    // Certificato Medico
+                    let testoScadenzaCert = 'MANCANTE';
                     if (atl.cert_scadenza) {
                         const parts = atl.cert_scadenza.split('-');
                         if (parts.length === 3) {
-                            testoScadenza = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            testoScadenzaCert = `${parts[2]}/${parts[1]}/${parts[0]}`;
                         } else {
-                            testoScadenza = atl.cert_scadenza;
+                            testoScadenzaCert = atl.cert_scadenza;
                         }
                     }
-                    
+
                     const certBarHtml = generateProgressBarHtml(atl.cert_scadenza);
+                    let semaforoCert = '';
 
                     if (atl.cert_stato === 'VERDE' && atl.cert_valido) {
                         semaforoCert = `
-                            <div class="flex flex-col items-center">
-                                <span class="text-green-500 font-bold" title="VALIDO">🟢 ${testoScadenza}</span>
+                            <div class="flex flex-col items-end">
+                                <span class="text-green-500 font-mono text-[11px] font-bold">🟢 ${testoScadenzaCert}</span>
                                 ${certBarHtml}
                             </div>
                         `;
                     } else if (atl.cert_stato === 'GIALLO' || atl.cert_stato === 'IN_ATTESA') {
                         semaforoCert = `
-                            <div class="flex flex-col items-center">
-                                <span class="text-yellow-500 font-bold" title="IN VALIDAZIONE / SOSPESO">🟡 ${testoScadenza}</span>
+                            <div class="flex flex-col items-end">
+                                <span class="text-yellow-500 font-mono text-[11px] font-bold">🟡 ${testoScadenzaCert}</span>
                                 ${certBarHtml}
                             </div>
                         `;
                     } else {
                         semaforoCert = `
-                            <div class="flex flex-col items-center">
-                                <span class="text-red-500 font-bold" title="SCADUTO O MANCANTE">🔴 ${testoScadenza}</span>
+                            <div class="flex flex-col items-end">
+                                <span class="text-red-500 font-mono text-[11px] font-bold">🔴 ${testoScadenzaCert}</span>
                                 ${certBarHtml}
                             </div>
                         `;
                     }
 
-                    const checked = isPresente ? 'checked' : '';
+                    // Formattazione Date
+                    let dataInizioStr = 'N/D';
+                    if (atl.data_inizio_corso) {
+                        const parts = atl.data_inizio_corso.split('T')[0].split('-');
+                        if (parts.length === 3) dataInizioStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
 
-                    const tr = document.createElement('tr');
-                    tr.className = `hover:bg-white/5 transition-all ${warningStyle}`;
-                    tr.setAttribute('data-atleta-id', atl.utente_id);
-                    tr.innerHTML = `
-                        <td class="p-4 font-bold text-white uppercase flex items-center gap-2" ${certTooltip}>
-                            ${!atl.cert_valido ? '<span class="text-red-500 font-bold">⚠</span>' : ''}
-                            ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
-                        </td>
-                        <td class="p-4 text-center">${badgeOrario}</td>
-                        <td class="p-4 text-center">${badgeQuotaCorso}</td>
-                        <td class="p-4 text-center">${badgeCsen}</td>
-                        <td class="p-4 text-center">${scadenzaHtml}</td>
-                        <td class="p-4 text-center font-mono text-[11px]">${semaforoCert}</td>
-                        <td class="p-4 text-center">
-                            <input type="checkbox" ${checked} onchange="updatePresenceCount()" class="presence-toggle-chk form-checkbox h-4 w-4 bg-black border-white/20 text-primary focus:ring-primary">
-                        </td>
+                    let scadenzaVal = atl.data_scadenza_corso || '';
+                    let dataScadenzaStr = 'N/D';
+                    if (scadenzaVal) {
+                        const parts = scadenzaVal.split('T')[0].split('-');
+                        if (parts.length === 3) dataScadenzaStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+
+                    const courseBarHtml = generateProgressBarHtml(scadenzaVal);
+
+                    // Abbonamento e Tipo Pagamento
+                    const abbonamentoStr = atl.abbonamento_scelto || 'N/D';
+                    
+                    let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
+                    if (atl.tipo_pagamento === 'A RATE') {
+                        tipoPagamentoBadge = '<span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>';
+                    } else if (atl.tipo_pagamento === 'UNICA RATA') {
+                        tipoPagamentoBadge = '<span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">UNICA RATA</span>';
+                    } else if (atl.tipo_pagamento === 'GRATUITO') {
+                        tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">GRATUITO</span>';
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = `bg-black/60 border ${!atl.cert_valido ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
+                    card.innerHTML = `
+                        <!-- Header riga -->
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${atl.utente_id}')">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${atl.utente_id}">expand_more</span>
+                                <div>
+                                    <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2">
+                                        ${!atl.cert_valido ? '<span class="text-red-500 font-bold" title="CERTIFICATO SCADUTO O NON VALIDO">⚠</span>' : ''}
+                                        ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
+                                    </h4>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <span class="text-[9px] font-mono text-gray-400 uppercase">ISCRITTO IL: ${dataInizioStr}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-4 self-end md:self-center">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">TESSERA CSEN</span>
+                                    ${badgeCsen}
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">CERT. MEDICO</span>
+                                    ${semaforoCert}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dettagli Espandibili -->
+                        <div id="details-card-${atl.utente_id}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                            <div>
+                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">PIANO ABBONAMENTO</span>
+                                <p class="font-mono text-white font-bold text-xs mt-1 uppercase">${abbonamentoStr}</p>
+                            </div>
+                            <div>
+                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">MODALITÀ PAGAMENTO</span>
+                                <div class="mt-1">${tipoPagamentoBadge}</div>
+                            </div>
+                            <div>
+                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">DATA ISCRIZIONE</span>
+                                <p class="font-mono text-gray-300 text-xs mt-1 font-bold">${dataInizioStr}</p>
+                            </div>
+                            <div>
+                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">SCADENZA CORSO</span>
+                                <div class="mt-1 flex flex-col items-start">
+                                    <div class="flex items-center gap-1">
+                                        <input type="date" value="${scadenzaVal}" onchange="modificaScadenzaCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
+                                        ${atl.scadenza_modificata_a_mano ? '<span title="Modificata a mano" class="text-xs">✋</span>' : ''}
+                                    </div>
+                                    <div class="mt-1">${courseBarHtml}</div>
+                                </div>
+                            </div>
+                        </div>
                     `;
-                    tbody.appendChild(tr);
-                });
 
-                if (countDisplay) countDisplay.textContent = `${presentiCount} / ${instructorStudentsData.length}`;
+                    container.appendChild(card);
+                });
 
             } catch (err) {
                 console.error("Errore loadRegistroIscritti:", err);
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-red-500">Errore: ${escapeHtml(err.message)}</td></tr>`;
+                container.innerHTML = `<div class="p-6 text-center text-red-500 font-mono text-xs uppercase bg-black/40 border border-white/10">Errore: ${escapeHtml(err.message)}</div>`;
             }
         }
 
-        function updatePresenceCount() {
-            const chks = document.querySelectorAll('.presence-toggle-chk');
-            const total = chks.length;
-            const checked = Array.from(chks).filter(c => c.checked).length;
-            const countDisplay = document.getElementById('instructor-presence-count');
-            if (countDisplay) {
-                countDisplay.textContent = `${checked} / ${total}`;
-            }
-        }
-
-        async function savePresenze() {
-            if (!instructorSelectedCourseId) return;
-
-            const dateInput = document.getElementById('instructor-presence-date');
-            if (!dateInput || !dateInput.value) {
-                alert("Data lezione non valida.");
-                return;
-            }
-
-            const btn = document.querySelector('button[onclick="savePresenze()"]');
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'SALVATAGGIO IN CORSO...';
-            }
-
-            const dataLezione = dateInput.value;
-            const rows = document.querySelectorAll('#instructor-iscritti-body tr[data-atleta-id]');
-            const upserts = [];
-
-            rows.forEach(r => {
-                const utenteId = r.getAttribute('data-atleta-id');
-                const presente = r.querySelector('.presence-toggle-chk').checked;
-                upserts.push({
-                    evento_id: instructorSelectedCourseId,
-                    utente_id: utenteId,
-                    data_lezione: dataLezione,
-                    presente: presente,
-                    registrato_da: currentUser.id
-                });
-            });
-
-            try {
-                const { error } = await supabaseClient
-                    .from('presenze_eventi')
-                    .upsert(upserts, { onConflict: 'evento_id,utente_id,data_lezione' });
-
-                if (error) throw error;
-
-                await scriviAuditLog("REGISTRAZIONE_PRESENZE", "presenze_eventi", instructorSelectedCourseId, { data: dataLezione, count: upserts.length });
-                alert("Presenze registrate con successo!");
-                await loadRegistroIscritti();
-            } catch (err) {
-                alert("Errore nel salvataggio delle presenze: " + err.message);
-            } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'SALVA PRESENZE';
-                }
-            }
-        }
-
-        async function loadStoricoPresenze() {
-            if (!instructorSelectedCourseId) return;
-
-            const tbody = document.getElementById('instructor-storico-body');
-            if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Caricamento storico...</td></tr>';
-
-            try {
-                const { data: presenze, error } = await supabaseClient
-                    .from('presenze_eventi')
-                    .select('data_lezione, presente, registrato_da, utenti:utenti!presenze_eventi_registrato_da_fkey(nome, cognome)')
-                    .eq('evento_id', instructorSelectedCourseId)
-                    .order('data_lezione', { ascending: false });
-
-                if (error) throw error;
-
-                if (!presenze || presenze.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Nessuna lezione registrata in precedenza.</td></tr>';
-                    return;
-                }
+        function updatePresenceCount() {}
+        async function savePresenze() {}
+        async function loadStoricoPresenze() {}
 
                 const dateGroup = {};
                 presenze.forEach(p => {

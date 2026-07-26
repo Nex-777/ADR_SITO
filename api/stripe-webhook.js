@@ -218,6 +218,10 @@ export default async function handler(req, res) {
                     }
                 }
 
+                const isInstallment = session.metadata?.is_installment === 'true';
+                const abbonamentoScelto = nomePiano || 'Mese';
+                const tipoPagamento = isInstallment ? 'A RATE' : 'UNICA RATA';
+
                 if (renew) {
                     // Aggiorna l'iscrizione esistente per rinnovo
                     const { error: eventRegError } = await supabase
@@ -228,7 +232,9 @@ export default async function handler(req, res) {
                             data_iscrizione: new Date().toISOString(),
                             data_inizio_corso: dataInizioCorso,
                             data_scadenza_corso: dataScadenzaCorso,
-                            scadenza_modificata_a_mano: false
+                            scadenza_modificata_a_mano: false,
+                            abbonamento_scelto: abbonamentoScelto,
+                            tipo_pagamento: tipoPagamento
                         })
                         .eq('evento_id', eventId)
                         .eq('utente_id', utenteId);
@@ -247,7 +253,9 @@ export default async function handler(req, res) {
                             stato_pagamento: 'PAGATO',
                             codice_transazione: stripePaymentId,
                             data_inizio_corso: dataInizioCorso,
-                            data_scadenza_corso: dataScadenzaCorso
+                            data_scadenza_corso: dataScadenzaCorso,
+                            abbonamento_scelto: abbonamentoScelto,
+                            tipo_pagamento: tipoPagamento
                         });
                     
                     if (eventRegError) {
