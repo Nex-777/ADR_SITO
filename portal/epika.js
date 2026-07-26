@@ -4303,7 +4303,7 @@ function disegnaTabellaListaGenerale() {
         const tr = document.createElement('tr');
         tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
         
-        const rowNum = idx + 1;
+        const rowNum = filtrati.length - idx;
         const nomeStorico = p.nome_di_battaglia || 'Senza Nome';
         const nomeReal = p.utenti ? `${p.utenti.nome} ${p.utenti.cognome}` : 'N/D';
 

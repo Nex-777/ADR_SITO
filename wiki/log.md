@@ -4,6 +4,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-26] fix | Inversione Numerazione Lista Generale Componenti (v1.03.30)
+- **Frontend Epika (`portal/epika.js`)**: Modificata la colonna numerica `N.` nella tabella "LISTA GENERALE COMPONENTI - PLANNING ANNI FUTURI" affinché il numero più piccolo (1) compaia in fondo alla tabella e il numero più grande in alto (`filtrati.length - idx`).
+- **Versione:** Incrementata la versione globale a `v1.03.30`.
+
+---
+
 ## [2026-07-26] fix | Dossier Socio Residence & Contact Buttons Fix (v1.03.29)
 - **Dossier Socio**: Risolto il problema di mancata visualizzazione dell'indirizzo di residenza (mostrava solo `-`): estrazione migliorata dai dati di `utenti` e `anagrafiche` insieme alla tabella relazionale `indirizzi_residenza`.
 - **UI**: Rimossi i pulsanti "SMS" e "CHIAMA" dalla sezione HUB CONTATTI del Dossier Socio.
