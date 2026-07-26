@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.28"
+                VERSION: "1.03.29"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -7896,14 +7896,14 @@ async function apriDossierTesserato(utente_id) {
     try {
         const { data: ut, error: errUt } = await supabaseClient
             .from('utenti')
-            .select('nome, cognome, email, documento_identita_url')
+            .select('*')
             .eq('id', utente_id)
             .single();
         if (errUt) throw errUt;
 
         const { data: ana, error: errAna } = await supabaseClient
             .from('anagrafiche')
-            .select('*')
+            .select('*, indirizzi_residenza(*), contatti(*)')
             .eq('utente_id', utente_id)
             .maybeSingle();
 
@@ -7949,8 +7949,18 @@ async function apriDossierTesserato(utente_id) {
         }
 
         // CONTATTI & TUTORE LEGALE
-        let emailTarget = ut.email;
-        let telefonoTarget = ana ? (ana.cellulare || '') : '';
+        let resObj = null;
+        if (ana && ana.indirizzi_residenza) {
+            resObj = Array.isArray(ana.indirizzi_residenza) ? ana.indirizzi_residenza[0] : ana.indirizzi_residenza;
+        }
+
+        let conObj = null;
+        if (ana && ana.contatti) {
+            conObj = Array.isArray(ana.contatti) ? ana.contatti[0] : ana.contatti;
+        }
+
+        let emailTarget = (conObj && conObj.email) ? conObj.email : (ut ? ut.email : '');
+        let telefonoTarget = (conObj && conObj.telefono) ? conObj.telefono : (ut ? ut.cellulare || '' : '');
         const tutoreBadge = document.getElementById('dossier-tutore-badge');
         const tutoreSection = document.getElementById('dossier-tutore-section');
         
@@ -7959,8 +7969,8 @@ async function apriDossierTesserato(utente_id) {
                 const tutore = typeof ana.dati_tutore_legale === 'string' ? JSON.parse(ana.dati_tutore_legale) : ana.dati_tutore_legale;
                 if (tutore.email) emailTarget = tutore.email;
                 
-                // Cerca un recapito telefonico del tutore se disponibile, altrimenti usa telefono_emergenza
-                telefonoTarget = ana.telefono_emergenza || telefonoTarget;
+                if (tutore.telefono || tutore.cellulare) telefonoTarget = tutore.telefono || tutore.cellulare;
+                else if (ana.telefono_emergenza) telefonoTarget = ana.telefono_emergenza;
                 
                 tutoreBadge.classList.remove('hidden');
                 tutoreSection.classList.remove('hidden');
@@ -7977,17 +7987,34 @@ async function apriDossierTesserato(utente_id) {
         document.getElementById('dossier-cellulare').textContent = telefonoTarget || '-';
         
         let residenza = '-';
-        if (ana) {
+        if (resObj && (resObj.via_piazza || resObj.comune)) {
+            const viaStr = [resObj.via_piazza, resObj.civico].filter(Boolean).join(' ');
+            const comStr = resObj.comune ? `${resObj.comune}${resObj.provincia ? ' (' + resObj.provincia.trim() + ')' : ''}` : null;
+            const arrRes = [viaStr, comStr, resObj.cap ? resObj.cap.trim() : null].filter(Boolean);
+            if (arrRes.length > 0) residenza = arrRes.join(', ');
+        } else if (ut && (ut.indirizzo || ut.comune)) {
+            const comStr = ut.comune ? `${ut.comune}${ut.provincia ? ' (' + ut.provincia.trim() + ')' : ''}` : null;
+            const arrRes = [ut.indirizzo, comStr, ut.cap ? ut.cap.trim() : null].filter(Boolean);
+            if (arrRes.length > 0) residenza = arrRes.join(', ');
+        } else if (ana && (ana.indirizzo_residenza || ana.comune_residenza)) {
             const arrRes = [ana.indirizzo_residenza, ana.civico_residenza, ana.comune_residenza, ana.provincia_residenza, ana.cap_residenza].filter(Boolean);
             if (arrRes.length > 0) residenza = arrRes.join(', ');
         }
         document.getElementById('dossier-indirizzo').textContent = residenza;
-        document.getElementById('dossier-emergenza').textContent = (ana && ana.telefono_emergenza) ? ana.telefono_emergenza : '-';
+
+        let emergenzaTarget = '-';
+        if (ut && (ut.emergenza_telefono || ut.emergenza_nome)) {
+            const nomeEm = ut.emergenza_nome || '';
+            const telEm = ut.emergenza_telefono || '';
+            emergenzaTarget = (nomeEm && telEm) ? `${nomeEm} (${telEm})` : (telEm || nomeEm || '-');
+        } else if (ana && ana.telefono_emergenza) {
+            emergenzaTarget = ana.telefono_emergenza;
+        }
+        document.getElementById('dossier-emergenza').textContent = emergenzaTarget;
 
         // BOTTONI AZIONE
-        document.getElementById('btn-invia-email').href = emailTarget ? `mailto:${emailTarget}?subject=Adrenalina%20Club%20-%20Comunicazione` : '#';
-        document.getElementById('btn-invia-sms').href = telefonoTarget ? `sms:${telefonoTarget}` : '#';
-        document.getElementById('btn-chiama').href = telefonoTarget ? `tel:${telefonoTarget}` : '#';
+        const btnEmail = document.getElementById('btn-invia-email');
+        if (btnEmail) btnEmail.href = emailTarget ? `mailto:${emailTarget}?subject=Adrenalina%20Club%20-%20Comunicazione` : '#';
 
         // ANAGRAFICA DETTAGLIATA
         document.getElementById('dossier-cf').textContent = (ana && ana.codice_fiscale) ? ana.codice_fiscale : '-';

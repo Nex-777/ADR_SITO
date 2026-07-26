@@ -4,6 +4,14 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-26] fix | Dossier Socio Residence & Contact Buttons Fix (v1.03.29)
+- **Dossier Socio**: Risolto il problema di mancata visualizzazione dell'indirizzo di residenza (mostrava solo `-`): estrazione migliorata dai dati di `utenti` e `anagrafiche` insieme alla tabella relazionale `indirizzi_residenza`.
+- **UI**: Rimossi i pulsanti "SMS" e "CHIAMA" dalla sezione HUB CONTATTI del Dossier Socio.
+- **Database RLS**: Risolto 'infinite recursion detected' error in `epika_profili` RLS rimuovendo policy ridondanti e riscrivendo le policy admin come `SECURITY DEFINER` per interrompere il ciclo di dipendenza tra `epika_profili`, `epika_gruppi_storici` e `utenti`.
+- **Versione:** Incrementata la versione globale a `v1.03.29`.
+
+---
+
 ## [2026-07-26] feature | Automazione System-Wide Versioning & Regola Agenti (v1.03.28)
 - **Scripting (`scripts/bump-version.js`)**: Aggiornato lo script per supportare l'auto-incremento zero-arguments (`npm run bump`) e la scansione/sostituzione su tutti i file del progetto (HTML query params `?v=`, badge UI `Vs.`, costanti JS `VERSION:` e `package.json`). Eliminato lo script ridondante `bump.js`.
 - **Regole Agenti (`AGENTS.md`)**: Aggiornata la regola #5 per rendere obbligatoria l'esecuzione di `npm run bump` per tutti gli agenti AI prima di qualsiasi `git push`.
