@@ -20,6 +20,7 @@ let soggettiValidatori = [];
 let soggettiAllenatori = [];
 let soggettiAllievi = [];
 let abbinamentiState = {};
+let scabAbbinamentiMap = {};
 let managedGroups = [];
 let isCapogruppo = false;
 let currentManagedGroupId = null;
@@ -1889,6 +1890,7 @@ async function renderSCABTab() {
         (abbinamentiD || []).forEach(a => {
             abbinamentiMap[a.struttura_id] = a;
         });
+        scabAbbinamentiMap = abbinamentiMap;
 
         // 4. Renderizza Anagrafiche
         renderSCABAnagrafica();
@@ -2262,12 +2264,39 @@ function switchScabSubTab(subTab) {
 }
 
 
+// Helper per il calcolo dei contatori di abbinamento nelle strutture attive
+function calcolaContatoriAbbinamentiSCAB(strutture, abbinamentiMap) {
+    const contatori = {};
+    const increment = (id) => {
+        if (id === null || id === undefined || id === '') return;
+        const strId = String(id);
+        contatori[strId] = (contatori[strId] || 0) + 1;
+    };
+
+    (strutture || []).forEach(s => {
+        if (!s.attivo) return; // Considera solo le strutture attive
+        const abb = abbinamentiMap ? abbinamentiMap[s.id] : null;
+        if (!abb) return;
+
+        increment(abb.validatore_id);
+        increment(abb.allenatore_ref_id);
+        increment(abb.allievo_ref_id);
+        if (Array.isArray(abb.allenatori_co_ids)) {
+            abb.allenatori_co_ids.forEach(increment);
+        }
+        if (Array.isArray(abb.allievi_ids)) {
+            abb.allievi_ids.forEach(increment);
+        }
+    });
+    return contatori;
+}
+
 // Modifica variabili globali di binding
 let currentBindingOpzioneId = null;
 let currentBindingSoggettoNome = "";
 let currentBindingTipo = "";
 
-// A — Gestione Ruoli (CRUD con Binding Account)
+// A — Gestione Ruoli (CRUD con Binding Account e Badge Abbinamenti)
 async function renderRuoliAdmin() {
     try {
         const { data: soggetti, error } = await supabaseClient
@@ -2286,7 +2315,10 @@ async function renderRuoliAdmin() {
         if (allList) allList.innerHTML = '';
         if (allieviList) allieviList.innerHTML = '';
 
+        const contatori = calcolaContatoriAbbinamentiSCAB(scabStrutture, scabAbbinamentiMap);
+
         (soggetti || []).forEach(s => {
+            const count = contatori[String(s.id)] || 0;
             const activeText = s.attivo ? 'Dis' : 'Att';
             const activeStyle = s.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             
@@ -2295,10 +2327,25 @@ async function renderRuoliAdmin() {
             const bindingIconColor = isBound ? '#22c55e' : '#888';
             const bindingTitle = isBound ? 'Account Reale Collegato (Clicca per modificare/scollegare)' : 'Nessun Account Collegato (Clicca per collegare)';
             
+            // Badge Abbinamenti SCAB
+            let badgeAbbinamentoHtml = '';
+            if (count > 0) {
+                badgeAbbinamentoHtml = `
+                    <span style="font-size: 10px; font-weight: bold; background: rgba(34, 197, 94, 0.18); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="Abbinato in ${count} strutture SCAB attive">
+                        🔗 ${count}
+                    </span>`;
+            } else {
+                badgeAbbinamentoHtml = `
+                    <span style="font-size: 10px; color: #64748b; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px;" title="Nessun abbinamento attivo in strutture SCAB">
+                        0
+                    </span>`;
+            }
+
             const html = `
                 <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.valore.toUpperCase()}</span>
+                        ${badgeAbbinamentoHtml}
                         <span style="cursor: pointer; color: ${bindingIconColor}; font-size: 14px;" title="${bindingTitle}" onclick="apriModaleBinding(${s.id}, '${s.valore.replace(/'/g, "\\'")}', '${s.tipo}', ${s.utente_id ? `'${s.utente_id}'` : 'null'})">
                             ${isBound ? '🔗' : '➕'}
                         </span>

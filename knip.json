@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "api/*.js",
+    "portal/*.js",
+    "scripts/*.js",
+    "scripts/*.cjs",
+    "supabase/functions/*/index.ts",
+    "tests/**/*.js",
+    "*.js",
+    "*.cjs"
+  ],
+  "project": [
+    "**/*.{js,cjs,mjs,ts}"
+  ],
+  "ignoreDependencies": [
+    "@tailwindcss/cli"
+  ]
+}

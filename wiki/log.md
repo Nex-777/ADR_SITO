@@ -2,6 +2,23 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-26] feature | Contatori Visivi Abbinamenti SCAB (v1.03.33)
+- **Frontend (`portal/epika.js`)**:
+  - Introdotta la variabile globale `scabAbbinamentiMap` per memorizzare gli abbinamenti delle strutture SCAB caricate.
+  - Creata la funzione `calcolaContatoriAbbinamentiSCAB` per calcolare in O(N) le ricorrenze dei ruoli nelle strutture attive (`validatore_id`, `allenatore_ref_id`, `allenatori_co_ids`, `allievo_ref_id`, `allievi_ids`).
+  - Aggiornata la funzione `renderRuoliAdmin()` per mostrare un badge visivo oro/verde `🔗 N` accanto a ciascun ruolo abbinato almeno una volta nelle strutture attive.
+
+---
+
+## [2026-07-26] ingest | Integrazione e Configurazione Tool KNIP (v1.03.32)
+- **Tool KNIP (Open Source)**:
+  - Installato `knip` come devDependency ed aggiunto lo script `"knip": "knip"` in `package.json`.
+  - Creato il file di configurazione `knip.json` per mappare correttamente gli entrypoint serverless (`api/*.js`), frontend (`portal/*.js`), script di manutenzione (`scripts/*.js`), Supabase Edge Functions (`supabase/functions/*/index.ts`) e Vitest (`tests/*.js`).
+  - Eliminati tutti i falsi positivi di scansione: rilevati 0 file inutilizzati e 0 dipendenze di produzione inutilizzate.
+  - Verificato che sia `npm run knip` che `npm test` vengano eseguiti con successo garantendo massima sicurezza del codebase.
+
+---
+
 ## [2026-07-26] fix | Gestione Certificati Ludico-Ricreativi e Sospensione Tesseramento (v1.03.32)
 - **Backend (`api/validate.js`)**:
   - Aggiornato il prompt AI Gemini con vincolo positivo stringente: il certificato DEVE contenere esplicitamente almeno uno dei termini "AGONISTICO", "AGONISTICI", "NON AGONISTICO", "NON AGONISTICI". Documenti con diciture "ludico-motoria" o "ludico-ricreativa" vengono ora marcati come `ROSSO`.
