@@ -28,6 +28,12 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
   - Aggiunti i pulsanti di gestione manuale `APPROVA` / `RIFIUTA` nel modale Dossier Tesserato per ciascun certificato.
 - **Versione**: Incrementata la versione globale a `v1.03.32`.
 
+## [2026-07-26] fix | Ripristino Sintassi e Inizializzazione Dashboard (v1.03.35)
+- **Frontend Dashboard (`portal/dashboard.js`)**: Corretto errore di sintassi (`Unexpected token '}'`) causato dal raggruppamento residuo di codice del vecchio storico presenze. Ripristinata la corretta esecuzione del file e dell'inizializzazione del ruolo/permessi dell'utente.
+- **Versione:** Incrementata la versione globale a `v1.03.35`.
+
+---
+
 ## [2026-07-26] refactor | Dashboard Istruttori Card UI & Rimozione Presenze (v1.03.34)
 - **Database (`iscrizioni_eventi` & `vw_stato_atleta_corso`)**: Aggiunte colonne `abbonamento_scelto` e `tipo_pagamento` per tracciare il piano scelto e la modalità di pagamento (a rate / unica rata). Aggiornata la vista atleta/corso per esporli.
 - **Webhook Stripe (`api/stripe-webhook.js`) & Checkout (`api/create-checkout-session.js`)**: Aggiornata la scrittura del database per salvare automaticamente il piano e la modalità di pagamento.

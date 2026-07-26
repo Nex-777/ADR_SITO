@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.34"
+                VERSION: "1.03.35"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5003,53 +5003,7 @@
         function updatePresenceCount() {}
         async function savePresenze() {}
         async function loadStoricoPresenze() {}
-
-                const dateGroup = {};
-                presenze.forEach(p => {
-                    const d = p.data_lezione;
-                    if (!dateGroup[d]) {
-                        dateGroup[d] = {
-                            presenti: 0,
-                            assenti: 0,
-                            registratoDa: p.utenti ? `${p.utenti.nome} ${p.utenti.cognome}`.toUpperCase() : 'N/D'
-                        };
-                    }
-                    if (p.presente) dateGroup[d].presenti++;
-                    else dateGroup[d].assenti++;
-                });
-
-                tbody.innerHTML = '';
-                Object.keys(dateGroup).forEach(dateStr => {
-                    const stat = dateGroup[dateStr];
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-white/5 transition-all";
-                    tr.innerHTML = `
-                        <td class="p-4 font-bold text-white font-mono">${dateStr}</td>
-                        <td class="p-4 text-center text-green-500 font-bold">${stat.presenti}</td>
-                        <td class="p-4 text-center text-gray-500">${stat.assenti}</td>
-                        <td class="p-4 text-gray-400">${stat.registratoDa}</td>
-                        <td class="p-4 text-right">
-                            <button onclick="loadPresenzaDataStorico('${dateStr}')" class="border border-white/20 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white hover:text-black transition-all uppercase">
-                                Modifica Presenze
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-            } catch (err) {
-                console.error("Errore loadStoricoPresenze:", err);
-                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Errore: ${escapeHtml(err.message)}</td></tr>`;
-            }
-        }
-
-        function loadPresenzaDataStorico(dataStr) {
-            const dateInput = document.getElementById('instructor-presence-date');
-            if (dateInput) {
-                dateInput.value = dataStr;
-            }
-            toggleInstructorRegistroTab('registro');
-        }
+        function loadPresenzaDataStorico(dataStr) {}
 
         // Tab Switching Logic
         function switchTab(tabId) {
