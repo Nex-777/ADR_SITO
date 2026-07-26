@@ -1,6 +1,6 @@
 {
   "name": "adr-sito",
-  "version": "1.01.97",
+  "version": "1.03.28",
   "type": "module",
   "dependencies": {
     "@google/genai": "^2.7.0",
@@ -24,6 +24,7 @@
     "vitest": "^4.1.9"
   },
   "scripts": {
+    "bump": "node scripts/bump-version.js",
     "test": "vitest run"
   },
   "repository": {

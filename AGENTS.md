@@ -22,7 +22,7 @@ When modifying, writing, or reading the wiki, you **MUST** follow these practice
 2. **Interlinking**: Always link related pages using standard relative markdown links, e.g., `[Registration Flow](registration_flow.md)`.
 3. **No Placeholders**: Never write placeholders like `TODO` or `Insert details here`. If details are missing, flag it as a data gap in `index.md` or perform a codebase look-up.
 4. **File Citations**: When citing logic from raw sources, create direct references to source files in the repo using relative syntax, e.g., `[otp.js](../api/otp.js)`.
-5. **Versioning Rule**: Whenever you push code to GitHub (`git push`), you MUST increment the application version number in the HTML/JS headers by 1 (e.g. from 1.03.26 to 1.03.26) and explicitly inform the user of the newly pushed version. **You must always check the absolute latest version from the git commit log before bumping (do not rely on hardcoded script files or package.json unless verified). Also, you must always include the version number in the commit message/title (which determines the Vercel deployment title) so that the user can verify the build easily.**
+5. **Versioning Rule**: Prima di eseguire qualsiasi commit e push su GitHub (`git push`), l'agente DEVE OBBLIGATORIAMENTE eseguire il comando `npm run bump` (oppure `node scripts/bump-version.js`). Questo incrementerà automaticamente la versione globale di tutti i file HTML/JS/JSON (cache-busting, badge UI e costanti). È SEVERAMENTE VIETATO modificare i numeri di versione a mano nei singoli file o committare senza aver eseguito `npm run bump`. Il messaggio del commit e il titolo del rilascio DEVONO includere sempre la versione risultante.
 
 ---
 

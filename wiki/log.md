@@ -4,6 +4,13 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ---
 
+## [2026-07-26] feature | Automazione System-Wide Versioning & Regola Agenti (v1.03.28)
+- **Scripting (`scripts/bump-version.js`)**: Aggiornato lo script per supportare l'auto-incremento zero-arguments (`npm run bump`) e la scansione/sostituzione su tutti i file del progetto (HTML query params `?v=`, badge UI `Vs.`, costanti JS `VERSION:` e `package.json`). Eliminato lo script ridondante `bump.js`.
+- **Regole Agenti (`AGENTS.md`)**: Aggiornata la regola #5 per rendere obbligatoria l'esecuzione di `npm run bump` per tutti gli agenti AI prima di qualsiasi `git push`.
+- **Allineamento Codebase**: Livellati tutti i 21 file del repository alla versione unica `v1.03.28`.
+
+---
+
 ## [2026-07-23] fix | Rimozione dicitura Klarna (3 rate) per chiarezza UX (v1.03.26)
 - **Frontend Dashboard (`portal/dashboard.html`)**: Rimossa la dicitura "(3 rate)" dalla descrizione dell'opzione "Pagamento in Unica Soluzione". Questa scritta generava estrema confusione negli utenti, che la scambiavano per l'abbonamento rateale interno, portandoli a selezionare il pagamento unico (che poi su Stripe delegava la rateizzazione a Klarna) anziché il nostro Abbonamento Rateale Ricorrente.
 - **Versione:** Incrementata la versione globale dell'applicazione a `v1.03.26`.
