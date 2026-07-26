@@ -7896,23 +7896,132 @@ async function apriDossierTesserato(utente_id) {
     try {
         const { data: ut, error: errUt } = await supabaseClient
             .from('utenti')
-            .select('nome, cognome, documento_identita_url')
+            .select('nome, cognome, email, documento_identita_url')
             .eq('id', utente_id)
             .single();
         if (errUt) throw errUt;
 
-        document.getElementById('dossier-nome').textContent = `${ut.nome} ${ut.cognome}`;
+        const { data: ana, error: errAna } = await supabaseClient
+            .from('anagrafiche')
+            .select('*')
+            .eq('utente_id', utente_id)
+            .maybeSingle();
 
+        const { data: tess, error: errTess } = await supabaseClient
+            .from('registro_tesserati')
+            .select('*')
+            .eq('utente_id', utente_id)
+            .maybeSingle();
+
+        // NOME COGNOME
+        document.getElementById('dossier-nome').textContent = `${ut.nome} ${ut.cognome}`;
+        
+        // BADGES
+        const badgesContainer = document.getElementById('dossier-badges-container');
+        badgesContainer.innerHTML = '';
+        
+        // 1. STATO
+        let statoBadge = '';
+        if (tess) {
+            if (tess.stato === 'ATTIVO') statoBadge = '<span class="bg-green-500/20 text-green-500 border border-green-500/30 px-2 py-1 rounded text-[10px] font-bold">ATTIVO</span>';
+            else if (tess.stato === 'IN ATTESA') statoBadge = '<span class="bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-2 py-1 rounded text-[10px] font-bold">IN ATTESA</span>';
+            else statoBadge = `<span class="bg-red-500/20 text-red-500 border border-red-500/30 px-2 py-1 rounded text-[10px] font-bold">${tess.stato}</span>`;
+            
+            // 2. CSEN
+            badgesContainer.innerHTML += statoBadge;
+            badgesContainer.innerHTML += `<span class="bg-blue-500/20 text-blue-500 border border-blue-500/30 px-2 py-1 rounded text-[10px] font-bold">CSEN: ${tess.tipo_copertura_csen || 'ND'}</span>`;
+        }
+
+        // ETA e MINORENNE
+        let isMinorenne = false;
+        if (ana && ana.data_nascita) {
+            const birthDate = new Date(ana.data_nascita);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (age < 18) {
+                isMinorenne = true;
+                badgesContainer.innerHTML += `<span class="bg-primary/20 text-primary border border-primary/30 px-2 py-1 rounded text-[10px] font-bold">MINORENNE</span>`;
+            }
+        }
+
+        // CONTATTI & TUTORE LEGALE
+        let emailTarget = ut.email;
+        let telefonoTarget = ana ? (ana.cellulare || '') : '';
+        const tutoreBadge = document.getElementById('dossier-tutore-badge');
+        const tutoreSection = document.getElementById('dossier-tutore-section');
+        
+        if (isMinorenne && ana && ana.dati_tutore_legale) {
+            try {
+                const tutore = typeof ana.dati_tutore_legale === 'string' ? JSON.parse(ana.dati_tutore_legale) : ana.dati_tutore_legale;
+                if (tutore.email) emailTarget = tutore.email;
+                
+                // Cerca un recapito telefonico del tutore se disponibile, altrimenti usa telefono_emergenza
+                telefonoTarget = ana.telefono_emergenza || telefonoTarget;
+                
+                tutoreBadge.classList.remove('hidden');
+                tutoreSection.classList.remove('hidden');
+                
+                document.getElementById('dossier-tutore-nome').textContent = `${tutore.nome || ''} ${tutore.cognome || ''}`.trim() || '-';
+                document.getElementById('dossier-tutore-cf').textContent = tutore.codice_fiscale || '-';
+            } catch(e) { console.error("Errore parse tutore", e); }
+        } else {
+            tutoreBadge.classList.add('hidden');
+            tutoreSection.classList.add('hidden');
+        }
+
+        document.getElementById('dossier-email').textContent = emailTarget || '-';
+        document.getElementById('dossier-cellulare').textContent = telefonoTarget || '-';
+        
+        let residenza = '-';
+        if (ana) {
+            const arrRes = [ana.indirizzo_residenza, ana.civico_residenza, ana.comune_residenza, ana.provincia_residenza, ana.cap_residenza].filter(Boolean);
+            if (arrRes.length > 0) residenza = arrRes.join(', ');
+        }
+        document.getElementById('dossier-indirizzo').textContent = residenza;
+        document.getElementById('dossier-emergenza').textContent = (ana && ana.telefono_emergenza) ? ana.telefono_emergenza : '-';
+
+        // BOTTONI AZIONE
+        document.getElementById('btn-invia-email').href = emailTarget ? `mailto:${emailTarget}?subject=Adrenalina%20Club%20-%20Comunicazione` : '#';
+        document.getElementById('btn-invia-sms').href = telefonoTarget ? `sms:${telefonoTarget}` : '#';
+        document.getElementById('btn-chiama').href = telefonoTarget ? `tel:${telefonoTarget}` : '#';
+
+        // ANAGRAFICA DETTAGLIATA
+        document.getElementById('dossier-cf').textContent = (ana && ana.codice_fiscale) ? ana.codice_fiscale : '-';
+        document.getElementById('dossier-sesso').textContent = (ana && ana.sesso) ? ana.sesso : '-';
+        document.getElementById('dossier-data-nascita').textContent = (ana && ana.data_nascita) ? formatToItalianDate(ana.data_nascita) : '-';
+        document.getElementById('dossier-luogo-nascita').textContent = (ana && ana.comune_nascita) ? `${ana.comune_nascita} (${ana.provincia_nascita || ''})` : '-';
+
+        // TESSERAMENTO
+        const tessContainer = document.getElementById('dossier-tesseramento-container');
+        if (tess) {
+            tessContainer.innerHTML = `
+                <div><p class="text-[10px] text-gray-500 uppercase">Tessera CSEN</p><p class="text-sm text-white font-bold">${tess.numero_tessera_csen || 'IN ATTESA'}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase">Adesione</p><p class="text-sm text-white">${tess.tipo_adesione || '-'}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase">Quota Totale</p><p class="text-sm text-white">€${tess.quota_totale || '0'}</p></div>
+                <div><p class="text-[10px] text-gray-500 uppercase">Data Richiesta</p><p class="text-sm text-white">${tess.created_at ? new Date(tess.created_at).toLocaleDateString('it-IT') : '-'}</p></div>
+            `;
+        } else {
+            tessContainer.innerHTML = `<div class="col-span-4 text-gray-500 text-xs italic">Nessun dato di tesseramento trovato</div>`;
+        }
+
+        // DOCUMENTO IDENTITA
         const idContainer = document.getElementById('dossier-identita-container');
         if (ut.documento_identita_url) {
             idContainer.innerHTML = `
-                <span class="text-white text-xs">Documento d'Identità salvato</span>
-                <button onclick="openSignedFile('documenti_identita', '${escapeHtml(ut.documento_identita_url)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
+                <div class="flex items-center justify-between">
+                    <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">badge</span> Documento salvato</span>
+                    <button onclick="openSignedFile('documenti_identita', '${escapeHtml(ut.documento_identita_url)}')" class="bg-primary/20 text-primary border border-primary/30 font-headline text-[10px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase rounded">VEDI FILE</button>
+                </div>
             `;
         } else {
-            idContainer.innerHTML = `<span class="text-gray-500 text-xs italic">Nessun documento caricato</span>`;
+            idContainer.innerHTML = `<span class="text-gray-500 text-xs italic flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">warning</span> Nessun documento caricato</span>`;
         }
 
+        // MODULISTICA
         const modContainer = document.getElementById('dossier-modulistica-container');
         const { data: atti, error: errAtti } = await supabaseClient
             .from('atti_adesione')
@@ -7925,25 +8034,26 @@ async function apriDossierTesserato(utente_id) {
             if (atti.url_pdf_csen_iscrizione) {
                 modHtml += `
                     <div class="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span class="text-white text-xs">Modulo Iscrizione CSEN</span>
-                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_iscrizione)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
+                        <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">description</span> Iscrizione CSEN</span>
+                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_iscrizione)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded">VEDI FILE</button>
                     </div>`;
             }
             if (atti.url_pdf_csen_informativa) {
                 modHtml += `
-                    <div class="flex items-center justify-between">
-                        <span class="text-white text-xs">Informativa CSEN</span>
-                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_informativa)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
+                    <div class="flex items-center justify-between mt-2">
+                        <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">privacy_tip</span> Informativa CSEN</span>
+                        <button onclick="openSignedFile('documenti_adesione', '${escapeHtml(atti.url_pdf_csen_informativa)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded">VEDI FILE</button>
                     </div>`;
             }
         }
         if (!modHtml) modHtml = `<span class="text-gray-500 text-xs italic">Nessuna modulistica firmata digitalmente trovata</span>`;
         modContainer.innerHTML = modHtml;
 
+        // CERTIFICATI MEDICI
         const certContainer = document.getElementById('dossier-certificati-container');
-        const { data: ana, error: errAna } = await supabaseClient.from('anagrafiche').select('id').eq('utente_id', utente_id).maybeSingle();
-        
         let certHtml = '';
+        let hasActiveCert = false;
+        
         if (ana) {
             const { data: certs, error: errCerts } = await supabaseClient
                 .from('certificati_medici')
@@ -7954,22 +8064,33 @@ async function apriDossierTesserato(utente_id) {
             if (certs && certs.length > 0) {
                 certs.forEach(c => {
                     const scaduto = isCertificatoScaduto(c.data_scadenza);
-                    const statusStr = scaduto ? '<span class="text-primary font-bold ml-2">(SCADUTO)</span>' : '<span class="text-green-500 font-bold ml-2">(ATTIVO)</span>';
+                    if (!scaduto) hasActiveCert = true;
+                    const statusBadge = scaduto ? '<span class="bg-red-500/20 text-red-500 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">SCADUTO</span>' : '<span class="bg-green-500/20 text-green-500 border border-green-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">ATTIVO</span>';
                     certHtml += `
-                        <div class="flex items-center justify-between border-b border-white/5 pb-2">
+                        <div class="flex items-center justify-between border-b border-white/5 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
                             <div>
-                                <span class="text-white text-xs">${escapeHtml(c.tipologia)}</span>
-                                ${statusStr}
+                                <div class="flex items-center">
+                                    <span class="text-white text-xs font-bold">${escapeHtml(c.tipologia)}</span>
+                                    ${statusBadge}
+                                </div>
                                 <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${escapeHtml(formatToItalianDate(c.data_scadenza))}</div>
                             </div>
-                            <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-primary text-white font-headline text-xs font-bold px-4 py-2 hover:bg-primary-dim transition-all uppercase">VEDI FILE</button>
+                            <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded flex-shrink-0">VEDI FILE</button>
                         </div>`;
                 });
             }
         }
+        
         if (!certHtml) certHtml = `<span class="text-gray-500 text-xs italic">Nessun certificato medico caricato</span>`;
         certContainer.innerHTML = certHtml;
+        
+        if (hasActiveCert) {
+            badgesContainer.innerHTML += `<span class="bg-green-500/20 text-green-500 border border-green-500/30 px-2 py-1 rounded text-[10px] font-bold">CERT. MEDICO OK</span>`;
+        } else {
+            badgesContainer.innerHTML += `<span class="bg-red-500/20 text-red-500 border border-red-500/30 px-2 py-1 rounded text-[10px] font-bold">CERT. MEDICO ASSENTE/SCADUTO</span>`;
+        }
 
+        // RICEVUTE
         const ricContainer = document.getElementById('dossier-ricevute-container');
         const { data: ricevute, error: errRic } = await supabaseClient
             .from('ricevute_pagamenti')
@@ -7981,14 +8102,14 @@ async function apriDossierTesserato(utente_id) {
         if (ricevute && ricevute.length > 0) {
             ricevute.forEach(r => {
                 ricHtml += `
-                    <div class="flex items-center justify-between border-b border-white/5 pb-2">
+                    <div class="flex items-center justify-between border-b border-white/5 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
                         <div>
                             <span class="text-white text-xs font-bold">Ricevuta n. ${r.numero_ricevuta}/${r.anno_fiscale}</span>
                             <span class="text-gray-400 text-[10px] ml-2">(${r.data_pagamento})</span>
-                            <div class="text-[10px] text-gray-400 mt-1">Causale: ${escapeHtml(r.causale)}</div>
-                            <div class="text-[11px] text-green-500 font-bold mt-1">€${parseFloat(r.importo).toFixed(2)}</div>
+                            <div class="text-[10px] text-gray-400 mt-0.5">Causale: ${escapeHtml(r.causale)}</div>
+                            <div class="text-[11px] text-green-500 font-bold mt-0.5">€${parseFloat(r.importo).toFixed(2)}</div>
                         </div>
-                        <button onclick="stampaRicevuta('${r.id}')" class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-gray-200 transition-all uppercase flex items-center gap-2">
+                        <button onclick="stampaRicevuta('${r.id}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded flex items-center gap-1 flex-shrink-0">
                             <span class="material-symbols-outlined text-[14px]">print</span>
                             STAMPA
                         </button>
