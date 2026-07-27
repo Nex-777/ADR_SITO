@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.37"
+                VERSION: "1.03.38"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1359,6 +1359,10 @@
                             data_nascita,
                             comune_nascita,
                             provincia_nascita,
+                            contatti (
+                                email,
+                                telefono
+                            ),
                             utenti (
                                 quota_totale
                             ),
@@ -1781,7 +1785,7 @@
             // Render Pending Payments
             if (pagBody) {
                 if (pendingPag.length === 0) {
-                    pagBody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-500">Nessun utente in attesa di pagamento.</td></tr>';
+                    pagBody.innerHTML = '<tr><td colspan="8" class="p-3 text-center text-gray-500">Nessun utente in attesa di pagamento.</td></tr>';
                 } else {
                     pendingPag.forEach(item => {
                         const row = document.createElement('tr');
@@ -1790,20 +1794,53 @@
                         const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
                         const cf = escapeHtml(anag.codice_fiscale || '');
                         
+                        const conObj = Array.isArray(anag.contatti) ? (anag.contatti[0] || {}) : (anag.contatti || {});
+                        const email = conObj.email || '';
+                        const tel = conObj.telefono || '';
+
+                        let contattiHtml = '<span class="text-gray-600 text-[10px]">-</span>';
+                        if (email || tel) {
+                            const parts = [];
+                            if (email) {
+                                parts.push(`<a href="mailto:${escapeHtml(email)}" class="text-primary hover:underline block truncate max-w-[170px] text-xs font-mono lowercase" title="${escapeHtml(email)}">✉️ ${escapeHtml(email)}</a>`);
+                            }
+                            if (tel) {
+                                const cleanTel = tel.replace(/[^0-9+]/g, '');
+                                parts.push(`<div class="flex items-center gap-1.5 mt-0.5">
+                                    <a href="tel:${cleanTel}" class="text-xs text-gray-300 hover:text-white font-mono">📞 ${escapeHtml(tel)}</a>
+                                    <a href="https://wa.me/${cleanTel.replace('+', '')}" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:text-green-300 font-bold text-[10px] bg-green-950/40 px-1 py-0.5 border border-green-500/30 rounded" title="Apri WhatsApp">💬 WA</a>
+                                </div>`);
+                            }
+                            contattiHtml = parts.join('');
+                        }
+
                         let quotaStr = '€0.00';
                         if (anag.utenti) {
                             const quota = parseFloat(anag.utenti.quota_totale) || 0;
                             quotaStr = `€${quota.toFixed(2)}`;
                         }
                         
+                        let eliminaBtn = '';
+                        if (typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere'].includes(r))) {
+                            eliminaBtn = `
+                                <button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white font-headline text-[9px] font-bold px-2 py-1 rounded transition-all uppercase flex items-center gap-1 ml-auto" title="Elimina utente per permettere nuova iscrizione">
+                                    <span class="material-symbols-outlined text-[11px]">delete</span> ELIMINA
+                                </button>
+                            `;
+                        }
+
                         row.innerHTML = `
                             <td class="p-3 font-bold text-white">${nome}</td>
                             <td class="p-3 text-gray-400 font-mono">${cf}</td>
+                            <td class="p-3 text-xs lowercase">${contattiHtml}</td>
                             <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
                             <td class="p-3 text-yellow-500 font-bold">${quotaStr}</td>
                             <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_decisione || item.data_richiesta))}</td>
-                            <td class="p-3 text-right">
+                            <td class="p-3 text-center">
                                 <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase text-yellow-500 bg-yellow-500/10 border-yellow-500/30">ATTESA PAGAMENTO</span>
+                            </td>
+                            <td class="p-3 text-right">
+                                ${eliminaBtn || '-'}
                             </td>
                         `;
                         pagBody.appendChild(row);
@@ -2699,7 +2736,7 @@
 
         // Eliminazione Utente
         async function eliminaUtente(anagraficaId, nominativo) {
-            const confirmed = confirm(`ATTENZIONE! Sei sicuro di voler eliminare DEFINITIVAMENTE l'utente ${nominativo} e tutti i suoi dati dal database? Questa operazione è irreversibile.`);
+            const confirmed = confirm(`ATTENZIONE! Sei sicuro di voler eliminare DEFINITIVAMENTE l'utente ${nominativo} e tutti i suoi dati dal database?\n\nQuesta operazione libererà l'email e il codice fiscale per permettere una nuova iscrizione da capo.\nAVVISO: Assicurarsi prima che l'utente non abbia effettuato un pagamento non ancora registrato!`);
             if (!confirmed) return;
 
             try {
@@ -2708,7 +2745,11 @@
 
                 if (error) throw error;
 
-                alert(`Utente ${nominativo} eliminato con successo.`);
+                if (typeof showToastNotification === 'function') {
+                    showToastNotification(`Utente ${nominativo} eliminato e sbloccato per la ri-registrazione.`, 'success');
+                } else {
+                    alert(`Utente ${nominativo} eliminato con successo.`);
+                }
                 // Ricarica tutti i pannelli per aggiornare i dati
                 loadSoci();
                 loadTesserati();
@@ -2717,7 +2758,11 @@
                 if (typeof loadApprovazioni === 'function') loadApprovazioni();
                 loadStats();
             } catch (err) {
-                alert("Errore durante l'eliminazione dell'utente: " + err.message);
+                if (typeof showToastNotification === 'function') {
+                    showToastNotification("Errore durante l'eliminazione dell'utente: " + err.message, 'error');
+                } else {
+                    alert("Errore durante l'eliminazione dell'utente: " + err.message);
+                }
             }
         }
 

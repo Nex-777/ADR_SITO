@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-27] feature | Contatti Utente e Tasto Eliminazione in Attesa di Pagamento (v1.03.38)
+- **Frontend (`portal/dashboard.js`, `portal/dashboard.html`)**:
+  - Estesa la query `loadApprovazioni()` per recuperare i contatti (`email`, `telefono`) relazionati alle anagrafiche.
+  - Aggiornata la tabella **TESSERATI E SOCI IN ATTESA DI PAGAMENTO** per visualizzare i recapiti diretti con link rapido `mailto:`, collegamento `tel:` e pulsante `💬 WA` (WhatsApp).
+  - Inserito il pulsante **`ELIMINA`** per i ruoli direttivi (Presidente, Vice Presidente, Segretario, Tesoriere) con conferme severe e avviso di controllo pagamenti Stripe, permettendo la cancellazione totale e lo sblocco dell'anagrafica per ri-registrarsi da capo.
+  - Aggiornato l'indicatore delle tabelle e la notifica toast per la rimozione con successo dell'utente.
+
+---
+
 ## [2026-07-27] feature | Feedback Visivo Immediato su Click Pulsanti e Toast System (v1.03.37)
 - **UI & UX (`portal/dashboard.js`, `portal/dashboard.html`)**:
   - Implementata la funzione globale `showToastNotification(message, type)` per mostrare notifiche toast fluttuanti in alto a destra all'esecuzione delle azioni.
