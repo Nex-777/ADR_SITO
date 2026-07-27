@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-27] feature | Feedback Visivo Immediato su Click Pulsanti e Toast System (v1.03.37)
+- **UI & UX (`portal/dashboard.js`, `portal/dashboard.html`)**:
+  - Implementata la funzione globale `showToastNotification(message, type)` per mostrare notifiche toast fluttuanti in alto a destra all'esecuzione delle azioni.
+  - Aggiornate le funzioni `openSignedFile`, `handleDocManualValidation` e `validaCertificatoManual`: al click del pulsante viene disabilitato l'elemento, mostrato uno spinner animato ed un testo di stato istantaneo (es. `🔄 APERTURA...`, `🔄 RINVIO ALL'AI...`), seguito da un indicatore di successo `✓ FATTO!`.
+  - Aggiunta la regola CSS micro-interattiva globale `button:active` (effetto pressione fisica a -6% di scala e scurimento al click) su tutti i pulsanti della dashboard.
+
+---
+
 ## [2026-07-27] fix | Aggiunta Pulsante Visualizzazione Documenti Identità in Registro Approvazioni (v1.03.36)
 - **Frontend (`portal/dashboard.js`)**:
   - Aggiunto il pulsante `👁 VEDI DOCUMENTO` nella funzione `loadDocsAttesa()` all'interno del pannello "Documenti d'Identità in Attesa di Verifica" (Registro Approvazioni).

@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.36"
+                VERSION: "1.03.37"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -143,15 +143,78 @@
             return `<div class="flex gap-[2px] mt-1.5 w-full max-w-[110px] mx-auto" title="${monthsRemaining} mesi rimanenti">${stepsHtml}</div>`;
         }
 
-        async function openSignedFile(bucket, filePath) {
+        function showToastNotification(message, type = 'success') {
+            let container = document.getElementById('global-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'global-toast-container';
+                container.className = 'fixed top-5 right-5 z-[99999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            const isError = type === 'error';
+            const bgColor = isError ? 'bg-red-950/95 border-red-500 text-red-200' : 'bg-zinc-900/95 border-emerald-500 text-emerald-300';
+            const icon = isError ? 'error' : 'check_circle';
+
+            toast.className = `pointer-events-auto border-2 ${bgColor} p-3.5 shadow-2xl backdrop-blur-md flex items-center gap-3 transform transition-all duration-300 translate-x-12 opacity-0 font-headline text-xs font-bold uppercase tracking-wider rounded-sm`;
+            toast.innerHTML = `
+                <span class="material-symbols-outlined text-lg shrink-0 ${isError ? 'text-red-400' : 'text-emerald-400'}">${icon}</span>
+                <span class="flex-grow leading-tight">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-12', 'opacity-0');
+                toast.classList.add('translate-x-0', 'opacity-100');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0', 'opacity-100');
+                toast.classList.add('translate-x-12', 'opacity-0');
+                setTimeout(() => toast.remove(), 350);
+            }, 3500);
+        }
+
+        async function openSignedFile(bucket, filePath, btnEl) {
+            let targetBtn = btnEl;
+            if (!targetBtn && window.event) {
+                targetBtn = window.event.currentTarget || window.event.target;
+            }
+            if (targetBtn && targetBtn.tagName !== 'BUTTON' && targetBtn.tagName !== 'A') {
+                targetBtn = targetBtn.closest('button, a');
+            }
+
+            let originalHtml = '';
+            if (targetBtn) {
+                originalHtml = targetBtn.innerHTML;
+                targetBtn.disabled = true;
+                targetBtn.style.pointerEvents = 'none';
+                targetBtn.classList.add('opacity-75', 'cursor-wait');
+                targetBtn.innerHTML = `<span class="material-symbols-outlined text-xs animate-spin">progress_activity</span> APERTURA...`;
+            }
+
             try {
                 if (!filePath) {
-                    alert("Percorso file non valido.");
+                    showToastNotification("Percorso file non valido o mancante.", "error");
+                    if (targetBtn) {
+                        targetBtn.innerHTML = originalHtml;
+                        targetBtn.disabled = false;
+                        targetBtn.style.pointerEvents = '';
+                        targetBtn.classList.remove('opacity-75', 'cursor-wait');
+                    }
                     return;
                 }
                 const allowedBuckets = ['certificati_medici', 'documenti_identita', 'documenti_tutori', 'documenti_adesione'];
                 if (!allowedBuckets.includes(bucket)) {
-                    alert("Bucket non autorizzato.");
+                    showToastNotification("Bucket non autorizzato.", "error");
+                    if (targetBtn) {
+                        targetBtn.innerHTML = originalHtml;
+                        targetBtn.disabled = false;
+                        targetBtn.style.pointerEvents = '';
+                        targetBtn.classList.remove('opacity-75', 'cursor-wait');
+                    }
                     return;
                 }
                 let parsedPath = filePath;
@@ -163,10 +226,30 @@
                 
                 const { data, error } = await supabaseClient.storage.from(bucket).createSignedUrl(parsedPath, 300);
                 if (error) throw error;
+                
                 window.open(data.signedUrl, '_blank');
+                showToastNotification("✓ Documento aperto in una nuova scheda");
+
+                if (targetBtn) {
+                    targetBtn.innerHTML = `<span class="material-symbols-outlined text-xs">check_circle</span> APERTO!`;
+                    setTimeout(() => {
+                        if (targetBtn) {
+                            targetBtn.innerHTML = originalHtml;
+                            targetBtn.disabled = false;
+                            targetBtn.style.pointerEvents = '';
+                            targetBtn.classList.remove('opacity-75', 'cursor-wait');
+                        }
+                    }, 1800);
+                }
             } catch (err) {
                 console.error("Errore generazione signed URL:", err);
-                alert("Impossibile caricare il file. Riprova.");
+                showToastNotification("Impossibile caricare il file: " + err.message, "error");
+                if (targetBtn) {
+                    targetBtn.innerHTML = originalHtml;
+                    targetBtn.disabled = false;
+                    targetBtn.style.pointerEvents = '';
+                    targetBtn.classList.remove('opacity-75', 'cursor-wait');
+                }
             }
         }
 
@@ -1159,31 +1242,60 @@
                                 <span class="px-1.5 py-0.5 text-[8px] bg-amber-900 text-amber-300 font-headline font-bold rounded uppercase shrink-0">${doc.stato_validazione}</span>
                             </div>
                             <div class="flex gap-2 flex-wrap">
-                                ${doc.file_url ? `<button onclick="openSignedFile('${doc.tipo_documento === 'TUTORE' ? 'documenti_tutori' : 'documenti_identita'}', '${escapeHtml(doc.file_url)}')" class="bg-blue-900 hover:bg-blue-700 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">visibility</span> VEDI DOCUMENTO</button>` : ''}
-                                <button onclick="handleDocManualValidation('${doc.id}', 'VERDE')" class="bg-green-800 hover:bg-green-600 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">✓ APPROVA</button>
-                                <button onclick="handleDocManualValidation('${doc.id}', 'ROSSO')" class="bg-red-900 hover:bg-red-700 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">✗ RIFIUTA</button>
-                                <button onclick="handleDocManualValidation('${doc.id}', 'GIALLO')" class="bg-gray-800 hover:bg-gray-600 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">⚠ RINVIA AI</button>
+                                ${doc.file_url ? `<button onclick="openSignedFile('${doc.tipo_documento === 'TUTORE' ? 'documenti_tutori' : 'documenti_identita'}', '${escapeHtml(doc.file_url)}', this)" class="bg-blue-900 hover:bg-blue-700 active:scale-95 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all flex items-center gap-1"><span class="material-symbols-outlined text-xs">visibility</span> VEDI DOCUMENTO</button>` : ''}
+                                <button onclick="handleDocManualValidation('${doc.id}', 'VERDE', this)" class="bg-green-800 hover:bg-green-600 active:scale-95 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all">✓ APPROVA</button>
+                                <button onclick="handleDocManualValidation('${doc.id}', 'ROSSO', this)" class="bg-red-900 hover:bg-red-700 active:scale-95 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all">✗ RIFIUTA</button>
+                                <button onclick="handleDocManualValidation('${doc.id}', 'GIALLO', this)" class="bg-gray-800 hover:bg-gray-600 active:scale-95 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all">⚠ RINVIA AI</button>
                             </div>
                             <div class="hidden space-y-2" id="doc-nota-${doc.id}">
-                                <input type="text" id="doc-nota-text-${doc.id}" class="w-full bg-black border border-white/20 text-xs text-white p-2 font-mono" placeholder="Inserisci una nota opzionale...">
+                                <input type="text" id="doc-nota-text-${doc.id}" class="w-full bg-black border border-white/20 text-xs text-white p-2 font-mono transition-all" placeholder="Inserisci una nota opzionale...">
                             </div>
                         </div>
                     `;
                 }).join('');
 
                 // Handler called inline
-                window.handleDocManualValidation = async (docId, nuovoStato) => {
+                window.handleDocManualValidation = async (docId, nuovoStato, btnEl) => {
+                    let targetBtn = btnEl;
+                    if (!targetBtn && window.event) {
+                        targetBtn = window.event.currentTarget || window.event.target;
+                    }
+                    if (targetBtn && targetBtn.tagName !== 'BUTTON' && targetBtn.tagName !== 'A') {
+                        targetBtn = targetBtn.closest('button, a');
+                    }
+
+                    const card = document.querySelector(`[data-doc-id="${docId}"]`);
                     const noteEl = document.getElementById(`doc-nota-text-${docId}`);
                     const nota = noteEl?.value || '';
                     const noteContainer = document.getElementById(`doc-nota-${docId}`);
 
                     if ((nuovoStato === 'ROSSO' || nuovoStato === 'GIALLO') && noteContainer) {
-                        noteContainer.classList.remove('hidden');
-                        if (!nota) {
+                        if (noteContainer.classList.contains('hidden')) {
+                            noteContainer.classList.remove('hidden');
                             noteEl.focus();
-                            noteEl.placeholder = '⚠ Inserisci una nota motivazionale obbligatoria';
+                            noteEl.classList.add('ring-2', 'ring-amber-500', 'border-amber-500');
+                            noteEl.placeholder = '⚠ Inserisci la motivazione e clicca di nuovo il pulsante per confermare';
+                            showToastNotification("⚠ Inserisci una nota motivazionale per confermare", "error");
                             return;
                         }
+                        if (!nota.trim()) {
+                            noteEl.focus();
+                            noteEl.classList.add('ring-2', 'ring-red-500', 'border-red-500');
+                            noteEl.placeholder = '⚠ Inserisci la nota motivazionale obbligatoria!';
+                            showToastNotification("⚠ Nota motivazionale obbligatoria mancante", "error");
+                            return;
+                        }
+                    }
+
+                    let originalHtml = '';
+                    const allBtns = card ? card.querySelectorAll('button') : [];
+                    allBtns.forEach(b => { b.disabled = true; b.style.pointerEvents = 'none'; });
+
+                    if (targetBtn) {
+                        originalHtml = targetBtn.innerHTML;
+                        const actionLabel = nuovoStato === 'VERDE' ? 'APPROVAZIONE...' : nuovoStato === 'ROSSO' ? 'RIFIUTO...' : 'RINVIO ALL\'AI...';
+                        targetBtn.innerHTML = `<span class="material-symbols-outlined text-xs animate-spin">progress_activity</span> ${actionLabel}`;
+                        targetBtn.classList.add('opacity-80');
                     }
 
                     try {
@@ -1195,10 +1307,26 @@
                             body: JSON.stringify({ target_type: 'doc', doc_id: docId, is_manual: true, nuovo_stato: nuovoStato, note: nota || `Validazione manuale: ${nuovoStato}` })
                         });
                         if (!res.ok) throw new Error(await res.text());
-                        await loadDocsAttesa();
+
+                        if (targetBtn) {
+                            targetBtn.innerHTML = `<span class="material-symbols-outlined text-xs">check_circle</span> FATTO!`;
+                        }
+
+                        const statusText = nuovoStato === 'VERDE' ? 'approvato' : nuovoStato === 'ROSSO' ? 'rifiutato' : 'rinviato all\'AI';
+                        showToastNotification(`✓ Documento ${statusText} con successo!`);
+
+                        setTimeout(async () => {
+                            await loadDocsAttesa();
+                        }, 500);
+
                     } catch (err) {
                         console.error('Errore validazione manuale documento:', err);
-                        alert('Errore durante la validazione: ' + err.message);
+                        showToastNotification('Errore durante la validazione: ' + err.message, "error");
+                        allBtns.forEach(b => { b.disabled = false; b.style.pointerEvents = ''; });
+                        if (targetBtn) {
+                            targetBtn.innerHTML = originalHtml;
+                            targetBtn.classList.remove('opacity-80');
+                        }
                     }
                 };
 
@@ -1824,12 +1952,29 @@
             });
         }
 
-        async function validaCertificatoManual(certId, nuovoStato) {
+        async function validaCertificatoManual(certId, nuovoStato, btnEl) {
+            let targetBtn = btnEl;
+            if (!targetBtn && window.event) {
+                targetBtn = window.event.currentTarget || window.event.target;
+            }
+            if (targetBtn && targetBtn.tagName !== 'BUTTON' && targetBtn.tagName !== 'A') {
+                targetBtn = targetBtn.closest('button, a');
+            }
+
             let note = null;
             if (nuovoStato === 'ROSSO') {
                 note = prompt("Inserisci il motivo del rifiuto del certificato (sarà mostrato all'utente):");
                 if (note === null) return; // Annullato
                 if (!note.trim()) note = "File illeggibile o documento non conforme.";
+            }
+
+            let originalHtml = '';
+            if (targetBtn) {
+                originalHtml = targetBtn.innerHTML;
+                targetBtn.disabled = true;
+                targetBtn.style.pointerEvents = 'none';
+                targetBtn.innerHTML = `<span class="material-symbols-outlined text-xs animate-spin">progress_activity</span> AGGIORNAMENTO...`;
+                targetBtn.classList.add('opacity-80');
             }
 
             try {
@@ -1861,17 +2006,28 @@
                     throw new Error(resData.error || "Errore durante la validazione manuale.");
                 }
 
-                // Scrivi audit log
                 await scriviAuditLog('DELIBERA_CERTIFICATO_MEDICO', 'certificati_medici', certId, {
                     stato_validazione: nuovoStato,
                     note: note
                 });
 
-                alert(`Certificato medico aggiornato a ${nuovoStato} con successo!`);
-                loadTesserati();
-                loadApprovazioni();
+                if (targetBtn) {
+                    targetBtn.innerHTML = `<span class="material-symbols-outlined text-xs">check_circle</span> AGGIORNATO!`;
+                }
+                showToastNotification(`✓ Certificato medico impostato a ${nuovoStato} con successo!`);
+
+                setTimeout(() => {
+                    loadTesserati();
+                    loadApprovazioni();
+                }, 500);
             } catch (err) {
-                alert("Errore aggiornamento certificato: " + err.message);
+                showToastNotification("Errore aggiornamento certificato: " + err.message, "error");
+                if (targetBtn) {
+                    targetBtn.innerHTML = originalHtml;
+                    targetBtn.disabled = false;
+                    targetBtn.style.pointerEvents = '';
+                    targetBtn.classList.remove('opacity-80');
+                }
             }
         }
 
