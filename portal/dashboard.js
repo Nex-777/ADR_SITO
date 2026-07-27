@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.35"
+                VERSION: "1.03.36"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1159,6 +1159,7 @@
                                 <span class="px-1.5 py-0.5 text-[8px] bg-amber-900 text-amber-300 font-headline font-bold rounded uppercase shrink-0">${doc.stato_validazione}</span>
                             </div>
                             <div class="flex gap-2 flex-wrap">
+                                ${doc.file_url ? `<button onclick="openSignedFile('${doc.tipo_documento === 'TUTORE' ? 'documenti_tutori' : 'documenti_identita'}', '${escapeHtml(doc.file_url)}')" class="bg-blue-900 hover:bg-blue-700 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase flex items-center gap-1"><span class="material-symbols-outlined text-xs">visibility</span> VEDI DOCUMENTO</button>` : ''}
                                 <button onclick="handleDocManualValidation('${doc.id}', 'VERDE')" class="bg-green-800 hover:bg-green-600 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">✓ APPROVA</button>
                                 <button onclick="handleDocManualValidation('${doc.id}', 'ROSSO')" class="bg-red-900 hover:bg-red-700 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">✗ RIFIUTA</button>
                                 <button onclick="handleDocManualValidation('${doc.id}', 'GIALLO')" class="bg-gray-800 hover:bg-gray-600 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase">⚠ RINVIA AI</button>

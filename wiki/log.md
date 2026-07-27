@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-27] fix | Aggiunta Pulsante Visualizzazione Documenti Identità in Registro Approvazioni (v1.03.36)
+- **Frontend (`portal/dashboard.js`)**:
+  - Aggiunto il pulsante `👁 VEDI DOCUMENTO` nella funzione `loadDocsAttesa()` all'interno del pannello "Documenti d'Identità in Attesa di Verifica" (Registro Approvazioni).
+  - Il pulsante richiama `openSignedFile` sul bucket appropriato (`documenti_identita` o `documenti_tutori`), permettendo agli amministratori di visionare il file caricato dall'atleta anche in caso di errore 503 dell'AI per approvazione o rifiuto manuale.
+
+---
+
 ## [2026-07-26] feature | Contatori Visivi Abbinamenti SCAB (v1.03.33)
 - **Frontend (`portal/epika.js`)**:
   - Introdotta la variabile globale `scabAbbinamentiMap` per memorizzare gli abbinamenti delle strutture SCAB caricate.
