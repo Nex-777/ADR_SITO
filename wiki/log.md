@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-28] feature | Gestione Allenatore nel Planning Lista Generale (v1.03.45)
+- **Database (`supabase/migration_epika_storico_allenatore.sql`)**: Aggiunta la colonna `allenatore_id` alla tabella `epika_storico_organico` con vincolo di integrità nativo (`CHECK constraint`) che impedisce l'assegnazione di un allenatore per i soggetti con ruolo `non_combattente`.
+- **Frontend (`portal/epika.html`, `portal/epika.js`)**:
+  - Inserito il 4° dropdown `.gen-allenatore` in ciascuna riga della tabella della Lista Generale (Planning Anni Futuri).
+  - Aggiunto il filtro `gen-filter-allenatore` (`TUTTI GLI ALLENATORI 2026`) nella Control Bar della Lista Generale.
+  - Implementata la funzione reattiva `handleGenRuoloChange()` che azzera e disabilita in tempo reale la select dell'Allenatore quando un utente viene impostato come `non_combattente`.
+  - Aggiornata la funzione `salvaTuttaLaListaGenerale()` per includere `allenatore_id` nell'upsert atomico verso `epika_storico_organico`.
+
+---
+
 ## [2026-07-28] feature | Ordinamento Decrescente & Control Bar Filtri Avanzati Dashboard Eventi (v1.03.44)
 - **Ordinamento Iscritti (`portal/epika.js`)**: Aggiunto `.order('data_iscrizione', { ascending: false })` con fallback su `.order('id', { ascending: false })` nella query Supabase su `epika_iscrizioni_eventi`, garantendo che gli ultimi iscritti compaiano sempre in alto.
 - **Control Bar Filtri (`portal/epika.html`, `portal/epika.js`)**:

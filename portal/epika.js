@@ -4435,6 +4435,16 @@ async function renderListaGeneraleAdmin() {
             .order('nome', { ascending: true });
             
         if (gruppiError) throw gruppiError;
+
+        if (soggettiAllenatori.length === 0) {
+            const { data: allnData } = await supabaseClient
+                .from('epika_opzioni')
+                .select('*')
+                .eq('tipo', 'allenatore')
+                .eq('attivo', true)
+                .order('valore', { ascending: true });
+            if (allnData) soggettiAllenatori = allnData;
+        }
         
         listaGeneraleProfili = profili || [];
         listaGeneraleStorico = storico || [];
@@ -4455,12 +4465,40 @@ async function renderListaGeneraleAdmin() {
                 popoloFilterSel.innerHTML += `<option value="${p.nome}">${p.nome.toUpperCase()}</option>`;
             });
         }
+
+        const allenatoreFilterSel = document.getElementById('gen-filter-allenatore');
+        if (allenatoreFilterSel) {
+            allenatoreFilterSel.innerHTML = '<option value="">TUTTI GLI ALLENATORI 2026</option>';
+            soggettiAllenatori.forEach(a => {
+                allenatoreFilterSel.innerHTML += `<option value="${a.id}">${a.valore.toUpperCase()}</option>`;
+            });
+        }
         
         disegnaTabellaListaGenerale();
         
     } catch (e) {
         console.error("Errore caricamento lista generale:", e);
         tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 12px; color: red;">Errore durante il caricamento della lista generale.</td></tr>';
+    }
+}
+
+function handleGenRuoloChange(ruoloSel, uid) {
+    ruoloSel.style.opacity = '1';
+    ruoloSel.style.fontStyle = 'normal';
+    ruoloSel.style.borderColor = 'var(--epk-gold)';
+    
+    const allenatoreSel = document.querySelector(`.gen-allenatore[data-uid="${uid}"]`);
+    if (!allenatoreSel) return;
+    
+    if (ruoloSel.value === 'non_combattente') {
+        allenatoreSel.value = '';
+        allenatoreSel.disabled = true;
+        allenatoreSel.style.opacity = '0.5';
+    } else {
+        if (!isReadOnly()) {
+            allenatoreSel.disabled = false;
+            allenatoreSel.style.opacity = '1';
+        }
     }
 }
 
@@ -4472,6 +4510,7 @@ function disegnaTabellaListaGenerale() {
     const ruoloFilter = document.getElementById('gen-filter-ruolo')?.value || '';
     const gruppoFilter = document.getElementById('gen-filter-gruppo')?.value || '';
     const popoloFilter = document.getElementById('gen-filter-popolo')?.value || '';
+    const allenatoreFilter = document.getElementById('gen-filter-allenatore')?.value || '';
 
     // 1. Applica Filtri
     let filtrati = listaGeneraleProfili.filter(p => {
@@ -4486,10 +4525,12 @@ function disegnaTabellaListaGenerale() {
         const ruolo2026 = row2026 ? row2026.ruolo_combattimento : p.ruolo_combattimento;
         const gruppoId2026 = row2026 ? row2026.gruppo_storico_id : p.gruppo_storico_id;
         const popolo2026 = row2026 ? row2026.popolo : p.popolo;
+        const allenatoreId2026 = row2026 ? row2026.allenatore_id : p.allenatore_id;
 
         if (ruoloFilter && ruolo2026 !== ruoloFilter) return false;
         if (gruppoFilter && String(gruppoId2026) !== String(gruppoFilter)) return false;
         if (popoloFilter && popolo2026 !== popoloFilter) return false;
+        if (allenatoreFilter && String(allenatoreId2026) !== String(allenatoreFilter)) return false;
 
         return true;
     });
@@ -4521,13 +4562,14 @@ function disegnaTabellaListaGenerale() {
         const ruoloAttivo = row2026 ? row2026.ruolo_combattimento : p.ruolo_combattimento;
         const gruppoIdAttivo = row2026 ? row2026.gruppo_storico_id : p.gruppo_storico_id;
         const popoloAttivo = row2026 ? row2026.popolo : p.popolo;
+        const allenatoreIdAttivo = row2026 ? row2026.allenatore_id : p.allenatore_id;
         
         const isFallback = !row2026;
         const selectStyle = isFallback ? "opacity: 0.65; font-style: italic; border-color: rgba(251, 191, 36, 0.2);" : "border-color: var(--epk-gold);";
         
         const disabledSelect = isReadOnly() ? 'disabled' : '';
         // Select Ruolo
-        let ruoloSelect = `<select class="gen-ruolo epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 100px; ${selectStyle}" ${disabledSelect} onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
+        let ruoloSelect = `<select class="gen-ruolo epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 100px; ${selectStyle}" ${disabledSelect} onchange="handleGenRuoloChange(this, '${p.id}');">`;
         ruoloSelect += `<option value="" ${!ruoloAttivo ? 'selected' : ''}>NESSUNO</option>`;
         ruoloSelect += `<option value="combattente" ${ruoloAttivo === 'combattente' ? 'selected' : ''}>COMBATTENTE</option>`;
         ruoloSelect += `<option value="non_combattente" ${ruoloAttivo === 'non_combattente' ? 'selected' : ''}>NON COMBATTENTE</option>`;
@@ -4551,6 +4593,20 @@ function disegnaTabellaListaGenerale() {
         });
         popoloSelect += `</select>`;
 
+        // Select Allenatore
+        const isNonCombattente = (ruoloAttivo === 'non_combattente');
+        const allenatoreDisabledAttr = (disabledSelect || isNonCombattente) ? 'disabled' : '';
+        const allenatoreVal = isNonCombattente ? '' : (allenatoreIdAttivo || '');
+        const allenatoreOpacity = isNonCombattente ? 'opacity: 0.5;' : '';
+        
+        let allenatoreSelect = `<select class="gen-allenatore epk-input" data-uid="${p.id}" data-year="2026" style="font-size: 10px; padding: 4px; width: 110px; ${selectStyle} ${allenatoreOpacity}" ${allenatoreDisabledAttr} onchange="this.style.opacity='1'; this.style.fontStyle='normal'; this.style.borderColor='var(--epk-gold)'">`;
+        allenatoreSelect += `<option value="" ${!allenatoreVal ? 'selected' : ''}>NESSUNO</option>`;
+        soggettiAllenatori.forEach(aln => {
+            const selected = (allenatoreVal && Number(aln.id) === Number(allenatoreVal)) ? 'selected' : '';
+            allenatoreSelect += `<option value="${aln.id}" ${selected}>${aln.valore.toUpperCase()}</option>`;
+        });
+        allenatoreSelect += `</select>`;
+
         tr.innerHTML = `
             <td style="padding: 10px; text-align: center; color: var(--epk-gold-dim); font-weight: bold;">${rowNum}</td>
             <td style="padding: 10px;">
@@ -4560,10 +4616,11 @@ function disegnaTabellaListaGenerale() {
                 </div>
             </td>
             <td style="padding: 8px; text-align: center;">
-                <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                <div style="display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
                     ${ruoloSelect}
                     ${gruppoSelect}
                     ${popoloSelect}
+                    ${allenatoreSelect}
                 </div>
             </td>
         `;
@@ -4585,6 +4642,7 @@ async function salvaTuttaLaListaGenerale() {
     const ruoliSelects = document.querySelectorAll('.gen-ruolo');
     const gruppiSelects = document.querySelectorAll('.gen-gruppo');
     const popoliSelects = document.querySelectorAll('.gen-popolo');
+    const allenatoriSelects = document.querySelectorAll('.gen-allenatore');
     
     const rowsToUpsert = [];
     const map = {};
@@ -4617,6 +4675,20 @@ async function salvaTuttaLaListaGenerale() {
             map[key] = { profilo_id: uid, anno_sociale: year };
         }
         map[key].popolo = sel.value || null;
+    });
+
+    allenatoriSelects.forEach(sel => {
+        const uid = sel.getAttribute('data-uid');
+        const year = parseInt(sel.getAttribute('data-year'));
+        const key = `${uid}_${year}`;
+        if (!map[key]) {
+            map[key] = { profilo_id: uid, anno_sociale: year };
+        }
+        if (map[key].ruolo_combattimento === 'non_combattente') {
+            map[key].allenatore_id = null;
+        } else {
+            map[key].allenatore_id = sel.value ? parseInt(sel.value) : null;
+        }
     });
     
     for (const key in map) {
