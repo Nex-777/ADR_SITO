@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-28] feature | Gestione Anagrafiche e Hard Delete per Iscrizioni Bloccate
+- **Database (`elimina_utente_completo`)**:
+  - Creata una nuova stored procedure RPC con privilegi `SECURITY DEFINER` per eseguire un *Hard Delete* completo.
+  - La funzione elimina a cascata l'anagrafica, i certificati, i contatti, l'utente pubblico e infine l'utenza Auth (`auth.users`), liberando così l'email e il codice fiscale.
+  - Questa eccezione alla *EPIKA Core Rule* (che richiederebbe storicizzazione) è stata approvata per permettere agli utenti che hanno commesso errori non correggibili di riniziare il flusso di registrazione da capo.
+- **Frontend (`portal/dashboard.js`, `portal/dashboard.html`)**:
+  - Aggiunte le colonne **Email** e **Cellulare** (Contatti) nella tabella delle Approvazioni - Pagamenti in Sospeso per permettere di ricontattare chi ha problemi al checkout.
+  - Inserito il pulsante di azione **ELIMINA** nella riga dei pagamenti in sospeso, visibile solo ai ruoli apicali, collegato alla nuova funzione di Hard Delete (con prompt di sicurezza su pagamenti Stripe disallineati).
+
+---
+
 ## [2026-07-28] feature | Layout Dinamico & Slot Da Assegnare nei Direttivi Auto-Compilati (v1.03.40)
 - **Frontend (`portal/epika.js`)**:
   - Eliminata la barra di scorrimento (`max-height: 220px`) per i 3 quadri direttivi auto-compilati (*Capi Gruppo*, *Vice Capi Gruppo*, *Responsabili Iscrizioni*), impostando un'altezza fluida che si adatta a tutti i nominativi.
