@@ -2948,16 +2948,20 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
     tableBody.innerHTML = '<tr><td colspan="8" style="padding: 15px; text-align: center; text-transform: uppercase; color: gray;">Caricamento dati...</td></tr>';
 
     try {
-        // 1. Carica iscrizioni con profili
+        // 1. Carica iscrizioni con profili (ordinate per data_iscrizione decrescente)
         const { data: iscritti, error: errIsc } = await supabaseClient
             .from('epika_iscrizioni_eventi')
             .select(`
+                id,
+                data_iscrizione,
                 utente_id,
                 giorni_presenza,
                 dettagli,
                 profilo:epika_profili(nome_di_battaglia, ruolo_combattimento, gruppo_storico_id)
             `)
-            .eq('evento_id', eventoId);
+            .eq('evento_id', eventoId)
+            .order('data_iscrizione', { ascending: false })
+            .order('id', { ascending: false });
 
         if (errIsc) throw errIsc;
 
@@ -3068,11 +3072,13 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
                 gruppo: gruppoNome,
                 ruolo: ruolo,
                 giorni: giorni.map(formattaData).join(', '),
+                giorni_raw: giorni,
                 coach: coachNome,
                 armatura: arm,
                 arciere: arc,
                 armi_speciali: armiS,
-                descrizione_sperimentali: descSper
+                descrizione_sperimentali: descSper,
+                data_iscrizione: isc.data_iscrizione
             };
         });
 
@@ -3096,6 +3102,7 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
             `;
         });
 
+        popolaFiltriDinamiciDashboard(giorniPresenzaMappa);
         filtraPartecipantiDashboard();
 
     } catch (e) {
@@ -3108,18 +3115,94 @@ function nascondiDashboardEvento() {
     document.getElementById('adm-dashboard-evento-panel').classList.add('epk-hidden');
 }
 
+function popolaFiltriDinamiciDashboard(giorniPresenzaMappa) {
+    // Gruppi
+    const gruppi = [...new Set(dashboardIscrittiCache.map(i => i.gruppo))].sort();
+    const selGruppo = document.getElementById('evt-dashboard-filter-gruppo');
+    if (selGruppo) {
+        selGruppo.innerHTML = '<option value="">TUTTI I GRUPPI</option>' + 
+            gruppi.map(g => `<option value="${g}">${g.toUpperCase()}</option>`).join('');
+    }
+
+    // Ruoli
+    const ruoli = [...new Set(dashboardIscrittiCache.map(i => i.ruolo))].sort();
+    const selRuolo = document.getElementById('evt-dashboard-filter-ruolo');
+    if (selRuolo) {
+        selRuolo.innerHTML = '<option value="">TUTTI I RUOLI</option>' + 
+            ruoli.map(r => `<option value="${r}">${r === 'combattente' ? 'COMBATTENTE' : 'NON COMBATTENTE'}</option>`).join('');
+    }
+
+    // Date presenze
+    const selGiorno = document.getElementById('evt-dashboard-filter-giorno');
+    if (selGiorno) {
+        const dateISO = Object.keys(giorniPresenzaMappa || {}).sort();
+        selGiorno.innerHTML = '<option value="">TUTTE LE DATE</option>' + 
+            dateISO.map(d => `<option value="${d}">${formattaData(d)}</option>`).join('');
+    }
+
+    // Allenatori
+    const coachList = [...new Set(dashboardIscrittiCache.filter(i => i.ruolo === 'combattente' && i.coach && i.coach !== 'N/D').map(i => i.coach))].sort();
+    const selCoach = document.getElementById('evt-dashboard-filter-allenatore');
+    if (selCoach) {
+        selCoach.innerHTML = '<option value="">TUTTI GLI ALLENATORI</option>' + 
+            coachList.map(c => `<option value="${c}">${c.toUpperCase()}</option>`).join('');
+    }
+
+    const selArciere = document.getElementById('evt-dashboard-filter-arciere');
+    if (selArciere) selArciere.value = '';
+}
+
+function resetFiltriDashboardEvento() {
+    const search = document.getElementById('evt-dashboard-search');
+    if (search) search.value = '';
+    const fGruppo = document.getElementById('evt-dashboard-filter-gruppo');
+    if (fGruppo) fGruppo.value = '';
+    const fRuolo = document.getElementById('evt-dashboard-filter-ruolo');
+    if (fRuolo) fRuolo.value = '';
+    const fGiorno = document.getElementById('evt-dashboard-filter-giorno');
+    if (fGiorno) fGiorno.value = '';
+    const fCoach = document.getElementById('evt-dashboard-filter-allenatore');
+    if (fCoach) fCoach.value = '';
+    const fArciere = document.getElementById('evt-dashboard-filter-arciere');
+    if (fArciere) fArciere.value = '';
+    filtraPartecipantiDashboard();
+}
+
 function filtraPartecipantiDashboard() {
-    const query = document.getElementById('evt-dashboard-search').value.toLowerCase().trim();
+    const query = (document.getElementById('evt-dashboard-search')?.value || '').toLowerCase().trim();
+    const fGruppo = document.getElementById('evt-dashboard-filter-gruppo')?.value || '';
+    const fRuolo = document.getElementById('evt-dashboard-filter-ruolo')?.value || '';
+    const fGiorno = document.getElementById('evt-dashboard-filter-giorno')?.value || '';
+    const fCoach = document.getElementById('evt-dashboard-filter-allenatore')?.value || '';
+    const fArciere = document.getElementById('evt-dashboard-filter-arciere')?.value || '';
+
     const tableBody = document.getElementById('evt-dashboard-table-body');
-    
     tableBody.innerHTML = '';
 
-    const filtrati = dashboardIscrittiCache.filter(i => 
-        i.nome_storico.toLowerCase().includes(query) ||
-        i.nome_reale.toLowerCase().includes(query) ||
-        i.gruppo.toLowerCase().includes(query) ||
-        i.ruolo.toLowerCase().includes(query)
-    );
+    const filtrati = dashboardIscrittiCache.filter(i => {
+        const matchText = !query || 
+            i.nome_storico.toLowerCase().includes(query) ||
+            i.nome_reale.toLowerCase().includes(query);
+
+        const matchGruppo = !fGruppo || i.gruppo === fGruppo;
+        const matchRuolo = !fRuolo || i.ruolo === fRuolo;
+        const matchGiorno = !fGiorno || (Array.isArray(i.giorni_raw) && i.giorni_raw.includes(fGiorno));
+        const matchCoach = !fCoach || i.coach === fCoach;
+
+        let matchArciere = true;
+        if (fArciere === 'si') {
+            matchArciere = i.ruolo === 'combattente' && i.arciere !== 'nessuno';
+        } else if (fArciere === 'no') {
+            matchArciere = i.ruolo !== 'combattente' || i.arciere === 'nessuno';
+        }
+
+        return matchText && matchGruppo && matchRuolo && matchGiorno && matchCoach && matchArciere;
+    });
+
+    const countBadge = document.getElementById('evt-dashboard-filter-count');
+    if (countBadge) {
+        countBadge.textContent = `MOSTRATI: ${filtrati.length} / ${dashboardIscrittiCache.length}`;
+    }
 
     if (filtrati.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="8" style="padding: 15px; text-align: center; text-transform: uppercase; color: gray;">Nessun partecipante corrisponde ai filtri.</td></tr>';

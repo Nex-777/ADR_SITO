@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.03.43">
+    <link rel="stylesheet" href="epika.css?v=1.03.44">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.03.43"></script>
+    <script src="config.js?v=1.03.44"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.03.43</span>
+            <span class="epk-version-badge">Vs. 1.03.44</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -731,9 +731,20 @@
                                 </div>
                             </div>
 
-                            <!-- Ricerca Partecipanti -->
-                            <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
-                                <input type="text" id="evt-dashboard-search" class="epk-input" placeholder="Cerca partecipante..." style="font-size: 11px; max-width: 250px;" oninput="filtraPartecipantiDashboard()">
+                            <!-- Control Bar: Filtri e Ricerca Partecipanti -->
+                            <div style="margin-bottom: 16px; display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid rgba(251, 191, 36, 0.1); flex-wrap: wrap;">
+                                <input type="text" id="evt-dashboard-search" class="epk-input" placeholder="Cerca nome..." style="font-size: 11px; max-width: 140px;" oninput="filtraPartecipantiDashboard()">
+                                <select id="evt-dashboard-filter-gruppo" class="epk-input" style="font-size: 11px; max-width: 140px;" onchange="filtraPartecipantiDashboard()"></select>
+                                <select id="evt-dashboard-filter-ruolo" class="epk-input" style="font-size: 11px; max-width: 140px;" onchange="filtraPartecipantiDashboard()"></select>
+                                <select id="evt-dashboard-filter-giorno" class="epk-input" style="font-size: 11px; max-width: 140px;" onchange="filtraPartecipantiDashboard()"></select>
+                                <select id="evt-dashboard-filter-allenatore" class="epk-input" style="font-size: 11px; max-width: 150px;" onchange="filtraPartecipantiDashboard()"></select>
+                                <select id="evt-dashboard-filter-arciere" class="epk-input" style="font-size: 11px; max-width: 130px;" onchange="filtraPartecipantiDashboard()">
+                                    <option value="">TUTTI (ARCIERI)</option>
+                                    <option value="si">ARCIERE: SÌ</option>
+                                    <option value="no">ARCIERE: NO</option>
+                                </select>
+                                <button class="epk-btn-secondary" onclick="resetFiltriDashboardEvento()" style="font-size: 10px; padding: 8px 12px;">RESET FILTRI</button>
+                                <span id="evt-dashboard-filter-count" style="font-size: 11px; color: var(--epk-gold); margin-left: auto;"></span>
                             </div>
 
                             <!-- Tabella Iscritti -->
@@ -1678,6 +1689,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.03.43"></script>
+    <script src="epika.js?v=1.03.44"></script>
 </body>
 </html>

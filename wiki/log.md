@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-28] feature | Ordinamento Decrescente & Control Bar Filtri Avanzati Dashboard Eventi (v1.03.44)
+- **Ordinamento Iscritti (`portal/epika.js`)**: Aggiunto `.order('data_iscrizione', { ascending: false })` con fallback su `.order('id', { ascending: false })` nella query Supabase su `epika_iscrizioni_eventi`, garantendo che gli ultimi iscritti compaiano sempre in alto.
+- **Control Bar Filtri (`portal/epika.html`, `portal/epika.js`)**:
+  - Creata la control bar a 6 elementi in `epika.html` (Ricerca Nome, Gruppo, Ruolo, Date Presenza, Allenatore, Arciere Sì/No).
+  - Implementata la generazione dinamica *data-driven* dei dropdown in `popolaFiltriDinamiciDashboard()` basata unicamente sui partecipanti reali dell'evento.
+  - Implementata la logica di filtraggio cumulativo in `filtraPartecipantiDashboard()` con badge di conteggio `MOSTRATI: X / Y`.
+  - Aggiunta la funzione `resetFiltriDashboardEvento()` per azzerare i filtri con 1 click.
+
+---
+
 ## [2026-07-28] fix | Ripristino Formato Sequenziale Numero Registro Tesserati T_XXX_YYYY (v1.03.43)
 - **Database & Funzioni PL/pgSQL (`supabase/migration_fix_numero_registro_tesserati.sql`)**:
   - Eliminata la generazione di prefissi casuali `REG-YYYY-XXXX` dalla funzione `public.approva_tesserato()`.
