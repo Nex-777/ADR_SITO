@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-28] feature | Layout Dinamico & Slot Da Assegnare nei Direttivi Auto-Compilati (v1.03.40)
+- **Frontend (`portal/epika.js`)**:
+  - Eliminata la barra di scorrimento (`max-height: 220px`) per i 3 quadri direttivi auto-compilati (*Capi Gruppo*, *Vice Capi Gruppo*, *Responsabili Iscrizioni*), impostando un'altezza fluida che si adatta a tutti i nominativi.
+  - Implementata l'identificazione automatica dei gruppi storici attivi sprovvisti di referente.
+  - Aggiunti gli slot visuali tratteggiati "DA ASSEGNARE" per ciascun gruppo sprovvisto di responsabile e integrati con la ricerca globale in tempo reale.
+  - Inserito il badge di allerta sintetico nell'header dei quadri direttivi auto-compilati con il conteggio degli slot mancanti.
+
+---
+
 ## [2026-07-28] fix | Bonifica CSS max-height, Layout Modale Nomine e Ricerca Globale Direttivi (v1.03.39)
 - **Frontend (`portal/epika.html`, `portal/epika.js`)**:
   - Eseguita bonifica sistemica della proprietà CSS `max-h:` (invalida inline) convertendola in `max-height:` su tutte le liste (SCAB, Popoli, Gruppi Storici, Modale Nomine).

@@ -1575,12 +1575,14 @@ async function renderTesseratiNomineInverso() {
         // Genera i quadri per ciascun gruppo di lavoro attivo
         gruppiLavoro.forEach(g => {
             let membri = [];
+            let mancanti = [];
             let isAutoCompiled = false;
             
             if (g.id === 5) {
                 // Capi Gruppo (auto-compilato)
                 isAutoCompiled = true;
                 gruppiStorici.forEach(grp => {
+                    if (!grp.attivo) return;
                     if (grp.capogruppo_id) {
                         const m = tesseratiCache.find(t => t.id === grp.capogruppo_id);
                         if (m) {
@@ -1588,13 +1590,18 @@ async function renderTesseratiNomineInverso() {
                                 ...m,
                                 gruppoRepresentedName: grp.nome
                             });
+                        } else {
+                            mancanti.push({ nome: grp.nome, ruolo: "Capo Gruppo" });
                         }
+                    } else {
+                        mancanti.push({ nome: grp.nome, ruolo: "Capo Gruppo" });
                     }
                 });
             } else if (g.nome === 'Gruppo Vice Capi Gruppo') {
                 // Vice Capi Gruppo (auto-compilato)
                 isAutoCompiled = true;
                 gruppiStorici.forEach(grp => {
+                    if (!grp.attivo) return;
                     if (grp.vice_capogruppo_id) {
                         const m = tesseratiCache.find(t => t.id === grp.vice_capogruppo_id);
                         if (m) {
@@ -1602,13 +1609,18 @@ async function renderTesseratiNomineInverso() {
                                 ...m,
                                 gruppoRepresentedName: grp.nome
                             });
+                        } else {
+                            mancanti.push({ nome: grp.nome, ruolo: "Vice Capo Gruppo" });
                         }
+                    } else {
+                        mancanti.push({ nome: grp.nome, ruolo: "Vice Capo Gruppo" });
                     }
                 });
             } else if (g.id === 6) {
                 // Responsabili Iscrizioni (auto-compilato)
                 isAutoCompiled = true;
                 gruppiStorici.forEach(grp => {
+                    if (!grp.attivo) return;
                     if (grp.responsabile_iscrizioni_id) {
                         const m = tesseratiCache.find(t => t.id === grp.responsabile_iscrizioni_id);
                         if (m) {
@@ -1616,7 +1628,11 @@ async function renderTesseratiNomineInverso() {
                                 ...m,
                                 gruppoRepresentedName: grp.nome
                             });
+                        } else {
+                            mancanti.push({ nome: grp.nome, ruolo: "Resp. Iscrizioni" });
                         }
+                    } else {
+                        mancanti.push({ nome: grp.nome, ruolo: "Resp. Iscrizioni" });
                     }
                 });
             } else {
@@ -1626,7 +1642,7 @@ async function renderTesseratiNomineInverso() {
 
             let membriHTML = '';
             
-            if (membri.length === 0) {
+            if (membri.length === 0 && mancanti.length === 0) {
                 membriHTML = '<p style="font-size: 11px; color: rgba(245, 230, 200, 0.4); text-transform: uppercase; font-style: italic; margin: 10px 0;">Nessun componente nominato</p>';
             } else {
                 membri.forEach(m => {
@@ -1664,6 +1680,20 @@ async function renderTesseratiNomineInverso() {
                             </div>
                         </div>`;
                 });
+
+                // Accoda gli slot per i gruppi storici sprovvisti di responsabile
+                mancanti.forEach(item => {
+                    membriHTML += `
+                        <div class="direttivo-member-row" style="background: rgba(0,0,0,0.15); border: 1px dashed rgba(255,255,255,0.15); padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px; opacity: 0.65;">
+                            <div>
+                                <span class="epk-headline direttivo-member-battle" style="font-size: 12px; color: rgba(245,230,200,0.45);">${item.nome.toUpperCase()}</span>
+                                <span class="direttivo-member-real" style="font-size: 9px; display: block; color: rgba(245,230,200,0.3);">GRUPPO STORICO</span>
+                            </div>
+                            <div style="font-size: 9px; font-weight: bold; color: rgba(239, 68, 68, 0.7); border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 6px; border-radius: 2px; text-transform: uppercase; font-style: italic;">
+                                DA ASSEGNARE
+                            </div>
+                        </div>`;
+                });
             }
 
             let actionButtonHTML = '';
@@ -1675,12 +1705,22 @@ async function renderTesseratiNomineInverso() {
                 </button>`;
             }
 
+            let titleBadgeHTML = '';
+            if (isAutoCompiled && mancanti.length > 0) {
+                titleBadgeHTML = ` <span style="font-size: 9px; color: #f87171; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); padding: 1px 6px; border-radius: 2px; font-weight: normal; margin-left: 6px;">⚠️ ${mancanti.length} DA ASSEGNARE</span>`;
+            }
+
+            const containerStyle = isAutoCompiled 
+                ? 'flex-grow: 1; padding-right: 4px;' 
+                : 'flex-grow: 1; max-height: 220px; overflow-y: auto; padding-right: 4px;';
+
             container.innerHTML += `
                 <div class="epk-card direttivo-group-card" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 class="epk-headline direttivo-group-title" style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 6px;">
-                        ${g.nome.toUpperCase()}
+                    <h3 class="epk-headline direttivo-group-title" style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span>${g.nome.toUpperCase()}</span>
+                        ${titleBadgeHTML}
                     </h3>
-                    <div style="flex-grow: 1; max-height: 220px; overflow-y: auto; padding-right: 4px;">
+                    <div style="${containerStyle}">
                         ${membriHTML}
                     </div>
                     ${actionButtonHTML}
