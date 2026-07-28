@@ -2,14 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
-## [2026-07-28] feature | Gestione Anagrafiche e Hard Delete per Iscrizioni Bloccate
-- **Database (`elimina_utente_completo`)**:
-  - Creata una nuova stored procedure RPC con privilegi `SECURITY DEFINER` per eseguire un *Hard Delete* completo.
-  - La funzione elimina a cascata l'anagrafica, i certificati, i contatti, l'utente pubblico e infine l'utenza Auth (`auth.users`), liberando così l'email e il codice fiscale.
-  - Questa eccezione alla *EPIKA Core Rule* (che richiederebbe storicizzazione) è stata approvata per permettere agli utenti che hanno commesso errori non correggibili di riniziare il flusso di registrazione da capo.
-- **Frontend (`portal/dashboard.js`, `portal/dashboard.html`)**:
-  - Aggiunte le colonne **Email** e **Cellulare** (Contatti) nella tabella delle Approvazioni - Pagamenti in Sospeso per permettere di ricontattare chi ha problemi al checkout.
-  - Inserito il pulsante di azione **ELIMINA** nella riga dei pagamenti in sospeso, visibile solo ai ruoli apicali, collegato alla nuova funzione di Hard Delete (con prompt di sicurezza su pagamenti Stripe disallineati).
+## [2026-07-28] fix | Ripristino Formato Sequenziale Numero Registro Tesserati T_XXX_YYYY (v1.03.43)
+- **Database & Funzioni PL/pgSQL (`supabase/migration_fix_numero_registro_tesserati.sql`)**:
+  - Eliminata la generazione di prefissi casuali `REG-YYYY-XXXX` dalla funzione `public.approva_tesserato()`.
+  - Implementata la funzione di calcolo sequenziale automatico nel formato standard `T_LPAD(N, 3, '0')_YYYY` (es. `T_088_2026`).
+  - Eseguita sanatoria atomica nel DB: il record dell'atleta Daniele Oronzo Stefanelli è stato corretto da `REG-2026-5822` al numero registro sequenziale ufficiale `T_088_2026`.
 
 ---
 
