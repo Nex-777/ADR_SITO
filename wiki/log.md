@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-28] fix | Bonifica CSS max-height, Layout Modale Nomine e Ricerca Globale Direttivi (v1.03.39)
+- **Frontend (`portal/epika.html`, `portal/epika.js`)**:
+  - Eseguita bonifica sistemica della proprietà CSS `max-h:` (invalida inline) convertendola in `max-height:` su tutte le liste (SCAB, Popoli, Gruppi Storici, Modale Nomine).
+  - Blindato il layout del modale `#adm-nomina-modal` con `max-height: 85vh`, pulsante di chiusura `"✖"` nella testata, e chiusura al click sul backdrop oscurato esterno.
+  - Creata la casella di ricerca globale nei Direttivi (`#adm-direttivi-global-search`) con filtraggio live `filtraDirettiviInverso()` in O(N) sul DOM per Nome di Battaglia, Nome Reale e Gruppo Direttivo.
+
+---
+
 ## [2026-07-27] feature | Contatti Utente e Tasto Eliminazione in Attesa di Pagamento (v1.03.38)
 - **Frontend (`portal/dashboard.js`, `portal/dashboard.html`)**:
   - Estesa la query `loadApprovazioni()` per recuperare i contatti (`email`, `telefono`) relazionati alle anagrafiche.

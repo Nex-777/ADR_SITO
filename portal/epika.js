@@ -1644,10 +1644,10 @@ async function renderTesseratiNomineInverso() {
                     }
 
                     membriHTML += `
-                        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.1); padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
+                        <div class="direttivo-member-row" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251,191,36,0.1); padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
                             <div>
-                                <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold);">${m.nome_di_battaglia}${rappresentatoText}</span>
-                                <span style="font-size: 9px; display: block; color: rgba(245,230,200,0.5);">Real: ${nomeReale.toUpperCase()}</span>
+                                <span class="epk-headline direttivo-member-battle" style="font-size: 12px; color: var(--epk-gold);">${m.nome_di_battaglia}${rappresentatoText}</span>
+                                <span class="direttivo-member-real" style="font-size: 9px; display: block; color: rgba(245,230,200,0.5);">Real: ${nomeReale.toUpperCase()}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 ${g.id === 1 ? `
@@ -1676,21 +1676,61 @@ async function renderTesseratiNomineInverso() {
             }
 
             container.innerHTML += `
-                <div class="epk-card" style="display: flex; flex-direction: column; gap: 12px;">
-                    <h3 class="epk-headline" style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 6px;">
+                <div class="epk-card direttivo-group-card" style="display: flex; flex-direction: column; gap: 12px;">
+                    <h3 class="epk-headline direttivo-group-title" style="margin-top: 0; font-size: 14px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px; margin-bottom: 6px;">
                         ${g.nome.toUpperCase()}
                     </h3>
-                    <div style="flex-grow: 1; max-h: 220px; overflow-y: auto; padding-right: 4px;">
+                    <div style="flex-grow: 1; max-height: 220px; overflow-y: auto; padding-right: 4px;">
                         ${membriHTML}
                     </div>
                     ${actionButtonHTML}
                 </div>`;
         });
 
+        // Applica eventuale filtro attivo
+        filtraDirettiviInverso();
+
     } catch (err) {
         console.error("Errore renderTesseratiNomineInverso:", err);
         container.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: red;">Errore durante il caricamento delle nomine.</p>';
     }
+}
+
+// Logica per il Filtraggio Live dei Direttivi (Ricerca Globale)
+function filtraDirettiviInverso() {
+    const input = document.getElementById('adm-direttivi-global-search');
+    if (!input) return;
+    const searchVal = input.value.trim().toUpperCase();
+    const cards = document.querySelectorAll('.direttivo-group-card');
+
+    cards.forEach(card => {
+        const titleEl = card.querySelector('.direttivo-group-title');
+        const groupTitle = titleEl ? titleEl.textContent.toUpperCase() : '';
+        const isGroupMatch = searchVal !== '' && groupTitle.includes(searchVal);
+
+        const rows = card.querySelectorAll('.direttivo-member-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const battleEl = row.querySelector('.direttivo-member-battle');
+            const realEl = row.querySelector('.direttivo-member-real');
+            const battleText = battleEl ? battleEl.textContent.toUpperCase() : '';
+            const realText = realEl ? realEl.textContent.toUpperCase() : '';
+
+            if (isGroupMatch || !searchVal || battleText.includes(searchVal) || realText.includes(searchVal)) {
+                row.style.display = 'flex';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (!searchVal || isGroupMatch || visibleCount > 0) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
 }
 
 // Logica per il Modale Centralizzato di Ricerca e Aggiunta

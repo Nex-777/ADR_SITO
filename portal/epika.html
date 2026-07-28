@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.03.38">
+    <link rel="stylesheet" href="epika.css?v=1.03.39">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.03.38"></script>
+    <script src="config.js?v=1.03.39"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.03.38</span>
+            <span class="epk-version-badge">Vs. 1.03.39</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -263,6 +263,11 @@
 
                     <!-- Tab 2: Direttivi -->
                     <div id="epk-adm-tab-direttivi" class="epk-admin-tab-panel epk-hidden">
+                        <!-- Barra di ricerca globale Direttivi -->
+                        <div style="margin-bottom: 16px; background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.15); padding: 12px; border-radius: 4px;">
+                            <label class="epk-label" for="adm-direttivi-global-search" style="margin-bottom: 6px; display: block;">🔍 Cerca nei Direttivi (Nome di Battaglia, Nome Reale o Nome Direttivo)</label>
+                            <input type="text" id="adm-direttivi-global-search" class="epk-input" placeholder="Digita per filtrare i direttivi in tempo reale..." oninput="filtraDirettiviInverso()">
+                        </div>
                         <!-- Qui inseriremo i quadri inversi per ogni direttivo -->
                         <div class="epk-grid-2" id="adm-direttivi-quadri-list">
                             <!-- Popolato dinamicamente da JS -->
@@ -328,7 +333,7 @@
                                         <input type="text" id="scab-new-palestra-nome" class="epk-input" placeholder="NOME PALESTRA...">
                                         <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaStrutturaSCAB('palestra')">Aggiungi Palestra</button>
                                     </div>
-                                    <div id="scab-palestre-list" style="margin-top: 16px; max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                    <div id="scab-palestre-list" style="margin-top: 16px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
                                         <!-- Lista palestre populated by JS -->
                                     </div>
                                 </div>
@@ -339,7 +344,7 @@
                                         <input type="text" id="scab-new-centro-nome" class="epk-input" placeholder="NOME CENTRO PRATICA...">
                                         <button class="epk-btn" style="font-size: 10px; padding: 10px;" onclick="creaStrutturaSCAB('centro_pratica')">Aggiungi Centro Pratica</button>
                                     </div>
-                                    <div id="scab-centri-list" style="margin-top: 16px; max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                    <div id="scab-centri-list" style="margin-top: 16px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
                                         <!-- Lista centri populated by JS -->
                                     </div>
                                 </div>
@@ -358,7 +363,7 @@
                                         <input type="text" id="adm-new-validatore" class="epk-input" placeholder="NOME..." style="flex: 1;">
                                         <button class="epk-btn" onclick="creaSoggettoRuolo('scab_validatore')" style="padding: 10px 12px; font-size: 9px;">ADD</button>
                                     </div>
-                                    <div id="adm-validatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
+                                    <div id="adm-validatori-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
                                     </div>
                                 </div>
 
@@ -371,7 +376,7 @@
                                         <input type="text" id="adm-new-allenatore" class="epk-input" placeholder="NOME..." style="flex: 1;">
                                         <button class="epk-btn" onclick="creaSoggettoRuolo('allenatore')" style="padding: 10px 12px; font-size: 9px;">ADD</button>
                                     </div>
-                                    <div id="adm-allenatori-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
+                                    <div id="adm-allenatori-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
                                     </div>
                                 </div>
 
@@ -384,7 +389,7 @@
                                         <input type="text" id="adm-new-allievo" class="epk-input" placeholder="NOME..." style="flex: 1;">
                                         <button class="epk-btn" onclick="creaSoggettoRuolo('scab_allievo_allenatore')" style="padding: 10px 12px; font-size: 9px;">ADD</button>
                                     </div>
-                                    <div id="adm-allievi-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 300px; overflow-y: auto;">
+                                    <div id="adm-allievi-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
                                     </div>
                                 </div>
                             </div>
@@ -591,7 +596,7 @@
                                 </div>
                                 <button class="epk-btn" onclick="creaPopolo()" style="padding: 10px 20px; font-size: 11px;">CREA POPOLO</button>
                             </div>
-                            <div id="adm-popoli-list" style="display: flex; flex-direction: column; gap: 8px; max-h: 400px; overflow-y: auto;">
+                            <div id="adm-popoli-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;">
                                 <!-- Elenco popoli gestito dinamicamente -->
                             </div>
                         </div>
@@ -911,13 +916,16 @@
             </div>
 
             <!-- Modale Centralizzato Nomine Direttivi (Step 3.3) -->
-            <div id="adm-nomina-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px;">
-                <div class="epk-card" style="max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.9);">
-                    <h3 id="adm-nomina-modal-titolo" class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
-                        AGGIUNGI MEMBRO AL DIRETTIVO
-                    </h3>
+            <div id="adm-nomina-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px;" onclick="if(event.target===this) chiudiModaleNomine()">
+                <div class="epk-card" style="max-width: 500px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.9); border: 1px solid var(--epk-gold-dim); overflow: hidden;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                        <h3 id="adm-nomina-modal-titolo" class="epk-headline" style="margin: 0; font-size: 16px; color: var(--epk-gold);">
+                            AGGIUNGI MEMBRO AL DIRETTIVO
+                        </h3>
+                        <button onclick="chiudiModaleNomine()" style="background: none; border: none; color: var(--epk-gold); font-size: 18px; cursor: pointer; padding: 0 4px;" title="Chiudi modale">✖</button>
+                    </div>
                     <input type="hidden" id="adm-nomina-modal-gruppo-id">
-                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div style="display: flex; flex-direction: column; gap: 16px; flex: 1; overflow: hidden;">
                         <div>
                             <label class="epk-label" for="adm-nomina-modal-search">Cerca Tesserato (Nome o Nome Storico)</label>
                             <input type="text" id="adm-nomina-modal-search" class="epk-input" placeholder="Digita per cercare..." oninput="filtraTesseratiNomina()">
@@ -928,10 +936,10 @@
                                 <!-- Popolato dinamicamente -->
                             </select>
                         </div>
-                        <div id="adm-nomina-modal-results" style="max-h: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px; background: rgba(0,0,0,0.2);">
+                        <div id="adm-nomina-modal-results" style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px; background: rgba(0,0,0,0.2); flex: 1;">
                             <!-- Risultati della ricerca -->
                         </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
                             <button class="epk-btn-secondary" onclick="chiudiModaleNomine()">ANNULLA</button>
                         </div>
                     </div>
@@ -1670,6 +1678,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.03.38"></script>
+    <script src="epika.js?v=1.03.39"></script>
 </body>
 </html>
