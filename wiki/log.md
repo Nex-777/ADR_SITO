@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-28] fix | Data Backfill Allenatore nello Storico Organico 2026 (v1.03.46)
+- **Database (`supabase/migration_epika_storico_allenatore_backfill.sql`)**: Eseguita migrazione di popolamento dati che ha sincronizzato gli `allenatore_id` per l'anno 2026 in `epika_storico_organico` dall'anagrafica `epika_profili` per tutti i record pregressi. Nessuna modifica al codice JS necessaria per preservare la corretta gestione dei valori `NULL` intenzionali.
+
+---
+
 ## [2026-07-28] feature | Gestione Allenatore nel Planning Lista Generale (v1.03.45)
 - **Database (`supabase/migration_epika_storico_allenatore.sql`)**: Aggiunta la colonna `allenatore_id` alla tabella `epika_storico_organico` con vincolo di integrità nativo (`CHECK constraint`) che impedisce l'assegnazione di un allenatore per i soggetti con ruolo `non_combattente`.
 - **Frontend (`portal/epika.html`, `portal/epika.js`)**:
