@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.03.52">
+    <link rel="stylesheet" href="epika.css?v=1.03.53">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.03.52"></script>
+    <script src="config.js?v=1.03.53"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.03.52</span>
+            <span class="epk-version-badge">Vs. 1.03.53</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -692,7 +692,152 @@
                                 <!-- Iscritti con toggle presenza -->
                             </div>
                         </div>
-                        
+
+                        <!-- Pannello Gestione Eserciti -->
+                        <div id="adm-eserciti-panel" class="epk-card epk-hidden" style="margin-top: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 12px; margin-bottom: 16px;">
+                                <div>
+                                    <h2 class="epk-headline" id="adm-eserciti-titolo" style="margin: 0; font-size: 16px; color: var(--epk-gold);">
+                                        GESTIONE ESERCITI & SCHIERAMENTI
+                                    </h2>
+                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6);">Bilanciamento tattico dei gruppi e dei mercenari per lo scontro</span>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="epk-btn-secondary" onclick="apriModalCofficientiEserciti()" style="padding: 8px 12px; font-size: 10px; border-color: var(--epk-gold); color: var(--epk-gold);">⚙️ COEFFICIENTI FORZA</button>
+                                    <button class="epk-btn" onclick="salvaSchieramentiEserciti()" style="padding: 8px 16px; font-size: 10px; background: #166534; border-color: #22c55e;">💾 SALVA SCHIERAMENTI</button>
+                                    <button class="epk-btn-secondary" onclick="nascondiPannelloEserciti()" style="padding: 8px 12px; font-size: 10px;">CHIUDI</button>
+                                </div>
+                            </div>
+                            <input type="hidden" id="adm-eserciti-evento-id">
+
+                            <!-- Header Bar: Nomi Eserciti, Gridi e VS Gauge -->
+                            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(251, 191, 36, 0.2); padding: 16px; margin-bottom: 20px; border-radius: 4px;">
+                                <div style="display: grid; grid-template-columns: 1fr 180px 1fr; gap: 16px; align-items: center;">
+                                    
+                                    <!-- Esercito A Header -->
+                                    <div style="background: rgba(30, 58, 138, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px; border-radius: 4px;">
+                                        <div style="font-size: 11px; font-weight: bold; color: #93c5fd; margin-bottom: 6px;">NOME ESERCITO A</div>
+                                        <input type="text" id="adm-esercito-a-nome" class="epk-input" value="ESERCITO A" style="font-size: 12px; font-weight: bold; margin-bottom: 8px;" oninput="aggiornaCalcoliEserciti()">
+                                        <input type="text" id="adm-esercito-a-grido" class="epk-input" placeholder="Grido di Battaglia (es: PER LA GLORIA!)..." style="font-size: 10px; font-style: italic;" oninput="aggiornaCalcoliEserciti()">
+                                        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-size: 10px; color: rgba(255,255,255,0.7);">FORZA TOTALE:</span>
+                                            <span id="adm-esercito-a-badge" style="font-size: 12px; font-weight: bold; color: #60a5fa; font-family: monospace;">FORZA: 0.0 pts | 0 COMBATTENTI</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Centro VS Gauge -->
+                                    <div style="text-align: center;">
+                                        <div style="font-family: 'Cinzel', serif; font-size: 18px; font-weight: bold; color: var(--epk-gold); letter-spacing: 2px;">VS</div>
+                                        <div id="adm-eserciti-vs-delta" style="font-size: 11px; font-weight: bold; font-family: monospace; color: var(--epk-gold-dim); margin-top: 6px; padding: 4px 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 2px;">
+                                            BILANCIATI
+                                        </div>
+                                    </div>
+
+                                    <!-- Esercito B Header -->
+                                    <div style="background: rgba(136, 36, 43, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); padding: 12px; border-radius: 4px;">
+                                        <div style="font-size: 11px; font-weight: bold; color: #fca5a5; margin-bottom: 6px;">NOME ESERCITO B</div>
+                                        <input type="text" id="adm-esercito-b-nome" class="epk-input" value="ESERCITO B" style="font-size: 12px; font-weight: bold; margin-bottom: 8px;" oninput="aggiornaCalcoliEserciti()">
+                                        <input type="text" id="adm-esercito-b-grido" class="epk-input" placeholder="Grido di Battaglia (es: NESSUN PASSO INDIETRO!)..." style="font-size: 10px; font-style: italic;" oninput="aggiornaCalcoliEserciti()">
+                                        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-size: 10px; color: rgba(255,255,255,0.7);">FORZA TOTALE:</span>
+                                            <span id="adm-esercito-b-badge" style="font-size: 12px; font-weight: bold; color: #f87171; font-family: monospace;">FORZA: 0.0 pts | 0 COMBATTENTI</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <!-- Layout Tattico a 3 Colonne (Gruppi) -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                                
+                                <!-- Colonna Esercito A -->
+                                <div style="background: rgba(30, 58, 138, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 4px;">
+                                    <h3 id="adm-esercito-a-col-titolo" style="font-size: 12px; color: #93c5fd; font-family: 'Cinzel', serif; margin: 0 0 10px 0; border-bottom: 1px solid rgba(59, 130, 246, 0.3); padding-bottom: 6px;">
+                                        ESERCITO A (GRUPPI)
+                                    </h3>
+                                    <div id="adm-esercito-a-gruppi-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 120px;">
+                                        <!-- Popolato via JS -->
+                                    </div>
+                                </div>
+
+                                <!-- Colonna Pool (Non Assegnati) -->
+                                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 4px;">
+                                    <h3 style="font-size: 12px; color: rgba(245, 230, 200, 0.7); font-family: 'Cinzel', serif; margin: 0 0 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px;">
+                                        GRUPPI NON ASSEGNATI
+                                    </h3>
+                                    <div id="adm-eserciti-pool-gruppi-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 120px;">
+                                        <!-- Popolato via JS -->
+                                    </div>
+                                </div>
+
+                                <!-- Colonna Esercito B -->
+                                <div style="background: rgba(136, 36, 43, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 12px; border-radius: 4px;">
+                                    <h3 id="adm-esercito-b-col-titolo" style="font-size: 12px; color: #fca5a5; font-family: 'Cinzel', serif; margin: 0 0 10px 0; border-bottom: 1px solid rgba(239, 68, 68, 0.3); padding-bottom: 6px;">
+                                        ESERCITO B (GRUPPI)
+                                    </h3>
+                                    <div id="adm-esercito-b-gruppi-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 120px;">
+                                        <!-- Popolato via JS -->
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Sezione Mercenari Singoli -->
+                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(251, 191, 36, 0.15); padding: 16px; border-radius: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(251, 191, 36, 0.15); padding-bottom: 8px; margin-bottom: 12px;">
+                                    <h3 style="font-size: 13px; color: var(--epk-gold); font-family: 'Cinzel', serif; margin: 0;">
+                                        🗡️ MERCENARI (ASSEGNAZIONE INDIVIDUALE)
+                                    </h3>
+                                    <span style="font-size: 10px; color: gray;">Assegna i singoli mercenari per bilanciare la forza esatta</span>
+                                </div>
+                                <div id="adm-eserciti-mercenari-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">
+                                    <!-- Popolato via JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Popover Coefficienti Forza -->
+                        <div id="adm-eserciti-coeff-modal" class="epk-hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px;">
+                            <div class="epk-card" style="max-width: 480px; width: 100%; border: 1px solid var(--epk-gold);">
+                                <h3 style="font-size: 14px; color: var(--epk-gold); font-family: 'Cinzel', serif; margin: 0 0 12px 0; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 6px;">
+                                    ⚙️ IMPOSTAZIONI COEFFICIENTI FORZA
+                                </h3>
+                                <p style="font-size: 10px; color: rgba(245, 230, 200, 0.7); margin-bottom: 16px;">
+                                    Modifica i pesi di forza per il calcolo automatico dell'esercito. I valori influenzeranno immediatamente le simulazioni.
+                                </p>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label style="font-size: 11px; color: #fff;">Non Combattente:</label>
+                                        <input type="number" step="0.05" id="coeff-non-combattente" class="epk-input" style="width: 80px; text-align: right;" value="0">
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label style="font-size: 11px; color: #fff;">Combattente (Standard / No Armatura):</label>
+                                        <input type="number" step="0.05" id="coeff-combattente" class="epk-input" style="width: 80px; text-align: right;" value="1.0">
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label style="font-size: 11px; color: #fff;">Armatura Leggera:</label>
+                                        <input type="number" step="0.05" id="coeff-armatura-leggera" class="epk-input" style="width: 80px; text-align: right;" value="1.2">
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label style="font-size: 11px; color: #fff;">Armatura Pesante:</label>
+                                        <input type="number" step="0.05" id="coeff-armatura-pesante" class="epk-input" style="width: 80px; text-align: right;" value="1.3">
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label style="font-size: 11px; color: #fff;">Arciere Puro:</label>
+                                        <input type="number" step="0.05" id="coeff-arciere-puro" class="epk-input" style="width: 80px; text-align: right;" value="0.75">
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <label style="font-size: 11px; color: #fff;">Arciere Ibrido:</label>
+                                        <input type="number" step="0.05" id="coeff-arciere-ibrido" class="epk-input" style="width: 80px; text-align: right;" value="1.0">
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+                                    <button class="epk-btn-secondary" onclick="chiudiModalCofficientiEserciti()" style="font-size: 10px; padding: 6px 12px;">ANNULLA</button>
+                                    <button class="epk-btn" onclick="confermaCoefficientiEserciti()" style="font-size: 10px; padding: 6px 16px;">CONFERMA</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Dashboard Dettagliata Evento -->
                         <div id="adm-dashboard-evento-panel" class="epk-card epk-hidden" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
@@ -1693,6 +1838,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.03.52"></script>
+    <script src="epika.js?v=1.03.53"></script>
 </body>
 </html>

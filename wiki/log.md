@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-29] feature | Dashboard Gestione Eserciti & Bilanciamento Tattico (v1.03.53)
+- **Database (`supabase/migration_epika_eserciti.sql`)**: Creata la tabella `epika_eserciti_eventi` con politiche RLS per storicizzare nomi eserciti, gridi di battaglia, coefficienti di forza e assegnazioni JSONB dei gruppi e dei mercenari.
+- **Frontend Admin (`portal/epika.html`, `portal/epika.js`)**:
+  - Inserito il pulsante imperiale `⚔️ GESTIONE ESERCITI` nella lista eventi tra "Gestisci Presenze" e "Disattiva".
+  - Implementata la dashboard tattica `#adm-eserciti-panel` a 3 colonne (Esercito A, Pool Non Assegnati, Esercito B).
+  - Implementata l'assegnazione in blocco per i Gruppi Storici e l'assegnazione individuale per i membri del gruppo **MERCENARI**.
+  - Implementato l'algoritmo di calcolo automatico della forza totale e dei combattenti con indicatore di sbilanciamento centrale (VS Delta Gauge).
+  - Creato il popover `#adm-eserciti-coeff-modal` per la personalizzazione dinamica dei 6 coefficienti di forza.
+
+---
+
 ## [2026-07-29] feature | Distinzione Visiva Codice Richiesta CSEN vs Tessera Ufficiale (v1.03.52)
 - **Frontend (`portal/dashboard.js`)**:
   - Distinti i codici richiesta temporanei (prefisso `IT...`, es. `IT26149086`) dalle tessere CSEN ufficiali definitive.
