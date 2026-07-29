@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-29] ingest | Registrazione decisioni architetturali OTP e Validazione Documenti (v1.03.50)
+- **Wiki Updates**:
+  - [`wiki/registration_flow.md`](file:///d:/Antigravity_Projects/ADR_SITO/wiki/registration_flow.md): Registrato il nuovo flusso Pre-Upload per la registrazione, l'impostazione di default del layout a due file per i documenti di identità, e formalizzato il chiarimento sulla *EPIKA CORE RULE* (la storicizzazione distruttiva si applica esclusivamente agli utenti con iscrizione completata; per gli utenti non registrati/incompleti è ammessa l'eliminazione fisica diretta).
+  - [`wiki/otp_signature_system.md`](file:///d:/Antigravity_Projects/ADR_SITO/wiki/otp_signature_system.md): Documentate le nuove pratiche di sicurezza e performance (Signed URL a 3600s, refresh sessione JWT preventivo e audit trail con l'hash SHA-256 dell'OTP nel PDF contratto finale).
+
+---
+
 ## [2026-07-29] fix | Risoluzione Critica Signed URL 3600s, Layout Avviso Single Mode e Ripristino OTP Hash PDF (v1.03.50)
 - **Frontend (`portal/registrazione.js`)**:
   - Estesa la durata di tutti i Signed URL generati in pre-upload (`documenti_identita`, `certificati_medici`, `documenti_adesione`, `documenti_tutori`) da 300 secondi (5 minuti) a **3600 secondi (1 ora)** per prevenire scadenze durante l'inserimento dell'OTP.
