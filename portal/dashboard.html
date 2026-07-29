@@ -22,7 +22,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.03.50"></script>
+    <script src="config.js?v=1.03.51"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -495,7 +495,7 @@
             color: #C9A84C;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.03.50">
+    <link rel="stylesheet" href="../output.css?v=1.03.51">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -507,7 +507,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.50</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.51</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -2035,20 +2035,57 @@
                         <p class="text-gray-400">Caricamento in corso...</p>
                     </div>
                     <!-- Upload nuovo documento personale -->
-                    <div id="doc-personale-upload" class="hidden space-y-3 border-t border-white/5 pt-4">
+                    <div id="doc-personale-upload" class="hidden space-y-4 border-t border-white/5 pt-4">
                         <p class="text-[10px] text-gray-400 uppercase font-headline">AGGIORNA DOCUMENTO D'IDENTITÀ</p>
+                        
+                        <!-- Scelta Layout Radio -->
+                        <div class="space-y-2">
+                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">COME PREFERISCI CARICARE IL DOCUMENTO?</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-headline text-[10px] font-bold">
+                                <label class="border border-white/10 p-2.5 flex items-center gap-2 cursor-pointer hover:bg-white/5 transition-all text-gray-300">
+                                    <input type="radio" name="doc-personale-layout" value="single" class="accent-primary">
+                                    HO UN FILE UNICO (PDF o foto fronte e retro assieme)
+                                </label>
+                                <label class="border border-white/10 p-2.5 flex items-center gap-2 cursor-pointer hover:bg-white/5 transition-all text-gray-300">
+                                    <input type="radio" name="doc-personale-layout" value="double" checked class="accent-primary">
+                                    HO DUE FILE SEPARATI (foto fronte + foto retro)
+                                </label>
+                            </div>
+                            <p id="doc-personale-avviso-single" class="hidden text-[9px] text-amber-400 font-bold uppercase tracking-wider mt-1">
+                                ⚠️ Modalità file unico: assicurati che il file contenga sia il FRONTE che il RETRO del documento.
+                            </p>
+                        </div>
+
+                        <!-- Dropzones Grid -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Box Fronte -->
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="doc-personale-click-fronte">
+                                <input type="file" id="doc-personale-fronte-input" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                <p class="text-xs text-white uppercase font-bold" id="doc-personale-fronte-name">FRONTE (O DOC. COMPLETO)</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="doc-personale-fronte-status">Nessun file selezionato</p>
+                            </div>
+                            <!-- Box Retro -->
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="doc-personale-click-retro">
+                                <input type="file" id="doc-personale-retro-input" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                <p class="text-xs text-white uppercase font-bold" id="doc-personale-retro-name">RETRO (SE FILE SEPARATO)</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="doc-personale-retro-status">Nessun file selezionato</p>
+                            </div>
+                        </div>
+
+                        <!-- Helper message dinamico -->
+                        <div id="doc-personale-helper-msg" class="text-[10px] uppercase font-bold tracking-wider mt-2 text-center hidden"></div>
+
+                        <!-- Data Scadenza -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                             <div>
-                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA DI SCADENZA NUOVO DOCUMENTO</label>
+                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA DI SCADENZA NUOVO DOCUMENTO *</label>
                                 <input type="date" id="doc-personale-scadenza-input" class="w-full brutalist-input bg-black text-white text-xs p-2 border border-white/20">
                             </div>
                         </div>
-                        <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" onclick="document.getElementById('doc-personale-file-input').click()">
-                            <input type="file" id="doc-personale-file-input" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
-                            <span class="material-symbols-outlined text-xl text-primary mb-1">upload_file</span>
-                            <p class="text-xs text-white uppercase font-bold" id="doc-personale-file-name">SELEZIONA DOCUMENTO (FRONTE+RETRO)</p>
-                            <p class="text-[9px] text-gray-400 mt-1 uppercase" id="doc-personale-file-status">PDF, PNG, JPG — Max 5MB</p>
-                        </div>
+
+                        <!-- Action Button -->
                         <button id="btn-upload-doc-personale" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-4 py-2 transition-all uppercase tracking-wider">
                             INVIA DOCUMENTO
                         </button>
@@ -2064,20 +2101,57 @@
                     <div id="doc-tutore-info" class="space-y-2 text-xs font-mono uppercase">
                         <p class="text-gray-400">Caricamento in corso...</p>
                     </div>
-                    <div id="doc-tutore-upload" class="hidden space-y-3 border-t border-white/5 pt-4">
+                    <div id="doc-tutore-upload" class="hidden space-y-4 border-t border-white/5 pt-4">
                         <p class="text-[10px] text-gray-400 uppercase font-headline">AGGIORNA DOCUMENTO GENITORE/TUTORE</p>
+
+                        <!-- Scelta Layout Radio -->
+                        <div class="space-y-2">
+                            <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">COME PREFERISCI CARICARE IL DOCUMENTO TUTORE?</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-headline text-[10px] font-bold">
+                                <label class="border border-white/10 p-2.5 flex items-center gap-2 cursor-pointer hover:bg-white/5 transition-all text-gray-300">
+                                    <input type="radio" name="doc-tutore-layout" value="single" class="accent-primary">
+                                    HO UN FILE UNICO (PDF o foto fronte e retro assieme)
+                                </label>
+                                <label class="border border-white/10 p-2.5 flex items-center gap-2 cursor-pointer hover:bg-white/5 transition-all text-gray-300">
+                                    <input type="radio" name="doc-tutore-layout" value="double" checked class="accent-primary">
+                                    HO DUE FILE SEPARATI (foto fronte + foto retro)
+                                </label>
+                            </div>
+                            <p id="doc-tutore-avviso-single" class="hidden text-[9px] text-amber-400 font-bold uppercase tracking-wider mt-1">
+                                ⚠️ Modalità file unico: assicurati che il file contenga sia il FRONTE che il RETRO del documento.
+                            </p>
+                        </div>
+
+                        <!-- Dropzones Grid -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Box Fronte -->
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="doc-tutore-click-fronte">
+                                <input type="file" id="doc-tutore-fronte-input" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                <p class="text-xs text-white uppercase font-bold" id="doc-tutore-fronte-name">FRONTE (O DOC. COMPLETO)</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="doc-tutore-fronte-status">Nessun file selezionato</p>
+                            </div>
+                            <!-- Box Retro -->
+                            <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="doc-tutore-click-retro">
+                                <input type="file" id="doc-tutore-retro-input" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
+                                <span class="material-symbols-outlined text-2xl text-primary mb-1">badge</span>
+                                <p class="text-xs text-white uppercase font-bold" id="doc-tutore-retro-name">RETRO (SE FILE SEPARATO)</p>
+                                <p class="text-[9px] text-gray-400 mt-1 uppercase" id="doc-tutore-retro-status">Nessun file selezionato</p>
+                            </div>
+                        </div>
+
+                        <!-- Helper message dinamico -->
+                        <div id="doc-tutore-helper-msg" class="text-[10px] uppercase font-bold tracking-wider mt-2 text-center hidden"></div>
+
+                        <!-- Data Scadenza -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                             <div>
-                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA DI SCADENZA NUOVO DOCUMENTO</label>
+                                <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">DATA DI SCADENZA NUOVO DOCUMENTO *</label>
                                 <input type="date" id="doc-tutore-scadenza-input" class="w-full brutalist-input bg-black text-white text-xs p-2 border border-white/20">
                             </div>
                         </div>
-                        <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" onclick="document.getElementById('doc-tutore-file-input').click()">
-                            <input type="file" id="doc-tutore-file-input" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
-                            <span class="material-symbols-outlined text-xl text-primary mb-1">upload_file</span>
-                            <p class="text-xs text-white uppercase font-bold" id="doc-tutore-file-name">SELEZIONA DOCUMENTO TUTORE</p>
-                            <p class="text-[9px] text-gray-400 mt-1 uppercase" id="doc-tutore-file-status">PDF, PNG, JPG — Max 5MB</p>
-                        </div>
+
+                        <!-- Action Button -->
                         <button id="btn-upload-doc-tutore" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-4 py-2 transition-all uppercase tracking-wider">
                             INVIA DOCUMENTO TUTORE
                         </button>
@@ -2969,8 +3043,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.03.50"></script>
-    <script src="dashboard.js?v=1.03.50"></script>
+    <script src="password-validator.js?v=1.03.51"></script>
+    <script src="dashboard.js?v=1.03.51"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>

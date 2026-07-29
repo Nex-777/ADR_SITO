@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.50"
+                VERSION: "1.03.51"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6517,32 +6517,219 @@
                     renderDocInfo('doc-tutore-container', 'doc-tutore-info', 'doc-tutore-badge', 'doc-tutore-upload', tutore);
                 }
 
-                // Handle file selection display
-                document.getElementById('doc-personale-file-input')?.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        document.getElementById('doc-personale-file-name').textContent = file.name;
-                        document.getElementById('doc-personale-file-status').textContent = `${(file.size / 1024).toFixed(0)} KB`;
+                // ─────────────────────────────────────────────────────────────
+                // Helper: Fusione PDF e gestione widget documento (Fronte + Retro)
+                // ─────────────────────────────────────────────────────────────
+                async function mergeIdentityDocuments(fileFronte, fileRetro) {
+                    if (typeof window.PDFLib === 'undefined') {
+                        throw new Error("Libreria elaborazione PDF non ancora caricata. Attendi qualche secondo e riprova.");
                     }
-                });
-                document.getElementById('doc-tutore-file-input')?.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        document.getElementById('doc-tutore-file-name').textContent = file.name;
-                        document.getElementById('doc-tutore-file-status').textContent = `${(file.size / 1024).toFixed(0)} KB`;
+                    const pdfDoc = await window.PDFLib.PDFDocument.create();
+                    const files = [fileFronte, fileRetro];
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        if (!file) continue;
+                        if (file.type === 'application/pdf') {
+                            const fileBytes = await file.arrayBuffer();
+                            const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
+                            const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
+                            copiedPages.forEach(page => pdfDoc.addPage(page));
+                        } else if (file.type.startsWith('image/')) {
+                            const compBlob = await compressImageSandbox(file, 1200, 1200, 0.8);
+                            const imageBytes = await compBlob.arrayBuffer();
+                            let embeddedImage;
+                            if (file.type === 'image/png') {
+                                embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
+                            } else {
+                                embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                            }
+                            const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                            page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
+                        }
                     }
-                });
+                    const pdfBytes = await pdfDoc.save();
+                    const mergedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    return new File([mergedPdfBlob], "documento_unito.pdf", { type: "application/pdf" });
+                }
 
-                // Upload handlers
-                async function handleDocUpload(fileInputId, scadenzaInputId, tipoDoc) {
-                    const fileInput = document.getElementById(fileInputId);
+                function setupIdentityDocumentWidget(prefix) {
+                    let uploadedFronte = null;
+                    let uploadedRetro = null;
+
+                    const clickFronte = document.getElementById(`${prefix}-click-fronte`);
+                    const fronteInput = document.getElementById(`${prefix}-fronte-input`);
+                    const fronteName = document.getElementById(`${prefix}-fronte-name`);
+                    const fronteStatus = document.getElementById(`${prefix}-fronte-status`);
+
+                    const clickRetro = document.getElementById(`${prefix}-click-retro`);
+                    const retroInput = document.getElementById(`${prefix}-retro-input`);
+                    const retroName = document.getElementById(`${prefix}-retro-name`);
+                    const retroStatus = document.getElementById(`${prefix}-retro-status`);
+
+                    const helperMsg = document.getElementById(`${prefix}-helper-msg`);
+                    const avvisoSingle = document.getElementById(`${prefix}-avviso-single`);
+                    const layoutRadios = document.getElementsByName(`${prefix}-layout`);
+
+                    function getLayoutChoice() {
+                        for (const radio of layoutRadios) {
+                            if (radio.checked) return radio.value;
+                        }
+                        return 'double';
+                    }
+
+                    function updateHelper() {
+                        if (!helperMsg) return;
+                        const choice = getLayoutChoice();
+                        if (choice === 'single') {
+                            if (uploadedFronte) {
+                                helperMsg.textContent = "✓ DOCUMENTO PRONTO PER L'INVIO.";
+                                helperMsg.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-green-500";
+                                helperMsg.classList.remove('hidden');
+                            } else {
+                                helperMsg.classList.add('hidden');
+                            }
+                        } else {
+                            if (uploadedFronte && uploadedRetro) {
+                                helperMsg.textContent = "✓ FRONTE E RETRO SELEZIONATI. VERRANNO UNITI IN UN SINGOLO PDF.";
+                                helperMsg.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-green-500";
+                                helperMsg.classList.remove('hidden');
+                            } else if (uploadedFronte) {
+                                helperMsg.textContent = "💡 HAI CARICATO IL FRONTE. CARICA LA FOTO DEL RETRO A FIANCO PER COMPLETARE IL DOCUMENTO.";
+                                helperMsg.className = "text-[10px] uppercase font-bold tracking-wider mt-2 text-center text-amber-500 animate-pulse";
+                                helperMsg.classList.remove('hidden');
+                            } else {
+                                helperMsg.classList.add('hidden');
+                            }
+                        }
+                    }
+
+                    if (clickFronte && fronteInput) {
+                        clickFronte.onclick = () => fronteInput.click();
+                    }
+                    if (clickRetro && retroInput) {
+                        clickRetro.onclick = () => retroInput.click();
+                    }
+
+                    layoutRadios.forEach(radio => {
+                        radio.addEventListener('change', () => {
+                            if (radio.value === 'single') {
+                                clickRetro?.classList.add('hidden');
+                                avvisoSingle?.classList.remove('hidden');
+                                uploadedRetro = null;
+                                if (retroInput) retroInput.value = '';
+                                if (retroName) retroName.textContent = "RETRO (SE FILE SEPARATO)";
+                                if (retroStatus) {
+                                    retroStatus.textContent = "Nessun file selezionato";
+                                    retroStatus.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                                }
+                            } else {
+                                clickRetro?.classList.remove('hidden');
+                                avvisoSingle?.classList.add('hidden');
+                            }
+                            updateHelper();
+                        });
+                    });
+
+                    fronteInput?.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (!file) {
+                            uploadedFronte = null;
+                            if (fronteName) fronteName.textContent = "FRONTE (O DOC. COMPLETO)";
+                            if (fronteStatus) {
+                                fronteStatus.textContent = "Nessun file selezionato";
+                                fronteStatus.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                            }
+                            updateHelper();
+                            return;
+                        }
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert("Il file non deve superare i 5MB.");
+                            fronteInput.value = '';
+                            uploadedFronte = null;
+                            if (fronteStatus) {
+                                fronteStatus.textContent = "Errore: File > 5MB";
+                                fronteStatus.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                            }
+                            updateHelper();
+                            return;
+                        }
+                        uploadedFronte = file;
+                        if (fronteName) fronteName.textContent = file.name.toUpperCase();
+                        if (fronteStatus) {
+                            fronteStatus.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                            fronteStatus.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                        }
+                        updateHelper();
+                    });
+
+                    retroInput?.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (!file) {
+                            uploadedRetro = null;
+                            if (retroName) retroName.textContent = "RETRO (SE FILE SEPARATO)";
+                            if (retroStatus) {
+                                retroStatus.textContent = "Nessun file selezionato";
+                                retroStatus.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                            }
+                            updateHelper();
+                            return;
+                        }
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert("Il file non deve superare i 5MB.");
+                            retroInput.value = '';
+                            uploadedRetro = null;
+                            if (retroStatus) {
+                                retroStatus.textContent = "Errore: File > 5MB";
+                                retroStatus.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                            }
+                            updateHelper();
+                            return;
+                        }
+                        uploadedRetro = file;
+                        if (retroName) retroName.textContent = file.name.toUpperCase();
+                        if (retroStatus) {
+                            retroStatus.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                            retroStatus.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                        }
+                        updateHelper();
+                    });
+
+                    return {
+                        async getFinalDocument() {
+                            const choice = getLayoutChoice();
+                            if (!uploadedFronte) {
+                                throw new Error("Seleziona il file del documento (Fronte).");
+                            }
+                            if (choice === 'single') {
+                                return uploadedFronte;
+                            } else {
+                                if (!uploadedRetro) {
+                                    throw new Error("Hai scelto la modalità 'Due file separati'. Seleziona anche la foto del RETRO prima di inviare.");
+                                }
+                                return await mergeIdentityDocuments(uploadedFronte, uploadedRetro);
+                            }
+                        }
+                    };
+                }
+
+                // Inizializza i widget per documento personale e tutore
+                const widgetPersonale = setupIdentityDocumentWidget('doc-personale');
+                const widgetTutore = setupIdentityDocumentWidget('doc-tutore');
+
+                async function handleDocUploadWidget(widgetInstance, scadenzaInputId, btnId, tipoDoc) {
                     const scadenzaInput = document.getElementById(scadenzaInputId);
-                    const file = fileInput?.files?.[0];
-                    if (!file) { alert('Seleziona un file prima di inviare.'); return; }
+                    const btn = document.getElementById(btnId);
                     const scadenza = scadenzaInput?.value;
                     if (!scadenza) { alert('Inserisci la data di scadenza del documento.'); return; }
 
+                    const origBtnText = btn ? btn.textContent : '';
                     try {
+                        if (btn) { btn.disabled = true; btn.textContent = 'ELABORAZIONE DOCUMENTO...'; }
+
+                        const file = await widgetInstance.getFinalDocument();
+
+                        if (btn) btn.textContent = 'CARICAMENTO IN CORSO...';
                         const filePath = `${currentUser.id}/${tipoDoc.toLowerCase()}_${Date.now()}.${file.name.split('.').pop()}`;
                         const { error: uploadErr } = await supabaseClient.storage.from('documenti_identita').upload(filePath, file, { contentType: file.type, upsert: true });
                         if (uploadErr) throw uploadErr;
@@ -6562,11 +6749,27 @@
                     } catch (err) {
                         console.error('Errore upload documento:', err);
                         alert('Errore durante il caricamento: ' + err.message);
+                    } finally {
+                        if (btn) { btn.disabled = false; btn.textContent = origBtnText; }
                     }
                 }
 
-                document.getElementById('btn-upload-doc-personale')?.addEventListener('click', () => handleDocUpload('doc-personale-file-input', 'doc-personale-scadenza-input', 'PERSONALE'));
-                document.getElementById('btn-upload-doc-tutore')?.addEventListener('click', () => handleDocUpload('doc-tutore-file-input', 'doc-tutore-scadenza-input', 'TUTORE'));
+                // Event listener sui pulsanti di invio
+                const btnPersonale = document.getElementById('btn-upload-doc-personale');
+                if (btnPersonale) {
+                    btnPersonale.replaceWith(btnPersonale.cloneNode(true));
+                    document.getElementById('btn-upload-doc-personale')?.addEventListener('click', () => {
+                        handleDocUploadWidget(widgetPersonale, 'doc-personale-scadenza-input', 'btn-upload-doc-personale', 'PERSONALE');
+                    });
+                }
+
+                const btnTutore = document.getElementById('btn-upload-doc-tutore');
+                if (btnTutore) {
+                    btnTutore.replaceWith(btnTutore.cloneNode(true));
+                    document.getElementById('btn-upload-doc-tutore')?.addEventListener('click', () => {
+                        handleDocUploadWidget(widgetTutore, 'doc-tutore-scadenza-input', 'btn-upload-doc-tutore', 'TUTORE');
+                    });
+                }
 
             } catch (err) {
                 console.error('Errore loadUserDocumento:', err);

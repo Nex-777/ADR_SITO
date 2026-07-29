@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-29] feature | Caricamento Documento d'Identità Modulare e Uniformato in Dashboard (v1.03.51)
+- **HTML (`portal/dashboard.html`)**: Ristrutturate le sezioni di caricamento del documento d'identità (personale e tutore per minorenni) per includere la selezione della modalità (File Unico vs Due File Separati Fronte/Retro), doppia dropzone dedicata e avvisi dinamici di stato.
+- **JavaScript (`portal/dashboard.js`)**: Implementata la factory function `setupIdentityDocumentWidget` per gestire in modo isolato ed incapsulato le istanze dei form, e la funzione `mergeIdentityDocuments` per la fusione client-side con `pdf-lib` delle immagini/PDF Fronte+Retro prima dell'upload su Supabase.
+- **Versione**: Incrementata la versione globale del progetto a `1.03.51`.
+
+---
+
 ## [2026-07-29] ingest | Registrazione decisioni architetturali OTP e Validazione Documenti (v1.03.50)
 - **Wiki Updates**:
   - [`wiki/registration_flow.md`](file:///d:/Antigravity_Projects/ADR_SITO/wiki/registration_flow.md): Registrato il nuovo flusso Pre-Upload per la registrazione, l'impostazione di default del layout a due file per i documenti di identità, e formalizzato il chiarimento sulla *EPIKA CORE RULE* (la storicizzazione distruttiva si applica esclusivamente agli utenti con iscrizione completata; per gli utenti non registrati/incompleti è ammessa l'eliminazione fisica diretta).
