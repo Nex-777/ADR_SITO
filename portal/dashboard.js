@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.51"
+                VERSION: "1.03.52"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2157,10 +2157,18 @@
                 // ---- Colore e testo badge tessera CSEN (tabella) ----
                 let csenTextColor = 'text-yellow-500';  // PENDING default
                 let csenTextStr = 'DA COMUNICARE';
+                let isTempReqCode = false;
                 if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
-                    // Tessera assegnata → verde
-                    csenTextColor = 'text-green-500';
-                    csenTextStr = tess.numero_tessera_csen;
+                    isTempReqCode = String(tess.numero_tessera_csen).toUpperCase().startsWith('IT');
+                    if (isTempReqCode) {
+                        // Codice richiesta temporaneo (es. IT26149086) → Cyan/Azzurro per distinguerlo dalla tessera ufficiale
+                        csenTextColor = 'text-cyan-400';
+                        csenTextStr = tess.numero_tessera_csen;
+                    } else {
+                        // Tessera assegnata ufficiale CSEN → verde
+                        csenTextColor = 'text-green-500';
+                        csenTextStr = tess.numero_tessera_csen;
+                    }
                 } else {
                     switch (tess.sync_csen_status) {
                         case 'RENEWAL_SUBMITTED':
@@ -2213,6 +2221,7 @@
                     </td>
                     <td class="p-4 font-mono font-bold ${csenTextColor}">
                         ${escapeHtml(csenTextStr)}<br>
+                        ${isTempReqCode ? '<span class="text-[9px] text-cyan-400/80 block uppercase font-mono font-normal">CODICE RICHIESTA</span>' : ''}
                         <span class="text-[10px] text-gray-500 font-normal">Richiesta: ${escapeHtml(formatToItalianDate(tess.data_richiesta_tesseramento))}</span>
                     </td>
                     <td class="p-4 text-gray-400">${escapeHtml(tess.livello_copertura)}</td>
@@ -2312,8 +2321,14 @@
                 let csenTextColorHex = '#eab308'; // yellow — PENDING default
                 let csenTextStr = 'DA COMUNICARE';
                 if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
-                    csenTextColorHex = '#22c55e'; // verde — tessera assegnata
-                    csenTextStr = tess.numero_tessera_csen;
+                    const isTempReqCodeCard = String(tess.numero_tessera_csen).toUpperCase().startsWith('IT');
+                    if (isTempReqCodeCard) {
+                        csenTextColorHex = '#22d3ee'; // cyan — codice richiesta temporaneo
+                        csenTextStr = `${tess.numero_tessera_csen} (CODICE RICHIESTA)`;
+                    } else {
+                        csenTextColorHex = '#22c55e'; // verde — tessera ufficiale assegnata
+                        csenTextStr = tess.numero_tessera_csen;
+                    }
                 } else {
                     switch (tess.sync_csen_status) {
                         case 'RENEWAL_SUBMITTED':
@@ -8350,13 +8365,17 @@ async function apriDossierTesserato(utente_id) {
         // TESSERAMENTO
         const tessContainer = document.getElementById('dossier-tesseramento-container');
         if (tess) {
+            const isTempCodeDossier = tess.numero_tessera_csen && String(tess.numero_tessera_csen).toUpperCase().startsWith('IT');
+            const csenColorClass = isTempCodeDossier ? 'text-cyan-400' : 'text-white';
+            const csenSubLabel = isTempCodeDossier ? '<span class="text-[9px] text-cyan-400/80 font-mono block mt-0.5 uppercase">CODICE RICHIESTA</span>' : '';
             tessContainer.innerHTML = `
                 <div>
                     <p class="text-[10px] text-gray-500 uppercase">Tessera CSEN</p>
                     <div class="flex items-center gap-1.5 mt-0.5">
-                        <p id="dossier-tessera-csen" class="text-sm text-white font-bold">${tess.numero_tessera_csen || 'IN ATTESA'}</p>
+                        <p id="dossier-tessera-csen" class="text-sm ${csenColorClass} font-bold">${tess.numero_tessera_csen || 'IN ATTESA'}</p>
                         ${tess.numero_tessera_csen ? `<button onclick="copyDossierText('dossier-tessera-csen', this)" class="text-gray-500 hover:text-primary transition-colors opacity-60 hover:opacity-100 p-0.5 rounded shrink-0" title="Copia Tessera CSEN"><span class="material-symbols-outlined text-[13px] block">content_copy</span></button>` : ''}
                     </div>
+                    ${csenSubLabel}
                 </div>
                 <div><p class="text-[10px] text-gray-500 uppercase">Adesione</p><p class="text-sm text-white mt-0.5">${tess.tipo_adesione || '-'}</p></div>
                 <div><p class="text-[10px] text-gray-500 uppercase">Quota Totale</p><p class="text-sm text-white mt-0.5">€${tess.quota_totale || '0'}</p></div>

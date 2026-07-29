@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-29] feature | Distinzione Visiva Codice Richiesta CSEN vs Tessera Ufficiale (v1.03.52)
+- **Frontend (`portal/dashboard.js`)**:
+  - Distinti i codici richiesta temporanei (prefisso `IT...`, es. `IT26149086`) dalle tessere CSEN ufficiali definitive.
+  - Applicato il colore azzurro elettrico (`text-cyan-400` / `#22d3ee`) ed il sottotitolo `CODICE RICHIESTA` per le pratiche temporanee sia nella vista Tabella, nella vista Card Mobile, che nel Modale Dossier Socio.
+  - Mantenuto il colore verde (`text-green-500` / `#22c55e`) esclusivamente per i numeri di tessera CSEN ufficiali ed effettivi.
+
+---
+
 ## [2026-07-29] feature | Caricamento Documento d'Identità Modulare e Uniformato in Dashboard (v1.03.51)
 - **HTML (`portal/dashboard.html`)**: Ristrutturate le sezioni di caricamento del documento d'identità (personale e tutore per minorenni) per includere la selezione della modalità (File Unico vs Due File Separati Fronte/Retro), doppia dropzone dedicata e avvisi dinamici di stato.
 - **JavaScript (`portal/dashboard.js`)**: Implementata la factory function `setupIdentityDocumentWidget` per gestire in modo isolato ed incapsulato le istanze dei form, e la funzione `mergeIdentityDocuments` per la fusione client-side con `pdf-lib` delle immagini/PDF Fronte+Retro prima dell'upload su Supabase.
