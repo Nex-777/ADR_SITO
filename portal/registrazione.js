@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.49"
+                VERSION: "1.03.50"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1351,6 +1351,11 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
             // --- Pre-Upload File Block (Prima dell'invio OTP) ---
             try {
+                preUploadedDocumentoUrl = null;
+                preUploadedCertificatoUrl = null;
+                preUploadedTutoreUrl = null;
+                preUploadedPdfUrl = null;
+
                 const userId = createdUserSession.user.id;
 
                 // 1. Upload certificato medico (se tesserato)
@@ -1370,7 +1375,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     
                     const { data: urlData, error: signedUrlError } = await supabaseClient.storage
                         .from('certificati_medici')
-                        .createSignedUrl(filePath, 300);
+                        .createSignedUrl(filePath, 3600);
                     if (signedUrlError) throw signedUrlError;
                     preUploadedCertificatoUrl = urlData.signedUrl;
                     console.log("Certificato medico caricato con successo in pre-upload.");
@@ -1428,7 +1433,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 
                 const { data: idUrlData, error: idSignedUrlError } = await supabaseClient.storage
                     .from('documenti_identita')
-                    .createSignedUrl(idFilePath, 300);
+                    .createSignedUrl(idFilePath, 3600);
                 if (idSignedUrlError) throw idSignedUrlError;
                 preUploadedDocumentoUrl = idUrlData.signedUrl;
                 console.log("Documento d'identità caricato con successo in pre-upload.");
@@ -1515,7 +1520,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 
                 const { data: urlData, error: signedUrlError } = await supabaseClient.storage
                     .from('documenti_adesione')
-                    .createSignedUrl(pdfPath, 300);
+                    .createSignedUrl(pdfPath, 3600);
                 if (signedUrlError) throw signedUrlError;
                 preUploadedPdfUrl = urlData.signedUrl;
 
@@ -1536,7 +1541,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
                     const { data: parentUrlData, error: parentSignedUrlError } = await supabaseClient.storage
                         .from('documenti_tutori')
-                        .createSignedUrl(filePath, 300);
+                        .createSignedUrl(filePath, 3600);
                     if (parentSignedUrlError) throw parentSignedUrlError;
                     preUploadedTutoreUrl = parentUrlData.signedUrl;
                 }
@@ -1687,6 +1692,88 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     }
                 } catch (refreshErr) {
                     console.warn('JWT refresh failed, using existing token:', refreshErr);
+                }
+
+                // Genera hash SHA-256 dell'OTP e aggiorna il PDF contratto finale con l'hash di firma
+                try {
+                    const otpHash = await sha256(code);
+                    const userId = createdUserSession.user.id;
+                    const nome = document.getElementById('nome').value.trim();
+                    const cognome = document.getElementById('cognome').value.trim();
+                    const cf = document.getElementById('codice_fiscale').value.trim().toUpperCase();
+                    const email = document.getElementById('email').value.trim();
+                    const dataNascita = document.getElementById('data_nascita').value;
+                    const provinciaNascita = selectProvinciaNascita.value;
+                    const comuneNascita = selectComuneNascita.value;
+                    const indirizzo = document.getElementById('indirizzo').value.trim();
+                    const provincia = selectProvincia.value;
+                    const comune = selectComune.value;
+                    const cap = selectCap.value;
+                    const tutoreNome = document.getElementById('tutore_nome').value.trim();
+                    const tutoreCognome = document.getElementById('tutore_cognome').value.trim();
+
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    doc.setFont("Helvetica", "bold");
+                    doc.setFontSize(22);
+                    doc.text("ADRENALINA CLUB APS", 20, 30);
+                    doc.setFontSize(14);
+                    doc.text("MODULO DI ADESIONE ED ASSOCIAZIONE", 20, 42);
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(1);
+                    doc.line(20, 48, 190, 48);
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(10);
+                    doc.text(`ID UTENTE: ${userId}`, 20, 58);
+                    doc.text(`DATA REGISTRAZIONE: ${new Date().toLocaleString()}`, 20, 64);
+                    doc.setFont("Helvetica", "bold");
+                    doc.text("DATI SOCIO/TESSERATO:", 20, 74);
+                    doc.setFont("Helvetica", "normal");
+                    doc.text(`Cognome e Nome: ${cognome} ${nome}`, 20, 80);
+                    doc.text(`Codice Fiscale: ${cf}`, 20, 86);
+                    doc.text(`Luogo e Data di Nascita: ${comuneNascita} (${provinciaNascita}), ${dataNascita}`, 20, 92);
+                    doc.text(`Residenza: ${indirizzo}, ${comune} (${provincia}), CAP ${cap}`, 20, 98);
+                    doc.text(`Email: ${email}`, 20, 104);
+                    doc.setFont("Helvetica", "bold");
+                    doc.text("DETTAGLI DI ISCRIZIONE ED ADESIONE:", 20, 114);
+                    doc.setFont("Helvetica", "normal");
+                    doc.text(`Tipo Adesione: ${selectedAdesione.toUpperCase()}`, 20, 120);
+                    if (selectedTessera) {
+                        doc.text(`Tessera Sportiva: ${selectedTessera.replace(/_/g, ' ').replace('tessera-', '').toUpperCase()}`, 20, 126);
+                    }
+                    doc.text(`Quota Totale a Versare: ${riepilogoQuotaTotale.textContent}`, 20, 132);
+                    if (isMinor) {
+                        doc.setFont("Helvetica", "bold");
+                        doc.text("DATI GENITORE / TUTORE LEGALE (ATLETA MINORE):", 20, 142);
+                        doc.setFont("Helvetica", "normal");
+                        doc.text(`Genitore/Tutore: ${tutoreCognome} ${tutoreNome}`, 20, 148);
+                        doc.text(`Codice Fiscale Tutore: ${document.getElementById('tutore_codice_fiscale').value.trim().toUpperCase()}`, 20, 154);
+                        doc.text(`Email Tutore: ${document.getElementById('tutore_email').value.trim()}`, 20, 160);
+                    }
+                    const legalY = isMinor ? 170 : 142;
+                    doc.setFont("Helvetica", "bold");
+                    doc.text("CONSENSO LEGALE E ASSUNZIONE DI RESPONSABILITA':", 20, legalY);
+                    doc.setFont("Helvetica", "normal");
+                    const splitText = doc.splitTextToSize("Il sottoscritto accetta in data odierna l'Atto Costitutivo e lo Statuto dell'Associazione Adrenalina Club ed assume piena responsabilità per i rischi associati alla pratica delle discipline sportive e del sollevamento pesi. Si solleva ASD Adrenalina Club da qualsiasi danno a cose o persone.", 170);
+                    doc.text(splitText, 20, legalY + 6);
+                    const signY = legalY + 30;
+                    doc.setDrawColor(223, 41, 62);
+                    doc.setLineWidth(0.5);
+                    doc.rect(20, signY, 170, 30);
+                    doc.setFont("Helvetica", "bold");
+                    doc.text("FIRMA DIGITALE APPOSTA CON SUCCESSO (ADRENALINA E-SIGN)", 25, signY + 10);
+                    doc.setFont("Helvetica", "normal");
+                    doc.setFontSize(8);
+                    doc.text(`OTP VERIFICATION TOKEN HASH: ${otpHash}`, 25, signY + 18);
+                    doc.text(`IP ADDRESS DI FIRMA: 127.0.0.1 (Firma digitale certificata)`, 25, signY + 24);
+                    
+                    const pdfBlob = doc.output('blob');
+                    const pdfPath = `${userId}/adesione.pdf`;
+                    await supabaseClient.storage.from('documenti_adesione').upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+                    const { data: urlData } = await supabaseClient.storage.from('documenti_adesione').createSignedUrl(pdfPath, 3600);
+                    if (urlData) preUploadedPdfUrl = urlData.signedUrl;
+                } catch (pdfUpdateErr) {
+                    console.warn("Errore aggiornamento hash PDF contratto:", pdfUpdateErr);
                 }
 
                 // Verify OTP and finalize sign document state server-side

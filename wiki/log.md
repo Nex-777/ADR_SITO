@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-29] fix | Risoluzione Critica Signed URL 3600s, Layout Avviso Single Mode e Ripristino OTP Hash PDF (v1.03.50)
+- **Frontend (`portal/registrazione.js`)**:
+  - Estesa la durata di tutti i Signed URL generati in pre-upload (`documenti_identita`, `certificati_medici`, `documenti_adesione`, `documenti_tutori`) da 300 secondi (5 minuti) a **3600 secondi (1 ora)** per prevenire scadenze durante l'inserimento dell'OTP.
+  - Aggiunto il reset esplicito delle variabili `preUploaded*` ad ogni nuovo invio OTP.
+  - Ripristinata la generazione istantanea dell'hash SHA-256 dell'OTP sul PDF contratto finale al momento della conferma OTP.
+- **Frontend (`portal/registrazione.html`)**:
+  - Spostato l'elemento `#avviso-single-mode` all'esterno del container grid dei radio button per prevenire qualsiasi distorsione del layout visivo.
+
+---
+
 ## [2026-07-29] feature | Ottimizzazione Flusso OTP Mobile e Validazione Documenti d'Identità (v1.03.49)
 - **Frontend (`portal/registrazione.html`, `portal/registrazione.js`)**:
   - Spostata l'esecuzione delle operazioni pesanti (compressione immagini fotocamera, merge PDFLib fronte/retro, upload Supabase Storage `documenti_identita`, `certificati_medici`, `documenti_adesione`) all'interno di `btnInviaOtp.click` in fase di Pre-Upload.
