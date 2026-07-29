@@ -2833,17 +2833,30 @@ async function cancellaEvento(id, titolo) {
     }
 }
 
+function apriPannelloEsclusivoAdmin(targetPanelId) {
+    const PANNELLI_EVENTO = [
+        'adm-presenze-panel', 
+        'adm-dashboard-evento-panel', 
+        'adm-eserciti-panel'
+    ];
+    PANNELLI_EVENTO.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('epk-hidden');
+    });
+    if (targetPanelId) {
+        const target = document.getElementById(targetPanelId);
+        if (target) {
+            target.classList.remove('epk-hidden');
+            target.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
 // D — Conferma Presenze Evento
 async function mostraPannelloPresenze(eventoId, eventoTitolo) {
-    const panel = document.getElementById('adm-presenze-panel');
+    apriPannelloEsclusivoAdmin('adm-presenze-panel');
     document.getElementById('adm-presenze-titolo').textContent = `CONFERMA PRESENZE: ${eventoTitolo.toUpperCase()}`;
     document.getElementById('adm-presenze-evento-id').value = eventoId;
-    
-    // Nascondi dashboard se aperta
-    document.getElementById('adm-dashboard-evento-panel').classList.add('epk-hidden');
-    
-    panel.classList.remove('epk-hidden');
-    panel.scrollIntoView({ behavior: 'smooth' });
 
     const listContainer = document.getElementById('adm-presenze-utenti-list');
     listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento iscritti...</p>';
@@ -2929,22 +2942,16 @@ async function togglePresenzaAtleta(eventoId, utenteId, statoAttuale) {
 }
 
 function nascondiPannelloPresenze() {
-    document.getElementById('adm-presenze-panel').classList.add('epk-hidden');
+    apriPannelloEsclusivoAdmin(null);
 }
 
 let dashboardIscrittiCache = [];
 
 async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFine) {
-    const panel = document.getElementById('adm-dashboard-evento-panel');
+    apriPannelloEsclusivoAdmin('adm-dashboard-evento-panel');
     document.getElementById('adm-dashboard-evento-titolo').textContent = `STATISTICHE & DETTAGLI EVENTO: ${eventoTitolo.toUpperCase()}`;
     document.getElementById('adm-dashboard-evento-id').value = eventoId;
     document.getElementById('evt-dashboard-search').value = '';
-    
-    // Nascondi presenze se aperto
-    document.getElementById('adm-presenze-panel').classList.add('epk-hidden');
- 
-    panel.classList.remove('epk-hidden');
-    panel.scrollIntoView({ behavior: 'smooth' });
 
     const tableBody = document.getElementById('evt-dashboard-table-body');
     tableBody.innerHTML = '<tr><td colspan="8" style="padding: 15px; text-align: center; text-transform: uppercase; color: gray;">Caricamento dati...</td></tr>';
@@ -3114,7 +3121,7 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
 }
 
 function nascondiDashboardEvento() {
-    document.getElementById('adm-dashboard-evento-panel').classList.add('epk-hidden');
+    apriPannelloEsclusivoAdmin(null);
 }
 
 function popolaFiltriDinamiciDashboard(giorniPresenzaMappa) {
@@ -6080,15 +6087,9 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
     const panel = document.getElementById('adm-eserciti-panel');
     if (!panel) return;
 
+    apriPannelloEsclusivoAdmin('adm-eserciti-panel');
     document.getElementById('adm-eserciti-titolo').textContent = `GESTIONE ESERCITI & SCHIERAMENTI: ${eventoTitolo.toUpperCase()}`;
     document.getElementById('adm-eserciti-evento-id').value = eventoId;
-
-    // Nascondi gli altri pannelli
-    document.getElementById('adm-presenze-panel')?.classList.add('epk-hidden');
-    document.getElementById('adm-dashboard-evento-panel')?.classList.add('epk-hidden');
-
-    panel.classList.remove('epk-hidden');
-    panel.scrollIntoView({ behavior: 'smooth' });
 
     esercitiCacheData.eventoId = eventoId;
     esercitiCacheData.coeff = {
@@ -6117,6 +6118,16 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
 
         if (errIsc) throw errIsc;
 
+        // Popola datalist con gli atleti iscritti per autocompletamento generali
+        const datalist = document.getElementById('adm-eserciti-atleti-datalist');
+        if (datalist) {
+            datalist.innerHTML = '';
+            const nomiUnici = [...new Set((iscritti || []).map(i => (i.profilo?.nome_di_battaglia || '').toUpperCase()).filter(Boolean))].sort();
+            nomiUnici.forEach(nome => {
+                datalist.innerHTML += `<option value="${nome}">`;
+            });
+        }
+
         // 2. Carica anagrafiche gruppi storici
         const { data: gruppiS } = await supabaseClient
             .from('epika_gruppi_storici')
@@ -6137,6 +6148,16 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             document.getElementById('adm-esercito-b-nome').value = savedEserciti.nome_esercito_b || 'ESERCITO B';
             document.getElementById('adm-esercito-b-grido').value = savedEserciti.grido_esercito_b || '';
 
+            const genA = savedEserciti.generali_esercito_a || [];
+            if (document.getElementById('adm-esercito-a-gen-1')) document.getElementById('adm-esercito-a-gen-1').value = genA[0] || '';
+            if (document.getElementById('adm-esercito-a-gen-2')) document.getElementById('adm-esercito-a-gen-2').value = genA[1] || '';
+            if (document.getElementById('adm-esercito-a-gen-3')) document.getElementById('adm-esercito-a-gen-3').value = genA[2] || '';
+
+            const genB = savedEserciti.generali_esercito_b || [];
+            if (document.getElementById('adm-esercito-b-gen-1')) document.getElementById('adm-esercito-b-gen-1').value = genB[0] || '';
+            if (document.getElementById('adm-esercito-b-gen-2')) document.getElementById('adm-esercito-b-gen-2').value = genB[1] || '';
+            if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = genB[2] || '';
+
             if (savedEserciti.coefficienti_forza) {
                 esercitiCacheData.coeff = { ...esercitiCacheData.coeff, ...savedEserciti.coefficienti_forza };
             }
@@ -6151,6 +6172,13 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             document.getElementById('adm-esercito-a-grido').value = '';
             document.getElementById('adm-esercito-b-nome').value = 'ESERCITO B';
             document.getElementById('adm-esercito-b-grido').value = '';
+
+            if (document.getElementById('adm-esercito-a-gen-1')) document.getElementById('adm-esercito-a-gen-1').value = '';
+            if (document.getElementById('adm-esercito-a-gen-2')) document.getElementById('adm-esercito-a-gen-2').value = '';
+            if (document.getElementById('adm-esercito-a-gen-3')) document.getElementById('adm-esercito-a-gen-3').value = '';
+            if (document.getElementById('adm-esercito-b-gen-1')) document.getElementById('adm-esercito-b-gen-1').value = '';
+            if (document.getElementById('adm-esercito-b-gen-2')) document.getElementById('adm-esercito-b-gen-2').value = '';
+            if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = '';
         }
 
         // 4. Organizza gli atleti
@@ -6191,7 +6219,7 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
 }
 
 function nascondiPannelloEserciti() {
-    document.getElementById('adm-eserciti-panel')?.classList.add('epk-hidden');
+    apriPannelloEsclusivoAdmin(null);
 }
 
 function calcolaForzaSingoloAtleta(atleta, coeff) {
@@ -6346,8 +6374,27 @@ function aggiornaCalcoliEserciti() {
     const nomeA = (document.getElementById('adm-esercito-a-nome')?.value || 'ESERCITO A').trim().toUpperCase();
     const nomeB = (document.getElementById('adm-esercito-b-nome')?.value || 'ESERCITO B').trim().toUpperCase();
 
-    if (document.getElementById('adm-esercito-a-col-titolo')) document.getElementById('adm-esercito-a-col-titolo').textContent = `${nomeA} (GRUPPI)`;
-    if (document.getElementById('adm-esercito-b-col-titolo')) document.getElementById('adm-esercito-b-col-titolo').textContent = `${nomeB} (GRUPPI)`;
+    const genA = [
+        document.getElementById('adm-esercito-a-gen-1')?.value.trim(),
+        document.getElementById('adm-esercito-a-gen-2')?.value.trim(),
+        document.getElementById('adm-esercito-a-gen-3')?.value.trim()
+    ].filter(Boolean);
+
+    const genB = [
+        document.getElementById('adm-esercito-b-gen-1')?.value.trim(),
+        document.getElementById('adm-esercito-b-gen-2')?.value.trim(),
+        document.getElementById('adm-esercito-b-gen-3')?.value.trim()
+    ].filter(Boolean);
+
+    const titleA = document.getElementById('adm-esercito-a-col-titolo');
+    if (titleA) {
+        titleA.innerHTML = `${nomeA} (GRUPPI)<br><span style="font-size:9px; color:rgba(147,197,253,0.8); font-family:sans-serif; text-transform:none;">👑 GENERALI: ${genA.length ? genA.join(' | ') : 'Nessuno'}</span>`;
+    }
+
+    const titleB = document.getElementById('adm-esercito-b-col-titolo');
+    if (titleB) {
+        titleB.innerHTML = `${nomeB} (GRUPPI)<br><span style="font-size:9px; color:rgba(252,165,165,0.8); font-family:sans-serif; text-transform:none;">👑 GENERALI: ${genB.length ? genB.join(' | ') : 'Nessuno'}</span>`;
+    }
 
     let forzaA = 0;
     let combA = 0;
@@ -6443,12 +6490,26 @@ async function salvaSchieramentiEserciti() {
     const eventoId = esercitiCacheData.eventoId;
     if (!eventoId) return;
 
+    const genA = [
+        document.getElementById('adm-esercito-a-gen-1')?.value.trim(),
+        document.getElementById('adm-esercito-a-gen-2')?.value.trim(),
+        document.getElementById('adm-esercito-a-gen-3')?.value.trim()
+    ].filter(Boolean);
+
+    const genB = [
+        document.getElementById('adm-esercito-b-gen-1')?.value.trim(),
+        document.getElementById('adm-esercito-b-gen-2')?.value.trim(),
+        document.getElementById('adm-esercito-b-gen-3')?.value.trim()
+    ].filter(Boolean);
+
     const payload = {
         evento_id: eventoId,
         nome_esercito_a: (document.getElementById('adm-esercito-a-nome')?.value || 'ESERCITO A').trim(),
         grido_esercito_a: (document.getElementById('adm-esercito-a-grido')?.value || '').trim(),
         nome_esercito_b: (document.getElementById('adm-esercito-b-nome')?.value || 'ESERCITO B').trim(),
         grido_esercito_b: (document.getElementById('adm-esercito-b-grido')?.value || '').trim(),
+        generali_esercito_a: genA,
+        generali_esercito_b: genB,
         coefficienti_forza: esercitiCacheData.coeff,
         assegnazione_gruppi: esercitiCacheData.assegnazioniGruppi,
         assegnazione_mercenari: esercitiCacheData.assegnazioniMercenari,
@@ -6462,7 +6523,7 @@ async function salvaSchieramentiEserciti() {
 
         if (error) throw error;
 
-        if (typeof showToast === 'function') showToast("⚔️ Schieramenti e gridi di battaglia salvati con successo!", "success");
+        if (typeof showToast === 'function') showToast("⚔️ Schieramenti, generali e gridi di battaglia salvati con successo!", "success");
     } catch (err) {
         console.error("Errore salvataggio eserciti:", err);
         if (typeof showToast === 'function') showToast("Errore durante il salvataggio degli eserciti", "error");

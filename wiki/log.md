@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] feature | Generali d'Esercito (1-3) & Fix Esclusività Pannelli Admin (v1.03.54)
+- **Database (`supabase/migration_epika_eserciti_generali.sql`)**: Aggiunte le colonne `generali_esercito_a` e `generali_esercito_b` (JSONB) alla tabella `epika_eserciti_eventi`.
+- **Frontend Admin (`portal/epika.html`, `portal/epika.js`)**:
+  - Implementato il gestore atomico `apriPannelloEsclusivoAdmin(panelId)` per garantire che un solo pannello evento alla volta sia visibile, eliminando l'accavallamento visivo delle schermate.
+  - Aggiunti 3 campi input per Esercito A e 3 per Esercito B per la registrazione dei Generali (Comandante + 2 Opzionali).
+  - Integrato `<datalist id="adm-eserciti-atleti-datalist">` per suggerire l'autocompletamento dei Nomi di Battaglia reali degli atleti iscritti.
+  - Evidenziati i Generali registrati nelle intestazioni delle colonne di schieramento tattico.
+
+---
+
 ## [2026-07-29] feature | Dashboard Gestione Eserciti & Bilanciamento Tattico (v1.03.53)
 - **Database (`supabase/migration_epika_eserciti.sql`)**: Creata la tabella `epika_eserciti_eventi` con politiche RLS per storicizzare nomi eserciti, gridi di battaglia, coefficienti di forza e assegnazioni JSONB dei gruppi e dei mercenari.
 - **Frontend Admin (`portal/epika.html`, `portal/epika.js`)**:
