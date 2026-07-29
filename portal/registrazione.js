@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.46"
+                VERSION: "1.03.49"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -552,6 +552,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
             radio.addEventListener('change', () => {
                 if (radio.value === 'single') {
                     retroBox.classList.add('hidden');
+                    document.getElementById('avviso-single-mode')?.classList.remove('hidden');
                     uploadedDocumentoIdentitaRetroFile = null;
                     if (identitaRetroFileInput) {
                         identitaRetroFileInput.value = "";
@@ -561,10 +562,15 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     identitaRetroFileStatusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
                 } else {
                     retroBox.classList.remove('hidden');
+                    document.getElementById('avviso-single-mode')?.classList.add('hidden');
                 }
                 updateDocumentoIdentitaHelper();
             });
         });
+
+        // Inizializzazione corretta stato di default (double)
+        if (retroBox) retroBox.classList.remove('hidden');
+        document.getElementById('avviso-single-mode')?.classList.add('hidden');
 
         identitaFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -1034,6 +1040,10 @@ function togglePasswordVisibility(inputId, buttonEl) {
         let createdUserSession = null;
         let jwtToken = null;
         let timerInterval = null;
+        let preUploadedDocumentoUrl = null;
+        let preUploadedCertificatoUrl = null;
+        let preUploadedTutoreUrl = null;
+        let preUploadedPdfUrl = null;
 
         function startOtpTimer() {
             let duration = 900; // 15 minutes
@@ -1339,8 +1349,236 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 return;
             }
 
+            // --- Pre-Upload File Block (Prima dell'invio OTP) ---
+            try {
+                const userId = createdUserSession.user.id;
+
+                // 1. Upload certificato medico (se tesserato)
+                if (selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') {
+                    btnInviaOtp.textContent = "CARICAMENTO CERTIFICATO MEDICO...";
+                    const fileExt = uploadedCertificatoFile.name.split('.').pop();
+                    const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('certificati_medici')
+                        .upload(filePath, uploadedCertificatoFile, {
+                            contentType: uploadedCertificatoFile.type,
+                            upsert: true
+                        });
+                        
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: urlData, error: signedUrlError } = await supabaseClient.storage
+                        .from('certificati_medici')
+                        .createSignedUrl(filePath, 300);
+                    if (signedUrlError) throw signedUrlError;
+                    preUploadedCertificatoUrl = urlData.signedUrl;
+                    console.log("Certificato medico caricato con successo in pre-upload.");
+                }
+
+                // 2. Merge Fronte & Retro se retro presente
+                if (uploadedDocumentoIdentitaRetroFile) {
+                    if (typeof window.PDFLib === 'undefined') {
+                        throw new Error("Sistema di elaborazione documenti non ancora pronto. Attendi qualche secondo e riprova, o disabilita eventuali ad-blocker.");
+                    }
+                    btnInviaOtp.textContent = "ELABORAZIONE DOCUMENTI...";
+                    
+                    const pdfDoc = await window.PDFLib.PDFDocument.create();
+                    const files = [uploadedDocumentoIdentitaFile, uploadedDocumentoIdentitaRetroFile];
+                    
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        if (file.type === 'application/pdf') {
+                            const fileBytes = await file.arrayBuffer();
+                            const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
+                            const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
+                            copiedPages.forEach(page => pdfDoc.addPage(page));
+                        } else if (file.type.startsWith('image/')) {
+                            const compBlob = await compressImage(file, 1200, 1200, 0.8);
+                            const imageBytes = await compBlob.arrayBuffer();
+                            let embeddedImage;
+                            if (file.type === 'image/png') {
+                                embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
+                            } else {
+                                embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                            }
+                            const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                            page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
+                        }
+                    }
+                    
+                    const pdfBytes = await pdfDoc.save();
+                    const mergedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    uploadedDocumentoIdentitaFile = new File([mergedPdfBlob], "documento_unito.pdf", { type: "application/pdf" });
+                }
+
+                // 3. Upload documento identità
+                btnInviaOtp.textContent = "CARICAMENTO DOCUMENTO IDENTITÀ...";
+                const idFileExt = uploadedDocumentoIdentitaFile.name.split('.').pop();
+                const idFilePath = `${userId}/documento_${Date.now()}.${idFileExt}`;
+                
+                const { data: idUploadData, error: idUploadError } = await supabaseClient.storage
+                    .from('documenti_identita')
+                    .upload(idFilePath, uploadedDocumentoIdentitaFile, {
+                        contentType: uploadedDocumentoIdentitaFile.type,
+                        upsert: true
+                    });
+                    
+                if (idUploadError) throw idUploadError;
+                
+                const { data: idUrlData, error: idSignedUrlError } = await supabaseClient.storage
+                    .from('documenti_identita')
+                    .createSignedUrl(idFilePath, 300);
+                if (idSignedUrlError) throw idSignedUrlError;
+                preUploadedDocumentoUrl = idUrlData.signedUrl;
+                console.log("Documento d'identità caricato con successo in pre-upload.");
+
+                // 4. Generazione PDF contratto provvisorio con jsPDF
+                btnInviaOtp.textContent = "GENERAZIONE CONTRATTO...";
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFont("Helvetica", "bold");
+                doc.setFontSize(22);
+                doc.text("ADRENALINA CLUB APS", 20, 30);
+                doc.setFontSize(14);
+                doc.text("MODULO DI ADESIONE ED ASSOCIAZIONE", 20, 42);
+                
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(1);
+                doc.line(20, 48, 190, 48);
+                
+                doc.setFont("Helvetica", "normal");
+                doc.setFontSize(10);
+                doc.text(`ID UTENTE: ${userId}`, 20, 58);
+                doc.text(`DATA REGISTRAZIONE: ${new Date().toLocaleString()}`, 20, 64);
+                
+                doc.setFont("Helvetica", "bold");
+                doc.text("DATI SOCIO/TESSERATO:", 20, 74);
+                doc.setFont("Helvetica", "normal");
+                doc.text(`Cognome e Nome: ${cognome} ${nome}`, 20, 80);
+                doc.text(`Codice Fiscale: ${cf}`, 20, 86);
+                doc.text(`Luogo e Data di Nascita: ${comuneNascita} (${provinciaNascita}), ${dataNascita}`, 20, 92);
+                doc.text(`Residenza: ${indirizzo}, ${comune} (${provincia}), CAP ${cap}`, 20, 98);
+                doc.text(`Email: ${email}`, 20, 104);
+
+                doc.setFont("Helvetica", "bold");
+                doc.text("DETTAGLI DI ISCRIZIONE ED ADESIONE:", 20, 114);
+                doc.setFont("Helvetica", "normal");
+                doc.text(`Tipo Adesione: ${selectedAdesione.toUpperCase()}`, 20, 120);
+                if (selectedTessera) {
+                    doc.text(`Tessera Sportiva: ${selectedTessera.replace(/_/g, ' ').replace('tessera-', '').toUpperCase()}`, 20, 126);
+                }
+                doc.text(`Quota Totale a Versare: ${riepilogoQuotaTotale.textContent}`, 20, 132);
+                
+                if (isMinor) {
+                    doc.setFont("Helvetica", "bold");
+                    doc.text("DATI GENITORE / TUTORE LEGALE (ATLETA MINORE):", 20, 142);
+                    doc.setFont("Helvetica", "normal");
+                    doc.text(`Genitore/Tutore: ${tutoreCognome} ${tutoreNome}`, 20, 148);
+                    doc.text(`Codice Fiscale Tutore: ${document.getElementById('tutore_codice_fiscale').value.trim().toUpperCase()}`, 20, 154);
+                    doc.text(`Email Tutore: ${document.getElementById('tutore_email').value.trim()}`, 20, 160);
+                }
+                
+                const legalY = isMinor ? 170 : 142;
+                doc.setFont("Helvetica", "bold");
+                doc.text("CONSENSO LEGALE E ASSUNZIONE DI RESPONSABILITA':", 20, legalY);
+                doc.setFont("Helvetica", "normal");
+                const splitText = doc.splitTextToSize("Il sottoscritto accetta in data odierna l'Atto Costitutivo e lo Statuto dell'Associazione Adrenalina Club ed assume piena responsabilità per i rischi associati alla pratica delle discipline sportive e del sollevamento pesi. Si solleva ASD Adrenalina Club da qualsiasi danno a cose o persone.", 170);
+                doc.text(splitText, 20, legalY + 6);
+                
+                const signY = legalY + 30;
+                doc.setDrawColor(223, 41, 62);
+                doc.setLineWidth(0.5);
+                doc.rect(20, signY, 170, 30);
+                doc.setFont("Helvetica", "bold");
+                doc.text("FIRMA DIGITALE APPOSTA CON SUCCESSO (ADRENALINA E-SIGN)", 25, signY + 10);
+                doc.setFont("Helvetica", "normal");
+                doc.setFontSize(8);
+                doc.text(`OTP VERIFICATION IN CORSO...`, 25, signY + 18);
+                doc.text(`IP ADDRESS DI FIRMA: 127.0.0.1 (Firma digitale certificata)`, 25, signY + 24);
+                
+                const pdfBlob = doc.output('blob');
+
+                // Upload contratto su Storage
+                btnInviaOtp.textContent = "CARICAMENTO CONTRATTO...";
+                const pdfPath = `${userId}/adesione.pdf`;
+                
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('documenti_adesione')
+                    .upload(pdfPath, pdfBlob, {
+                        contentType: 'application/pdf',
+                        upsert: true
+                    });
+                    
+                if (uploadError) throw uploadError;
+                
+                const { data: urlData, error: signedUrlError } = await supabaseClient.storage
+                    .from('documenti_adesione')
+                    .createSignedUrl(pdfPath, 300);
+                if (signedUrlError) throw signedUrlError;
+                preUploadedPdfUrl = urlData.signedUrl;
+
+                // 5. Upload documento tutore (se minore)
+                if (isMinor && uploadedTutoreDocumentoFile) {
+                    btnInviaOtp.textContent = "CARICAMENTO DOCUMENTO TUTORE...";
+                    const fileExt = uploadedTutoreDocumentoFile.name.split('.').pop();
+                    const filePath = `${userId}/documento_tutore_${Date.now()}.${fileExt}`;
+
+                    const { data: parentUploadData, error: parentUploadError } = await supabaseClient.storage
+                        .from('documenti_tutori')
+                        .upload(filePath, uploadedTutoreDocumentoFile, {
+                            contentType: uploadedTutoreDocumentoFile.type,
+                            upsert: true
+                        });
+
+                    if (parentUploadError) throw parentUploadError;
+
+                    const { data: parentUrlData, error: parentSignedUrlError } = await supabaseClient.storage
+                        .from('documenti_tutori')
+                        .createSignedUrl(filePath, 300);
+                    if (parentSignedUrlError) throw parentSignedUrlError;
+                    preUploadedTutoreUrl = parentUrlData.signedUrl;
+                }
+
+                // 6. Aggiornamento profilo utenti con gli URL dei file
+                if (preUploadedCertificatoUrl || preUploadedTutoreUrl || preUploadedDocumentoUrl) {
+                    btnInviaOtp.textContent = "AGGIORNAMENTO PROFILO...";
+                    const updatePayload = {};
+                    if (preUploadedCertificatoUrl) {
+                        updatePayload.certificato_medico_url = preUploadedCertificatoUrl;
+                        updatePayload.certificato_tipologia = document.getElementById('certificato_tipologia').value;
+                        updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione').value;
+                    }
+                    if (preUploadedTutoreUrl) {
+                        updatePayload.tutore_documento_url = preUploadedTutoreUrl;
+                        const tutoreScadenza = document.getElementById('tutore_documento_scadenza')?.value;
+                        if (tutoreScadenza) updatePayload.tutore_documento_scadenza = tutoreScadenza;
+                    }
+                    if (preUploadedDocumentoUrl) {
+                        updatePayload.documento_identita_url = preUploadedDocumentoUrl;
+                        const docScadenza = document.getElementById('documento_identita_scadenza')?.value;
+                        if (docScadenza) updatePayload.documento_identita_scadenza = docScadenza;
+                    }
+
+                    const { error: utentiUpdateError } = await supabaseClient
+                        .from('utenti')
+                        .update(updatePayload)
+                        .eq('id', userId);
+                    if (utentiUpdateError) throw utentiUpdateError;
+                }
+
+            } catch (preUploadErr) {
+                console.error("Pre-upload error:", preUploadErr);
+                alert("Errore nel caricamento dei documenti: " + preUploadErr.message);
+                btnInviaOtp.disabled = false;
+                btnInviaOtp.textContent = "INVIA CODICE OTP";
+                return;
+            }
+
             // Invio OTP
             try {
+                btnInviaOtp.textContent = "INVIO CODICE OTP...";
                 const apiBase = APP_CONFIG.API_BASE_URL || "";
                 const response = await fetch(`${apiBase}/api/otp.js`, {
                     method: 'POST',
@@ -1428,9 +1666,9 @@ function togglePasswordVisibility(inputId, buttonEl) {
             }
         }
 
-        // Validate OTP and generate PDF + Upload Files
+        // Validate OTP and verify server-side
         btnValidaOtp.addEventListener('click', async () => {
-            const code = inputOtp.value.trim();
+            const code = inputOtp.value.replace(/\s+/g, '').trim();
             if (code.length !== 6) {
                 alert("Il codice deve essere di 6 cifre.");
                 return;
@@ -1439,265 +1677,19 @@ function togglePasswordVisibility(inputId, buttonEl) {
             btnValidaOtp.disabled = true;
             updateOtpButtonStatus("VERIFICA IN CORSO...");
 
-            clearInterval(timerInterval);
-            updateOtpButtonStatus("GENERAZIONE PDF...");
-
             try {
-                const nome = document.getElementById('nome').value.trim();
-                const cognome = document.getElementById('cognome').value.trim();
-                const cf = document.getElementById('codice_fiscale').value.trim().toUpperCase();
-                const email = document.getElementById('email').value.trim();
-                const dataNascita = document.getElementById('data_nascita').value;
-                
-                const provinciaNascita = selectProvinciaNascita.value;
-                const comuneNascita = selectComuneNascita.value;
-
-                const indirizzo = document.getElementById('indirizzo').value.trim();
-                const provincia = selectProvincia.value;
-                const comune = selectComune.value;
-                const cap = selectCap.value;
-                
-                const userId = createdUserSession.user.id;
-
-                const tutoreNome = document.getElementById('tutore_nome').value.trim();
-                const tutoreCognome = document.getElementById('tutore_cognome').value.trim();
-
-                // 1. Upload medical certificate if required
-                let certificatoMedicoUrl = "";
-                if (selectedAdesione === 'tesserato' || selectedAdesione === 'socio_tesserato') {
-                    const fileExt = uploadedCertificatoFile.name.split('.').pop();
-                    const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
-                    updateOtpButtonStatus("CARICAMENTO CERTIFICATO...");
-                    
-                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                        .from('certificati_medici')
-                        .upload(filePath, uploadedCertificatoFile, {
-                            contentType: uploadedCertificatoFile.type,
-                            upsert: true
-                        });
-                        
-                    if (uploadError) throw uploadError;
-                    
-                    const { data: urlData, error: signedUrlError } = await supabaseClient.storage
-                        .from('certificati_medici')
-                        .createSignedUrl(filePath, 300);
-                    if (signedUrlError) throw signedUrlError;
-                    certificatoMedicoUrl = urlData.signedUrl;
-                    console.log("Certificato medico caricato con successo.");
-                }
-
-                // 1.45 Merge Fronte & Retro if Retro is present
-                if (uploadedDocumentoIdentitaRetroFile) {
-                    if (typeof window.PDFLib === 'undefined') {
-                        alert("Sistema di elaborazione documenti non ancora pronto. Attendi qualche secondo e riprova, o disabilita eventuali ad-blocker.");
-                        btnValidaOtp.disabled = false;
-                        updateOtpButtonStatus("CONFERMA FIRMA");
-                        return;
+                // Refresh JWT per garantire che il token non sia scaduto durante l'attesa OTP
+                try {
+                    const { data: refreshData } = await supabaseClient.auth.refreshSession();
+                    if (refreshData?.session?.access_token) {
+                        jwtToken = refreshData.session.access_token;
+                        if (createdUserSession) createdUserSession.access_token = jwtToken;
                     }
-
-                    updateOtpButtonStatus("ELABORAZIONE DOCUMENTI...");
-                    
-                    try {
-                        const pdfDoc = await window.PDFLib.PDFDocument.create();
-                        const files = [uploadedDocumentoIdentitaFile, uploadedDocumentoIdentitaRetroFile];
-                        
-                        for (let i = 0; i < files.length; i++) {
-                            const file = files[i];
-                            if (file.type === 'application/pdf') {
-                                const fileBytes = await file.arrayBuffer();
-                                const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
-                                const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
-                                copiedPages.forEach(page => pdfDoc.addPage(page));
-                            } else if (file.type.startsWith('image/')) {
-                                const compBlob = await compressImage(file, 1200, 1200, 0.8);
-                                const imageBytes = await compBlob.arrayBuffer();
-                                let embeddedImage;
-                                if (file.type === 'image/png') {
-                                    embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
-                                } else {
-                                    embeddedImage = await pdfDoc.embedJpg(imageBytes);
-                                }
-                                const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
-                                page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
-                            }
-                        }
-                        
-                        const pdfBytes = await pdfDoc.save();
-                        const mergedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-                        
-                        uploadedDocumentoIdentitaFile = new File([mergedPdfBlob], "documento_unito.pdf", { type: "application/pdf" });
-                    } catch (error) {
-                        console.error("Errore durante l'elaborazione dei documenti:", error);
-                        alert("Impossibile elaborare i file. Assicurati che non siano danneggiati o protetti da password.");
-                        btnValidaOtp.disabled = false;
-                        updateOtpButtonStatus("CONFERMA FIRMA");
-                        return;
-                    }
+                } catch (refreshErr) {
+                    console.warn('JWT refresh failed, using existing token:', refreshErr);
                 }
 
-                // 1.5 Upload Identity Document
-                let documentoIdentitaUrl = "";
-                const idFileExt = uploadedDocumentoIdentitaFile.name.split('.').pop();
-                const idFilePath = `${userId}/documento_${Date.now()}.${idFileExt}`;
-                updateOtpButtonStatus("CARICAMENTO DOCUMENTO IDENTITÀ...");
-                
-                const { data: idUploadData, error: idUploadError } = await supabaseClient.storage
-                    .from('documenti_identita')
-                    .upload(idFilePath, uploadedDocumentoIdentitaFile, {
-                        contentType: uploadedDocumentoIdentitaFile.type,
-                        upsert: true
-                    });
-                    
-                if (idUploadError) throw idUploadError;
-                
-                const { data: idUrlData, error: idSignedUrlError } = await supabaseClient.storage
-                    .from('documenti_identita')
-                    .createSignedUrl(idFilePath, 300);
-                if (idSignedUrlError) throw idSignedUrlError;
-                documentoIdentitaUrl = idUrlData.signedUrl;
-                console.log("Documento d'identità caricato con successo.");
-
-                // 2. Generate PDF with jsPDF
-                updateOtpButtonStatus("GENERAZIONE CONTRATTO...");
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                doc.setFont("Helvetica", "bold");
-                doc.setFontSize(22);
-                doc.text("ADRENALINA CLUB APS", 20, 30);
-                doc.setFontSize(14);
-                doc.text("MODULO DI ADESIONE ED ASSOCIAZIONE", 20, 42);
-                
-                doc.setDrawColor(0, 0, 0);
-                doc.setLineWidth(1);
-                doc.line(20, 48, 190, 48);
-                
-                doc.setFont("Helvetica", "normal");
-                doc.setFontSize(10);
-                doc.text(`ID UTENTE: ${userId}`, 20, 58);
-                doc.text(`DATA REGISTRAZIONE: ${new Date().toLocaleString()}`, 20, 64);
-                
-                doc.setFont("Helvetica", "bold");
-                doc.text("DATI SOCIO/TESSERATO:", 20, 74);
-                doc.setFont("Helvetica", "normal");
-                doc.text(`Cognome e Nome: ${cognome} ${nome}`, 20, 80);
-                doc.text(`Codice Fiscale: ${cf}`, 20, 86);
-                doc.text(`Luogo e Data di Nascita: ${comuneNascita} (${provinciaNascita}), ${dataNascita}`, 20, 92);
-                doc.text(`Residenza: ${indirizzo}, ${comune} (${provincia}), CAP ${cap}`, 20, 98);
-                doc.text(`Email: ${email}`, 20, 104);
-
-                doc.setFont("Helvetica", "bold");
-                doc.text("DETTAGLI DI ISCRIZIONE ED ADESIONE:", 20, 114);
-                doc.setFont("Helvetica", "normal");
-                doc.text(`Tipo Adesione: ${selectedAdesione.toUpperCase()}`, 20, 120);
-                if (selectedTessera) {
-                    doc.text(`Tessera Sportiva: ${selectedTessera.replace(/_/g, ' ').replace('tessera-', '').toUpperCase()}`, 20, 126);
-                }
-                doc.text(`Quota Totale a Versare: ${riepilogoQuotaTotale.textContent}`, 20, 132);
-                
-                if (isMinor) {
-                    doc.setFont("Helvetica", "bold");
-                    doc.text("DATI GENITORE / TUTORE LEGALE (ATLETA MINORE):", 20, 142);
-                    doc.setFont("Helvetica", "normal");
-                    doc.text(`Genitore/Tutore: ${tutoreCognome} ${tutoreNome}`, 20, 148);
-                    doc.text(`Codice Fiscale Tutore: ${document.getElementById('tutore_codice_fiscale').value.trim().toUpperCase()}`, 20, 154);
-                    doc.text(`Email Tutore: ${document.getElementById('tutore_email').value.trim()}`, 20, 160);
-                }
-                
-                const legalY = isMinor ? 170 : 142;
-                doc.setFont("Helvetica", "bold");
-                doc.text("CONSENSO LEGALE E ASSUNZIONE DI RESPONSABILITA':", 20, legalY);
-                doc.setFont("Helvetica", "normal");
-                const splitText = doc.splitTextToSize("Il sottoscritto accetta in data odierna l'Atto Costitutivo e lo Statuto dell'Associazione Adrenalina Club ed assume piena responsabilità per i rischi associati alla pratica delle discipline sportive e del sollevamento pesi. Si solleva ASD Adrenalina Club da qualsiasi danno a cose o persone.", 170);
-                doc.text(splitText, 20, legalY + 6);
-                
-                const signY = legalY + 30;
-                doc.setDrawColor(223, 41, 62);
-                doc.setLineWidth(0.5);
-                doc.rect(20, signY, 170, 30);
-                doc.setFont("Helvetica", "bold");
-                doc.text("FIRMA DIGITALE APPOSTA CON SUCCESSO (ADRENALINA E-SIGN)", 25, signY + 10);
-                doc.setFont("Helvetica", "normal");
-                doc.setFontSize(8);
-                const otpHash = await sha256(code);
-                doc.text(`OTP VERIFICATION TOKEN HASH: ${otpHash}`, 25, signY + 18);
-                doc.text(`IP ADDRESS DI FIRMA: 127.0.0.1 (Firma digitale certificata)`, 25, signY + 24);
-                
-                const pdfBlob = doc.output('blob');
-
-                // 3. Upload signed PDF to storage bucket 'documenti_adesione'
-                let pdfPublicUrl = "";
-                const pdfPath = `${userId}/adesione.pdf`;
-                updateOtpButtonStatus("CARICAMENTO CONTRATTO...");
-                
-                const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                    .from('documenti_adesione')
-                    .upload(pdfPath, pdfBlob, {
-                        contentType: 'application/pdf',
-                        upsert: true
-                    });
-                    
-                if (uploadError) throw uploadError;
-                
-                const { data: urlData, error: signedUrlError } = await supabaseClient.storage
-                    .from('documenti_adesione')
-                    .createSignedUrl(pdfPath, 300);
-                if (signedUrlError) throw signedUrlError;
-                pdfPublicUrl = urlData.signedUrl;
-                console.log("PDF caricato con successo.");
-
-                // 4. Update utenti with certificato_medico_url if uploaded, and tutore_documento_url if uploaded
-                let tutoreDocumentoUrl = "";
-                if (isMinor && uploadedTutoreDocumentoFile) {
-                    const fileExt = uploadedTutoreDocumentoFile.name.split('.').pop();
-                    const filePath = `${userId}/documento_tutore_${Date.now()}.${fileExt}`;
-                    updateOtpButtonStatus("CARICAMENTO DOCUMENTO TUTORE...");
-
-                    const { data: parentUploadData, error: parentUploadError } = await supabaseClient.storage
-                        .from('documenti_tutori')
-                        .upload(filePath, uploadedTutoreDocumentoFile, {
-                            contentType: uploadedTutoreDocumentoFile.type,
-                            upsert: true
-                        });
-
-                    if (parentUploadError) throw parentUploadError;
-
-                    const { data: parentUrlData, error: parentSignedUrlError } = await supabaseClient.storage
-                        .from('documenti_tutori')
-                        .createSignedUrl(filePath, 300);
-                    if (parentSignedUrlError) throw parentSignedUrlError;
-                    tutoreDocumentoUrl = parentUrlData.signedUrl;
-                    console.log("Documento tutore caricato con successo.");
-                }
-
-                if (certificatoMedicoUrl || tutoreDocumentoUrl || documentoIdentitaUrl) {
-                    updateOtpButtonStatus("AGGIORNAMENTO PROFILO...");
-                    const updatePayload = {};
-                    if (certificatoMedicoUrl) {
-                        updatePayload.certificato_medico_url = certificatoMedicoUrl;
-                        updatePayload.certificato_tipologia = document.getElementById('certificato_tipologia').value;
-                        updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione').value;
-                    }
-                    if (tutoreDocumentoUrl) {
-                        updatePayload.tutore_documento_url = tutoreDocumentoUrl;
-                        const tutoreScadenza = document.getElementById('tutore_documento_scadenza')?.value;
-                        if (tutoreScadenza) updatePayload.tutore_documento_scadenza = tutoreScadenza;
-                    }
-                    if (documentoIdentitaUrl) {
-                        updatePayload.documento_identita_url = documentoIdentitaUrl;
-                        const docScadenza = document.getElementById('documento_identita_scadenza')?.value;
-                        if (docScadenza) updatePayload.documento_identita_scadenza = docScadenza;
-                    }
-
-                    const { error: utentiUpdateError } = await supabaseClient
-                        .from('utenti')
-                        .update(updatePayload)
-                        .eq('id', userId);
-                    if (utentiUpdateError) throw utentiUpdateError;
-                }
-
-
-                // 5. Verify OTP and finalize sign document state server-side
+                // Verify OTP and finalize sign document state server-side
                 updateOtpButtonStatus("REGISTRAZIONE FINALE...");
                 
                 const apiBase = APP_CONFIG.API_BASE_URL || "";
@@ -1707,7 +1699,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${createdUserSession.access_token}`
                     },
-                    body: JSON.stringify({ otp: code, url_pdf_generato: pdfPublicUrl })
+                    body: JSON.stringify({ otp: code, url_pdf_generato: preUploadedPdfUrl })
                 });
 
                 if (!response.ok) {
@@ -1715,20 +1707,21 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     throw new Error(errData.error || "Codice OTP non valido o scaduto");
                 }
                 
+                clearInterval(timerInterval);
                 console.log("Registrazione completata e OTP verificato via server.");
 
                 updateOtpButtonStatus("COMPLETATO!", false);
                 if (selectedAdesione === 'tesserato') {
                     alert("REGISTRAZIONE RICEVUTA CON SUCCESSO!\n\nI nostri sistemi verificheranno la validità del certificato medico tramite scansione AI. Potrai procedere al pagamento non appena la verifica sarà completata con successo.");
-                    window.location.href = "pagamento.html?id=" + userId;
+                    window.location.href = "pagamento.html?id=" + createdUserSession.user.id;
                 } else {
                     alert("DOMANDA DI ISCRIZIONE RICEVUTA CON SUCCESSO!\n\nLa tua richiesta di ammissione socio è in attesa di delibera da parte del Consiglio Direttivo. Riceverai un'e-mail per procedere al pagamento non appena la domanda verrà deliberata.");
                     window.location.href = "../index.html";
                 }
 
             } catch (err) {
-                console.error("Error during final files/database save:", err);
-                alert("Errore salvataggio finale: " + err.message);
+                console.error("Error during final OTP verification:", err);
+                alert("Errore verifica OTP: " + err.message);
                 btnValidaOtp.disabled = false;
                 updateOtpButtonStatus("CONFERMA FIRMA", false);
             }

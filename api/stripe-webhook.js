@@ -208,8 +208,14 @@ export default async function handler(req, res) {
 
                     if (ev && Array.isArray(ev.piani_abbonamento)) {
                         const piano = ev.piani_abbonamento.find(p => p.nome.toLowerCase() === nomePiano.toLowerCase());
-                        // fallback to 1 month if duration is missing
-                        const durataMesi = piano && piano.durata_mesi ? parseInt(piano.durata_mesi) : 1; 
+                        let durataMesi = piano && piano.durata_mesi ? parseInt(piano.durata_mesi) : null;
+                        if (!durataMesi || isNaN(durataMesi)) {
+                            const lower = (nomePiano || '').toLowerCase();
+                            if (lower.includes('trimest')) durataMesi = 3;
+                            else if (lower.includes('semest')) durataMesi = 6;
+                            else if (lower.includes('annual')) durataMesi = 12;
+                            else durataMesi = 1;
+                        }
                         const start = new Date(dataInizioCorso);
                         const end = new Date(start);
                         end.setMonth(start.getMonth() + durataMesi);

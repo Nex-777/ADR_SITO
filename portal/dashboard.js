@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.46"
+                VERSION: "1.03.49"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -4251,13 +4251,25 @@
             document.getElementById('modal-corso').classList.add('hidden');
         }
 
-        function addAbbonamentoInput(nome = '', prezzo = '') {
+        function addAbbonamentoInput(nome = '', prezzo = '', durata_mesi = '') {
             const container = document.getElementById('abbonamenti-list-container');
+            if (!container) return;
+            let dur = durata_mesi;
+            if (!dur && nome) {
+                const lower = nome.toLowerCase();
+                if (lower.includes('trimest')) dur = 3;
+                else if (lower.includes('semest')) dur = 6;
+                else if (lower.includes('annual')) dur = 12;
+                else dur = 1;
+            }
+            if (!dur) dur = 1;
+
             const div = document.createElement('div');
             div.className = "flex gap-2 items-center abbonamento-row";
             div.innerHTML = `
                 <input type="text" placeholder="NOME PIANO (ES. MENSILE)" value="${nome}" class="flex-1 bg-black border border-white/20 text-white p-1 text-[11px] font-mono plan-name">
-                <input type="number" step="0.01" placeholder="PREZZO" value="${prezzo}" class="w-20 bg-black border border-white/20 text-white p-1 text-[11px] font-mono plan-price">
+                <input type="number" step="0.01" placeholder="PREZZO (€)" value="${prezzo}" class="w-20 bg-black border border-white/20 text-white p-1 text-[11px] font-mono plan-price">
+                <input type="number" min="1" max="60" placeholder="MESI" value="${dur}" class="w-16 bg-black border border-white/20 text-white p-1 text-[11px] font-mono plan-duration" title="Durata dell'abbonamento in mesi">
                 <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-400 font-bold px-1 text-xs">X</button>
             `;
             container.appendChild(div);
@@ -4452,7 +4464,7 @@
                             const piani = typeof evt.piani_abbonamento === 'string' ? JSON.parse(evt.piani_abbonamento) : evt.piani_abbonamento;
                             if (Array.isArray(piani)) {
                                 piani.forEach(p => {
-                                    addAbbonamentoInput(p.nome, p.prezzo);
+                                    addAbbonamentoInput(p.nome, p.prezzo, p.durata_mesi);
                                 });
                             }
                         } catch (e) {
@@ -4532,8 +4544,13 @@
                 rows.forEach(r => {
                     const nomePiano = r.querySelector('.plan-name').value.trim();
                     const prezzoPiano = parseFloat(r.querySelector('.plan-price').value);
+                    const durataMesiVal = parseInt(r.querySelector('.plan-duration')?.value || '1');
                     if (nomePiano && !isNaN(prezzoPiano)) {
-                        piani.push({ nome: nomePiano, prezzo: prezzoPiano });
+                        piani.push({
+                            nome: nomePiano,
+                            prezzo: prezzoPiano,
+                            durata_mesi: isNaN(durataMesiVal) || durataMesiVal <= 0 ? 1 : durataMesiVal
+                        });
                     }
                 });
                 if (piani.length > 0) {
@@ -5030,6 +5047,23 @@
             }
         };
 
+        window.modificaPianoCorso = async function(iscrizioneId, nuovoPiano) {
+            try {
+                const { error } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .update({
+                        abbonamento_scelto: nuovoPiano ? nuovoPiano.trim() : 'Mese'
+                    })
+                    .eq('id', iscrizioneId);
+
+                if (error) throw error;
+                await loadRegistroIscritti();
+            } catch (err) {
+                console.error("Errore aggiornamento piano:", err);
+                alert("Errore durante l'aggiornamento del piano: " + err.message);
+            }
+        };
+
         async function onPresenceDateChange() {
             await loadRegistroIscritti();
         }
@@ -5170,7 +5204,9 @@
                         <div id="details-card-${atl.utente_id}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                             <div>
                                 <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">PIANO ABBONAMENTO</span>
-                                <p class="font-mono text-white font-bold text-xs mt-1 uppercase">${abbonamentoStr}</p>
+                                <div class="mt-1 flex items-center gap-1">
+                                    <input type="text" value="${abbonamentoStr}" onchange="modificaPianoCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none w-28 uppercase" title="Modifica piano abbonamento" />
+                                </div>
                             </div>
                             <div>
                                 <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">MODALITÀ PAGAMENTO</span>

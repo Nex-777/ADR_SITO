@@ -210,7 +210,7 @@ Le seguenti tabelle, colonne e viste supportano il sistema di assegnazione istru
 ### 1. Colonne aggiuntive su `public.eventi`
 - `tipo` (`varchar`): Distingue tra `'corso'` (corsi ricorrenti settimanali) e `'evento'` (singolo evento o stage).
 - `orari_settimanali` (`jsonb`): Contiene la programmazione dei giorni e orari del corso (es. `[{"giorno": "LUN", "ora": "18:00"}, {"giorno": "MER", "ora": "18:00"}]`).
-- `piani_abbonamento` (`jsonb`): Contiene i piani di pagamento associabili al corso (es. `[{"nome": "Mensile", "prezzo": 50}]`).
+- `piani_abbonamento` (`jsonb`): Contiene i piani di pagamento associabili al corso (es. `[{"nome": "Mese", "prezzo": 65, "durata_mesi": 1}]`).
 
 ### 2. Colonne aggiuntive su `public.iscrizioni_eventi`
 - `orario_libero` (`boolean`): Specifica se l'atleta usufruisce del corso al di fuori degli orari previsti (orario libero, default `false`).

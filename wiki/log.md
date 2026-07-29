@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-29] feature | Ottimizzazione Flusso OTP Mobile e Validazione Documenti d'Identità (v1.03.49)
+- **Frontend (`portal/registrazione.html`, `portal/registrazione.js`)**:
+  - Spostata l'esecuzione delle operazioni pesanti (compressione immagini fotocamera, merge PDFLib fronte/retro, upload Supabase Storage `documenti_identita`, `certificati_medici`, `documenti_adesione`) all'interno di `btnInviaOtp.click` in fase di Pre-Upload.
+  - Semplificato il listener `btnValidaOtp.click` per eseguire immediatamente la sanitizzazione dell'OTP, il refresh preventivo della sessione JWT (`auth.refreshSession()`) e la chiamata alla verifica server-side `/api/otp-verify.js` in meno di 2 secondi.
+  - Impostata l'opzione layout documento `"HO DUE FILE SEPARATI"` come predefinita e resa visibile di default la casella del retro.
+  - Aggiunto l'avviso visivo per la modalità file unico `#avviso-single-mode` e gli attributi HTML5 `inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"` per attivare la tastiera numerica ed il rilevamento automatico del codice OTP da SMS/email su smartphone (iOS e Android).
+
+---
+- **Database & Patch Dati**:
+  - Eseguito update su `iscrizioni_eventi` per Fabio Piciacchia (`abbonamento_scelto = 'Trimestre'`) e per Fabio Morganti (`data_scadenza_corso = '2027-01-28'`).
+  - Arricchito il campo JSONB `piani_abbonamento` della tabella `eventi` inserendo esplicitamente `durata_mesi` (1, 3, 6, 12) per tutti i corsi attivi.
+- **Frontend (`portal/dashboard.js`)**:
+  - Aggiornata la modale di creazione/modifica corso per richiedere ed estrarre la `durata_mesi` in ogni piano abbonamento.
+  - Implementata la funzione `modificaPianoCorso()` nell'interfaccia istruttore/direttivo per consentire l'editing diretto dell'etichetta `abbonamento_scelto`.
+- **Backend (`api/stripe-webhook.js`)**:
+  - Aggiunta una doppia protezione di fallback sulla durata in mesi basata sulle parole chiave del piano (`Trimestre` -> 3, `Semestre` -> 6, `Annuale` -> 12).
+
+---
+
 ## [2026-07-28] fix | Data Backfill Allenatore nello Storico Organico 2026 (v1.03.46)
 - **Database (`supabase/migration_epika_storico_allenatore_backfill.sql`)**: Eseguita migrazione di popolamento dati che ha sincronizzato gli `allenatore_id` per l'anno 2026 in `epika_storico_organico` dall'anagrafica `epika_profili` per tutti i record pregressi. Nessuna modifica al codice JS necessaria per preservare la corretta gestione dei valori `NULL` intenzionali.
 
