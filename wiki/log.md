@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] fix | Risoluzione Visualizzazione Moduli Firmati OTP nel Dossier Socio e Approvazioni (v1.03.56)
+- **Frontend (`portal/dashboard.js`)**:
+  - Riscritto il rendering del box MODULISTICA in `apriDossierSocio` per estrarre analiticamente i tre documenti della tabella `atti_adesione` (`url_pdf_generato`, `url_pdf_csen_informativa`, `url_pdf_csen_iscrizione`).
+  - Implementata la strategia ibrida: rigenerazione dinamica via `openSignedFile('documenti_adesione', ...)` per il Modulo Adesione (URL con validità 1 ora), ed apertura diretta via link per l'Informativa ed il Modulo Iscrizione CSEN (URL con validità 10 anni).
+  - Corretta la select ed il rendering nel Pannello Approvazioni per includere il Modulo Adesione tra i pulsanti d'azione del Direttivo.
+
+---
+
 ## [2026-07-30] feature | Generali d'Esercito (1-3) & Fix Esclusività Pannelli Admin (v1.03.54)
 - **Database (`supabase/migration_epika_eserciti_generali.sql`)**: Aggiunte le colonne `generali_esercito_a` e `generali_esercito_b` (JSONB) alla tabella `epika_eserciti_eventi`.
 - **Frontend Admin (`portal/epika.html`, `portal/epika.js`)**:

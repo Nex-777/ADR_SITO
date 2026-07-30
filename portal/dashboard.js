@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.55"
+                VERSION: "1.03.56"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1594,12 +1594,12 @@
 
                 if (error) throw error;
                 
-                // Fetch atti_adesione per ottenere i PDF CSEN
+                // Fetch atti_adesione per ottenere i PDF CSEN e Modulo Adesione
                 const utenteIds = (data || []).map(x => x.anagrafiche?.utente_id).filter(Boolean);
                 if (utenteIds.length > 0) {
                     const { data: attiData } = await supabaseClient
                         .from('atti_adesione')
-                        .select('utente_id, url_pdf_csen_informativa, url_pdf_csen_iscrizione')
+                        .select('utente_id, url_pdf_generato, url_pdf_csen_informativa, url_pdf_csen_iscrizione')
                         .in('utente_id', utenteIds);
                     if (attiData) {
                         data.forEach(item => {
@@ -1688,13 +1688,15 @@
 
                     let csenFormsHtml = '';
                     if (item.atti_adesione) {
+                        const urlGen  = item.atti_adesione.url_pdf_generato;
                         const urlInfo = item.atti_adesione.url_pdf_csen_informativa;
                         const urlIscr = item.atti_adesione.url_pdf_csen_iscrizione;
-                        if (urlInfo || urlIscr) {
+                        if (urlGen || urlInfo || urlIscr) {
                             csenFormsHtml = `
                                 <div class="mt-2 flex flex-col items-center gap-1 border-t border-white/10 pt-2">
-                                    ${urlInfo ? `<a href="${urlInfo}" target="_blank" class="underline text-purple-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">description</span>INFORMATIVA CSEN</a>` : ''}
-                                    ${urlIscr ? `<a href="${urlIscr}" target="_blank" class="underline text-purple-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">description</span>ISCRIZIONE CSEN</a>` : ''}
+                                    ${urlGen  ? `<button onclick="openSignedFile('documenti_adesione', '${escapeHtml(urlGen)}', this)" class="underline text-blue-400 font-bold text-[9px] uppercase cursor-pointer"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">description</span>MODULO ADESIONE</button>` : ''}
+                                    ${urlInfo ? `<a href="${escapeHtml(urlInfo)}" target="_blank" rel="noopener noreferrer" class="underline text-purple-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">description</span>INFORMATIVA CSEN</a>` : ''}
+                                    ${urlIscr ? `<a href="${escapeHtml(urlIscr)}" target="_blank" rel="noopener noreferrer" class="underline text-purple-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">description</span>ISCRIZIONE CSEN</a>` : ''}
                                 </div>
                             `;
                         }
@@ -8400,22 +8402,52 @@ async function apriDossierTesserato(utente_id) {
 
         // MODULISTICA
         const modContainer = document.getElementById('dossier-modulistica-container');
-        const { data: atti, error: errAtti } = await supabaseClient
+        const { data: attiMod, error: errAtti } = await supabaseClient
             .from('atti_adesione')
-            .select('*')
-            .eq('utente_id', utente_id);
-        
+            .select('url_pdf_generato, url_pdf_csen_informativa, url_pdf_csen_iscrizione, stato, data_firma')
+            .eq('utente_id', utente_id)
+            .maybeSingle();
+
         let modHtml = '';
-        if (atti && atti.length > 0) {
-            atti.forEach(atto => {
-                modHtml += `
-                    <div class="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">description</span> ${escapeHtml(atto.tipo_atto || 'Atto')}</span>
-                        <button onclick="openSignedFile('modulistica', '${escapeHtml(atto.file_url)}')" class="bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold px-3 py-1 transition-all uppercase rounded">VEDI FILE</button>
-                    </div>`;
+        if (attiMod) {
+            // url_pdf_generato: Signed URL a 1 ora → usa openSignedFile per rigenerarlo
+            // url_pdf_csen_*:   Signed URL a 10 anni → apertura diretta, nessuna chiamata API extra
+            const docs = [
+                {
+                    label: 'Modulo Adesione & Statuto',
+                    url: attiMod.url_pdf_generato,
+                    useDirect: false
+                },
+                {
+                    label: 'Informativa Privacy CSEN',
+                    url: attiMod.url_pdf_csen_informativa,
+                    useDirect: true
+                },
+                {
+                    label: 'Modulo Iscrizione CSEN',
+                    url: attiMod.url_pdf_csen_iscrizione,
+                    useDirect: true
+                }
+            ];
+
+            docs.forEach(doc => {
+                if (doc.url) {
+                    const btnHtml = doc.useDirect
+                        ? `<a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer" class="bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold px-3 py-1 transition-all uppercase rounded flex-shrink-0">VEDI FILE</a>`
+                        : `<button onclick="openSignedFile('documenti_adesione', '${escapeHtml(doc.url)}', this)" class="bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold px-3 py-1 transition-all uppercase rounded flex-shrink-0">VEDI FILE</button>`;
+
+                    modHtml += `
+                        <div class="flex items-center justify-between border-b border-white/5 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
+                            <span class="text-white text-xs flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px] text-primary">description</span>
+                                ${escapeHtml(doc.label)}
+                            </span>
+                            ${btnHtml}
+                        </div>`;
+                }
             });
         }
-        if (!modHtml) modHtml = `<span class="text-gray-500 text-xs italic">Nessun modulo compilato</span>`;
+        if (!modHtml) modHtml = `<span class="text-gray-500 text-xs italic">Nessun modulo firmato disponibile</span>`;
         modContainer.innerHTML = modHtml;
 
         // CERTIFICATI MEDICI
