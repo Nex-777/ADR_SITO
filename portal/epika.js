@@ -4453,13 +4453,15 @@ async function renderCapoStoricoRuoli(groupId) {
 
 let capoIscrittiCache = [];
 let capoIscrittiOrdinamentoAscendente = true;
+let capoAbilitazioniMap = new Map(); // profilo_id -> record abilitazione anno corrente
+let capoOpzioniNomiMap = new Map();  // opzione_id -> valore (nome) per allenatori + validatori
 
 async function renderCapoIscrittiGruppo() {
     const tbody = document.getElementById('capo-iscritti-table-body');
     const countEl = document.getElementById('capo-iscritti-count');
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 12px;">Ricerca iscritti in corso...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 12px;">Ricerca iscritti in corso...</td></tr>';
     
     try {
         const { data: iscritti, error } = await supabaseClient
@@ -4469,6 +4471,30 @@ async function renderCapoIscrittiGruppo() {
             .eq('profilo_completato', true);
             
         if (error) throw error;
+
+        const annoCorrente = new Date().getFullYear();
+
+        // Fetch abilitazioni anno corrente per i profili del gruppo
+        let ablData = [];
+        if (iscritti && iscritti.length > 0) {
+            const profiloIds = iscritti.map(i => i.id);
+            const { data: ablResult } = await supabaseClient
+                .from('epika_scab_abilitazioni')
+                .select('profilo_id, stato_allenatore, stato_validatore, allenatore_opzione_id, validatore_opzione_id')
+                .in('profilo_id', profiloIds)
+                .eq('anno_abilitativo', annoCorrente);
+            ablData = ablResult || [];
+        }
+
+        // Fetch opzioni nomi (allenatori + validatori SCAB)
+        const { data: opzioniResult } = await supabaseClient
+            .from('epika_opzioni')
+            .select('id, valore')
+            .in('tipo', ['allenatore', 'scab_allievo_allenatore', 'scab_validatore']);
+
+        // Costruire le Map per lookup O(1)
+        capoAbilitazioniMap = new Map(ablData.map(a => [a.profilo_id, a]));
+        capoOpzioniNomiMap = new Map((opzioniResult || []).map(o => [o.id, o.valore]));
         
         capoIscrittiCache = iscritti || [];
         
@@ -4486,7 +4512,7 @@ async function renderCapoIscrittiGruppo() {
         
     } catch (e) {
         console.error("Errore caricamento iscritti gruppo:", e);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 12px; color: red;">Errore durante il caricamento degli iscritti.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 12px; color: red;">Errore durante il caricamento degli iscritti.</td></tr>';
     }
 }
 
@@ -4524,7 +4550,7 @@ function disegnaTabellaCapoIscritti() {
     countEl.textContent = `${filtrati.length} ISCRITTI`;
     
     if (filtrati.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 12px; color: gray;">Nessun iscritto trovato con i filtri selezionati.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 12px; color: gray;">Nessun iscritto trovato con i filtri selezionati.</td></tr>';
         return;
     }
     
@@ -4539,6 +4565,50 @@ function disegnaTabellaCapoIscritti() {
         if (i.ruolo_combattimento === 'combattente') ruoloComb = 'Combattente';
         else if (i.ruolo_combattimento === 'non_combattente') ruoloComb = 'Non Combattente';
         else ruoloComb = i.ruolo_combattimento || 'N/D';
+
+        // Lookup abilitazione per questo iscritto
+        const abl = capoAbilitazioniMap.get(i.id);
+
+        // --- Cella: Stato Abilitazione ---
+        let statoAblHtml;
+        if (!abl) {
+            statoAblHtml = `<td style="padding: 10px; font-style: italic; color: rgba(245,230,200,0.35); font-size: 10px;">NON HA RICHIESTO</td>`;
+        } else {
+            const statiLabelMap = {
+                'in_attesa':           'IN ATTESA',
+                'in_valutazione':      'IN VALUTAZIONE',
+                'video_fatto':         'VIDEO FATTO',
+                'video_in_valutazione':'VIDEO IN VALUTAZIONE'
+            };
+            const statoLabel = statiLabelMap[abl.stato_allenatore] || (abl.stato_allenatore ? abl.stato_allenatore.toUpperCase() : '—');
+            const nomeAllenatore = abl.allenatore_opzione_id ? (capoOpzioniNomiMap.get(abl.allenatore_opzione_id) || '—') : '—';
+            statoAblHtml = `<td style="padding: 10px; font-size: 10px;">
+                <span style="color: var(--epk-gold); font-weight: 600;">${statoLabel}</span><br>
+                <span style="color: #a1a1aa; font-size: 9px;">Allenatore: ${nomeAllenatore}</span>
+            </td>`;
+        }
+
+        // --- Cella: Risposta Validatore ---
+        let rispostaValHtml;
+        if (!abl) {
+            rispostaValHtml = `<td style="padding: 10px; text-align: center; color: rgba(245,230,200,0.35);">—</td>`;
+        } else {
+            const semMap = {
+                'giallo': { label: 'IN ATTESA',  emoji: '🟡', color: '#f9a825' },
+                'rosso':  { label: 'RESPINTA',   emoji: '🔴', color: '#ef4444' },
+                'verde':  { label: 'APPROVATA',  emoji: '🟢', color: '#22c55e' }
+            };
+            const sem = semMap[abl.stato_validatore] || null;
+            const nomeValidatore = abl.validatore_opzione_id ? (capoOpzioniNomiMap.get(abl.validatore_opzione_id) || '—') : '—';
+            if (!sem) {
+                rispostaValHtml = `<td style="padding: 10px; text-align: center; color: rgba(245,230,200,0.35);">—</td>`;
+            } else {
+                rispostaValHtml = `<td style="padding: 10px; font-size: 10px;">
+                    <span style="color: ${sem.color}; font-weight: 600;">${sem.emoji} ${sem.label}</span><br>
+                    <span style="color: #a1a1aa; font-size: 9px;">Validatore: ${nomeValidatore}</span>
+                </td>`;
+            }
+        }
         
         let incarichiStr = 'Nessuno';
         const gids = i.gruppo_lavoro_ids || [];
@@ -4558,6 +4628,8 @@ function disegnaTabellaCapoIscritti() {
             <td style="padding: 10px; color: #a1a1aa;">${nomeReal}</td>
             <td style="padding: 10px; color: #cbd5e1; font-weight: 500; font-size: 11px;">${popoloVal.toUpperCase()}</td>
             <td style="padding: 10px; color: var(--epk-gold);">${ruoloComb}</td>
+            ${statoAblHtml}
+            ${rispostaValHtml}
             <td style="padding: 10px; font-size: 10px; color: #a1a1aa;">${incarichiStr}</td>
         `;
         tbody.appendChild(tr);
