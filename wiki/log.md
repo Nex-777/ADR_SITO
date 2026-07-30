@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] feat | Colonne Abilitazione SCAB in Vista Capogruppo (v1.03.64)
+- **Frontend (`portal/epika.html` & `portal/epika.js`):**
+  - Integrate le colonne `Stato Abilitazione` e `Risposta Validatore` nella tabella degli iscritti al gruppo della Vista Capogruppo (`#epk-capo-tab-iscritti`).
+  - Ottimizzato il caricamento dati con lookup in memoria $O(1)$ (`capoAbilitazioniMap` e `capoOpzioniNomiMap`) durante la funzione `renderCapoIscrittiGruppo()`.
+  - Formattazione avanzata con supporto ai semafori colorati (🟢/🟡/🔴) e visualizzazione dinamica dei referenti (Allenatore e Validatore).
+  - Aggiornati i `colspan` delle tabelle dinamiche a 8 per prevenire disallineamenti di layout.
+- **Versionamento:** Eseguito `npm run bump` portando la versione globale a `v1.03.64`.
+
 ## [2026-07-30] fix | Bypass Autorizzazioni Admin nelle RPC SCAB (v1.03.61)
 - **Database (Supabase RPCs):**
   - Modificate le RPC `public.aggiorna_stato_validatore` e `public.aggiorna_stato_allenatore` introducendo il controllo `v_is_admin`: gli utenti con `is_admin_epika = TRUE` oppure ruolo `'presidente'` beneficiano dell'override automatico delle autorizzazioni di identità.
