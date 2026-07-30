@@ -61,19 +61,21 @@ DECLARE
     v_validatore_id BIGINT;
     v_ha_cm BOOLEAN;
     v_scadenza DATE;
+    v_existing_id BIGINT;
+    v_old_stato_a TEXT;
+    v_old_stato_v TEXT;
     v_result public.epika_scab_abilitazioni;
 BEGIN
     IF v_profilo_id IS NULL THEN
         RAISE EXCEPTION 'Utente non autenticato';
     END IF;
 
-    -- Recupera tipo del soggetto scelto
+    -- 1. Risolvi gerarchicamente i soggetti
     SELECT tipo INTO v_tipo FROM public.epika_opzioni WHERE id = p_soggetto_opzione_id AND attivo = TRUE;
     IF v_tipo IS NULL THEN
         RAISE EXCEPTION 'Soggetto non trovato o non attivo: %', p_soggetto_opzione_id;
     END IF;
 
-    -- Risolvi gerarchicamente allenatore, allievo e validatore
     IF v_tipo = 'allenatore' THEN
         v_allenatore_id := p_soggetto_opzione_id;
         v_allievo_id := NULL;
@@ -91,45 +93,59 @@ BEGIN
         RAISE EXCEPTION 'Tipo soggetto non valido per abilitazione: %', v_tipo;
     END IF;
 
-    -- Controlla presenza a Campo Marzio nell'anno specificato
+    -- 2. Prevenzione sovrascrittura distruttiva (Regola EPIKA Storicizzazione)
+    SELECT id, stato_allenatore, stato_validatore INTO v_existing_id, v_old_stato_a, v_old_stato_v
+    FROM public.epika_scab_abilitazioni
+    WHERE profilo_id = v_profilo_id AND anno_abilitativo = p_anno;
+
+    IF v_existing_id IS NOT NULL THEN
+        IF v_old_stato_a != 'in_attesa' OR v_old_stato_v != 'giallo' THEN
+            RAISE EXCEPTION 'Impossibile modificare: esiste già una richiesta per l''anno % in fase di valutazione avanzata (stato: %, %).', p_anno, v_old_stato_a, v_old_stato_v;
+        END IF;
+    END IF;
+
+    -- 3. Controlla presenza a Campo Marzio (Ottimizzato SARGable)
     SELECT EXISTS (
         SELECT 1 FROM public.epika_presenze_eventi pe
         JOIN public.epika_eventi ev ON pe.evento_id = ev.id
         WHERE pe.utente_id = v_profilo_id
           AND pe.presente = TRUE
           AND ev.tipo_evento = 'campo_marzio'
-          AND EXTRACT(YEAR FROM ev.data_evento) = p_anno
+          AND ev.data_inizio >= MAKE_DATE(p_anno, 1, 1)
+          AND ev.data_inizio <= MAKE_DATE(p_anno, 12, 31)
     ) INTO v_ha_cm;
 
-    -- Calcola scadenza
+    -- 4. Calcola scadenza
     IF v_ha_cm THEN
-        v_scadenza := (p_anno || '-12-31')::DATE;
+        v_scadenza := MAKE_DATE(p_anno, 12, 31);
     ELSE
-        v_scadenza := (p_anno || '-08-31')::DATE;
+        v_scadenza := MAKE_DATE(p_anno, 8, 31);
     END IF;
 
-    -- Inserisci o aggiorna (permette riconferma allenatore)
-    INSERT INTO public.epika_scab_abilitazioni (
-        profilo_id, anno_abilitativo,
-        allenatore_opzione_id, allievo_opzione_id, validatore_opzione_id,
-        stato_allenatore, stato_validatore,
-        ha_partecipato_cm, data_scadenza
-    ) VALUES (
-        v_profilo_id, p_anno,
-        v_allenatore_id, v_allievo_id, v_validatore_id,
-        'in_attesa', 'giallo',
-        v_ha_cm, v_scadenza
-    )
-    ON CONFLICT (profilo_id, anno_abilitativo) DO UPDATE SET
-        allenatore_opzione_id = EXCLUDED.allenatore_opzione_id,
-        allievo_opzione_id    = EXCLUDED.allievo_opzione_id,
-        validatore_opzione_id = EXCLUDED.validatore_opzione_id,
-        stato_allenatore      = 'in_attesa',
-        stato_validatore      = 'giallo',
-        ha_partecipato_cm     = EXCLUDED.ha_partecipato_cm,
-        data_scadenza         = EXCLUDED.data_scadenza,
-        updated_at            = NOW()
-    RETURNING * INTO v_result;
+    -- 5. Inserisci o Aggiorna (solo se in attesa)
+    IF v_existing_id IS NOT NULL THEN
+        UPDATE public.epika_scab_abilitazioni
+        SET allenatore_opzione_id = v_allenatore_id,
+            allievo_opzione_id = v_allievo_id,
+            validatore_opzione_id = v_validatore_id,
+            ha_partecipato_cm = v_ha_cm,
+            data_scadenza = v_scadenza,
+            updated_at = NOW()
+        WHERE id = v_existing_id
+        RETURNING * INTO v_result;
+    ELSE
+        INSERT INTO public.epika_scab_abilitazioni (
+            profilo_id, anno_abilitativo,
+            allenatore_opzione_id, allievo_opzione_id, validatore_opzione_id,
+            stato_allenatore, stato_validatore,
+            ha_partecipato_cm, data_scadenza
+        ) VALUES (
+            v_profilo_id, p_anno,
+            v_allenatore_id, v_allievo_id, v_validatore_id,
+            'in_attesa', 'giallo',
+            v_ha_cm, v_scadenza
+        ) RETURNING * INTO v_result;
+    END IF;
 
     RETURN v_result;
 END;
@@ -145,28 +161,39 @@ CREATE OR REPLACE FUNCTION public.aggiorna_stato_allenatore(
 RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_allenatore_opzione_id BIGINT;
-    v_caller_opzione_id BIGINT;
+    v_stato_validatore      TEXT;
+    v_caller_opzione_id     BIGINT;
 BEGIN
     IF auth.uid() IS NULL THEN
         RAISE EXCEPTION 'Utente non autenticato';
     END IF;
 
-    -- Valida nuovo stato
+    -- 1. Valida nuovo stato
     IF p_nuovo_stato NOT IN ('in_attesa','in_valutazione','video_fatto','video_in_valutazione') THEN
         RAISE EXCEPTION 'Stato allenatore non valido: %', p_nuovo_stato;
     END IF;
 
-    -- Trova l'allenatore_opzione_id del record da modificare
-    SELECT allenatore_opzione_id INTO v_allenatore_opzione_id
-    FROM public.epika_scab_abilitazioni WHERE id = p_abilitazione_id;
+    -- 2. Recupera allenatore assegnato e stato validatore corrente in una sola query
+    SELECT allenatore_opzione_id, stato_validatore
+    INTO v_allenatore_opzione_id, v_stato_validatore
+    FROM public.epika_scab_abilitazioni
+    WHERE id = p_abilitazione_id;
 
-    -- Trova l'ID opzione del chiamante
+    IF v_allenatore_opzione_id IS NULL THEN
+        RAISE EXCEPTION 'Richiesta di abilitazione non trovata: %', p_abilitazione_id;
+    END IF;
+
+    -- 3. VINCOLO: Ciclo chiuso se validatore ha approvato con VERDE
+    IF v_stato_validatore = 'verde' THEN
+        RAISE EXCEPTION 'Impossibile modificare: il ciclo di abilitazione è chiuso (approvazione validatore presente).';
+    END IF;
+
+    -- 4. Autorizzazione: verifica che il chiamante sia l allenatore o co-allenatore
     SELECT id INTO v_caller_opzione_id
     FROM public.epika_opzioni
     WHERE utente_id = auth.uid() AND tipo = 'allenatore'
     LIMIT 1;
 
-    -- Autorizzazione: il chiamante deve essere l'allenatore del record o co-allenatore
     IF v_caller_opzione_id IS NULL OR v_caller_opzione_id <> v_allenatore_opzione_id THEN
         IF NOT EXISTS (
             SELECT 1 FROM public.epika_scab_abbinamenti
@@ -177,10 +204,18 @@ BEGIN
         END IF;
     END IF;
 
+    -- 5. Aggiornamento stato con eventuale auto-reset del semaforo validatore
+    --    Se l allenatore torna a VIDEO_FATTO dopo una risposta ROSSO del validatore,
+    --    il semaforo validatore torna a GIALLO per permettere una nuova valutazione.
     UPDATE public.epika_scab_abilitazioni
-    SET stato_allenatore = p_nuovo_stato,
-        note_allenatore  = COALESCE(p_note, note_allenatore),
-        updated_at       = NOW()
+    SET stato_allenatore  = p_nuovo_stato,
+        note_allenatore   = COALESCE(p_note, note_allenatore),
+        stato_validatore  = CASE
+                                WHEN p_nuovo_stato = 'video_fatto' AND v_stato_validatore = 'rosso'
+                                THEN 'giallo'
+                                ELSE stato_validatore
+                            END,
+        updated_at        = NOW()
     WHERE id = p_abilitazione_id;
 END;
 $$;
@@ -195,36 +230,58 @@ CREATE OR REPLACE FUNCTION public.aggiorna_stato_validatore(
 RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_validatore_opzione_id BIGINT;
-    v_caller_opzione_id BIGINT;
+    v_stato_validatore_cur  TEXT;
+    v_stato_allenatore      TEXT;
+    v_caller_opzione_id     BIGINT;
 BEGIN
     IF auth.uid() IS NULL THEN
         RAISE EXCEPTION 'Utente non autenticato';
     END IF;
 
-    -- Valida nuovo stato
+    -- 1. Valida nuovo stato
     IF p_nuovo_stato NOT IN ('giallo','rosso','verde') THEN
         RAISE EXCEPTION 'Stato validatore non valido: %', p_nuovo_stato;
     END IF;
 
-    -- Trova il validatore_opzione_id del record
-    SELECT validatore_opzione_id INTO v_validatore_opzione_id
-    FROM public.epika_scab_abilitazioni WHERE id = p_abilitazione_id;
+    -- 2. Recupera stato corrente del record in una sola query
+    SELECT validatore_opzione_id, stato_validatore, stato_allenatore
+    INTO v_validatore_opzione_id, v_stato_validatore_cur, v_stato_allenatore
+    FROM public.epika_scab_abilitazioni
+    WHERE id = p_abilitazione_id;
 
-    -- Trova l'ID opzione del chiamante
+    IF v_validatore_opzione_id IS NULL THEN
+        RAISE EXCEPTION 'Richiesta di abilitazione non trovata: %', p_abilitazione_id;
+    END IF;
+
+    -- 3. Autorizzazione: il chiamante deve essere il validatore del record
     SELECT id INTO v_caller_opzione_id
     FROM public.epika_opzioni
     WHERE utente_id = auth.uid() AND tipo = 'scab_validatore'
     LIMIT 1;
 
-    -- Autorizzazione: il chiamante deve essere il validatore del record
     IF v_caller_opzione_id IS NULL OR v_caller_opzione_id <> v_validatore_opzione_id THEN
         RAISE EXCEPTION 'Non autorizzato: non sei il validatore di questa richiesta.';
     END IF;
 
+    -- 4. VINCOLO DI FLUSSO: Il validatore può agire SOLO in due casi:
+    --    A) lo stato allenatore è 'video_in_valutazione' (flusso normale)
+    --    B) lo stato validatore corrente è 'verde' (il validatore sta togliendo la propria approvazione)
+    IF v_stato_allenatore != 'video_in_valutazione' AND v_stato_validatore_cur != 'verde' THEN
+        RAISE EXCEPTION 'Impossibile modificare il semaforo: l allenatore non ha ancora inviato il video in valutazione.';
+    END IF;
+
+    -- 5. Aggiornamento stato con eventuale auto-reset dello stato allenatore
+    --    Se il validatore imposta ROSSO, lo stato allenatore torna a IN_VALUTAZIONE
+    --    per permettere all allenatore di ricominciare il ciclo di preparazione.
     UPDATE public.epika_scab_abilitazioni
-    SET stato_validatore = p_nuovo_stato,
-        note_validatore  = COALESCE(p_note, note_validatore),
-        updated_at       = NOW()
+    SET stato_validatore  = p_nuovo_stato,
+        note_validatore   = COALESCE(p_note, note_validatore),
+        stato_allenatore  = CASE
+                                WHEN p_nuovo_stato = 'rosso'
+                                THEN 'in_valutazione'
+                                ELSE stato_allenatore
+                            END,
+        updated_at        = NOW()
     WHERE id = p_abilitazione_id;
 END;
 $$;

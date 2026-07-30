@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] fix | Macchina a Stati Abilitazione SCAB — Lock Verde & Auto-Reset (v1.03.59)
+- **Database (Supabase RPCs):**
+  - Aggiornata la RPC `public.aggiorna_stato_validatore` per consentire la modifica del semaforo SOLO se `stato_allenatore = 'video_in_valutazione'` oppure se si sta revocando un semaforo `verde` preesistente.
+  - Implementato l'auto-reset dello `stato_allenatore` a `'in_valutazione'` se il Validatore imposta il semaforo a `'rosso'`.
+  - Aggiornata la RPC `public.aggiorna_stato_allenatore` per **bloccare** qualsiasi tentativo di modifica dello stato dell'allenatore se il semaforo è già `'verde'` (ciclo chiuso).
+  - Implementato l'auto-reset del semaforo Validatore a `'giallo'` se l'Allenatore imposta nuovamente `'video_fatto'` a seguito di un precedente esito `'rosso'`.
+- **Frontend (`portal/epika.js`):**
+  - Disabilitato visivamente (`disabled`, `opacity: 0.35`, `cursor: not-allowed`) il menu a tendina del Semaforo Validatore per gli atleti la cui valutazione non è ancora stata sbloccata dall'allenatore.
+  - Disabilitato visivamente il menu a tendina dell'Allenatore quando l'atleta è già stato approvato dal Validatore con semaforo verde.
+  - Aggiunto il re-rendering automatico delle dashboard Allenatore e Validatore a seguito di ogni aggiornamento stato per riflettere istantaneamente in UI i side-effect e gli auto-reset del DB.
+- **Versionamento:** Eseguito `npm run bump` portando la versione di sistema a `v1.03.59`.
+
 ## [2026-07-30] ingest | Abilitazioni Combattimento SCAB v1.03.57
 - Creata tabella `epika_scab_abilitazioni` e 3 RPC PostgreSQL `crea_richiesta_abilitazione`, `aggiorna_stato_allenatore`, `aggiorna_stato_validatore`.
 - Integrata la card abilitazione nella dashboard Atleta (#epk-main).

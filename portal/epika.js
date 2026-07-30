@@ -4976,10 +4976,14 @@ async function renderAllenatoreDashboard(opzioneId) {
                 statoCell = `<td style="padding:10px;color:rgba(245,230,200,0.3);font-style:italic;">Non ha richiesto</td>`;
                 semCell = `<td style="padding:10px;">—</td>`;
             } else {
+                const isVerde = record.stato_validatore === 'verde';
+                const disabledAttr = isVerde ? 'disabled' : '';
+                const titleAttr = isVerde ? 'Ciclo chiuso: approvazione verde del Validatore presente' : 'Modifica stato atleta';
+                const opacityStyle = isVerde ? 'opacity:0.4;cursor:not-allowed;' : '';
                 statoCell = `
                     <td style="padding:10px;">
-                        <select onchange="aggiornaStatoAllenatore(${record.id}, this.value, this)"
-                                style="background:#1a0a0a;border:1px solid var(--epk-gold-dim);color:var(--epk-parchment);font-size:10px;padding:4px;text-transform:uppercase;">
+                        <select ${disabledAttr} title="${titleAttr}" onchange="aggiornaStatoAllenatore(${record.id}, this.value, this)"
+                                style="background:#1a0a0a;border:1px solid var(--epk-gold-dim);color:var(--epk-parchment);font-size:10px;padding:4px;text-transform:uppercase;${opacityStyle}">
                             <option value="in_attesa" ${record.stato_allenatore==='in_attesa'?'selected':''}>IN ATTESA</option>
                             <option value="in_valutazione" ${record.stato_allenatore==='in_valutazione'?'selected':''}>IN VALUTAZIONE</option>
                             <option value="video_fatto" ${record.stato_allenatore==='video_fatto'?'selected':''}>VIDEO FATTO</option>
@@ -5020,6 +5024,8 @@ async function aggiornaStatoAllenatore(abilitazioneId, nuovoStato, selectEl) {
         });
         if (error) throw error;
         selectEl.dataset.prevValue = nuovoStato;
+        const opzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        await renderAllenatoreDashboard(opzioneId);
     } catch (e) {
         console.error('Errore aggiornamento stato allenatore:', e);
         selectEl.value = vecchioValore; // Ripristina
@@ -5052,23 +5058,21 @@ async function renderAllievoAllenatoreDashboard(opzioneId) {
         }
 
         let html = `
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;">`;
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">`;
 
         mieiAbbinamenti.forEach(a => {
             const strutturaNome = a.struttura ? a.struttura.nome.toUpperCase() : 'N/D';
-            const strutturaTipo = a.struttura ? (a.struttura.tipo === 'palestra' ? 'PALESTRA' : 'CENTRO PRATICA') : 'N/D';
             const allenatoreCapo = a.allenatore ? a.allenatore.valore.toUpperCase() : 'NESSUNO';
-            const validatore = a.validatore ? a.validatore.valore.toUpperCase() : 'N/D';
+            const validatoreNome = a.validatore ? a.validatore.valore.toUpperCase() : 'NESSUNO';
 
             html += `
-                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); display: flex; flex-direction: column; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 6px;">
-                        <span style="font-weight: bold; color: var(--epk-gold); font-size: 13px;">${strutturaNome}</span>
-                        <span style="font-size: 9px; padding: 2px 6px; background: rgba(201, 168, 76, 0.2); border-radius: 2px;">${strutturaTipo}</span>
+                <div class="epk-card" style="background: rgba(0,0,0,0.35); border: 1px solid var(--epk-gold-dim); display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+                    <div style="font-size: 14px; font-weight: bold; color: var(--epk-gold); border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 6px; text-transform: uppercase;">
+                        ${strutturaNome}
                     </div>
-                    <div style="font-size: 11px; display: flex; flex-direction: column; gap: 4px; text-transform: uppercase;">
-                        <div><strong style="color: var(--epk-gold-dim);">Allenatore Capo:</strong> ${allenatoreCapo}</div>
-                        <div><strong style="color: var(--epk-gold-dim);">Validatore:</strong> ${validatore}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 11px; text-transform: uppercase;">
+                        <div><strong style="color: var(--epk-gold-dim);">Allenatore Referente:</strong> ${allenatoreCapo}</div>
+                        <div><strong style="color: var(--epk-gold-dim);">Validatore:</strong> ${validatoreNome}</div>
                     </div>
                 </div>`;
         });
@@ -5142,6 +5146,12 @@ async function renderAllievoAllenatoreDashboard(opzioneId) {
         console.error("Errore caricamento abbinamenti allievo:", e);
         container.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento degli abbinamenti.</div>';
     }
+}
+
+// Helper per ottenere gli ID profilo seguiti da un allievo allenatore
+async function getAllievoAllenatoreAllieviIds(opzioneId) {
+    // In questa versione gli allievi allenatori seguono i propri atleti assegnati
+    return [];
 }
 
 async function renderValidatoreDashboard(opzioneId) {
@@ -5280,6 +5290,16 @@ async function renderValidatoreDashboard(opzioneId) {
                 const sa = statiAllLabel[record.stato_allenatore] || { t: record.stato_allenatore, c: 'gray' };
                 const sem = record.stato_validatore || 'giallo';
                 const nomeAllenatore = record.allenatore?.valore?.toUpperCase() || 'N/D';
+
+                const isVideoInVal = record.stato_allenatore === 'video_in_valutazione';
+                const isAlreadyVerde = record.stato_validatore === 'verde';
+                const canEdit = isVideoInVal || isAlreadyVerde;
+                const disabledAttr = canEdit ? '' : 'disabled';
+                const opacityStyle = canEdit ? 'opacity:1;cursor:pointer;' : 'opacity:0.35;cursor:not-allowed;';
+                const titleAttr = canEdit 
+                    ? 'Modifica il semaforo di valutazione' 
+                    : 'Disponibile solo quando l\'allenatore imposta lo stato su VIDEO IN VALUTAZIONE';
+
                 atlHtml += `
                     <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                         <td style="padding:10px;">${nomeVero}</td>
@@ -5287,8 +5307,10 @@ async function renderValidatoreDashboard(opzioneId) {
                         <td style="padding:10px;">${nomeAllenatore}</td>
                         <td style="padding:10px;"><span style="color:${sa.c};font-weight:bold;">${sa.t}</span></td>
                         <td style="padding:10px;">
-                            <select onchange="aggiornaStatoValidatore(${record.id}, this.value, this)"
-                                    style="background:#1a0a0a;border:1px solid ${semColor[sem]};color:${semColor[sem]};font-size:10px;padding:4px;text-transform:uppercase;font-weight:bold;">
+                            <select ${disabledAttr}
+                                    title="${titleAttr}"
+                                    onchange="aggiornaStatoValidatore(${record.id}, this.value, this)"
+                                    style="background:#1a0a0a;border:1px solid ${semColor[sem]};color:${semColor[sem]};font-size:10px;padding:4px;text-transform:uppercase;font-weight:bold;${opacityStyle}">
                                 <option value="giallo" ${sem==='giallo'?'selected':''}>🟡 IN ATTESA</option>
                                 <option value="verde" ${sem==='verde'?'selected':''}>🟢 APPROVATA</option>
                                 <option value="rosso" ${sem==='rosso'?'selected':''}>🔴 RESPINTA</option>
@@ -5318,9 +5340,8 @@ async function aggiornaStatoValidatore(abilitazioneId, nuovoStato, selectEl) {
         });
         if (error) throw error;
         selectEl.dataset.prevValue = nuovoStato;
-        const color = { giallo: '#f9a825', rosso: '#ef4444', verde: '#22c55e' }[nuovoStato] || '#c9a84c';
-        selectEl.style.borderColor = color;
-        selectEl.style.color = color;
+        const opzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        await renderValidatoreDashboard(opzioneId);
     } catch (e) {
         console.error('Errore aggiornamento semaforo validatore:', e);
         selectEl.value = vecchioValore;
