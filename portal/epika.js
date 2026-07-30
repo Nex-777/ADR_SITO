@@ -24,8 +24,7 @@ let scabAbbinamentiMap = {};
 let managedGroups = [];
 let isCapogruppo = false;
 let currentManagedGroupId = null;
-let currentScabRuolo = null;
-let currentScabOpzioneId = null;
+let userScabRolesMap = {}; // Mappa dei ruoli SCAB dell'utente: tipo ('allenatore', 'scab_validatore', 'scab_allievo_allenatore') -> opzione_id
 let simulatedScabOpzioneId = null; // Per la simulazione admin
 
 
@@ -134,24 +133,23 @@ async function initPortal() {
             console.error("Errore recupero gruppi gestiti:", e);
         }
 
-        // Rilevamento ruolo SCAB per utente reale
-        // Usa limit(1) invece di maybeSingle() per gestire il caso in cui
-        // uno stesso utente sia abbinato a più ruoli (es. allenatore + validatore)
+        // Rilevamento ruoli SCAB per utente reale (multi-ruolo supportato)
         try {
+            userScabRolesMap = {};
             const { data: scabRecords, error: scabErr } = await supabaseClient
                 .from('epika_opzioni')
                 .select('id, tipo')
                 .eq('utente_id', currentUser.id)
-                .in('tipo', ['allenatore', 'scab_validatore', 'scab_allievo_allenatore'])
-                .limit(1);
+                .in('tipo', ['allenatore', 'scab_validatore', 'scab_allievo_allenatore']);
 
             if (!scabErr && scabRecords && scabRecords.length > 0) {
-                currentScabRuolo = scabRecords[0].tipo;
-                currentScabOpzioneId = scabRecords[0].id;
-                console.log("Rilevato ruolo SCAB:", currentScabRuolo, "ID opzione:", currentScabOpzioneId);
+                scabRecords.forEach(r => {
+                    userScabRolesMap[r.tipo] = r.id;
+                });
+                console.log("Rilevati ruoli SCAB utente:", userScabRolesMap);
             }
         } catch (e) {
-            console.error("Errore recupero ruolo SCAB utente:", e);
+            console.error("Errore recupero ruoli SCAB utente:", e);
         }
 
 
@@ -161,42 +159,49 @@ async function initPortal() {
         const hasDirettivoScab = gLavoroIds.includes(2);
         const hasDirettivoLogistica = gLavoroIds.includes(3);
         const hasDirettivoMarketing = gLavoroIds.includes(4);
+        const hasDirettivoSibis = gLavoroIds.includes(10);
         const isCapogruppoLavoro = isCapogruppo || gLavoroIds.includes(5) || gLavoroIds.includes(6) || gLavoroIds.includes(7) || gLavoroIds.includes(9);
 
         // Gestione switcher di vista (per admin, capogruppo, direttivi e ruoli SCAB)
-        const haQualcheRuoloSpeciale = isEpikaAdmin || isCapogruppoLavoro || hasDirettivoEpika || hasDirettivoScab || hasDirettivoLogistica || hasDirettivoMarketing || !!currentScabRuolo;
+        const haQualcheRuoloSpeciale = isEpikaAdmin || isCapogruppoLavoro || hasDirettivoEpika || hasDirettivoScab || hasDirettivoLogistica || hasDirettivoMarketing || hasDirettivoSibis || Object.keys(userScabRolesMap).length > 0;
         if (haQualcheRuoloSpeciale) {
             const adminSwitcher = document.getElementById('epk-admin-switcher');
-            adminSwitcher.innerHTML = '<option value="athlete">VISTA ATLETA</option>';
-            if (isCapogruppoLavoro) {
-                adminSwitcher.innerHTML += '<option value="capogruppo">VISTA CAPOGRUPPO</option>';
+            adminSwitcher.innerHTML = '';
+            if (isEpikaAdmin) {
+                adminSwitcher.innerHTML += '<option value="admin">VISTA AMMINISTRATORE</option>';
             }
             if (hasDirettivoEpika) {
-                adminSwitcher.innerHTML += '<option value="direttivo_epika">VISTA DIRETTIVO EPIKA</option>';
-            }
-            if (hasDirettivoScab) {
-                adminSwitcher.innerHTML += '<option value="direttivo_scab">VISTA DIRETTIVO SCAB</option>';
+                adminSwitcher.innerHTML += '<option value="direttivo_epika">VISTA DIRETTIVO</option>';
             }
             if (hasDirettivoLogistica) {
                 adminSwitcher.innerHTML += '<option value="direttivo_logistica">VISTA DIRETTIVO LOGISTICA</option>';
             }
+            if (hasDirettivoScab) {
+                adminSwitcher.innerHTML += '<option value="direttivo_scab">VISTA DIRETTIVO SCAB</option>';
+            }
+            if (hasDirettivoSibis || isEpikaAdmin) {
+                adminSwitcher.innerHTML += '<option value="direttivo_sibis">VISTA DIRETTIVO SIBIS</option>';
+            }
             if (hasDirettivoMarketing) {
                 adminSwitcher.innerHTML += '<option value="direttivo_marketing">VISTA DIRETTIVO MARKETING</option>';
             }
-            if (currentScabRuolo === 'allenatore') {
+            if (userScabRolesMap['scab_validatore']) {
+                adminSwitcher.innerHTML += '<option value="validatore">VISTA VALIDATORI</option>';
+            }
+            if (userScabRolesMap['allenatore']) {
                 adminSwitcher.innerHTML += '<option value="allenatore">VISTA ALLENATORE</option>';
             }
-            if (currentScabRuolo === 'scab_allievo_allenatore') {
+            if (userScabRolesMap['scab_allievo_allenatore']) {
                 adminSwitcher.innerHTML += '<option value="allievo_allenatore">VISTA ALLIEVO ALL.</option>';
             }
-            if (currentScabRuolo === 'scab_validatore') {
-                adminSwitcher.innerHTML += '<option value="validatore">VISTA VALIDATORE</option>';
+            if (isCapogruppoLavoro) {
+                adminSwitcher.innerHTML += '<option value="capogruppo">VISTA CAPOGRUPPO</option>';
             }
+            adminSwitcher.innerHTML += '<option value="athlete">VISTA ATLETA</option>';
             if (isEpikaAdmin) {
-                adminSwitcher.innerHTML += '<option value="admin">VISTA AMMINISTRATORE</option>';
+                adminSwitcher.innerHTML += '<option value="simula_validatore">🔍 SIMULA VALIDATORE</option>';
                 adminSwitcher.innerHTML += '<option value="simula_allenatore">🔍 SIMULA ALLENATORE</option>';
                 adminSwitcher.innerHTML += '<option value="simula_allievo">🔍 SIMULA ALLIEVO ALL.</option>';
-                adminSwitcher.innerHTML += '<option value="simula_validatore">🔍 SIMULA VALIDATORE</option>';
             }
             adminSwitcher.classList.remove('epk-hidden');
             
@@ -212,15 +217,17 @@ async function initPortal() {
                 adminSwitcher.value = 'direttivo_scab';
             } else if (viewParam === 'direttivo_logistica' && hasDirettivoLogistica) {
                 adminSwitcher.value = 'direttivo_logistica';
+            } else if (viewParam === 'direttivo_sibis' && (hasDirettivoSibis || isEpikaAdmin)) {
+                adminSwitcher.value = 'direttivo_sibis';
             } else if (viewParam === 'direttivo_marketing' && hasDirettivoMarketing) {
                 adminSwitcher.value = 'direttivo_marketing';
             } else if (viewParam === 'capogruppo' && isCapogruppoLavoro) {
                 adminSwitcher.value = 'capogruppo';
-            } else if (viewParam === 'allenatore' && currentScabRuolo === 'allenatore') {
+            } else if (viewParam === 'allenatore' && userScabRolesMap['allenatore']) {
                 adminSwitcher.value = 'allenatore';
-            } else if (viewParam === 'allievo_allenatore' && currentScabRuolo === 'scab_allievo_allenatore') {
+            } else if (viewParam === 'allievo_allenatore' && userScabRolesMap['scab_allievo_allenatore']) {
                 adminSwitcher.value = 'allievo_allenatore';
-            } else if (viewParam === 'validatore' && currentScabRuolo === 'scab_validatore') {
+            } else if (viewParam === 'validatore' && userScabRolesMap['scab_validatore']) {
                 adminSwitcher.value = 'validatore';
             }
         }
@@ -1600,6 +1607,8 @@ function configureAdminTabs() {
         visibleTabs = ['eventi', 'logistica'];
     } else if (viewMode === 'direttivo_marketing') {
         visibleTabs = ['eventi', 'marketing'];
+    } else if (viewMode === 'direttivo_sibis') {
+        visibleTabs = ['dash'];
     }
 
     // Mostra i bottoni visibili
@@ -5024,7 +5033,7 @@ async function aggiornaStatoAllenatore(abilitazioneId, nuovoStato, selectEl) {
         });
         if (error) throw error;
         selectEl.dataset.prevValue = nuovoStato;
-        const opzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const opzioneId = simulatedScabOpzioneId || userScabRolesMap['allenatore'];
         await renderAllenatoreDashboard(opzioneId);
     } catch (e) {
         console.error('Errore aggiornamento stato allenatore:', e);
@@ -5340,12 +5349,12 @@ async function aggiornaStatoValidatore(abilitazioneId, nuovoStato, selectEl) {
         });
         if (error) throw error;
         selectEl.dataset.prevValue = nuovoStato;
-        const opzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const opzioneId = simulatedScabOpzioneId || userScabRolesMap['scab_validatore'];
         await renderValidatoreDashboard(opzioneId);
     } catch (e) {
         console.error('Errore aggiornamento semaforo validatore:', e);
         alert('Errore: ' + (e.message || 'impossibile aggiornare il semaforo.'));
-        const opzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const opzioneId = simulatedScabOpzioneId || userScabRolesMap['scab_validatore'];
         await renderValidatoreDashboard(opzioneId);
     }
 }
@@ -5367,7 +5376,7 @@ function switchAllenatoreTab(tab) {
     if (panel) panel.classList.remove('epk-hidden');
     
     if (tab === 'atleti') {
-        renderAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+        renderAllenatoreDashboard(simulatedScabOpzioneId || userScabRolesMap['allenatore']);
     } else if (tab === 'eventi') {
         renderAllenatoreEventi();
     }
@@ -5386,7 +5395,7 @@ function switchAllievoTab(tab) {
     if (panel) panel.classList.remove('epk-hidden');
     
     if (tab === 'abbinamenti') {
-        renderAllievoAllenatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+        renderAllievoAllenatoreDashboard(simulatedScabOpzioneId || userScabRolesMap['scab_allievo_allenatore']);
     } else if (tab === 'eventi') {
         renderAllievoEventi();
     }
@@ -5405,7 +5414,7 @@ function switchValidatoreTab(tab) {
     if (panel) panel.classList.remove('epk-hidden');
     
     if (tab === 'strutture') {
-        renderValidatoreDashboard(simulatedScabOpzioneId || currentScabOpzioneId);
+        renderValidatoreDashboard(simulatedScabOpzioneId || userScabRolesMap['scab_validatore']);
     } else if (tab === 'eventi') {
         renderValidatoreEventi();
     }
@@ -5751,7 +5760,7 @@ async function mostraIscrittiEventoAllenatore(eventoId, eventoTitolo) {
     detailsPanel.scrollIntoView({ behavior: 'smooth' });
 
     try {
-        const coachOpzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const coachOpzioneId = simulatedScabOpzioneId || userScabRolesMap['allenatore'];
         const allieviIds = await getAllenatoreAllieviIds(coachOpzioneId);
         
         const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
@@ -5850,7 +5859,7 @@ async function mostraIscrittiEventoAllievo(eventoId, eventoTitolo) {
     detailsPanel.scrollIntoView({ behavior: 'smooth' });
 
     try {
-        const alvOpzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const alvOpzioneId = simulatedScabOpzioneId || userScabRolesMap['scab_allievo_allenatore'];
         const allieviIds = await getAllievoCoachAllieviIds(alvOpzioneId);
         
         const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
@@ -5949,7 +5958,7 @@ async function mostraIscrittiEventoValidatore(eventoId, eventoTitolo) {
     detailsPanel.scrollIntoView({ behavior: 'smooth' });
 
     try {
-        const valOpzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        const valOpzioneId = simulatedScabOpzioneId || userScabRolesMap['scab_validatore'];
         const allieviIds = await getValidatoreAllieviIds(valOpzioneId);
         
         const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
