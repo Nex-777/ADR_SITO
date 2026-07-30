@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] feature | Modifica Date ed Eliminazione Mandati nella Cronologia Gruppi Storici (v1.03.47)
+- **Frontend (`portal/epika.html` & `portal/epika.js`):**
+  - Aggiunta la colonna `Azioni` nella tabella `CRONOLOGIA STORICA MANDATI` dei dettagli del Gruppo Storico.
+  - Implementata la funzione `eliminaMandatoStorico()` con icona Cestino 🗑️ (disabilitata sui mandati attivi per prevenire disallineamenti anagrafici con `epika_gruppi_storici`).
+  - Implementata la modifica inline `abilitaModificaMandato()` e `salvaModificaMandato()` con icona Matita ✏️, consentendo l'editing e la retrodatazione di `data_inizio` e `data_fine`.
+
+---
+
 ## [2026-07-30] feat | Colonne Abilitazione SCAB in Vista Capogruppo (v1.03.64)
 - **Frontend (`portal/epika.html` & `portal/epika.js`):**
   - Integrate le colonne `Stato Abilitazione` e `Risposta Validatore` nella tabella degli iscritti al gruppo della Vista Capogruppo (`#epk-capo-tab-iscritti`).

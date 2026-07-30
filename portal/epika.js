@@ -4131,7 +4131,7 @@ async function caricaStoricoRuoliGruppo(gruppoId) {
     const tbody = document.getElementById('det-storico-ruoli-table-body');
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 8px;">Caricamento storico...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 8px;">Caricamento storico...</td></tr>';
     
     try {
         const { data: storico, error } = await supabaseClient
@@ -4143,7 +4143,7 @@ async function caricaStoricoRuoliGruppo(gruppoId) {
         if (error) throw error;
         
         if (!storico || storico.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 8px; color: gray;">Nessun mandato storico registrato per questo gruppo.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 8px; color: gray;">Nessun mandato storico registrato per questo gruppo.</td></tr>';
             return;
         }
         
@@ -4160,20 +4160,116 @@ async function caricaStoricoRuoliGruppo(gruppoId) {
             const inizioStr = s.data_inizio ? new Date(s.data_inizio).toLocaleDateString('it-IT') : 'N/D';
             const fineStr = s.data_fine ? new Date(s.data_fine).toLocaleDateString('it-IT') : 'Attivo';
             
+            const rawInizio = s.data_inizio ? s.data_inizio.split('T')[0] : '';
+            const rawFine = s.data_fine ? s.data_fine.split('T')[0] : '';
+            const isActive = !s.data_fine;
+
+            let azioniHtml = `
+                <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                    <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px;" onclick="abilitaModificaMandato(${s.id}, '${rawInizio}', '${rawFine}', ${gruppoId}, ${isActive})" title="Modifica date mandato">✏️</button>
+            `;
+            if (isActive) {
+                azioniHtml += `
+                    <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px; opacity: 0.4; cursor: not-allowed;" disabled title="Impossibile eliminare un mandato attivo. Cambia prima il ruolo dal pannello superiore.">🗑️</button>
+                </div>`;
+            } else {
+                azioniHtml += `
+                    <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="eliminaMandatoStorico(${s.id}, ${gruppoId})" title="Elimina mandato chiuso">🗑️</button>
+                </div>`;
+            }
+            
             const tr = document.createElement('tr');
+            tr.id = `storico-row-${s.id}`;
             tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
             tr.innerHTML = `
                 <td style="padding: 8px;">${nomeTesserato}</td>
                 <td style="padding: 8px; color: var(--epk-gold);">${ruoloFormatted}</td>
-                <td style="padding: 8px;">${inizioStr}</td>
-                <td style="padding: 8px; ${s.data_fine ? '' : 'color: #22c55e; font-weight: bold;'}">${fineStr}</td>
+                <td style="padding: 8px;" id="cell-inizio-${s.id}">${inizioStr}</td>
+                <td style="padding: 8px; ${s.data_fine ? '' : 'color: #22c55e; font-weight: bold;'}" id="cell-fine-${s.id}">${fineStr}</td>
+                <td style="padding: 8px; text-align: center;" id="cell-azioni-${s.id}">${azioniHtml}</td>
             `;
             tbody.appendChild(tr);
         });
         
     } catch (e) {
         console.error("Errore caricamento storico ruoli:", e);
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red; padding: 8px;">Errore caricamento storico.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red; padding: 8px;">Errore caricamento storico.</td></tr>';
+    }
+}
+
+function abilitaModificaMandato(id, dataInizio, dataFine, gruppoId, isActive) {
+    const cellInizio = document.getElementById(`cell-inizio-${id}`);
+    const cellFine = document.getElementById(`cell-fine-${id}`);
+    const cellAzioni = document.getElementById(`cell-azioni-${id}`);
+
+    if (!cellInizio || !cellFine || !cellAzioni) return;
+
+    cellInizio.innerHTML = `<input type="date" id="edit-mandato-inizio-${id}" class="epk-input" style="font-size: 10px; padding: 2px 4px;" value="${dataInizio}">`;
+
+    if (isActive) {
+        cellFine.innerHTML = `<span style="color: #22c55e; font-size: 10px; font-weight: bold;" title="I mandati attivi possono essere chiusi solo cambiando ruolo nel pannello superiore">Attivo (Bloccato)</span>`;
+    } else {
+        cellFine.innerHTML = `<input type="date" id="edit-mandato-fine-${id}" class="epk-input" style="font-size: 10px; padding: 2px 4px;" value="${dataFine}">`;
+    }
+
+    cellAzioni.innerHTML = `
+        <div style="display: flex; gap: 4px; justify-content: center;">
+            <button class="epk-btn" style="padding: 2px 8px; font-size: 10px;" onclick="salvaModificaMandato(${id}, ${gruppoId}, ${isActive})" title="Salva modifiche">✓</button>
+            <button class="epk-btn-secondary" style="padding: 2px 8px; font-size: 10px;" onclick="caricaStoricoRuoliGruppo(${gruppoId})" title="Annulla">✕</button>
+        </div>
+    `;
+}
+
+async function salvaModificaMandato(id, gruppoId, isActive) {
+    const valInizio = document.getElementById(`edit-mandato-inizio-${id}`)?.value;
+    if (!valInizio) {
+        alert("Inserisci una data di inizio valida.");
+        return;
+    }
+
+    const updatePayload = {
+        data_inizio: valInizio
+    };
+
+    if (!isActive) {
+        const valFine = document.getElementById(`edit-mandato-fine-${id}`)?.value;
+        if (valFine) {
+            updatePayload.data_fine = valFine;
+        } else {
+            updatePayload.data_fine = null;
+        }
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_storico_ruoli_gruppi')
+            .update(updatePayload)
+            .eq('id', id);
+
+        if (error) throw error;
+        await caricaStoricoRuoliGruppo(gruppoId);
+    } catch (e) {
+        console.error("Errore durante la modifica del mandato:", e);
+        alert("Errore durante il salvataggio della modifica del mandato.");
+    }
+}
+
+async function eliminaMandatoStorico(id, gruppoId) {
+    if (!confirm("Sei sicuro di voler eliminare definitivamente questo mandato dallo storico?")) {
+        return;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_storico_ruoli_gruppi')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        await caricaStoricoRuoliGruppo(gruppoId);
+    } catch (e) {
+        console.error("Errore durante l'eliminazione del mandato:", e);
+        alert("Errore durante l'eliminazione del mandato dallo storico.");
     }
 }
 
