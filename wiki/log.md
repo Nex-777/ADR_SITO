@@ -2,6 +2,12 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] fix | Bypass Autorizzazioni Admin nelle RPC SCAB (v1.03.61)
+- **Database (Supabase RPCs):**
+  - Modificate le RPC `public.aggiorna_stato_validatore` e `public.aggiorna_stato_allenatore` introducendo il controllo `v_is_admin`: gli utenti con `is_admin_epika = TRUE` oppure ruolo `'presidente'` beneficiano dell'override automatico delle autorizzazioni di identità.
+  - Questo consente agli amministratori (come Tito Admin) di utilizzare liberamente le funzionalità di simulazione o gestione per conto di qualsiasi validatore/allenatore senza incorrere in errori di autorizzazione.
+- **Versionamento:** Eseguito `npm run bump` portando la versione globale a `v1.03.61`.
+
 ## [2026-07-30] fix | Hotfix Validatori NULL & Auto-Healing RPC SCAB (v1.03.60)
 - **Database (Supabase DML & RPCs):**
   - Eseguita la patch dati universale per associare i validatori mancanti ai record `epika_scab_abilitazioni` con `validatore_opzione_id = NULL`.

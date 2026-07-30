@@ -167,10 +167,18 @@ DECLARE
     v_allenatore_opzione_id BIGINT;
     v_stato_validatore      TEXT;
     v_caller_opzione_id     BIGINT;
+    v_is_admin              BOOLEAN := FALSE;
 BEGIN
     IF auth.uid() IS NULL THEN
         RAISE EXCEPTION 'Utente non autenticato';
     END IF;
+
+    -- Controlla se il chiamante è Admin Epika o Presidente
+    SELECT EXISTS (
+        SELECT 1 FROM public.epika_profili
+        WHERE id = auth.uid() AND is_admin_epika = TRUE
+    ) OR 'presidente' = ANY(public.get_user_role(auth.uid()))
+    INTO v_is_admin;
 
     -- 1. Valida nuovo stato
     IF p_nuovo_stato NOT IN ('in_attesa','in_valutazione','video_fatto','video_in_valutazione') THEN
@@ -192,19 +200,21 @@ BEGIN
         RAISE EXCEPTION 'Impossibile modificare: il ciclo di abilitazione è chiuso (approvazione validatore presente).';
     END IF;
 
-    -- 4. Autorizzazione: verifica che il chiamante sia l allenatore o co-allenatore
-    SELECT id INTO v_caller_opzione_id
-    FROM public.epika_opzioni
-    WHERE utente_id = auth.uid() AND tipo = 'allenatore'
-    LIMIT 1;
+    -- 4. Autorizzazione: verifica che il chiamante sia l allenatore, co-allenatore OPPURE un ADMIN
+    IF NOT v_is_admin THEN
+        SELECT id INTO v_caller_opzione_id
+        FROM public.epika_opzioni
+        WHERE utente_id = auth.uid() AND tipo = 'allenatore'
+        LIMIT 1;
 
-    IF v_caller_opzione_id IS NULL OR v_caller_opzione_id <> v_allenatore_opzione_id THEN
-        IF NOT EXISTS (
-            SELECT 1 FROM public.epika_scab_abbinamenti
-            WHERE (allenatore_ref_id = v_caller_opzione_id OR allenatori_co_ids @> ARRAY[v_caller_opzione_id])
-              AND (allenatore_ref_id = v_allenatore_opzione_id OR allenatori_co_ids @> ARRAY[v_allenatore_opzione_id])
-        ) THEN
-            RAISE EXCEPTION 'Non autorizzato: non sei l allenatore di questa richiesta.';
+        IF v_caller_opzione_id IS NULL OR v_caller_opzione_id <> v_allenatore_opzione_id THEN
+            IF NOT EXISTS (
+                SELECT 1 FROM public.epika_scab_abbinamenti
+                WHERE (allenatore_ref_id = v_caller_opzione_id OR allenatori_co_ids @> ARRAY[v_caller_opzione_id])
+                  AND (allenatore_ref_id = v_allenatore_opzione_id OR allenatori_co_ids @> ARRAY[v_allenatore_opzione_id])
+            ) THEN
+                RAISE EXCEPTION 'Non autorizzato: non sei l allenatore di questa richiesta.';
+            END IF;
         END IF;
     END IF;
 
@@ -239,10 +249,18 @@ DECLARE
     v_stato_validatore_cur  TEXT;
     v_stato_allenatore      TEXT;
     v_caller_opzione_id     BIGINT;
+    v_is_admin              BOOLEAN := FALSE;
 BEGIN
     IF auth.uid() IS NULL THEN
         RAISE EXCEPTION 'Utente non autenticato';
     END IF;
+
+    -- Controlla se il chiamante è Admin Epika o Presidente
+    SELECT EXISTS (
+        SELECT 1 FROM public.epika_profili
+        WHERE id = auth.uid() AND is_admin_epika = TRUE
+    ) OR 'presidente' = ANY(public.get_user_role(auth.uid()))
+    INTO v_is_admin;
 
     -- 1. Valida nuovo stato
     IF p_nuovo_stato NOT IN ('giallo','rosso','verde') THEN
@@ -277,14 +295,16 @@ BEGIN
         END IF;
     END IF;
 
-    -- 4. Autorizzazione: il chiamante deve essere il validatore del record
-    SELECT id INTO v_caller_opzione_id
-    FROM public.epika_opzioni
-    WHERE utente_id = auth.uid() AND tipo = 'scab_validatore'
-    LIMIT 1;
+    -- 4. Autorizzazione: il chiamante deve essere il validatore del record OPPURE un ADMIN
+    IF NOT v_is_admin THEN
+        SELECT id INTO v_caller_opzione_id
+        FROM public.epika_opzioni
+        WHERE utente_id = auth.uid() AND tipo = 'scab_validatore'
+        LIMIT 1;
 
-    IF v_caller_opzione_id IS NULL OR v_caller_opzione_id <> v_validatore_opzione_id THEN
-        RAISE EXCEPTION 'Non autorizzato: non sei il validatore designato per questa richiesta.';
+        IF v_caller_opzione_id IS NULL OR v_validatore_opzione_id IS NULL OR v_caller_opzione_id <> v_validatore_opzione_id THEN
+            RAISE EXCEPTION 'Non autorizzato: non sei il validatore designato per questa richiesta.';
+        END IF;
     END IF;
 
     -- 5. VINCOLO DI FLUSSO: Il validatore può agire SOLO in due casi:
