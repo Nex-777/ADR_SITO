@@ -102,12 +102,36 @@ Stores audit logs for athlete profile modifications (such as historical group, p
 *   `valore_nuovo` (TEXT)
 *   `data_modifica` (TIMESTAMPTZ DEFAULT NOW())
 
+### 9. `public.epika_scab_abilitazioni`
+Stores annual SCAB combat certification state per athlete.
+*   `id` (BIGINT PK)
+*   `profilo_id` (UUID FK to `epika_profili.id` ON DELETE CASCADE)
+*   `anno_abilitativo` (INT)
+*   `allenatore_opzione_id` (BIGINT FK to `epika_opzioni.id`)
+*   `allievo_opzione_id` (BIGINT FK to `epika_opzioni.id`)
+*   `validatore_opzione_id` (BIGINT FK to `epika_opzioni.id`)
+*   `stato_allenatore` (TEXT CHECK `in_attesa`, `in_valutazione`, `video_fatto`, `video_in_valutazione`)
+*   `stato_validatore` (TEXT CHECK `giallo`, `rosso`, `verde`)
+*   `ha_partecipato_cm` (BOOLEAN)
+*   `data_scadenza` (DATE)
+
+---
+
+## ⚔️ SCAB Combat Certification Workflow
+
+1. **Athlete Request**: The athlete requests annual certification by selecting an Allenatore or Allievo Allenatore. The system invokes `crea_richiesta_abilitazione`, automatically resolving the supervising coach and structure validator via `epika_scab_abbinamenti`, and setting expiration (Dec 31 if Campo Marzio attended, Aug 31 otherwise).
+2. **Trainer Assessment**: The Allenatore updates evaluation state (`in_attesa` → `in_valutazione` → `video_fatto` → `video_in_valutazione`) via `aggiorna_stato_allenatore`.
+3. **Validator Approval**: The Validatore sets the validation semaphore (`giallo` → `verde`/`rosso`) via `aggiorna_stato_validatore`.
+4. **Assistant Trainer View**: The Allievo Allenatore monitors athletes under their supervision in read-only mode.
+
 ---
 
 ## 🔒 Row Level Security (RLS)
 
 - Lookups (`epika_gruppi_storici`, `epika_gruppi_lavoro`, `epika_opzioni`): Read access to all authenticated users. Write/Delete restricted to President or users with `is_admin_epika = TRUE`.
 - Profiles (`epika_profili`): Select allowed for the owner, President, `is_admin_epika = TRUE`, or any Capogruppo/Vice Capogruppo of the profile's current or historical group (to access member lists and cronologia mandati). Update allowed only for the owner, President, or `is_admin_epika = TRUE`. Insert allowed only for the owner. Validated by `BEFORE INSERT OR UPDATE` trigger `trg_check_epika_tessera_ruolo` to prevent base card holders from enrolling as `combattente` and to automatically nullify `allenatore_id` for `non_combattente`.
+- Abilitazioni (`epika_scab_abilitazioni`): Select allowed for all authenticated users. Insert/Update mutations restricted exclusively through `SECURITY DEFINER` RPCs (`crea_richiesta_abilitazione`, `aggiorna_stato_allenatore`, `aggiorna_stato_validatore`) enforcing strict caller role verification.
 - Events (`epika_eventi`): Read allowed for all authenticated users. Writes/Delete restricted to admins.
 - Signups & Attendance: Select/write restricted to owner/admin where appropriate.
 - Audit Log (`epika_registro_modifiche_profilo`): Select allowed for the profile owner, President, or users with `is_admin_epika = TRUE`. Write operations restricted to database trigger only.
+

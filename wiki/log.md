@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] ingest | Abilitazioni Combattimento SCAB v1.03.57
+- Creata tabella `epika_scab_abilitazioni` e 3 RPC PostgreSQL `crea_richiesta_abilitazione`, `aggiorna_stato_allenatore`, `aggiorna_stato_validatore`.
+- Integrata la card abilitazione nella dashboard Atleta (#epk-main).
+- Estesa la dashboard Allenatore (#epk-allenatore) con la tabella atleti (diretti e via allievi) per la modifica degli stati.
+- Estesa la dashboard Validatore (#epk-validatore) con la tabella atleti e semafori interattivi.
+- Estesa la dashboard Allievo Allenatore (#epk-allievo) con la tabella atleti in sola lettura.
+- Aggiornate le tendine di selezione allenatore per includere anche gli Allievi Allenatori.
+
+---
+
 ## [2026-07-30] fix | Risoluzione Visualizzazione Moduli Firmati OTP nel Dossier Socio e Approvazioni (v1.03.56)
 - **Frontend (`portal/dashboard.js`)**:
   - Riscritto il rendering del box MODULISTICA in `apriDossierSocio` per estrarre analiticamente i tre documenti della tabella `atti_adesione` (`url_pdf_generato`, `url_pdf_csen_informativa`, `url_pdf_csen_iscrizione`).

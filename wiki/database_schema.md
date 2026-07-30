@@ -311,8 +311,38 @@ Introdotta con `migration_patch_istruttori_v2.sql` per consolidare le policy e l
 - **`public.iscrizioni_eventi` (UPDATE)**: Aggiunta policy `update_own_iscrizioni` (permette agli atleti di modificare la colonna `orario_libero` delle proprie iscrizioni) e `update_board_iscrizioni` (consente al Direttivo di aggiornare le iscrizioni).
 - **Accesso Istruttori**: Estese le policy di `SELECT` sulle tabelle `utenti`, `anagrafiche`, `registro_soci`, `registro_tesserati` e `certificati_medici` per consentire agli istruttori di visualizzare lo stato (badge/semafori) esclusivamente per gli atleti iscritti ai corsi da loro seguiti.
 
-## 🩹 Patch Ricorsione Policy v3
+## ⚔️ Abilitazioni al Combattimento SCAB (EPIKA 2026)
 
-Introdotta con `migration_patch_istruttori_v3.sql` per risolvere l'errore di ricorsione infinita (codice 500 / 42P17) rilevato durante il caricamento del profilo utente al login:
-- **Prevenzione Ricorsione**: Sostituite sistematicamente le query dirette `(SELECT ruolo FROM public.utenti WHERE id = auth.uid())` con la funzione `SECURITY DEFINER` `public.get_user_role(auth.uid())` su tutte le policy RLS delle tabelle eventi (`eventi`, `iscrizioni_eventi`, `istruttori_eventi`, `presenze_eventi`).
+Introdotta con `migration_epika_scab_abilitazioni.sql` per la gestione del ciclo annuale di abilitazione al combattimento SCAB per gli atleti.
+
+### Tabella: `public.epika_scab_abilitazioni`
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `bigint` (PK) | Identificativo dell'abilitazione. |
+| `profilo_id` | `uuid` (FK) | Riferimento al profilo in `epika_profili(id)`. |
+| `anno_abilitativo` | `integer` | Anno di riferimento dell'abilitazione (es. `2026`). |
+| `allenatore_opzione_id` | `bigint` (FK) | Allenatore titolare in `epika_opzioni(id)`. |
+| `allievo_opzione_id` | `bigint` (FK) | Allievo allenatore (opzionale) in `epika_opzioni(id)`. |
+| `validatore_opzione_id` | `bigint` (FK) | Validatore di riferimento in `epika_opzioni(id)`. |
+| `stato_allenatore` | `text` | Stato gestito dall'allenatore: `in_attesa`, `in_valutazione`, `video_fatto`, `video_in_valutazione`. |
+| `stato_validatore` | `text` | Semaforo del validatore: `giallo`, `rosso`, `verde`. |
+| `note_allenatore` | `text` | Note dell'allenatore. |
+| `note_validatore` | `text` | Note del validatore. |
+| `ha_partecipato_cm` | `boolean` | Flag presenza al Campo Marzio nell'anno corrente. |
+| `data_scadenza` | `date` | Data di scadenza abilitazione (31/12 se CM, 31/08 se no CM). |
+| `created_at` | `timestamptz` | Data creazione richiesta. |
+| `updated_at` | `timestamptz` | Data ultimo aggiornamento. |
+
+### RPC PostgreSQL SECURITY DEFINER
+1. **`public.crea_richiesta_abilitazione(p_anno INT, p_soggetto_opzione_id BIGINT)`**:
+   - Invocata dall'atleta per inviare la richiesta di abilitazione per l'anno corrente.
+   - Risolve automaticamente l'allenatore supervisore ed il validatore della struttura tramite `epika_scab_abbinamenti`.
+   - Verifica la presenza a Campo Marzio e imposta la data di scadenza.
+2. **`public.aggiorna_stato_allenatore(p_abilitazione_id BIGINT, p_nuovo_stato TEXT, p_note TEXT)`**:
+   - Invocata dall'allenatore per aggiornare lo stato di valutazione dell'atleta.
+   - Valida che il chiamante (`auth.uid()`) corrisponda all'allenatore o co-allenatore responsabile.
+3. **`public.aggiorna_stato_validatore(p_abilitazione_id BIGINT, p_nuovo_stato TEXT, p_note TEXT)`**:
+   - Invocata dal validatore per aggiornare il semaforo (giallo/rosso/verde).
+   - Valida che il chiamante (`auth.uid()`) corrisponda al validatore di riferimento.
 

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.03.56">
+    <link rel="stylesheet" href="epika.css?v=1.03.57">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.03.56"></script>
+    <script src="config.js?v=1.03.57"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.03.56</span>
+            <span class="epk-version-badge">Vs. 1.03.57</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -192,6 +192,17 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- ABILITAZIONE AL COMBATTIMENTO SCAB -->
+            <div class="epk-card" id="epk-abilitazione-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    <h2 class="epk-headline" style="margin: 0; font-size: 16px;">ABILITAZIONE AL COMBATTIMENTO</h2>
+                    <span id="epk-abilitazione-anno-badge" style="font-size: 10px; padding: 3px 8px; border: 1px solid var(--epk-gold-dim); color: var(--epk-gold);"></span>
+                </div>
+                <div id="epk-abilitazione-content">
+                    <!-- Popolato da JS -->
+                </div>
             </div>
 
             <!-- Prossimi Eventi -->
@@ -1859,6 +1870,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.03.56"></script>
+    <script src="epika.js?v=1.03.57"></script>
 </body>
 </html>

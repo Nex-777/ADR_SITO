@@ -427,12 +427,13 @@ async function caricaLookupDati() {
             });
         }
 
-        // Carica Allenatori
+        // Carica Allenatori e Allievi Allenatori
         const { data: allenatori, error: aError } = await supabaseClient
             .from('epika_opzioni')
             .select('*')
-            .eq('tipo', 'allenatore')
-            .eq('attivo', true);
+            .in('tipo', ['allenatore', 'scab_allievo_allenatore'])
+            .eq('attivo', true)
+            .order('valore', { ascending: true });
 
         if (aError) {
             throw aError;
@@ -442,10 +443,20 @@ async function caricaLookupDati() {
 
         const selectAllenatore = document.getElementById('fa-allenatore');
         if (selectAllenatore) {
+            const allenatoriDirect = allenatoriLista.filter(a => a.tipo === 'allenatore');
+            const allieviDirect = allenatoriLista.filter(a => a.tipo === 'scab_allievo_allenatore');
+
             selectAllenatore.innerHTML = '<option value="" disabled selected>SELEZIONA</option>';
-            allenatoriLista.forEach(a => {
-                selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`;
-            });
+            if (allenatoriDirect.length) {
+                selectAllenatore.innerHTML += '<optgroup label="ALLENATORI">';
+                allenatoriDirect.forEach(a => { selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`; });
+                selectAllenatore.innerHTML += '</optgroup>';
+            }
+            if (allieviDirect.length) {
+                selectAllenatore.innerHTML += '<optgroup label="ALLIEVI ALLENATORI">';
+                allieviDirect.forEach(a => { selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`; });
+                selectAllenatore.innerHTML += '</optgroup>';
+            }
         }
 
         // Carica Popoli
@@ -648,11 +659,23 @@ async function apriModaleModificaProfilo() {
         document.getElementById('edit-ruolo-combattimento').value = prof.ruolo_combattimento || 'combattente';
 
         const selectAllenatore = document.getElementById('edit-allenatore');
-        selectAllenatore.innerHTML = '<option value="" selected>-- SELEZIONA ALLENATORE --</option>';
-        allenatoriLista.forEach(a => {
-            selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`;
-        });
-        selectAllenatore.value = prof.allenatore_id ? String(prof.allenatore_id) : '';
+        if (selectAllenatore) {
+            const allenatoriDirect = allenatoriLista.filter(a => a.tipo === 'allenatore');
+            const allieviDirect = allenatoriLista.filter(a => a.tipo === 'scab_allievo_allenatore');
+
+            selectAllenatore.innerHTML = '<option value="" selected>-- SELEZIONA ALLENATORE / ALLIEVO --</option>';
+            if (allenatoriDirect.length) {
+                selectAllenatore.innerHTML += '<optgroup label="ALLENATORI">';
+                allenatoriDirect.forEach(a => { selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`; });
+                selectAllenatore.innerHTML += '</optgroup>';
+            }
+            if (allieviDirect.length) {
+                selectAllenatore.innerHTML += '<optgroup label="ALLIEVI ALLENATORI">';
+                allieviDirect.forEach(a => { selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`; });
+                selectAllenatore.innerHTML += '</optgroup>';
+            }
+            selectAllenatore.value = prof.allenatore_id ? String(prof.allenatore_id) : '';
+        }
 
         onEditGruppoStoricoChange();
         applicaRestrizioneTessera('edit-ruolo-combattimento');
@@ -892,10 +915,148 @@ async function renderAthleteDashboard() {
         document.getElementById('epk-stat-anni-servizio').textContent = `${anniServizio} ${anniServizio === 1 ? 'Anno' : 'Anni'} (${prof.primo_anno_partecipazione} - ${currentYear})`;
 
         await caricaStatistiche();
+        await renderAbilitazioneAtleta();
         await caricaEventiDisponibili();
 
     } catch (err) {
         console.error("Errore rendering dashboard atleta:", err);
+    }
+}
+
+async function renderAbilitazioneAtleta() {
+    const container = document.getElementById('epk-abilitazione-content');
+    const annoBadge = document.getElementById('epk-abilitazione-anno-badge');
+    if (!container || !currentUser) return;
+
+    const annoCorrente = new Date().getFullYear();
+    if (annoBadge) annoBadge.textContent = `ANNO ABILITATIVO ${annoCorrente}`;
+
+    // Controlla se l'utente ha caricato il profilo ed è un combattente
+    if (currentUserProfile && currentUserProfile.ruolo_combattimento !== 'combattente') {
+        const card = document.getElementById('epk-abilitazione-card');
+        if (card) card.classList.add('epk-hidden');
+        return;
+    }
+
+    container.innerHTML = '<div style="text-align:center;padding:16px;">Caricamento stato abilitazione...</div>';
+
+    try {
+        // Carica record abilitazione anno corrente
+        const { data: abl, error } = await supabaseClient
+            .from('epika_scab_abilitazioni')
+            .select(`
+                *,
+                allenatore:allenatore_opzione_id(valore),
+                allievo:allievo_opzione_id(valore),
+                validatore:validatore_opzione_id(valore)
+            `)
+            .eq('profilo_id', currentUser.id)
+            .eq('anno_abilitativo', annoCorrente)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        const oggi = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const isScaduto = abl && abl.data_scadenza < oggi;
+
+        if (!abl || isScaduto) {
+            // --- Stato: NON ABILITATO — Mostra form di richiesta ---
+            const { data: soggetti } = await supabaseClient
+                .from('epika_opzioni')
+                .select('id, tipo, valore')
+                .in('tipo', ['allenatore', 'scab_allievo_allenatore'])
+                .eq('attivo', true)
+                .order('valore', { ascending: true });
+
+            const allenatori = (soggetti || []).filter(s => s.tipo === 'allenatore');
+            const allievi = (soggetti || []).filter(s => s.tipo === 'scab_allievo_allenatore');
+
+            let optsAll = allenatori.map(s => `<option value="${s.id}">${s.valore.toUpperCase()}</option>`).join('');
+            let optsAllievi = allievi.map(s => `<option value="${s.id}">${s.valore.toUpperCase()}</option>`).join('');
+
+            container.innerHTML = `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                    <span style="background:#7f1d1d;color:#fca5a5;padding:4px 12px;font-size:10px;font-weight:bold;letter-spacing:0.1em;">⚔ NON ABILITATO${isScaduto ? ' — SCADUTO' : ''}</span>
+                </div>
+                <p style="font-size:11px;text-transform:uppercase;color:rgba(245,230,200,0.6);margin-bottom:16px;">
+                    ${isScaduto ? 'La tua abilitazione è scaduta. Devi rinnovare la richiesta per quest\'anno.' : 'Devi richiedere l\'abilitazione per poter combattere quest\'anno.'}
+                </p>
+                <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
+                    <label class="epk-label">SCEGLI ALLENATORE / ALLIEVO ALLENATORE *</label>
+                    <select id="epk-abl-soggetto-select" class="epk-input">
+                        <option value="" disabled selected>Seleziona...</option>
+                        <optgroup label="ALLENATORI">${optsAll}</optgroup>
+                        <optgroup label="ALLIEVI ALLENATORI">${optsAllievi}</optgroup>
+                    </select>
+                    <button class="epk-btn" onclick="inviaRichiestaAbilitazione(${annoCorrente})">
+                        RICHIEDI ABILITAZIONE
+                    </button>
+                </div>
+            `;
+        } else {
+            // --- Stato: ABILITAZIONE ATTIVA — Mostra progress read-only ---
+            const statiAllenatore = ['in_attesa','in_valutazione','video_fatto','video_in_valutazione'];
+            const statiLabel = ['IN ATTESA','IN VALUTAZIONE','VIDEO FATTO','VIDEO IN VAL.'];
+            const idxCorrente = statiAllenatore.indexOf(abl.stato_allenatore);
+
+            const stepsHtml = statiAllenatore.map((s, i) => {
+                const isActive = i === idxCorrente;
+                const isDone = i < idxCorrente;
+                const color = isDone ? 'var(--epk-gold-dim)' : isActive ? 'var(--epk-gold)' : 'rgba(245,230,200,0.2)';
+                const weight = isActive ? 'bold' : 'normal';
+                return `<div style="flex:1;text-align:center;font-size:9px;text-transform:uppercase;color:${color};font-weight:${weight};padding:6px 2px;border-bottom:3px solid ${isActive ? 'var(--epk-gold)' : isDone ? 'var(--epk-gold-dim)' : 'transparent'};">${statiLabel[i]}</div>`;
+            }).join('');
+
+            const semaforoMap = {
+                giallo: { emoji: '🟡', testo: 'IN ATTESA / NON VISTO', color: '#f9a825' },
+                rosso:  { emoji: '🔴', testo: 'VALIDAZIONE RESPINTA',  color: '#ef4444' },
+                verde:  { emoji: '🟢', testo: 'VALIDAZIONE APPROVATA', color: '#22c55e' }
+            };
+            const sem = semaforoMap[abl.stato_validatore] || semaforoMap.giallo;
+
+            const nomeAllenatore = abl.allenatore?.valore?.toUpperCase() || 'N/D';
+            const nomeAllievo = abl.allievo?.valore ? ` (via ${abl.allievo.valore.toUpperCase()})` : '';
+            const nomeValidatore = abl.validatore?.valore?.toUpperCase() || 'N/D';
+
+            container.innerHTML = `
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
+                    <span style="background:#78350f;color:#fbbf24;padding:4px 12px;font-size:10px;font-weight:bold;letter-spacing:0.1em;">🛡 ${statiLabel[idxCorrente] || abl.stato_allenatore.toUpperCase()}</span>
+                    <span style="font-size:10px;color:rgba(245,230,200,0.5);">Scadenza: ${abl.data_scadenza}</span>
+                </div>
+                <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--epk-gold-dim);overflow:hidden;">${stepsHtml}</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.2);border:1px solid var(--epk-gold-dim);padding:12px 16px;">
+                    <div>
+                        <div style="font-size:9px;text-transform:uppercase;color:rgba(245,230,200,0.5);margin-bottom:4px;">RISPOSTA VALIDATORE</div>
+                        <div style="font-size:12px;font-weight:bold;color:${sem.color};">${sem.emoji} ${sem.testo}</div>
+                    </div>
+                    <div style="font-size:10px;text-align:right;color:rgba(245,230,200,0.5);text-transform:uppercase;">
+                        <div>Allenatore: <strong style="color:var(--epk-parchment);">${nomeAllenatore}${nomeAllievo}</strong></div>
+                        <div>Validatore: <strong style="color:var(--epk-parchment);">${nomeValidatore}</strong></div>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (e) {
+        console.error('Errore renderAbilitazioneAtleta:', e);
+        container.innerHTML = '<div style="color:#ef4444;font-size:11px;">Errore caricamento stato abilitazione.</div>';
+    }
+}
+
+async function inviaRichiestaAbilitazione(anno) {
+    const select = document.getElementById('epk-abl-soggetto-select');
+    if (!select || !select.value) { alert('Seleziona un allenatore o allievo allenatore.'); return; }
+
+    const soggettoId = parseInt(select.value);
+    try {
+        const { error } = await supabaseClient.rpc('crea_richiesta_abilitazione', {
+            p_anno: anno,
+            p_soggetto_opzione_id: soggettoId
+        });
+        if (error) throw error;
+        await renderAbilitazioneAtleta(); // Ricarica
+    } catch (e) {
+        console.error('Errore invio richiesta abilitazione:', e);
+        alert('Errore: ' + (e.message || 'impossibile inviare la richiesta.'));
     }
 }
 
@@ -4734,61 +4895,135 @@ async function salvaTuttaLaListaGenerale() {
 async function renderAllenatoreDashboard(opzioneId) {
     const container = document.getElementById('epk-allenatore-content');
     if (!container) return;
-    container.innerHTML = '<div style="text-align: center; padding: 20px;">Caricamento atleti...</div>';
+    container.innerHTML = '<div style="text-align:center;padding:20px;">Caricamento atleti...</div>';
+
+    const annoCorrente = new Date().getFullYear();
+    const effId = opzioneId;
+    if (!effId) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:gray;">ID allenatore non trovato.</div>';
+        return;
+    }
 
     try {
-        // Carica tutti i profili che hanno questo allenatore_id
-        // Nota: alias esplicito "gruppo_storico:gruppo_storico_id" richiesto da PostgREST
-        // per disambiguare il join quando ci sono più FK verso la stessa tabella
-        const { data: atleti, error } = await supabaseClient
-            .from('epika_profili')
-            .select('nome_di_battaglia, popolo, ruolo_combattimento, primo_anno_partecipazione, gruppo_storico:gruppo_storico_id(nome)')
-            .eq('allenatore_id', opzioneId)
-            .eq('profilo_completato', true)
-            .order('nome_di_battaglia', { ascending: true });
+        // 1. Risolvi tutti i profilo_id seguiti (diretti + via allievi) — funzione esistente riga 5130+
+        const allProfiloIds = await getAllenatoreAllieviIds(effId);
 
-        if (error) throw error;
-
-        if (!atleti || atleti.length === 0) {
-            container.innerHTML = '<div style="text-align: center; padding: 20px; color: gray;">Nessun atleta ti ha inserito come suo allenatore nel portale.</div>';
+        if (!allProfiloIds || allProfiloIds.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:gray;">Nessun atleta ti ha inserito come allenatore nel portale.</div>';
             return;
         }
 
-        let html = `
-            <div style="overflow-x: auto; margin-top: 16px;">
-                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; text-transform: uppercase;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold);">
-                            <th style="padding: 10px;">Nome di Battaglia</th>
-                            <th style="padding: 10px;">Gruppo Storico</th>
-                            <th style="padding: 10px;">Cultura / Popolo</th>
-                            <th style="padding: 10px;">Ruolo Militare</th>
-                            <th style="padding: 10px;">Primo Anno Part.</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+        // 2. Carica dati profilo
+        const { data: profili, error: pErr } = await supabaseClient
+            .from('epika_profili')
+            .select('id, nome_di_battaglia, popolo, ruolo_combattimento, primo_anno_partecipazione, gruppo_storico:gruppo_storico_id(nome)')
+            .in('id', allProfiloIds)
+            .eq('profilo_completato', true)
+            .order('nome_di_battaglia', { ascending: true });
+        if (pErr) throw pErr;
 
-        atleti.forEach(a => {
-            const gruppoNome = a.gruppo_storico ? a.gruppo_storico.nome : 'N/D';
+        // 3. Carica nomi reali da utenti
+        const { data: utenti } = await supabaseClient
+            .from('utenti')
+            .select('id, nome, cognome')
+            .in('id', allProfiloIds);
+        const utentiMap = {};
+        (utenti || []).forEach(u => { utentiMap[u.id] = `${u.nome} ${u.cognome}`; });
+
+        // 4. Carica abilitazioni anno corrente
+        const { data: abl } = await supabaseClient
+            .from('epika_scab_abilitazioni')
+            .select('id, profilo_id, stato_allenatore, stato_validatore')
+            .in('profilo_id', allProfiloIds)
+            .eq('anno_abilitativo', annoCorrente);
+        const ablMap = {};
+        (abl || []).forEach(a => { ablMap[a.profilo_id] = a; });
+
+        const statiLabel = {
+            'in_attesa': 'IN ATTESA',
+            'in_valutazione': 'IN VALUTAZIONE',
+            'video_fatto': 'VIDEO FATTO',
+            'video_in_valutazione': 'VIDEO IN VALUTAZIONE'
+        };
+        const semLabel = { giallo: '🟡 IN ATTESA', rosso: '🔴 RESPINTA', verde: '🟢 APPROVATA' };
+        const semColor = { giallo: '#f9a825', rosso: '#ef4444', verde: '#22c55e' };
+
+        let html = `
+            <p style="font-size:10px;color:rgba(245,230,200,0.5);text-transform:uppercase;margin-bottom:12px;">
+                Anno Abilitativo: <strong style="color:var(--epk-gold);">${annoCorrente}</strong> — 
+                Include atleti diretti e atleti seguiti dai tuoi Allievi Allenatori.
+            </p>
+            <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;text-align:left;font-size:11px;text-transform:uppercase;">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--epk-gold);color:var(--epk-gold);">
+                        <th style="padding:10px;">Nome Vero</th>
+                        <th style="padding:10px;">Nome di Battaglia</th>
+                        <th style="padding:10px;">Gruppo Storico</th>
+                        <th style="padding:10px;">Stato Abilitazione</th>
+                        <th style="padding:10px;">Risposta Validatore</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        (profili || []).forEach(p => {
+            const nomeVero = utentiMap[p.id] || 'N/D';
+            const gruppo = p.gruppo_storico?.nome || 'N/D';
+            const record = ablMap[p.id];
+
+            let statoCell, semCell;
+            if (!record) {
+                statoCell = `<td style="padding:10px;color:rgba(245,230,200,0.3);font-style:italic;">Non ha richiesto</td>`;
+                semCell = `<td style="padding:10px;">—</td>`;
+            } else {
+                statoCell = `
+                    <td style="padding:10px;">
+                        <select onchange="aggiornaStatoAllenatore(${record.id}, this.value, this)"
+                                style="background:#1a0a0a;border:1px solid var(--epk-gold-dim);color:var(--epk-parchment);font-size:10px;padding:4px;text-transform:uppercase;">
+                            <option value="in_attesa" ${record.stato_allenatore==='in_attesa'?'selected':''}>IN ATTESA</option>
+                            <option value="in_valutazione" ${record.stato_allenatore==='in_valutazione'?'selected':''}>IN VALUTAZIONE</option>
+                            <option value="video_fatto" ${record.stato_allenatore==='video_fatto'?'selected':''}>VIDEO FATTO</option>
+                            <option value="video_in_valutazione" ${record.stato_allenatore==='video_in_valutazione'?'selected':''}>VIDEO IN VALUTAZIONE</option>
+                        </select>
+                    </td>`;
+                const sem = record.stato_validatore || 'giallo';
+                semCell = `<td style="padding:10px;font-weight:bold;color:${semColor[sem]};">${semLabel[sem]}</td>`;
+            }
+
             html += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${a.nome_di_battaglia}</td>
-                    <td style="padding: 10px;">${gruppoNome}</td>
-                    <td style="padding: 10px;">${a.popolo || 'N/D'}</td>
-                    <td style="padding: 10px;">${a.ruolo_combattimento}</td>
-                    <td style="padding: 10px; text-align: center;">${a.primo_anno_partecipazione}</td>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:10px;">${nomeVero}</td>
+                    <td style="padding:10px;font-weight:bold;color:var(--epk-gold);font-family:'Cinzel',serif;">${p.nome_di_battaglia}</td>
+                    <td style="padding:10px;">${gruppo}</td>
+                    ${statoCell}
+                    ${semCell}
                 </tr>`;
         });
 
-        html += `
-                    </tbody>
-                </table>
-            </div>`;
+        html += '</tbody></table></div>';
         container.innerHTML = html;
 
     } catch (e) {
-        console.error("Errore caricamento atleti allenatore:", e);
-        container.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento della lista atleti.</div>';
+        console.error('Errore renderAllenatoreDashboard:', e);
+        container.innerHTML = '<div style="color:#ef4444;padding:20px;">Errore durante il caricamento della lista atleti.</div>';
+    }
+}
+
+async function aggiornaStatoAllenatore(abilitazioneId, nuovoStato, selectEl) {
+    const vecchioValore = selectEl.dataset.prevValue || selectEl.value;
+    selectEl.dataset.prevValue = vecchioValore;
+    try {
+        const { error } = await supabaseClient.rpc('aggiorna_stato_allenatore', {
+            p_abilitazione_id: abilitazioneId,
+            p_nuovo_stato: nuovoStato,
+            p_note: null
+        });
+        if (error) throw error;
+        selectEl.dataset.prevValue = nuovoStato;
+    } catch (e) {
+        console.error('Errore aggiornamento stato allenatore:', e);
+        selectEl.value = vecchioValore; // Ripristina
+        alert('Errore: ' + (e.message || 'impossibile aggiornare lo stato.'));
     }
 }
 
@@ -4840,6 +5075,68 @@ async function renderAllievoAllenatoreDashboard(opzioneId) {
 
         html += `</div>`;
         container.innerHTML = html;
+
+        // ---- SEZIONE ATLETI SEGUITI (SOLO LETTURA) ----
+        const annoCorrente = new Date().getFullYear();
+        const allProfiloIds = await getAllievoCoachAllieviIds(opzioneId);
+
+        if (allProfiloIds && allProfiloIds.length > 0) {
+            const { data: profili } = await supabaseClient
+                .from('epika_profili').select('id, nome_di_battaglia').in('id', allProfiloIds).eq('profilo_completato', true);
+
+            const { data: abl } = await supabaseClient
+                .from('epika_scab_abilitazioni')
+                .select('id, profilo_id, stato_allenatore, stato_validatore, allenatore:allenatore_opzione_id(valore)')
+                .in('profilo_id', allProfiloIds)
+                .eq('anno_abilitativo', annoCorrente);
+            const ablMap = {};
+            (abl || []).forEach(a => { ablMap[a.profilo_id] = a; });
+
+            const statiAll = { in_attesa: { t: 'IN ATTESA', c: 'rgba(245,230,200,0.4)' }, in_valutazione: { t: 'IN VALUTAZIONE', c: '#f9a825' }, video_fatto: { t: 'VIDEO FATTO', c: '#fb923c' }, video_in_valutazione: { t: 'VIDEO IN VAL.', c: '#f97316' }};
+            const semLabel = { giallo: '🟡 IN ATTESA', rosso: '🔴 RESPINTA', verde: '🟢 APPROVATA' };
+            const semColor = { giallo: '#f9a825', rosso: '#ef4444', verde: '#22c55e' };
+
+            let atlHtml = `
+                <div class="epk-card" style="margin-top:16px;">
+                    <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--epk-gold-dim);padding-bottom:8px;margin-bottom:16px;">
+                        <h2 class="epk-headline" style="margin:0;font-size:16px;">ATLETI SEGUITI — ANNO ABILITATIVO ${annoCorrente}</h2>
+                        <span style="background:#1c3a2f;color:#86efac;font-size:9px;padding:3px 8px;font-weight:bold;letter-spacing:0.1em;">👁 SOLA LETTURA</span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;text-align:left;font-size:11px;text-transform:uppercase;">
+                        <thead>
+                            <tr style="border-bottom:2px solid var(--epk-gold);color:var(--epk-gold);">
+                                <th style="padding:10px;">Nome di Battaglia</th>
+                                <th style="padding:10px;">Allenatore Supervisore</th>
+                                <th style="padding:10px;">Stato Abilitazione</th>
+                                <th style="padding:10px;">Risposta Validatore</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            (profili || []).forEach(p => {
+                const record = ablMap[p.id];
+                if (!record) {
+                    atlHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px;font-weight:bold;color:var(--epk-gold);">${p.nome_di_battaglia}</td>
+                        <td colspan="3" style="padding:10px;color:rgba(245,230,200,0.3);font-style:italic;">Non ha richiesto abilitazione</td>
+                    </tr>`;
+                    return;
+                }
+                const sa = statiAll[record.stato_allenatore] || { t: record.stato_allenatore, c: 'gray' };
+                const sem = record.stato_validatore || 'giallo';
+                const nomeAll = record.allenatore?.valore?.toUpperCase() || 'N/D';
+                atlHtml += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px;font-weight:bold;color:var(--epk-gold);font-family:'Cinzel',serif;">${p.nome_di_battaglia}</td>
+                        <td style="padding:10px;">${nomeAll}</td>
+                        <td style="padding:10px;"><span style="color:${sa.c};font-weight:bold;">${sa.t}</span></td>
+                        <td style="padding:10px;font-weight:bold;color:${semColor[sem]};">${semLabel[sem]}</td>
+                    </tr>`;
+            });
+            atlHtml += '</tbody></table></div></div>';
+            container.insertAdjacentHTML('beforeend', atlHtml);
+        }
 
     } catch (e) {
         console.error("Errore caricamento abbinamenti allievo:", e);
@@ -4919,9 +5216,115 @@ async function renderValidatoreDashboard(opzioneId) {
         html += `</div>`;
         container.innerHTML = html;
 
+        // ---- SEZIONE ATLETI DA VALIDARE ----
+        const annoCorrente = new Date().getFullYear();
+        const allProfiloIds = await getValidatoreAllieviIds(opzioneId);
+
+        if (allProfiloIds && allProfiloIds.length > 0) {
+            const { data: profili } = await supabaseClient
+                .from('epika_profili')
+                .select('id, nome_di_battaglia')
+                .in('id', allProfiloIds)
+                .eq('profilo_completato', true);
+
+            const { data: utenti } = await supabaseClient
+                .from('utenti').select('id, nome, cognome').in('id', allProfiloIds);
+            const utentiMap = {};
+            (utenti || []).forEach(u => { utentiMap[u.id] = `${u.nome} ${u.cognome}`; });
+
+            const { data: abl } = await supabaseClient
+                .from('epika_scab_abilitazioni')
+                .select('id, profilo_id, allenatore_opzione_id, stato_allenatore, stato_validatore, allenatore:allenatore_opzione_id(valore)')
+                .in('profilo_id', allProfiloIds)
+                .eq('anno_abilitativo', annoCorrente);
+            const ablMap = {};
+            (abl || []).forEach(a => { ablMap[a.profilo_id] = a; });
+
+            const statiAllLabel = {
+                'in_attesa': { t: 'IN ATTESA', c: 'rgba(245,230,200,0.4)' },
+                'in_valutazione': { t: 'IN VALUTAZIONE', c: '#f9a825' },
+                'video_fatto': { t: 'VIDEO FATTO', c: '#fb923c' },
+                'video_in_valutazione': { t: 'VIDEO IN VAL.', c: '#f97316' }
+            };
+            const semColor = { giallo: '#f9a825', rosso: '#ef4444', verde: '#22c55e' };
+
+            let atlHtml = `
+                <div class="epk-card" style="margin-top:16px;">
+                    <h2 class="epk-headline" style="margin-top:0;font-size:16px;border-bottom:1px solid var(--epk-gold-dim);padding-bottom:8px;margin-bottom:16px;">
+                        ATLETI DA VALIDARE — ANNO ABILITATIVO ${annoCorrente}
+                    </h2>
+                    <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;text-align:left;font-size:11px;text-transform:uppercase;">
+                        <thead>
+                            <tr style="border-bottom:2px solid var(--epk-gold);color:var(--epk-gold);">
+                                <th style="padding:10px;">Nome Vero</th>
+                                <th style="padding:10px;">Nome di Battaglia</th>
+                                <th style="padding:10px;">Allenatore</th>
+                                <th style="padding:10px;">Stato Allenatore</th>
+                                <th style="padding:10px;">Semaforo Validatore</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            (profili || []).forEach(p => {
+                const nomeVero = utentiMap[p.id] || 'N/D';
+                const record = ablMap[p.id];
+                if (!record) {
+                    atlHtml += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px;">${nomeVero}</td>
+                        <td style="padding:10px;color:var(--epk-gold);font-family:'Cinzel',serif;">${p.nome_di_battaglia}</td>
+                        <td colspan="3" style="padding:10px;color:rgba(245,230,200,0.3);font-style:italic;">Non ha richiesto abilitazione</td>
+                    </tr>`;
+                    return;
+                }
+                const sa = statiAllLabel[record.stato_allenatore] || { t: record.stato_allenatore, c: 'gray' };
+                const sem = record.stato_validatore || 'giallo';
+                const nomeAllenatore = record.allenatore?.valore?.toUpperCase() || 'N/D';
+                atlHtml += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px;">${nomeVero}</td>
+                        <td style="padding:10px;font-weight:bold;color:var(--epk-gold);font-family:'Cinzel',serif;">${p.nome_di_battaglia}</td>
+                        <td style="padding:10px;">${nomeAllenatore}</td>
+                        <td style="padding:10px;"><span style="color:${sa.c};font-weight:bold;">${sa.t}</span></td>
+                        <td style="padding:10px;">
+                            <select onchange="aggiornaStatoValidatore(${record.id}, this.value, this)"
+                                    style="background:#1a0a0a;border:1px solid ${semColor[sem]};color:${semColor[sem]};font-size:10px;padding:4px;text-transform:uppercase;font-weight:bold;">
+                                <option value="giallo" ${sem==='giallo'?'selected':''}>🟡 IN ATTESA</option>
+                                <option value="verde" ${sem==='verde'?'selected':''}>🟢 APPROVATA</option>
+                                <option value="rosso" ${sem==='rosso'?'selected':''}>🔴 RESPINTA</option>
+                            </select>
+                        </td>
+                    </tr>`;
+            });
+
+            atlHtml += '</tbody></table></div></div>';
+            container.insertAdjacentHTML('beforeend', atlHtml);
+        }
+
     } catch (e) {
         console.error("Errore caricamento strutture validatore:", e);
         container.innerHTML = '<div style="color: #ef4444; padding: 20px;">Errore durante il caricamento delle strutture.</div>';
+    }
+}
+
+async function aggiornaStatoValidatore(abilitazioneId, nuovoStato, selectEl) {
+    const vecchioValore = selectEl.dataset.prevValue || selectEl.value;
+    selectEl.dataset.prevValue = vecchioValore;
+    try {
+        const { error } = await supabaseClient.rpc('aggiorna_stato_validatore', {
+            p_abilitazione_id: abilitazioneId,
+            p_nuovo_stato: nuovoStato,
+            p_note: null
+        });
+        if (error) throw error;
+        selectEl.dataset.prevValue = nuovoStato;
+        const color = { giallo: '#f9a825', rosso: '#ef4444', verde: '#22c55e' }[nuovoStato] || '#c9a84c';
+        selectEl.style.borderColor = color;
+        selectEl.style.color = color;
+    } catch (e) {
+        console.error('Errore aggiornamento semaforo validatore:', e);
+        selectEl.value = vecchioValore;
+        alert('Errore: ' + (e.message || 'impossibile aggiornare il semaforo.'));
     }
 }
 
