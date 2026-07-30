@@ -81,13 +81,17 @@ BEGIN
         v_allievo_id := NULL;
         SELECT validatore_id INTO v_validatore_id
         FROM public.epika_scab_abbinamenti
-        WHERE allenatore_ref_id = v_allenatore_id OR allenatori_co_ids @> ARRAY[v_allenatore_id]
+        WHERE (allenatore_ref_id = v_allenatore_id OR allenatori_co_ids @> ARRAY[v_allenatore_id])
+          AND validatore_id IS NOT NULL
+        ORDER BY id ASC
         LIMIT 1;
     ELSIF v_tipo = 'scab_allievo_allenatore' THEN
         v_allievo_id := p_soggetto_opzione_id;
         SELECT allenatore_ref_id, validatore_id INTO v_allenatore_id, v_validatore_id
         FROM public.epika_scab_abbinamenti
-        WHERE allievo_ref_id = v_allievo_id OR allievi_ids @> ARRAY[v_allievo_id]
+        WHERE (allievo_ref_id = v_allievo_id OR allievi_ids @> ARRAY[v_allievo_id])
+          AND validatore_id IS NOT NULL
+        ORDER BY id ASC
         LIMIT 1;
     ELSE
         RAISE EXCEPTION 'Tipo soggetto non valido per abilitazione: %', v_tipo;
@@ -229,7 +233,9 @@ CREATE OR REPLACE FUNCTION public.aggiorna_stato_validatore(
 )
 RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
+    v_rec_id                BIGINT;
     v_validatore_opzione_id BIGINT;
+    v_allenatore_opzione_id BIGINT;
     v_stato_validatore_cur  TEXT;
     v_stato_allenatore      TEXT;
     v_caller_opzione_id     BIGINT;
@@ -243,34 +249,52 @@ BEGIN
         RAISE EXCEPTION 'Stato validatore non valido: %', p_nuovo_stato;
     END IF;
 
-    -- 2. Recupera stato corrente del record in una sola query
-    SELECT validatore_opzione_id, stato_validatore, stato_allenatore
-    INTO v_validatore_opzione_id, v_stato_validatore_cur, v_stato_allenatore
+    -- 2. Recupera record esplicito per id
+    SELECT id, validatore_opzione_id, allenatore_opzione_id, stato_validatore, stato_allenatore
+    INTO v_rec_id, v_validatore_opzione_id, v_allenatore_opzione_id, v_stato_validatore_cur, v_stato_allenatore
     FROM public.epika_scab_abilitazioni
     WHERE id = p_abilitazione_id;
 
-    IF v_validatore_opzione_id IS NULL THEN
-        RAISE EXCEPTION 'Richiesta di abilitazione non trovata: %', p_abilitazione_id;
+    IF v_rec_id IS NULL THEN
+        RAISE EXCEPTION 'Richiesta di abilitazione % non trovata nel sistema.', p_abilitazione_id;
     END IF;
 
-    -- 3. Autorizzazione: il chiamante deve essere il validatore del record
+    -- 3. Auto-healing se validatore_opzione_id è NULL
+    IF v_validatore_opzione_id IS NULL THEN
+        SELECT validatore_id INTO v_validatore_opzione_id
+        FROM public.epika_scab_abbinamenti
+        WHERE (allenatore_ref_id = v_allenatore_opzione_id OR allenatori_co_ids @> ARRAY[v_allenatore_opzione_id])
+          AND validatore_id IS NOT NULL
+        ORDER BY id ASC
+        LIMIT 1;
+
+        IF v_validatore_opzione_id IS NOT NULL THEN
+            UPDATE public.epika_scab_abilitazioni
+            SET validatore_opzione_id = v_validatore_opzione_id
+            WHERE id = p_abilitazione_id;
+        ELSE
+            RAISE EXCEPTION 'Impossibile determinare un validatore di riferimento per questa richiesta.';
+        END IF;
+    END IF;
+
+    -- 4. Autorizzazione: il chiamante deve essere il validatore del record
     SELECT id INTO v_caller_opzione_id
     FROM public.epika_opzioni
     WHERE utente_id = auth.uid() AND tipo = 'scab_validatore'
     LIMIT 1;
 
     IF v_caller_opzione_id IS NULL OR v_caller_opzione_id <> v_validatore_opzione_id THEN
-        RAISE EXCEPTION 'Non autorizzato: non sei il validatore di questa richiesta.';
+        RAISE EXCEPTION 'Non autorizzato: non sei il validatore designato per questa richiesta.';
     END IF;
 
-    -- 4. VINCOLO DI FLUSSO: Il validatore può agire SOLO in due casi:
+    -- 5. VINCOLO DI FLUSSO: Il validatore può agire SOLO in due casi:
     --    A) lo stato allenatore è 'video_in_valutazione' (flusso normale)
     --    B) lo stato validatore corrente è 'verde' (il validatore sta togliendo la propria approvazione)
     IF v_stato_allenatore != 'video_in_valutazione' AND v_stato_validatore_cur != 'verde' THEN
         RAISE EXCEPTION 'Impossibile modificare il semaforo: l allenatore non ha ancora inviato il video in valutazione.';
     END IF;
 
-    -- 5. Aggiornamento stato con eventuale auto-reset dello stato allenatore
+    -- 6. Aggiornamento stato con eventuale auto-reset dello stato allenatore
     --    Se il validatore imposta ROSSO, lo stato allenatore torna a IN_VALUTAZIONE
     --    per permettere all allenatore di ricominciare il ciclo di preparazione.
     UPDATE public.epika_scab_abilitazioni

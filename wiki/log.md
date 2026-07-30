@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-30] fix | Hotfix Validatori NULL & Auto-Healing RPC SCAB (v1.03.60)
+- **Database (Supabase DML & RPCs):**
+  - Eseguita la patch dati universale per associare i validatori mancanti ai record `epika_scab_abilitazioni` con `validatore_opzione_id = NULL`.
+  - Aggiornata la RPC `public.crea_richiesta_abilitazione` aggiungendo il filtro `validatore_id IS NOT NULL` ed `ORDER BY id ASC` per evitare l'assegnazione di validatori nulli in caso di abbinamenti multipli.
+  - Aggiornata la RPC `public.aggiorna_stato_validatore` implementando il meccanismo di **Auto-Healing**: se la richiesta ha validatore NULL, l'RPC lo risolve al volo e lo corregge nel DB prima della verifica autorizzativa.
+- **Frontend (`portal/epika.js`):**
+  - Aggiornato il blocco `catch` di `aggiornaStatoValidatore` per forzare il re-render della dashboard su eccezione, impedendo blocchi visivi spuri dell'interfaccia.
+- **Versionamento:** Eseguito `npm run bump` portando la versione globale a `v1.03.60`.
+
 ## [2026-07-30] fix | Macchina a Stati Abilitazione SCAB — Lock Verde & Auto-Reset (v1.03.59)
 - **Database (Supabase RPCs):**
   - Aggiornata la RPC `public.aggiorna_stato_validatore` per consentire la modifica del semaforo SOLO se `stato_allenatore = 'video_in_valutazione'` oppure se si sta revocando un semaforo `verde` preesistente.

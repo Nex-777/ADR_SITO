@@ -5344,8 +5344,9 @@ async function aggiornaStatoValidatore(abilitazioneId, nuovoStato, selectEl) {
         await renderValidatoreDashboard(opzioneId);
     } catch (e) {
         console.error('Errore aggiornamento semaforo validatore:', e);
-        selectEl.value = vecchioValore;
         alert('Errore: ' + (e.message || 'impossibile aggiornare il semaforo.'));
+        const opzioneId = simulatedScabOpzioneId || currentScabOpzioneId;
+        await renderValidatoreDashboard(opzioneId);
     }
 }
 
