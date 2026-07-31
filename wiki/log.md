@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-01] feat | Apertura Portale Epika in Nuova Tab Browser & Smart Tab (v1.03.81)
+- **Frontend Dashboard (`portal/dashboard.html`)**:
+  - Convertiti i pulsanti della sidebar laterale "PORTALE EPIKA" (`#tab-btn-user-epika`) e "GESTIONE EPIKA" (`#tab-btn-epika-presidente`) da elementi `<button>` con `window.location.href` a tag ancora nativi `<a>` con `target="portale_epika"`.
+  - Attivato il comportamento **Smart Tab**: il primo click apre Epika in un nuovo tab; i click successivi riportano in primo piano la scheda Epika già aperta evitando la duplicazione di schede browser.
+  - Aggiornato il selettore JS del generatore del menu mobile overlay (`const sidebarButtons = document.querySelectorAll('aside [id^="tab-btn-"]')`) e integrato l'invocazione sincrona diretta di `window.open(href, target)` per aggirare i pop-up blocker dei browser mobile (iOS Safari).
+- **Versione**: Incrementata la versione globale a `v1.03.81`.
+
+---
+
 ## [2026-07-31] data | Allineamento Integrale Soci Storici e Direttivo fino al 31/12/2026
 - **Database & Script (`scripts/align_historic_soci.js`)**:
   - Eseguito l'allineamento completo del database per tutti i 7 account storici con ruolo `socio_approvato` o ruoli di Direttivo (incluso l'account del Presidente `nexglg@gmail.com`).
