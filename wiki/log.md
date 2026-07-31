@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] fix | Sanatoria Martina Baratta & Blocco Preventivo Checkout Epika (v1.03.76)
+- **Database & Sanatoria (`scripts/fix_martina_baratta.js`)**:
+  - Eseguita la sanatoria dell'utente Martina Baratta (`e4c0ceda-9d31-49d2-a2a9-ce5fe52d6347`), completando l'anagrafica, l'indirizzo, i contatti e l'iscrizione in `registro_approvazioni` (stato `IN_ATTESA`, tipo `TESSERATO`, livello `BASE`).
+  - Rimossa l'anomalia dallo stato `vw_registrazioni_incomplete`, mantenendo intatto il biglietto Epika già pagato su Stripe (`pi_3TzEFP7wrOk84bdx1qwquwXf`).
+- **Backend Checkout API (`api/create-checkout-session.js`)**:
+  - Integrato un controllo preventivo di blocco che impedisce agli utenti con registrazione Adrenalina incompleta (`vw_registrazioni_incomplete`) di procedere all'acquisto di eventi Epika o corsi prima di aver completato il tesseramento base.
+
+---
+
 ## [2026-07-31] feat | Banner Universale Certificato Medico in Home Atleta & Landing Panoramica (v1.03.75)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Modificato l'atterraggio degli atleti (`currentViewContext === 'athlete'`): ora tutti gli atleti al login atterrano direttamente sulla propria Home (`panoramica`) invece di essere forzati sul tab certificato.

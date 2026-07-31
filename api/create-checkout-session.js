@@ -100,6 +100,19 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: 'Sei già iscritto a questo evento storico.' });
             }
 
+            // Blocco preventivo: utenti con registrazione Adrenalina incompleta non possono acquistare eventi Epika
+            const { data: isRegistrazioneIncompleta } = await supabase
+                .from('vw_registrazioni_incomplete')
+                .select('utente_id')
+                .eq('utente_id', utenteId)
+                .maybeSingle();
+
+            if (isRegistrazioneIncompleta) {
+                return res.status(403).json({
+                    error: 'Per partecipare agli eventi Epika è necessario completare il tesseramento ad Adrenalina Club. Completa la registrazione dal portale e riprova.'
+                });
+            }
+
             const costo = parseFloat(evento.costo || 0);
 
             // Se l'evento è gratuito, lo iscriviamo direttamente senza Stripe
