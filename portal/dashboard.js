@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.78"
+                VERSION: "1.03.79"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -322,7 +322,7 @@
                 try {
                     const res = await supabaseClient
                         .from('utenti')
-                        .select('*, anagrafiche(id, certificati_medici(*))')
+                        .select('*, anagrafiche(id, certificati_medici(*), registro_approvazioni(*))')
                         .eq('id', user.id)
                         .maybeSingle();
                     profile = res.data;
@@ -551,21 +551,44 @@
                     iconColor = "text-yellow-500";
                 }
 
+                const hasPendingPayment = anag && (
+                    (Array.isArray(anag.registro_approvazioni) && anag.registro_approvazioni.some(a => a.stato === 'IN_ATTESA_PAGAMENTO')) ||
+                    (anag.registro_approvazioni && anag.registro_approvazioni.stato === 'IN_ATTESA_PAGAMENTO')
+                );
+                let isPendingPaymentBanner = false;
+
+                if (!bannerTitle && hasPendingPayment) {
+                    bannerTitle = "AZIONE RICHIESTA: SALDO QUOTA TESSERAMENTO ADRENALINA";
+                    bannerMessage = "La tua richiesta di tesseramento Adrenalina è stata approvata ed è in attesa del saldo della quota associativa. Per completare la procedura ed attivare la tua tessera, effettua il pagamento sicuro online.";
+                    bannerColorClass = "border-blue-500/40 bg-blue-500/10 border-l-4 border-blue-500";
+                    iconColor = "text-blue-500";
+                    isPendingPaymentBanner = true;
+                }
+
                 if (bannerTitle) {
                     const alertDiv = document.createElement('div');
                     alertDiv.id = 'legacy-cert-alert-banner';
                     alertDiv.className = `${bannerColorClass} p-4 mt-4 rounded-r shadow-lg transition-all`;
+                    const actionBtnHtml = isPendingPaymentBanner ? `
+                        <button onclick="vaiAlPagamento()" class="bg-blue-600 hover:bg-blue-500 text-white font-headline text-[10px] font-bold px-4 py-2 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm mt-1 shadow-md">
+                            <span class="material-symbols-outlined text-xs">credit_card</span>
+                            PAGA ORA LA QUOTA TESSERAMENTO
+                        </button>
+                    ` : `
+                        <button onclick="switchTab('user_certificato')" class="bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm mt-1">
+                            <span class="material-symbols-outlined text-xs">upload_file</span>
+                            VAI ALLA SEZIONE CERTIFICATO MEDICO
+                        </button>
+                    `;
+
                     alertDiv.innerHTML = `
                         <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined ${iconColor} text-xl shrink-0 mt-0.5">warning</span>
+                            <span class="material-symbols-outlined ${iconColor} text-xl shrink-0 mt-0.5">${isPendingPaymentBanner ? 'payments' : 'warning'}</span>
                             <div class="space-y-2 flex-grow">
                                 <h3 class="font-headline font-bold ${iconColor} text-xs uppercase tracking-wider">${bannerTitle}</h3>
                                 <p class="text-[11px] text-gray-300 leading-relaxed font-sans">${bannerMessage}</p>
                                 <div>
-                                    <button onclick="switchTab('user_certificato')" class="bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm mt-1">
-                                        <span class="material-symbols-outlined text-xs">upload_file</span>
-                                        VAI ALLA SEZIONE CERTIFICATO MEDICO
-                                    </button>
+                                    ${actionBtnHtml}
                                 </div>
                             </div>
                         </div>
@@ -579,6 +602,7 @@
                 // Mostra pulsanti atleti base
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
+                document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
                 
                 // Show epika button for athletes
                 const epikaBtn = document.getElementById('tab-btn-user-epika');

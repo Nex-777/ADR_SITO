@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] feature | Abilitazione Checkout Quota Tesseramento & Banner Dashboard Atleti (v1.03.79)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Abilitata la visibilità del tab "Pagamenti e Ricevute" (`#tab-btn-user_pagamenti`) anche per gli utenti con ruolo atleta/tesserato (`tesserato_esterno`).
+  - Integrato nella select relazionale di `checkSession()` il recupero della tabella `registro_approvazioni(*)`.
+  - Inserito nella Panoramica (Home Page Atleta) un banner visivo di colore blu ("AZIONI RICHIESTA: SALDO QUOTA TESSERAMENTO ADRENALINA") per gli utenti in stato `IN_ATTESA_PAGAMENTO`, contenente il pulsante diretto "PAGA ORA LA QUOTA TESSERAMENTO" collegato a Stripe (`pagamento.html`).
+- **Database / Backend Script (`scripts/fix_martina_quota.js`)**:
+  - Sanata la posizione dell'utente Martina Baratta (`martinabara02@gmail.com`), impostando `quota_totale = 25.00` € in `utenti` per sbloccare la validazione di sicurezza in `pagamento.js`.
+
+---
+
 ## [2026-07-31] fix | Allineamento Ordinamento Certificati Medici Atleta vs Admin (v1.03.78)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Modificato il criterio della clausola `.order()` in `loadUserCertificato()` da `data_rilascio` a `created_at` decrescente (`.order('created_at', { ascending: false })`).
