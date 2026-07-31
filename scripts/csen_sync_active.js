@@ -155,14 +155,15 @@ async function syncCsen() {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // -------------------------------------------------------
-    // STEP 1: Correggi i PENDING che hanno già il numero tessera
-    // (bug legacy: stati non aggiornati da run precedenti)
+    // STEP 1: Correggi i PENDING che hanno già il numero tessera reale
+    // (bug legacy: stati non aggiornati da run precedenti, escludendo codici temporanei IT...)
     // -------------------------------------------------------
     const { data: pendingConTessera } = await supabase
         .from('registro_tesserati')
         .select('id_tesserato, numero_tessera_csen')
         .eq('sync_csen_status', 'PENDING')
-        .not('numero_tessera_csen', 'is', null);
+        .not('numero_tessera_csen', 'is', null)
+        .not('numero_tessera_csen', 'ilike', 'IT%');
 
     if (pendingConTessera && pendingConTessera.length > 0) {
         console.log(`\n[FIX LEGACY] Correzione ${pendingConTessera.length} record PENDING con numero tessera già presente...`);
@@ -178,7 +179,7 @@ async function syncCsen() {
     // STEP 2: Preleva record da processare:
     //   - PENDING (nuovi iscritti + rinnovi da fare)
     //   - RENEWAL_SUBMITTED (rinnovo inviato, verifica se CSEN ha assegnato nuovo numero)
-    // Entrambi devono avere numero_tessera_csen = NULL
+    // Entrambi devono avere numero_tessera_csen = NULL oppure codice temporaneo IT...
     // -------------------------------------------------------
     const { data: tesserati, error: fetchErr } = await supabase
         .from('registro_tesserati')
@@ -205,7 +206,7 @@ async function syncCsen() {
             )
         `)
         .in('sync_csen_status', ['PENDING', 'RENEWAL_SUBMITTED'])
-        .is('numero_tessera_csen', null)
+        .or('numero_tessera_csen.is.null,numero_tessera_csen.ilike.IT%')
         .limit(10);
 
     if (fetchErr) {

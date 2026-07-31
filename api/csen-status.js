@@ -72,7 +72,7 @@ export default async function handler(req, res) {
             .eq('sync_csen_status', 'ERROR')
             .limit(20);
 
-        // 3. PENDING senza numero tessera (da sincronizzare)
+        // 3. PENDING senza numero tessera o con codice temporaneo IT... (da sincronizzare)
         const { data: pendingList } = await supabase
             .from('registro_tesserati')
             .select(`
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
                 anagrafiche ( nome, cognome, codice_fiscale )
             `)
             .eq('sync_csen_status', 'PENDING')
-            .is('numero_tessera_csen', null)
+            .or('numero_tessera_csen.is.null,numero_tessera_csen.ilike.IT%')
             .order('data_richiesta_tesseramento', { ascending: true })
             .limit(30);
 
@@ -97,16 +97,17 @@ export default async function handler(req, res) {
                 anagrafiche ( nome, cognome, codice_fiscale )
             `)
             .eq('sync_csen_status', 'RENEWAL_SUBMITTED')
-            .is('numero_tessera_csen', null)
+            .or('numero_tessera_csen.is.null,numero_tessera_csen.ilike.IT%')
             .order('data_richiesta_tesseramento', { ascending: true })
             .limit(30);
 
-        // 5. PENDING ma con numero tessera già presente (bug legacy)
+        // 5. PENDING ma con numero tessera reale già presente (bug legacy, escludendo IT...)
         const { count: pendingConTessera } = await supabase
             .from('registro_tesserati')
             .select('id_tesserato', { count: 'exact', head: true })
             .eq('sync_csen_status', 'PENDING')
-            .not('numero_tessera_csen', 'is', null);
+            .not('numero_tessera_csen', 'is', null)
+            .not('numero_tessera_csen', 'ilike', 'IT%');
 
         return res.status(200).json({
             timestamp: new Date().toISOString(),

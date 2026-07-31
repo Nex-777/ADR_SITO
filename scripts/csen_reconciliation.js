@@ -39,7 +39,7 @@ async function runReconciliation() {
     // Pulisci mismatch precedenti (opzionale, ma mantiene la tabella pulita)
     await supabase.from('csen_mismatches').delete().neq('id', 0);
 
-    // Trova tutti i tesserati con numero_tessera_csen = NULL e stato:
+    // Trova tutti i tesserati con numero_tessera_csen = NULL oppure codice temporaneo IT... e stato:
     // - SYNCED_NO_NUM: registrati ma numero non ancora assegnato
     // - RENEWAL_SUBMITTED: rinnovo inviato, in attesa nuovo numero CSEN
     // - ERROR: tentativo di auto-recovery
@@ -56,7 +56,7 @@ async function runReconciliation() {
                 codice_fiscale
             )
         `)
-        .is('numero_tessera_csen', null)
+        .or('numero_tessera_csen.is.null,numero_tessera_csen.ilike.IT%')
         .in('sync_csen_status', ['SYNCED_NO_NUM', 'RENEWAL_SUBMITTED', 'ERROR']);
 
     if (fetchErr) {

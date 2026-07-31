@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] fix | Risoluzione Blocco Sincronizzazione CSEN & Codici IT (v1.03.70)
+- **Backend & Script (`scripts/csen_sync_active.js`, `scripts/csen_reconciliation.js`, `api/csen-status.js`)**:
+  - Aggiornato lo STEP 1 di `csen_sync_active.js` per escludere i codici temporanei locali (`IT...`) dalla promozione automatica a `SYNCED`.
+  - Inclusi i codici `IT...` nei filtri di ricerca Playwright di STEP 2 (`.or('numero_tessera_csen.is.null,numero_tessera_csen.ilike.IT%')`) per consentire al bot di completare tesseramenti e rinnovi su CSEN.
+  - Aggiornati i filtri equivalenti in `csen_reconciliation.js` e `api/csen-status.js`.
+- **Manutenzione Dati (`scripts/fix_csen_pending_records.js`)**:
+  - Creato lo script per azzerare i codici `IT...` e ripristinare a `PENDING` i record erroneamente marcati come `SYNCED` dal 28/07/26 ad oggi.
+
+---
+
 ## [2026-07-31] feat | Rinnovo Dinamico SCAB, Sync Profilo & Audit Log Nativo (v1.03.69)
 - **Database (Supabase RPC):**
   - Aggiornata la stored procedure `public.crea_richiesta_abilitazione`: se l'allenatore scelto per la richiesta è diverso da quello salvato nel profilo utente, esegue un `UPDATE` su `epika_profili.allenatore_id`.
