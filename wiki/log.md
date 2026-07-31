@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] feat | Banner Universale Certificato Medico in Home Atleta & Landing Panoramica (v1.03.75)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Modificato l'atterraggio degli atleti (`currentViewContext === 'athlete'`): ora tutti gli atleti al login atterrano direttamente sulla propria Home (`panoramica`) invece di essere forzati sul tab certificato.
+  - Implementata la generazione universale dell'Alert Banner nel pannello `#panel-panoramica` per **tutti i tesserati Adrenalina** con anomalie sul certificato medico:
+    - *Certificato Mancante*: Banner rosso con avviso di caricamento iniziale.
+    - *Certificato Scaduto*: Banner rosso con data esplicita di scadenza ed invito al rinnovo.
+    - *Certificato Rifiutato*: Banner rosso di notifica rigetto ed invito a caricare un documento conforme.
+    - *Dato Storico senza File*: Banner giallo per utenti iscritti prima della nascita del portale.
+  - Integrato il pulsante di Call-To-Action `VAI ALLA SEZIONE CERTIFICATO MEDICO` in ciascun banner per il reindirizzamento immediato al tab `user_certificato`.
+- **Versione**: Incrementata la versione globale a `v1.03.75`.
+
+---
+
 ## [2026-07-31] feat | Ordinamento Naturale Tesserati e Gestione Atleti Legacy (v1.03.74)
 - **Frontend Admin (`portal/dashboard.js`, `portal/dashboard.html`)**:
   - Implementata la funzione `parseNumeroRegistro(numRegStr)` per estrarre Anno e Numero progressivo da numeri di registro alfanumerici (es. `T_057_2026`). Aggiornata `sortArray` per ordinare matematicamente e cronologicamente la colonna `N.`.

@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.74"
+                VERSION: "1.03.75"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -470,36 +470,64 @@
                 
                 const anag = currentUserProfile ? (Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche) : null;
                 const cert = getCertInfo(anag);
-                const isBlocked = !cert || isCertificatoScaduto(cert.data_scadenza) || cert.stato_validazione === 'ROSSO';
+                const isCertScaduto = cert ? isCertificatoScaduto(cert.data_scadenza) : false;
+                const isBlocked = !cert || isCertScaduto || cert.stato_validazione === 'ROSSO';
 
-                const isLegacyMissingCert = cert && cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || !cert.file_url.startsWith('http'));
+                // Banner d'avviso universale per tutti gli atleti con anomalie sul certificato medico
+                const existingBanner = document.getElementById('legacy-cert-alert-banner');
+                if (existingBanner) existingBanner.remove();
 
-                // Banner informativo per atleti iscritti prima della nascita del portale (Legacy)
-                const existingLegacyBanner = document.getElementById('legacy-cert-alert-banner');
-                if (isLegacyMissingCert) {
-                    if (!existingLegacyBanner) {
-                        const legacyAlert = document.createElement('div');
-                        legacyAlert.id = 'legacy-cert-alert-banner';
-                        legacyAlert.className = "border border-yellow-500/40 p-4 bg-yellow-500/10 border-l-4 border-yellow-500 mt-4 rounded-r shadow-lg";
-                        legacyAlert.innerHTML = `
-                            <div class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-yellow-500 text-xl shrink-0 mt-0.5">info</span>
-                                <div class="space-y-1">
-                                    <h3 class="font-headline font-bold text-yellow-500 text-xs uppercase tracking-wider">Azione Richiesta: Aggiornamento Certificato Medico</h3>
-                                    <p class="text-[11px] text-gray-300 leading-relaxed font-sans">
-                                        Risulti tesserato all'associazione da prima della creazione del portale digitale. Per questo motivo, il sistema non possiede ancora la scansione digitale del tuo certificato medico.<br>
-                                        Ti preghiamo gentilmente di ricaricarlo tramite l'apposita sezione <strong class="text-white">"IL MIO PROFILO"</strong>, al fine di completare l'allineamento dei tuoi dati soci e tesserati.
-                                    </p>
+                let bannerTitle = '';
+                let bannerMessage = '';
+                let bannerColorClass = 'border-yellow-500/40 bg-yellow-500/10 border-l-4 border-yellow-500';
+                let iconColor = 'text-yellow-500';
+
+                if (!cert) {
+                    bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO MANCANTE";
+                    bannerMessage = "Non risulta alcun certificato medico registrato a tuo nome nel sistema. Per sbloccare la partecipazione alle attività sportive e ai corsi dell'associazione, è necessario caricare un certificato medico in corso di validità.";
+                    bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
+                    iconColor = "text-red-500";
+                } else if (isCertScaduto) {
+                    const scadenzaFormatted = formatToItalianDate(cert.data_scadenza);
+                    bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO SCADUTO";
+                    bannerMessage = `Il tuo certificato medico è scaduto il <strong>${escapeHtml(scadenzaFormatted)}</strong>. Per sbloccare l'iscrizione ai corsi ed agli eventi del club, ti preghiamo gentilmente di ricaricare il nuovo certificato aggiornato.`;
+                    bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
+                    iconColor = "text-red-500";
+                } else if (cert.stato_validazione === 'ROSSO') {
+                    bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO RIFIUTATO";
+                    bannerMessage = "Il certificato medico precedentemente caricato non è stato approvato (documento non conforme, scaduto o poco leggibile). Ti preghiamo di effettuare un nuovo caricamento con una scansione integra e leggibile.";
+                    bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
+                    iconColor = "text-red-500";
+                } else if (cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || !cert.file_url.startsWith('http'))) {
+                    bannerTitle = "AZIONE RICHIESTA: AGGIORNAMENTO CERTIFICATO MEDICO (DATO STORICO)";
+                    bannerMessage = "Risulti tesserato all'associazione da prima della creazione del portale digitale. Per questo motivo, il sistema non possiede ancora la scansione digitale del tuo certificato medico.<br>Ti preghiamo gentilmente di ricaricarlo al fine di completare l'allineamento dei tuoi dati soci e tesserati.";
+                    bannerColorClass = "border-yellow-500/40 bg-yellow-500/10 border-l-4 border-yellow-500";
+                    iconColor = "text-yellow-500";
+                }
+
+                if (bannerTitle) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.id = 'legacy-cert-alert-banner';
+                    alertDiv.className = `${bannerColorClass} p-4 mt-4 rounded-r shadow-lg transition-all`;
+                    alertDiv.innerHTML = `
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined ${iconColor} text-xl shrink-0 mt-0.5">warning</span>
+                            <div class="space-y-2 flex-grow">
+                                <h3 class="font-headline font-bold ${iconColor} text-xs uppercase tracking-wider">${bannerTitle}</h3>
+                                <p class="text-[11px] text-gray-300 leading-relaxed font-sans">${bannerMessage}</p>
+                                <div>
+                                    <button onclick="switchTab('user_certificato')" class="bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm mt-1">
+                                        <span class="material-symbols-outlined text-xs">upload_file</span>
+                                        VAI ALLA SEZIONE CERTIFICATO MEDICO
+                                    </button>
                                 </div>
                             </div>
-                        `;
-                        const panoramicaPanel = document.getElementById('panel-panoramica');
-                        if (panoramicaPanel) {
-                            panoramicaPanel.appendChild(legacyAlert);
-                        }
+                        </div>
+                    `;
+                    const panoramicaPanel = document.getElementById('panel-panoramica');
+                    if (panoramicaPanel) {
+                        panoramicaPanel.appendChild(alertDiv);
                     }
-                } else if (existingLegacyBanner) {
-                    existingLegacyBanner.remove();
                 }
 
                 // Mostra pulsanti atleti base
@@ -523,11 +551,8 @@
                 if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
                 else document.getElementById('user-status-container').classList.add('hidden');
 
-                if (isBlocked) {
-                    switchTab('user_certificato');
-                } else {
-                    switchTab('user_profilo');
-                }
+                // L'atleta atterra in Home (Panoramica) per visualizzare notifiche, bacheca ed il banner d'avviso
+                switchTab('panoramica');
             } else if (currentViewContext === 'member') {
                 document.body.classList.add('theme-socio');
                 document.getElementById('welcome-title').textContent = "Area Socio";
