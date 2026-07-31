@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.76"
+                VERSION: "1.03.77"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -472,6 +472,52 @@
                 const cert = getCertInfo(anag);
                 const isCertScaduto = cert ? isCertificatoScaduto(cert.data_scadenza) : false;
                 const isBlocked = !cert || isCertScaduto || cert.stato_validazione === 'ROSSO';
+                const isRegistrazioneIncompleta = !anag;
+
+                if (isRegistrazioneIncompleta) {
+                    // --- LOCKOUT TOTALE: Utente con registrazione Adrenalina incompleta ---
+                    // Nasconde TUTTI i tab tranne Profilo
+                    document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
+                    document.getElementById('tab-btn-user_certificato').classList.add('hidden');
+                    document.getElementById('tab-btn-user_corsi').classList.add('hidden');
+                    document.getElementById('tab-btn-user_eventi').classList.add('hidden');
+                    document.getElementById('tab-btn-user_pagamenti').classList.add('hidden');
+                    document.getElementById('tab-btn-user_documento').classList.add('hidden');
+                    const epikaBtnIncompleto = document.getElementById('tab-btn-user-epika');
+                    if (epikaBtnIncompleto) epikaBtnIncompleto.classList.add('hidden');
+
+                    // Banner bloccante per registrazione incompleta
+                    const existingBannerIncompleto = document.getElementById('legacy-cert-alert-banner');
+                    if (existingBannerIncompleto) existingBannerIncompleto.remove();
+                    const alertDivIncompleto = document.createElement('div');
+                    alertDivIncompleto.id = 'legacy-cert-alert-banner';
+                    alertDivIncompleto.className = 'border-orange-500/40 bg-orange-500/10 border-l-4 border-orange-500 p-4 mt-4 rounded-r shadow-lg transition-all';
+                    alertDivIncompleto.innerHTML = `
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-orange-500 text-xl shrink-0 mt-0.5">pending_actions</span>
+                            <div class="space-y-2 flex-grow">
+                                <h3 class="font-headline font-bold text-orange-500 text-xs uppercase tracking-wider">REGISTRAZIONE NON COMPLETATA</h3>
+                                <p class="text-[11px] text-gray-300 leading-relaxed font-sans">La tua procedura di registrazione non è stata completata. I tuoi dati sono stati salvati, ma la firma digitale del contratto (OTP) risulta ancora in sospeso.<br>Per sbloccare l'accesso ai servizi del club, completa la registrazione cliccando il pulsante qui sotto.</p>
+                                <div>
+                                    <a href="registrazione.html" class="bg-orange-500 hover:bg-orange-400 text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider inline-flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm mt-1">
+                                        <span class="material-symbols-outlined text-xs">edit_document</span>
+                                        COMPLETA LA REGISTRAZIONE
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    const panoramicaPanelIncompleto = document.getElementById('panel-panoramica');
+                    if (panoramicaPanelIncompleto) {
+                        panoramicaPanelIncompleto.appendChild(alertDivIncompleto);
+                    }
+
+                    if (userRoles.includes('socio_in_attesa')) document.getElementById('user-status-container').classList.remove('hidden');
+                    else document.getElementById('user-status-container').classList.add('hidden');
+
+                    switchTab('panoramica');
+                    return;
+                }
 
                 // Banner d'avviso universale per tutti gli atleti con anomalie sul certificato medico
                 const existingBanner = document.getElementById('legacy-cert-alert-banner');

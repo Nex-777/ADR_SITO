@@ -59,13 +59,22 @@ async function initPortal() {
         // Recupera info utente reale ed enum dei ruoli Adrenalina
         const { data: userData, error: userError } = await supabaseClient
             .from('utenti')
-            .select('nome, cognome, ruolo, tipo_tessera')
+            .select('nome, cognome, ruolo, tipo_tessera, anagrafiche(id)')
             .eq('id', currentUser.id)
             .maybeSingle();
 
         if (userError) {
             console.error("Errore recupero utenti:", userError);
             alert("Errore caricamento profilo utenti: " + userError.message);
+        }
+
+        // Blocco reindirizzamento se registrazione Adrenalina incompleta (anagrafica mancante)
+        const anagCheck = userData?.anagrafiche;
+        const hasAnagrafica = anagCheck && (Array.isArray(anagCheck) ? anagCheck.length > 0 : !!anagCheck.id);
+        if (!hasAnagrafica) {
+            alert("La tua registrazione ad Adrenalina Club non è ancora stata completata. Devi completare il tesseramento dal portale prima di poter accedere ad Epika.");
+            window.location.href = "dashboard.html";
+            return;
         }
 
         if (userData) {

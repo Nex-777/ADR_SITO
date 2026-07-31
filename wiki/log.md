@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] fix | Isolation & Lockout Navigazione Utenti con Registrazione Incompleta (v1.03.77)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Implementato il controllo `isRegistrazioneIncompleta = !anag` derivato direttamente in RAM dalla query relazionale del profilo (`currentUserProfile.anagrafiche`).
+  - Se l'utente ha una registrazione incompleta, vengono nascosti categoricamente il pulsante **EPIKA** (`#tab-btn-user-epika`) e tutti i tab di navigazione secondaria (Corsi, Eventi, Pagamenti, Documenti).
+  - Viene mostrato un banner arancione di avviso bloccante con link diretto al completamento della registrazione (`registrazione.html`). L'esecuzione si interrompe con un `return` prevenendo la normale inizializzazione dell'atleta.
+- **Frontend Epika (`portal/epika.js`)**:
+  - Estesa la query iniziale di profilo con `anagrafiche(id)`.
+  - Se un utente incompleto tenta l'accesso diretto via URL a `epika.html`, il sistema rileva l'assenza di anagrafica, lancia un alert ed esegue il reindirizzamento forzato immediato a `dashboard.html`.
+
+---
+
 ## [2026-07-31] fix | Sanatoria Martina Baratta & Blocco Preventivo Checkout Epika (v1.03.76)
 - **Database & Sanatoria (`scripts/fix_martina_baratta.js`)**:
   - Eseguita la sanatoria dell'utente Martina Baratta (`e4c0ceda-9d31-49d2-a2a9-ce5fe52d6347`), completando l'anagrafica, l'indirizzo, i contatti e l'iscrizione in `registro_approvazioni` (stato `IN_ATTESA`, tipo `TESSERATO`, livello `BASE`).
