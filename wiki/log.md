@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] data | Allineamento Integrale Soci Storici e Direttivo fino al 31/12/2026
+- **Database & Script (`scripts/align_historic_soci.js`)**:
+  - Eseguito l'allineamento completo del database per tutti i 7 account storici con ruolo `socio_approvato` o ruoli di Direttivo (incluso l'account del Presidente `nexglg@gmail.com`).
+  - Per ciascun account è stata garantita la piena regolarità fino al **31/12/2026**:
+    - **Registro Approvazioni**: Inserito record con `stato = 'APPROVATO'` e `livello_copertura = 'BASE'`.
+    - **Certificati Medici**: Impostato certificato con `stato_validazione = 'VERDE'` e `data_scadenza = '2026-12-31'`.
+    - **Registro Soci**: Impostato `stato_socio = 'ATTIVO'` e `quota_scadenza = '2026-12-31'`.
+    - **Utenti**: Azzerato eventuale saldo insoluto (`quota_totale = 0.00`).
+  - Mantenute inalterate e trasparenti le regole di sicurezza del frontend su `epika.js` e `dashboard.js`.
+
+---
+
 ## [2026-07-31] fix | Bugfix Quota Totale Registrazione, Guarding Portale Epika & Sanatoria Valeria Bosco (v1.03.80)
 - **Frontend Registrazione (`portal/registrazione.js`)**:
   - Corretto il bug critico per cui la `quota_totale` calcolata a schermo non veniva inserita nel payload della funzione `utenti.upsert()`. Ora l'importo corretto (es. €25.00) viene salvato su DB al momento dell'iscrizione.
