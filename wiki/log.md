@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] feat | Ordinamento Naturale Tesserati e Gestione Atleti Legacy (v1.03.74)
+- **Frontend Admin (`portal/dashboard.js`, `portal/dashboard.html`)**:
+  - Implementata la funzione `parseNumeroRegistro(numRegStr)` per estrarre Anno e Numero progressivo da numeri di registro alfanumerici (es. `T_057_2026`). Aggiornata `sortArray` per ordinare matematicamente e cronologicamente la colonna `N.`.
+  - Aggiornato l'ordinamento della colonna `Tessera CSEN` in `sortArray` usando `localeCompare` con opzione `{ numeric: true }` e spingendo in fondo alla lista i valori vuoti o `DA COMUNICARE`.
+  - Aggiornata `updateSortIcon` per supportare gli alias `numero_registro` e `id_tesserato`.
+  - Rilevamento dei **Soci Legacy**: Identificati gli atleti iscritti prima della creazione del portale (`stato_validazione === 'IN_ATTESA'` e assenza di un `file_url` valido).
+  - Aggiornato `renderTesseratiTable` e `renderTesseratiMobileCards` per mostrare il badge ed il tooltip esplicativo `STORICO (MANCA FILE)` per i record senza scansione digitale.
+  - Inserito un banner informativo dinamico (Alert Giallo) nella Home dell'Area Tesserato (`dashboard.html` lato Atleta) invitando gli utenti storici a ricaricare il proprio certificato medico via "IL MIO PROFILO".
+- **Versione**: Incrementata la versione globale a `v1.03.74`.
+
+---
+
 ## [2026-07-31] refactor | Rimozione Allenatore dal Modale Modifica Scheda Personaggio (v1.03.73)
 - **Frontend Epika (`portal/epika.html`, `portal/epika.js`)**:
   - Rimossa la selezione e la gestione del campo "Allenatore di Riferimento" dal modale "MODIFICA SCHEDA PERSONAGGIO".

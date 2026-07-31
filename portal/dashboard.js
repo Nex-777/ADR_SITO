@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.73"
+                VERSION: "1.03.74"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -472,6 +472,36 @@
                 const cert = getCertInfo(anag);
                 const isBlocked = !cert || isCertificatoScaduto(cert.data_scadenza) || cert.stato_validazione === 'ROSSO';
 
+                const isLegacyMissingCert = cert && cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || !cert.file_url.startsWith('http'));
+
+                // Banner informativo per atleti iscritti prima della nascita del portale (Legacy)
+                const existingLegacyBanner = document.getElementById('legacy-cert-alert-banner');
+                if (isLegacyMissingCert) {
+                    if (!existingLegacyBanner) {
+                        const legacyAlert = document.createElement('div');
+                        legacyAlert.id = 'legacy-cert-alert-banner';
+                        legacyAlert.className = "border border-yellow-500/40 p-4 bg-yellow-500/10 border-l-4 border-yellow-500 mt-4 rounded-r shadow-lg";
+                        legacyAlert.innerHTML = `
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-yellow-500 text-xl shrink-0 mt-0.5">info</span>
+                                <div class="space-y-1">
+                                    <h3 class="font-headline font-bold text-yellow-500 text-xs uppercase tracking-wider">Azione Richiesta: Aggiornamento Certificato Medico</h3>
+                                    <p class="text-[11px] text-gray-300 leading-relaxed font-sans">
+                                        Risulti tesserato all'associazione da prima della creazione del portale digitale. Per questo motivo, il sistema non possiede ancora la scansione digitale del tuo certificato medico.<br>
+                                        Ti preghiamo gentilmente di ricaricarlo tramite l'apposita sezione <strong class="text-white">"IL MIO PROFILO"</strong>, al fine di completare l'allineamento dei tuoi dati soci e tesserati.
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                        const panoramicaPanel = document.getElementById('panel-panoramica');
+                        if (panoramicaPanel) {
+                            panoramicaPanel.appendChild(legacyAlert);
+                        }
+                    }
+                } else if (existingLegacyBanner) {
+                    existingLegacyBanner.remove();
+                }
+
                 // Mostra pulsanti atleti base
                 document.getElementById('tab-btn-user_profilo').classList.remove('hidden');
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
@@ -818,6 +848,22 @@
             }
         }
 
+        function parseNumeroRegistro(numRegStr) {
+            if (!numRegStr) return { year: 0, num: 0 };
+            const match = String(numRegStr).match(/T_(\d+)_(\d{4})/i);
+            if (match) {
+                return { num: parseInt(match[1], 10) || 0, year: parseInt(match[2], 10) || 0 };
+            }
+            const numbers = String(numRegStr).match(/\d+/g);
+            if (numbers && numbers.length >= 2) {
+                return { num: parseInt(numbers[0], 10) || 0, year: parseInt(numbers[numbers.length - 1], 10) || 0 };
+            }
+            if (numbers && numbers.length === 1) {
+                return { num: parseInt(numbers[0], 10) || 0, year: 0 };
+            }
+            return { year: 0, num: 0 };
+        }
+
         // Helper generico per ordinare gli array in memoria
         function sortArray(arr, field, direction) {
             const dir = direction === 'asc' ? 1 : -1;
@@ -827,8 +873,16 @@
 
                 if (field === 'id_socio') {
                     return (a.id_socio - b.id_socio) * dir;
-                } else if (field === 'id_tesserato') {
-                    return (a.id_tesserato - b.id_tesserato) * dir;
+                } else if (field === 'id_tesserato' || field === 'numero_registro') {
+                    const regA = parseNumeroRegistro(a.numero_registro);
+                    const regB = parseNumeroRegistro(b.numero_registro);
+                    if (regA.year !== regB.year) {
+                        return (regA.year - regB.year) * dir;
+                    }
+                    if (regA.num !== regB.num) {
+                        return (regA.num - regB.num) * dir;
+                    }
+                    return ((a.id_tesserato || 0) - (b.id_tesserato || 0)) * dir;
                 } else if (field === 'quota_totale') {
                     return ((a.quota_totale || 0) - (b.quota_totale || 0)) * dir;
                 } else if (field === 'anno') {
@@ -873,8 +927,14 @@
                     valA = a.stato_socio || '';
                     valB = b.stato_socio || '';
                 } else if (field === 'numero_tessera_csen') {
-                    valA = a.numero_tessera_csen || '';
-                    valB = b.numero_tessera_csen || '';
+                    const valAStr = (a.numero_tessera_csen || '').trim();
+                    const valBStr = (b.numero_tessera_csen || '').trim();
+                    const isEmptyA = !valAStr || valAStr.toUpperCase() === 'DA COMUNICARE' || valAStr.toUpperCase() === 'IN ATTESA';
+                    const isEmptyB = !valBStr || valBStr.toUpperCase() === 'DA COMUNICARE' || valBStr.toUpperCase() === 'IN ATTESA';
+                    if (isEmptyA && !isEmptyB) return 1;
+                    if (!isEmptyA && isEmptyB) return -1;
+                    if (isEmptyA && isEmptyB) return 0;
+                    return valAStr.localeCompare(valBStr, undefined, { numeric: true, sensitivity: 'base' }) * dir;
                 } else if (field === 'livello_copertura') {
                     valA = a.livello_copertura || '';
                     valB = b.livello_copertura || '';
@@ -934,7 +994,10 @@
             const spans = document.querySelectorAll(`span[id^="${prefix}-"]`);
             spans.forEach(span => {
                 const field = span.id.replace(`${prefix}-`, '');
-                if (field === activeField) {
+                const isMatch = field === activeField || 
+                    (activeField === 'numero_registro' && field === 'id_tesserato') || 
+                    (activeField === 'id_tesserato' && field === 'numero_registro');
+                if (isMatch) {
                     span.textContent = activeDirection === 'asc' ? ' ▲' : ' ▼';
                     span.className = 'text-primary font-bold ml-1';
                 } else {
@@ -2139,7 +2202,12 @@
                         statusLabel = '<br><span class="text-[9px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">ATTESA REVISIONE</span>';
                     } else if (certInfo.stato_validazione === 'IN_ATTESA') {
                         color = 'text-gray-400';
-                        statusLabel = '<br><span class="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold">ATTESA AI</span>';
+                        const isLegacyCert = !certInfo.file_url || certInfo.file_url.trim() === '' || !certInfo.file_url.startsWith('http');
+                        if (isLegacyCert) {
+                            statusLabel = '<br><span title="Dato storico prima del portale: file non presente, l\'atleta deve ricaricarlo" class="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold cursor-help">STORICO (MANCA FILE)</span>';
+                        } else {
+                            statusLabel = '<br><span title="In attesa di validazione AI/amministratore" class="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold cursor-help">ATTESA AI</span>';
+                        }
                     } else {
                         statusLabel = '<br><span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">VALIDATO</span>';
                         if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
@@ -2147,7 +2215,9 @@
                         }
                     }
                     const certBarHtml = generateProgressBarHtml(certInfo.data_scadenza);
-                    certHtml = `<a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="tess-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}${adminCertAction}<br>
+                    const isLegacyCert = certInfo.stato_validazione === 'IN_ATTESA' && (!certInfo.file_url || certInfo.file_url.trim() === '' || !certInfo.file_url.startsWith('http'));
+                    const certTooltip = isLegacyCert ? 'title="Dato storico prima del portale. Manca il file digitale: l\'atleta deve ricaricarlo."' : 'title="In attesa di validazione"';
+                    certHtml = `<a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" ${certTooltip} class="tess-view-cert-btn underline ${color} font-bold">${escapeHtml(certInfo.tipologia)}</a>${statusLabel}${adminCertAction}<br>
                                 <span class="text-[10px] text-gray-400">Scadenza: ${escapeHtml(formatToItalianDate(certInfo.data_scadenza))}</span>
                                 ${certBarHtml}`;
                 }
@@ -2303,7 +2373,8 @@
                         certStatus = 'RIFIUTATO';
                         certColor = '#df293e';
                     } else if (certInfo.stato_validazione === 'IN_ATTESA') {
-                        certStatus = 'IN ATTESA';
+                        const isLegacyCert = !certInfo.file_url || certInfo.file_url.trim() === '' || !certInfo.file_url.startsWith('http');
+                        certStatus = isLegacyCert ? 'STORICO (MANCA FILE)' : 'IN ATTESA';
                         certColor = '#9ca3af';
                     } else if (scaduto) {
                         certStatus = 'SCADUTO';
