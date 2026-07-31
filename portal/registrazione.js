@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.79"
+                VERSION: "1.03.80"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1314,6 +1314,15 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
             // Inserimento o aggiornamento profilo utenti (con upsert per riprendere la sessione pendente)
             try {
+                let calculatedQuota = 0;
+                if (selectedAdesione === 'socio') {
+                    calculatedQuota = tariffe.quota_socio || 0;
+                } else if (selectedAdesione === 'tesserato' && selectedTessera) {
+                    calculatedQuota = tariffe[selectedTessera] || 0;
+                } else if (selectedAdesione === 'socio_tesserato') {
+                    calculatedQuota = (tariffe.quota_socio || 0) + (tariffe[selectedTessera] || 0);
+                }
+
                 const { error: insertError } = await supabaseClient
                     .from('utenti')
                     .upsert({
@@ -1333,6 +1342,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         luogo_nascita_comune: comuneNascita,
                         tipo_adesione: selectedAdesione,
                         tipo_tessera: selectedTessera || null,
+                        quota_totale: calculatedQuota,
                         tutore_nome: isMinor ? tutoreNome : null,
                         tutore_cognome: isMinor ? tutoreCognome : null,
                         tutore_codice_fiscale: isMinor ? tutoreCf : null,

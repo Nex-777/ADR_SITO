@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.79"
+                VERSION: "1.03.80"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -604,9 +604,19 @@
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
                 
-                // Show epika button for athletes
+                // Mostra il pulsante Epika SOLO se l'iscrizione e il pagamento sono stati completati con successo
+                const isEpikaAllowed = anag && !hasPendingPayment && !isBlocked && (
+                    (Array.isArray(anag.registro_approvazioni) && anag.registro_approvazioni.some(a => a.stato === 'APPROVATO')) ||
+                    (anag.registro_approvazioni && anag.registro_approvazioni.stato === 'APPROVATO')
+                );
                 const epikaBtn = document.getElementById('tab-btn-user-epika');
-                if (epikaBtn) epikaBtn.classList.remove('hidden');
+                if (epikaBtn) {
+                    if (isEpikaAllowed) {
+                        epikaBtn.classList.remove('hidden');
+                    } else {
+                        epikaBtn.classList.add('hidden');
+                    }
+                }
                 
                 if (isBlocked) {
                     document.getElementById('tab-btn-user_corsi').classList.add('hidden');

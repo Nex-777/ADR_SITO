@@ -59,7 +59,7 @@ async function initPortal() {
         // Recupera info utente reale ed enum dei ruoli Adrenalina
         const { data: userData, error: userError } = await supabaseClient
             .from('utenti')
-            .select('nome, cognome, ruolo, tipo_tessera, anagrafiche(id)')
+            .select('nome, cognome, ruolo, tipo_tessera, anagrafiche(id, registro_approvazioni(stato))')
             .eq('id', currentUser.id)
             .maybeSingle();
 
@@ -68,11 +68,15 @@ async function initPortal() {
             alert("Errore caricamento profilo utenti: " + userError.message);
         }
 
-        // Blocco reindirizzamento se registrazione Adrenalina incompleta (anagrafica mancante)
+        // Blocco reindirizzamento se registrazione o pagamento Adrenalina incompleti
         const anagCheck = userData?.anagrafiche;
-        const hasAnagrafica = anagCheck && (Array.isArray(anagCheck) ? anagCheck.length > 0 : !!anagCheck.id);
-        if (!hasAnagrafica) {
-            alert("La tua registrazione ad Adrenalina Club non è ancora stata completata. Devi completare il tesseramento dal portale prima di poter accedere ad Epika.");
+        const anagObj = Array.isArray(anagCheck) ? anagCheck[0] : anagCheck;
+        const hasAnagrafica = !!anagObj?.id;
+        const apprs = Array.isArray(anagObj?.registro_approvazioni) ? anagObj.registro_approvazioni : [anagObj?.registro_approvazioni];
+        const isApprovedAndPaid = apprs.some(a => a && a.stato === 'APPROVATO');
+
+        if (!hasAnagrafica || !isApprovedAndPaid) {
+            alert("La tua registrazione ad Adrenalina Club ed il relativo pagamento della quota non risultano completati. Devi prima completare l'iscrizione ed il saldo della quota dal portale per poter accedere ad Epika.");
             window.location.href = "dashboard.html";
             return;
         }

@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] fix | Bugfix Quota Totale Registrazione, Guarding Portale Epika & Sanatoria Valeria Bosco (v1.03.80)
+- **Frontend Registrazione (`portal/registrazione.js`)**:
+  - Corretto il bug critico per cui la `quota_totale` calcolata a schermo non veniva inserita nel payload della funzione `utenti.upsert()`. Ora l'importo corretto (es. €25.00) viene salvato su DB al momento dell'iscrizione.
+- **Frontend Dashboard & Epika (`portal/dashboard.js`, `portal/epika.js`)**:
+  - Implementata la regola tassativa di visibilità del pulsante **Epika** (`#tab-btn-user-epika`): il pulsante viene nascosto se l'utente non ha la registrazione E il pagamento completati (`registro_approvazioni.stato === 'APPROVATO'`).
+  - Integrata in `epika.js` la verifica di approvazione e saldo quota: l'accesso diretto via URL ad `epika.html` viene bloccato se l'utente ha pagamenti o approvazioni in sospeso, reindirizzando a `dashboard.html`.
+- **Database & Backend Script (`scripts/fix_valeria_bosto.js`)**:
+  - Eseguita la sanatoria per Valeria Bosco (`vale1211bosco@gmail.com`): certificato medico approvato a `VERDE`, stato approvazione impostato a `IN_ATTESA_PAGAMENTO` e `quota_totale` impostata a 25.00 €.
+
+---
+
 ## [2026-07-31] feature | Abilitazione Checkout Quota Tesseramento & Banner Dashboard Atleti (v1.03.79)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Abilitata la visibilità del tab "Pagamenti e Ricevute" (`#tab-btn-user_pagamenti`) anche per gli utenti con ruolo atleta/tesserato (`tesserato_esterno`).
