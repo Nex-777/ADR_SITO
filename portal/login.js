@@ -50,7 +50,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.03.65"
+        VERSION: "1.03.67"
     };
 }
 const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -96,7 +96,9 @@ if (form) {
                 .maybeSingle();
 
             if (profileError || !profile) {
-                throw new Error("Profilo utente non trovato nel database.");
+                alert("Il tuo profilo risulta incompleto. Verrai reindirizzato alla pagina di registrazione per concludere l'operazione.");
+                window.location.href = "registrazione.html";
+                return;
             }
 
             const ruolo = profile.ruolo;

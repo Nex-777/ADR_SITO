@@ -330,3 +330,98 @@ BEGIN
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.aggiorna_stato_validatore(BIGINT, TEXT, TEXT) TO authenticated;
+
+-- 7. Stored Procedure per Sanatoria Massiva Abilitazioni Combattenti
+CREATE OR REPLACE FUNCTION public.inizializza_abilitazioni_mancanti(p_anno INT DEFAULT 2026)
+RETURNS INT LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+    r RECORD;
+    v_count INT := 0;
+    v_allenatore_id BIGINT;
+    v_allievo_id BIGINT;
+    v_validatore_id BIGINT;
+    v_ha_cm BOOLEAN;
+    v_scadenza DATE;
+    v_tipo TEXT;
+    v_existing_id BIGINT;
+    v_existing_allenatore_id BIGINT;
+BEGIN
+    FOR r IN 
+        SELECT p.id AS profilo_id, p.allenatore_id
+        FROM public.epika_profili p
+        WHERE p.ruolo_combattimento = 'combattente'
+          AND p.allenatore_id IS NOT NULL
+    LOOP
+        -- Controlla se ha già una richiesta per quest'anno
+        SELECT id, allenatore_opzione_id INTO v_existing_id, v_existing_allenatore_id
+        FROM public.epika_scab_abilitazioni
+        WHERE profilo_id = r.profilo_id AND anno_abilitativo = p_anno;
+
+        SELECT tipo INTO v_tipo FROM public.epika_opzioni WHERE id = r.allenatore_id AND attivo = TRUE;
+        
+        IF v_tipo = 'allenatore' THEN
+            v_allenatore_id := r.allenatore_id;
+            v_allievo_id := NULL;
+            SELECT validatore_id INTO v_validatore_id
+            FROM public.epika_scab_abbinamenti
+            WHERE (allenatore_ref_id = v_allenatore_id OR allenatori_co_ids @> ARRAY[v_allenatore_id])
+              AND validatore_id IS NOT NULL
+            ORDER BY id ASC LIMIT 1;
+        ELSIF v_tipo = 'scab_allievo_allenatore' THEN
+            v_allievo_id := r.allenatore_id;
+            SELECT allenatore_ref_id, validatore_id INTO v_allenatore_id, v_validatore_id
+            FROM public.epika_scab_abbinamenti
+            WHERE (allievo_ref_id = v_allievo_id OR allievi_ids @> ARRAY[v_allievo_id])
+              AND validatore_id IS NOT NULL
+            ORDER BY id ASC LIMIT 1;
+        ELSE
+            CONTINUE;
+        END IF;
+
+        -- Controlla presenza a Campo Marzio
+        SELECT EXISTS (
+            SELECT 1 FROM public.epika_presenze_eventi pe
+            JOIN public.epika_eventi ev ON pe.evento_id = ev.id
+            WHERE pe.utente_id = r.profilo_id
+              AND pe.presente = TRUE
+              AND ev.tipo_evento = 'campo_marzio'
+              AND ev.data_inizio >= MAKE_DATE(p_anno, 1, 1)
+              AND ev.data_inizio <= MAKE_DATE(p_anno, 12, 31)
+        ) INTO v_ha_cm;
+
+        IF v_ha_cm THEN
+            v_scadenza := MAKE_DATE(p_anno, 12, 31);
+        ELSE
+            v_scadenza := MAKE_DATE(p_anno, 8, 31);
+        END IF;
+
+        IF v_existing_id IS NULL THEN
+            -- Inserisci nuova richiesta
+            INSERT INTO public.epika_scab_abilitazioni (
+                profilo_id, anno_abilitativo,
+                allenatore_opzione_id, allievo_opzione_id, validatore_opzione_id,
+                stato_allenatore, stato_validatore,
+                ha_partecipato_cm, data_scadenza
+            ) VALUES (
+                r.profilo_id, p_anno,
+                v_allenatore_id, v_allievo_id, v_validatore_id,
+                'in_attesa', 'giallo',
+                v_ha_cm, v_scadenza
+            );
+            v_count := v_count + 1;
+        ELSIF v_existing_allenatore_id IS DISTINCT FROM v_allenatore_id THEN
+            -- Se l'allenatore era diverso, forza l'aggiornamento a quello scelto in iscrizione
+            UPDATE public.epika_scab_abilitazioni
+            SET allenatore_opzione_id = v_allenatore_id,
+                allievo_opzione_id = v_allievo_id,
+                validatore_opzione_id = v_validatore_id,
+                updated_at = NOW()
+            WHERE id = v_existing_id;
+            v_count := v_count + 1;
+        END IF;
+    END LOOP;
+
+    RETURN v_count;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.inizializza_abilitazioni_mancanti(INT) TO authenticated;

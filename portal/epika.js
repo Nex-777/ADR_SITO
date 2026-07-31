@@ -594,11 +594,12 @@ async function handleFirstAccessSubmit(e) {
 
         if (error) throw error;
 
+        currentUserProfile = profilePayload;
+        await syncAbilitazioneScab(ruoloCombattimento, allenatoreId);
+
         alert("Profilo storico creato con successo! Benvenuto in EPIKA.");
         document.getElementById('epk-first-access').classList.add('epk-hidden');
         document.getElementById('epk-user-battle-name').textContent = `~ ${nomeBattaglia} ~`;
-        
-        currentUserProfile = profilePayload;
         
         const viewMode = document.getElementById('epk-admin-switcher').value || 'athlete';
         if (viewMode === 'admin') {
@@ -765,6 +766,8 @@ async function salvaModificheProfilo() {
 
         if (error) throw error;
 
+        await syncAbilitazioneScab(ruoloCombattimento, allenatoreId);
+
         alert("Profilo aggiornato con successo!");
         chiudiModaleModificaProfilo();
         await renderAthleteDashboard();
@@ -928,6 +931,17 @@ async function renderAthleteDashboard() {
     } catch (err) {
         console.error("Errore rendering dashboard atleta:", err);
     }
+async function syncAbilitazioneScab(ruolo, allenatoreId) {
+    if (ruolo === 'combattente' && allenatoreId) {
+        try {
+            await supabaseClient.rpc('crea_richiesta_abilitazione', {
+                p_anno: new Date().getFullYear(),
+                p_soggetto_opzione_id: allenatoreId
+            });
+        } catch (err) {
+            console.warn("Sync abilitazione SCAB silenziato:", err);
+        }
+    }
 }
 
 async function renderAbilitazioneAtleta() {
@@ -967,7 +981,22 @@ async function renderAbilitazioneAtleta() {
         const isScaduto = abl && abl.data_scadenza < oggi;
 
         if (!abl || isScaduto) {
-            // --- Stato: NON ABILITATO — Mostra form di richiesta ---
+            // AUTO-HEALING TRASPARENTE: Se l'atleta ha un allenatore nel profilo, crea/sincronizza in background
+            if (currentUserProfile && currentUserProfile.ruolo_combattimento === 'combattente' && currentUserProfile.allenatore_id) {
+                try {
+                    const { error: rpcErr } = await supabaseClient.rpc('crea_richiesta_abilitazione', {
+                        p_anno: annoCorrente,
+                        p_soggetto_opzione_id: currentUserProfile.allenatore_id
+                    });
+                    if (!rpcErr) {
+                        return await renderAbilitazioneAtleta();
+                    }
+                } catch (healErr) {
+                    console.warn("Auto-healing abilitazione atterraggio fallito:", healErr);
+                }
+            }
+
+            // Fallback: mostra il form di richiesta manuale
             const { data: soggetti } = await supabaseClient
                 .from('epika_opzioni')
                 .select('id, tipo, valore')
@@ -989,7 +1018,7 @@ async function renderAbilitazioneAtleta() {
                     ${isScaduto ? 'La tua abilitazione è scaduta. Devi rinnovare la richiesta per quest\'anno.' : 'Devi richiedere l\'abilitazione per poter combattere quest\'anno.'}
                 </p>
                 <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
-                    <label class="epk-label">SCEGLI ALLENATORE / ALLIEVO ALLENATORE *</label>
+                    <label class="epk-label">INDICA IL TUO ALLENATORE O ALLIEVO ALLENATORE *</label>
                     <select id="epk-abl-soggetto-select" class="epk-input">
                         <option value="" disabled selected>Seleziona...</option>
                         <optgroup label="ALLENATORI">${optsAll}</optgroup>

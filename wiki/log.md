@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] feat | Sanatoria & Automazione Abilitazioni SCAB dal Primo Accesso (v1.03.67)
+- **Database (Supabase DML & Stored Procedure):**
+  - Creata ed eseguita la funzione `public.inizializza_abilitazioni_mancanti(2026)` che ha sanato massivamente **44 combattenti** (creati/allineati 33 record mancanti o difformi).
+  - La procedura garantisce che l'allenatore dell'abilitazione coincida sempre con l'allenatore selezionato in fase di iscrizione/profilo.
+- **Frontend (`portal/epika.js`):**
+  - Creata la funzione `syncAbilitazioneScab(ruolo, allenatoreId)` richiamata automaticamente dopo `handleFirstAccessSubmit` e `salvaModificheProfilo`.
+  - Integrato l'**Auto-Healing trasparente** in `renderAbilitazioneAtleta`: se un combattente ha un allenatore nel profilo ma la pratica non è aperta, il sistema la crea silenziosamente in background caricando direttamente lo stato avanzamento.
+- **Versionamento:** Eseguito `npm run bump` portando la versione globale a `v1.03.67`.
+
 ## [2026-07-30] feature | Modifica Date ed Eliminazione Mandati nella Cronologia Gruppi Storici (v1.03.47)
 - **Frontend (`portal/epika.html` & `portal/epika.js`):**
   - Aggiunta la colonna `Azioni` nella tabella `CRONOLOGIA STORICA MANDATI` dei dettagli del Gruppo Storico.
@@ -903,9 +912,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Allineate tutte le versioni del portale a Vs. 1.03.26.
 
 ## [2026-07-07] fix | Robust Fallback for Password Recovery Redirect (v1.03.26)
-- Aggiunto un intercettore nel DOMContentLoaded di portal/login.js. Qualora Supabase Auth fallisca la validazione del parametro 
-edirectTo e riporti erroneamente l'utente alla schermata di login, il nuovo script intercetta immediatamente i parametri 	oken_hash e 	ype=recovery e reindirizza in modo invisibile e automatico l'utente a 
-eset-password.html.
+- Aggiunto un intercettore nel DOMContentLoaded di portal/login.js. Qualora Supabase Auth fallisca la validazione del parametro redirectTo e riporti erroneamente l'utente alla schermata di login, il nuovo script intercetta immediatamente i parametri token_hash e type=recovery e reindirizza in modo invisibile e automatico l'utente a reset-password.html.
 - Forzato il path assoluto nel template email di Supabase per eliminare le dipendenze dalle configurazioni Site URL di backend, rendendo il recupero 100% fail-safe per ogni dispositivo o connessione.
 - Rimossa la variabile duplicata const params introdotta erroneamente in login.js.
 - Allineate le versioni del portale a Vs. 1.03.26.
