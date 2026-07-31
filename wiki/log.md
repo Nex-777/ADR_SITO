@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] feat | Rinnovo Dinamico SCAB, Sync Profilo & Audit Log Nativo (v1.03.69)
+- **Database (Supabase RPC):**
+  - Aggiornata la stored procedure `public.crea_richiesta_abilitazione`: se l'allenatore scelto per la richiesta è diverso da quello salvato nel profilo utente, esegue un `UPDATE` su `epika_profili.allenatore_id`.
+  - Questo aggiornamento attiva automaticamente il trigger `trg_log_epika_profilo_updates` che registra la variazione nello **STORICO MODIFICHE** (`epika_registro_modifiche_profilo`).
+- **Frontend (`portal/epika.js`):**
+  - Ristrutturata `renderAbilitazioneAtleta()` per effettuare la query sulla pratica più recente dell'atleta (`order by anno_abilitativo desc limit 1`) e calcolare in modo dinamico l'anno di rinnovo (target 2027 se l'abilitazione 2026 è scaduta ad agosto).
+  - Pre-selezionato l'allenatore corrente nel select in fase di rinnovo, consentendo la modifica da parte dell'atleta.
+  - Aggiornato il testo di validità: `"abilitazione valida fino al 31/08/XX . per i partecipanti a CM XXXX l'abilitazione è valida fino al 31/12/XX"`.
+- **Versionamento:** Eseguito `npm run bump` (versione `v1.03.69`).
+
 ## [2026-07-31] fix | Hotfix Sintassi JS in epika.js (v1.03.68)
 - Corretta la parentesi graffa di chiusura mancante per `renderAthleteDashboard()` in `portal/epika.js`.
 - Verificata la validità della sintassi tramite `node -c portal/epika.js`.

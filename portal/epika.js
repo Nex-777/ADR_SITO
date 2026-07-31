@@ -951,9 +951,6 @@ async function renderAbilitazioneAtleta() {
     const annoBadge = document.getElementById('epk-abilitazione-anno-badge');
     if (!container || !currentUser) return;
 
-    const annoCorrente = new Date().getFullYear();
-    if (annoBadge) annoBadge.textContent = `ANNO ABILITATIVO ${annoCorrente}`;
-
     // Controlla se l'utente ha caricato il profilo ed è un combattente
     if (currentUserProfile && currentUserProfile.ruolo_combattimento !== 'combattente') {
         const card = document.getElementById('epk-abilitazione-card');
@@ -964,8 +961,11 @@ async function renderAbilitazioneAtleta() {
     container.innerHTML = '<div style="text-align:center;padding:16px;">Caricamento stato abilitazione...</div>';
 
     try {
-        // Carica record abilitazione anno corrente
-        const { data: abl, error } = await supabaseClient
+        const currentYear = new Date().getFullYear();
+        let targetAnnoAbilitativo = currentYear;
+
+        // 1. Cerca la pratica più recente in assoluto dell'utente
+        const { data: latestAbl, error } = await supabaseClient
             .from('epika_scab_abilitazioni')
             .select(`
                 *,
@@ -974,20 +974,38 @@ async function renderAbilitazioneAtleta() {
                 validatore:validatore_opzione_id(valore)
             `)
             .eq('profilo_id', currentUser.id)
-            .eq('anno_abilitativo', annoCorrente)
+            .order('anno_abilitativo', { ascending: false })
+            .limit(1)
             .maybeSingle();
 
         if (error) throw error;
 
-        const oggi = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        const isScaduto = abl && abl.data_scadenza < oggi;
+        let isScaduto = false;
+        let isPrimaPraticaAssoluta = false;
 
-        if (!abl || isScaduto) {
-            // AUTO-HEALING TRASPARENTE: Se l'atleta ha un allenatore nel profilo, crea/sincronizza in background
-            if (currentUserProfile && currentUserProfile.ruolo_combattimento === 'combattente' && currentUserProfile.allenatore_id) {
+        if (!latestAbl) {
+            isPrimaPraticaAssoluta = true;
+        } else {
+            const oggi = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            if (latestAbl.data_scadenza < oggi) {
+                isScaduto = true;
+                // Se la pratica scaduta fa riferimento all'anno corrente (es. scaduta il 31/08), il rinnovo è per l'anno prossimo
+                if (latestAbl.anno_abilitativo >= currentYear) {
+                    targetAnnoAbilitativo = latestAbl.anno_abilitativo + 1;
+                }
+            } else {
+                targetAnnoAbilitativo = latestAbl.anno_abilitativo;
+            }
+        }
+
+        if (annoBadge) annoBadge.textContent = `ANNO ABILITATIVO ${targetAnnoAbilitativo}`;
+
+        if (isPrimaPraticaAssoluta || isScaduto) {
+            // AUTO-HEALING TRASPARENTE: Si attiva SOLO per la prima pratica assoluta (nuovi utenti o orfani)
+            if (isPrimaPraticaAssoluta && currentUserProfile && currentUserProfile.ruolo_combattimento === 'combattente' && currentUserProfile.allenatore_id) {
                 try {
                     const { error: rpcErr } = await supabaseClient.rpc('crea_richiesta_abilitazione', {
-                        p_anno: annoCorrente,
+                        p_anno: targetAnnoAbilitativo,
                         p_soggetto_opzione_id: currentUserProfile.allenatore_id
                     });
                     if (!rpcErr) {
@@ -998,7 +1016,7 @@ async function renderAbilitazioneAtleta() {
                 }
             }
 
-            // Fallback: mostra il form di richiesta manuale
+            // Fallback: mostra il form di richiesta o rinnovo manuale
             const { data: soggetti } = await supabaseClient
                 .from('epika_opzioni')
                 .select('id, tipo, valore')
@@ -1017,7 +1035,7 @@ async function renderAbilitazioneAtleta() {
                     <span style="background:#7f1d1d;color:#fca5a5;padding:4px 12px;font-size:10px;font-weight:bold;letter-spacing:0.1em;">⚔ NON ABILITATO${isScaduto ? ' — SCADUTO' : ''}</span>
                 </div>
                 <p style="font-size:11px;text-transform:uppercase;color:rgba(245,230,200,0.6);margin-bottom:16px;">
-                    ${isScaduto ? 'La tua abilitazione è scaduta. Devi rinnovare la richiesta per quest\'anno.' : 'Devi richiedere l\'abilitazione per poter combattere quest\'anno.'}
+                    ${isScaduto ? `La tua abilitazione precedente è scaduta. Invia la richiesta per l'anno ${targetAnnoAbilitativo}.` : `Devi richiedere l'abilitazione per poter combattere per l'anno ${targetAnnoAbilitativo}.`}
                 </p>
                 <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
                     <label class="epk-label">INDICA IL TUO ALLENATORE O ALLIEVO ALLENATORE *</label>
@@ -1026,13 +1044,20 @@ async function renderAbilitazioneAtleta() {
                         <optgroup label="ALLENATORI">${optsAll}</optgroup>
                         <optgroup label="ALLIEVI ALLENATORI">${optsAllievi}</optgroup>
                     </select>
-                    <button class="epk-btn" onclick="inviaRichiestaAbilitazione(${annoCorrente})">
+                    <button class="epk-btn" onclick="inviaRichiestaAbilitazione(${targetAnnoAbilitativo})">
                         RICHIEDI ABILITAZIONE
                     </button>
                 </div>
             `;
+
+            // Pre-seleziona l'allenatore corrente nel select se presente nel profilo
+            if (currentUserProfile && currentUserProfile.allenatore_id) {
+                const selectEl = document.getElementById('epk-abl-soggetto-select');
+                if (selectEl) selectEl.value = String(currentUserProfile.allenatore_id);
+            }
         } else {
             // --- Stato: ABILITAZIONE ATTIVA — Mostra progress read-only ---
+            const abl = latestAbl;
             const statiAllenatore = ['in_attesa','in_valutazione','video_fatto','video_in_valutazione'];
             const statiLabel = ['IN ATTESA','IN VALUTAZIONE','VIDEO FATTO','VIDEO IN VAL.'];
             const idxCorrente = statiAllenatore.indexOf(abl.stato_allenatore);
@@ -1056,10 +1081,12 @@ async function renderAbilitazioneAtleta() {
             const nomeAllievo = abl.allievo?.valore ? ` (via ${abl.allievo.valore.toUpperCase()})` : '';
             const nomeValidatore = abl.validatore?.valore?.toUpperCase() || 'N/D';
 
+            const anno2Cifre = String(targetAnnoAbilitativo).slice(-2);
+
             container.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
                     <span style="background:#78350f;color:#fbbf24;padding:4px 12px;font-size:10px;font-weight:bold;letter-spacing:0.1em;">🛡 ${statiLabel[idxCorrente] || abl.stato_allenatore.toUpperCase()}</span>
-                    <span style="font-size:10px;color:rgba(245,230,200,0.5);">Scadenza: ${abl.data_scadenza}</span>
+                    <span style="font-size:10px;color:rgba(245,230,200,0.6);">abilitazione valida fino al 31/08/${anno2Cifre} . per i partecipanti a CM ${targetAnnoAbilitativo} l'abilitazione è valida fino al 31/12/${anno2Cifre}</span>
                 </div>
                 <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--epk-gold-dim);overflow:hidden;">${stepsHtml}</div>
                 <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.2);border:1px solid var(--epk-gold-dim);padding:12px 16px;">
