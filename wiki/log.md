@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] feat | Matrice Contatori Tessere CSEN (Residue, Da Comunicare, Da Richiedere) (v1.03.71)
+- **Frontend Admin (`portal/dashboard.html`, `portal/dashboard.js`)**:
+  - Riprogettato il widget contatore del Registro Tesserati in una tabella/matrice analitica 3 righe x 4 colonne (Base Silver, Base Gold, Integ. A, Integ. B).
+  - Implementato il conteggio dinamico senza limiti client-side per **Tessere da Comunicare** (atleti attivi in coda `PENDING` / `RENEWAL_SUBMITTED`).
+  - Implementato il calcolo automatico di **Tessere da Richiedere** (`Residue - Da Comunicare`): mostra `0` (grigio) se la giacenza è sufficiente, oppure il valore negativo (es. `-2` in rosso pulsante) se occorre ordinare nuove tessere a CSEN.
+
+---
+
 ## [2026-07-31] fix | Risoluzione Blocco Sincronizzazione CSEN & Codici IT (v1.03.70)
 - **Backend & Script (`scripts/csen_sync_active.js`, `scripts/csen_reconciliation.js`, `api/csen-status.js`)**:
   - Aggiornato lo STEP 1 di `csen_sync_active.js` per escludere i codici temporanei locali (`IT...`) dalla promozione automatica a `SYNCED`.

@@ -22,7 +22,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.03.70"></script>
+    <script src="config.js?v=1.03.71"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -495,7 +495,7 @@
             color: #C9A84C;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.03.70">
+    <link rel="stylesheet" href="../output.css?v=1.03.71">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -507,7 +507,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.70</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.71</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1090,18 +1090,50 @@
                         <p class="text-xs text-gray-500 uppercase">Flusso atleti e trasmissione RASD / CSEN</p>
                     </div>
 
-                    <!-- Widget Tessere CSEN -->
-                    <div class="hidden xl:flex bg-black/40 border border-white/10 p-2 gap-4 items-center shadow-[4px_4px_0_0_rgba(223,41,62,0.2)]">
-                        <button class="flex items-center gap-2 border-r border-white/10 pr-4 hover:bg-white/5 p-2 transition-colors focus:outline-none cursor-pointer group" title="Clicca per aggiornare manualmente dal portale CSEN" id="auto-dashboard-click-14">
-                            <span id="csen-sync-icon" class="material-symbols-outlined text-primary text-sm group-hover:rotate-180 transition-transform duration-500">sync</span>
-                            <span class="font-headline text-[10px] text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Tessere Residue</span>
-                        </button>
-                        <div class="flex gap-4 font-mono text-xs uppercase px-2">
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Silver</span><span id="csen-silver" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Base Gold</span><span id="csen-gold" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Integ. A</span><span id="csen-inta" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                            <div class="flex flex-col items-center"><span class="text-[9px] text-gray-500 tracking-wider">Integ. B</span><span id="csen-intb" class="font-bold text-white text-sm animate-pulse">--</span></div>
-                        </div>
+                    <!-- Widget Matrice Tessere CSEN -->
+                    <div class="hidden xl:block bg-black/60 border border-white/10 p-3 shadow-[4px_4px_0_0_rgba(223,41,62,0.2)]">
+                        <table class="w-full text-center font-mono text-xs">
+                            <thead>
+                                <tr class="border-b border-white/10 text-[9px] text-gray-400 font-headline uppercase tracking-wider">
+                                    <th class="text-left pb-1.5 font-normal flex items-center gap-1">
+                                        <button onclick="fetchCsenStatus()" class="hover:text-primary transition-colors cursor-pointer group" title="Aggiorna contatori CSEN" id="auto-dashboard-click-14">
+                                            <span id="csen-sync-icon" class="material-symbols-outlined text-sm align-middle group-hover:rotate-180 transition-transform duration-500 text-primary">sync</span>
+                                        </button>
+                                        <span class="ml-1 text-gray-300 font-bold">Tessere CSEN</span>
+                                    </th>
+                                    <th class="pb-1.5 font-normal px-3">Base Silver</th>
+                                    <th class="pb-1.5 font-normal px-3">Base Gold</th>
+                                    <th class="pb-1.5 font-normal px-3">Integ. A</th>
+                                    <th class="pb-1.5 font-normal px-3">Integ. B</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-white/5">
+                                <!-- Riga 1: Tessere Residue -->
+                                <tr>
+                                    <td class="text-left py-1 text-[10px] text-gray-400 uppercase font-headline pr-4" title="Tessere in giacenza su portale CSEN">Residue</td>
+                                    <td id="csen-res-silver" class="font-bold text-white py-1">--</td>
+                                    <td id="csen-res-gold" class="font-bold text-white py-1">--</td>
+                                    <td id="csen-res-inta" class="font-bold text-white py-1">--</td>
+                                    <td id="csen-res-intb" class="font-bold text-white py-1">--</td>
+                                </tr>
+                                <!-- Riga 2: Tessere da Comunicare -->
+                                <tr>
+                                    <td class="text-left py-1 text-[10px] text-cyan-400 uppercase font-headline pr-4" title="Atleti in attesa di tesseramento/rinnovo">Da Comunicare</td>
+                                    <td id="csen-com-silver" class="font-bold text-cyan-400 py-1">--</td>
+                                    <td id="csen-com-gold" class="font-bold text-cyan-400 py-1">--</td>
+                                    <td id="csen-com-inta" class="font-bold text-cyan-400 py-1">--</td>
+                                    <td id="csen-com-intb" class="font-bold text-cyan-400 py-1">--</td>
+                                </tr>
+                                <!-- Riga 3: Tessere da Richiedere -->
+                                <tr class="bg-white/5">
+                                    <td class="text-left py-1 text-[10px] text-white uppercase font-headline pr-4" title="Fabbisogno tessere da acquistare">Da Richiedere</td>
+                                    <td id="csen-req-silver" class="font-bold py-1">--</td>
+                                    <td id="csen-req-gold" class="font-bold py-1">--</td>
+                                    <td id="csen-req-inta" class="font-bold py-1">--</td>
+                                    <td id="csen-req-intb" class="font-bold py-1">--</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
                     <!-- Bottone Esportazione CSEN -->
@@ -3043,8 +3075,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.03.70"></script>
-    <script src="dashboard.js?v=1.03.70"></script>
+    <script src="password-validator.js?v=1.03.71"></script>
+    <script src="dashboard.js?v=1.03.71"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>

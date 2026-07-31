@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.70"
+                VERSION: "1.03.71"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6987,35 +6987,69 @@
         }
         async function fetchCsenStatus() {
             try {
-                // Nessun blocco dev mode qui
-                const { data, error } = await supabaseClient.from('csen_status').select('*').eq('id', 1).single();
-                if (error && error.code !== 'PGRST116') {
-                    console.error("Errore fetch CSEN status:", error);
-                    return;
-                }
-                
-                const silverEl = document.getElementById('csen-silver');
-                const goldEl = document.getElementById('csen-gold');
-                const intaEl = document.getElementById('csen-inta');
-                const intbEl = document.getElementById('csen-intb');
+                const icon = document.getElementById('csen-sync-icon');
+                if (icon) icon.classList.add('animate-spin');
 
-                if (data) {
-                    silverEl.textContent = data.base_silver;
-                    goldEl.textContent = data.base_gold;
-                    intaEl.textContent = data.integrativa_a;
-                    intbEl.textContent = data.integrativa_b;
-                } else {
-                    silverEl.textContent = '0';
-                    goldEl.textContent = '0';
-                    intaEl.textContent = '0';
-                    intbEl.textContent = '0';
-                }
-                silverEl.classList.remove('animate-pulse');
-                goldEl.classList.remove('animate-pulse');
-                intaEl.classList.remove('animate-pulse');
-                intbEl.classList.remove('animate-pulse');
+                // 1. Fetch Residue (Giacenza su portale CSEN)
+                const { data: statusData, error: statusErr } = await supabaseClient.from('csen_status').select('*').eq('id', 1).single();
+                if (statusErr && statusErr.code !== 'PGRST116') console.error("Errore fetch CSEN status:", statusErr);
+
+                // 2. Fetch Da Comunicare (Atleti in coda per tesseramento/rinnovo CSEN)
+                const { data: pendingData, error: pendingErr } = await supabaseClient
+                    .from('registro_tesserati')
+                    .select('livello_copertura')
+                    .eq('stato_tesseramento', 'ATTIVO')
+                    .in('sync_csen_status', ['PENDING', 'RENEWAL_SUBMITTED'])
+                    .or('numero_tessera_csen.is.null,numero_tessera_csen.ilike.IT%');
+                if (pendingErr) console.error("Errore fetch tesserati pending:", pendingErr);
+
+                // 3. Aggregazione Da Comunicare per livello
+                const comunicare = { silver: 0, gold: 0, inta: 0, intb: 0 };
+                (pendingData || []).forEach(row => {
+                    if (row.livello_copertura === 'BASE' || row.livello_copertura === 'BASE_SILVER') comunicare.silver++;
+                    else if (row.livello_copertura === 'BASE_GOLD') comunicare.gold++;
+                    else if (row.livello_copertura === 'INTEGRATIVA_A') comunicare.inta++;
+                    else if (row.livello_copertura === 'INTEGRATIVA_B') comunicare.intb++;
+                });
+
+                // 4. Mappatura Residue
+                const residue = {
+                    silver: statusData ? parseInt(statusData.base_silver) || 0 : 0,
+                    gold: statusData ? parseInt(statusData.base_gold) || 0 : 0,
+                    inta: statusData ? parseInt(statusData.integrativa_a) || 0 : 0,
+                    intb: statusData ? parseInt(statusData.integrativa_b) || 0 : 0
+                };
+
+                // 5. Helper per aggiornamento elementi DOM
+                const updateUI = (category, resValue, comValue) => {
+                    const elRes = document.getElementById(`csen-res-${category}`);
+                    const elCom = document.getElementById(`csen-com-${category}`);
+                    const elReq = document.getElementById(`csen-req-${category}`);
+
+                    if (elRes) elRes.textContent = resValue;
+                    if (elCom) elCom.textContent = comValue;
+
+                    if (elReq) {
+                        const diff = resValue - comValue;
+                        if (diff < 0) {
+                            elReq.innerHTML = `<span class="text-primary font-bold animate-pulse">${diff}</span>`; // Es. -2 in rosso brillante
+                        } else {
+                            elReq.innerHTML = `<span class="text-gray-500 font-normal">0</span>`; // 0 se giacenza sufficiente
+                        }
+                    }
+                };
+
+                // 6. Rendering finale delle 4 colonne
+                updateUI('silver', residue.silver, comunicare.silver);
+                updateUI('gold', residue.gold, comunicare.gold);
+                updateUI('inta', residue.inta, comunicare.inta);
+                updateUI('intb', residue.intb, comunicare.intb);
+
+                if (icon) icon.classList.remove('animate-spin');
             } catch (err) {
                 console.error("Errore fetch CSEN status catch:", err);
+                const icon = document.getElementById('csen-sync-icon');
+                if (icon) icon.classList.remove('animate-spin');
             }
         }
 
