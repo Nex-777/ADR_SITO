@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] fix | Allineamento Ordinamento Certificati Medici Atleta vs Admin (v1.03.78)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Modificato il criterio della clausola `.order()` in `loadUserCertificato()` da `data_rilascio` a `created_at` decrescente (`.order('created_at', { ascending: false })`).
+  - Risolta l'anomalia per cui in presenza di più record con la stessa `data_rilascio` (es. record fittizio di migrazione vs nuovo certificato reale), il sistema atleta mostrava lo stato del vecchio record `IN_ATTESA` anziché l'ultimo certificato `VERDE` approvato.
+
+---
+
 ## [2026-07-31] fix | Isolation & Lockout Navigazione Utenti con Registrazione Incompleta (v1.03.77)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Implementato il controllo `isRegistrazioneIncompleta = !anag` derivato direttamente in RAM dalla query relazionale del profilo (`currentUserProfile.anagrafiche`).
