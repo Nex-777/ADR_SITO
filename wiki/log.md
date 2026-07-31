@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] refactor | Rimozione Allenatore dal Modale Modifica Scheda Personaggio (v1.03.73)
+- **Frontend Epika (`portal/epika.html`, `portal/epika.js`)**:
+  - Rimossa la selezione e la gestione del campo "Allenatore di Riferimento" dal modale "MODIFICA SCHEDA PERSONAGGIO".
+  - Applicata la rigida separazione dei domini (Separation of Concerns): la Scheda Personaggio gestisce esclusivamente l'identità dell'atleta (Gruppo Storico, Popolo / Cultura e Ruolo Combattimento), mentre la gestione dell'Allenatore/Allievo Allenatore avviene unicamente nella sezione "Abilitazione al Combattimento" (SCAB).
+  - Eliminata la chiamata ridondante a `syncAbilitazioneScab()` dal salvataggio del profilo per evitare side-effect indesiderati sulla pratica marziale attiva.
+
+---
+
 ## [2026-07-31] fix | Layout Responsivo Widget CSEN & Batch Limit 25 (v1.03.72)
 - **Frontend Admin (`portal/dashboard.html`)**:
   - Estratto il widget matrice Tessere CSEN dal container dell'header e riposizionato in una riga dedicata a larghezza piena con container scrollabile orizzontalmente (`overflow-x-auto`). Garantita visibilità su tutti gli schermi (desktop, laptop 13"/15" e schermi mobili).

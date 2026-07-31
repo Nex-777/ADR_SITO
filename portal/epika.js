@@ -643,8 +643,7 @@ async function apriModaleModificaProfilo() {
         originalProfileData = {
             gruppo_storico_id: prof.gruppo_storico_id,
             popolo: prof.popolo,
-            ruolo_combattimento: prof.ruolo_combattimento,
-            allenatore_id: prof.allenatore_id
+            ruolo_combattimento: prof.ruolo_combattimento
         };
 
         const selectGruppo = document.getElementById('edit-gruppo-storico');
@@ -666,28 +665,8 @@ async function apriModaleModificaProfilo() {
 
         document.getElementById('edit-ruolo-combattimento').value = prof.ruolo_combattimento || 'combattente';
 
-        const selectAllenatore = document.getElementById('edit-allenatore');
-        if (selectAllenatore) {
-            const allenatoriDirect = allenatoriLista.filter(a => a.tipo === 'allenatore');
-            const allieviDirect = allenatoriLista.filter(a => a.tipo === 'scab_allievo_allenatore');
-
-            selectAllenatore.innerHTML = '<option value="" selected>-- SELEZIONA ALLENATORE / ALLIEVO --</option>';
-            if (allenatoriDirect.length) {
-                selectAllenatore.innerHTML += '<optgroup label="ALLENATORI">';
-                allenatoriDirect.forEach(a => { selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`; });
-                selectAllenatore.innerHTML += '</optgroup>';
-            }
-            if (allieviDirect.length) {
-                selectAllenatore.innerHTML += '<optgroup label="ALLIEVI ALLENATORI">';
-                allieviDirect.forEach(a => { selectAllenatore.innerHTML += `<option value="${a.id}">${a.valore}</option>`; });
-                selectAllenatore.innerHTML += '</optgroup>';
-            }
-            selectAllenatore.value = prof.allenatore_id ? String(prof.allenatore_id) : '';
-        }
-
         onEditGruppoStoricoChange();
         applicaRestrizioneTessera('edit-ruolo-combattimento');
-        onEditRuoloChange();
 
         document.getElementById('epk-edit-profile-modal').classList.remove('epk-hidden');
     } catch (err) {
@@ -721,8 +700,6 @@ async function salvaModificheProfilo() {
     const selectPopolo = document.getElementById('edit-popolo');
     const popolo = selectPopolo.value;
     const ruoloCombattimento = document.getElementById('edit-ruolo-combattimento').value;
-    const allenatoreSelect = document.getElementById('edit-allenatore');
-    const allenatoreId = (ruoloCombattimento === 'combattente' && allenatoreSelect.value) ? parseInt(allenatoreSelect.value) : null;
 
     if (isNaN(gruppoStoricoId) || !gruppoStoricoId) {
         alert("Seleziona un Gruppo Storico valido.");
@@ -734,16 +711,10 @@ async function salvaModificheProfilo() {
         return;
     }
 
-    if (ruoloCombattimento === 'combattente' && !allenatoreId) {
-        alert("Seleziona l'Allenatore di Riferimento obbligatorio per i combattenti.");
-        return;
-    }
-
     if (
         gruppoStoricoId === originalProfileData.gruppo_storico_id &&
         popolo === originalProfileData.popolo &&
-        ruoloCombattimento === originalProfileData.ruolo_combattimento &&
-        allenatoreId === originalProfileData.allenatore_id
+        ruoloCombattimento === originalProfileData.ruolo_combattimento
     ) {
         chiudiModaleModificaProfilo();
         return;
@@ -759,14 +730,11 @@ async function salvaModificheProfilo() {
             .update({
                 gruppo_storico_id: gruppoStoricoId,
                 popolo: popolo,
-                ruolo_combattimento: ruoloCombattimento,
-                allenatore_id: allenatoreId
+                ruolo_combattimento: ruoloCombattimento
             })
             .eq('id', currentUser.id);
 
         if (error) throw error;
-
-        await syncAbilitazioneScab(ruoloCombattimento, allenatoreId);
 
         alert("Profilo aggiornato con successo!");
         chiudiModaleModificaProfilo();
@@ -829,11 +797,6 @@ function applicaRestrizioneTessera(selectRuoloId) {
 function onFaRuoloChange() {
     const ruolo = document.getElementById('fa-ruolo-combattimento').value;
     gestisciVisibilitaAllenatore(ruolo, 'fa-allenatore', 'container-fa-allenatore');
-}
-
-function onEditRuoloChange() {
-    const ruolo = document.getElementById('edit-ruolo-combattimento').value;
-    gestisciVisibilitaAllenatore(ruolo, 'edit-allenatore', 'container-edit-allenatore');
 }
 
 async function apriModaleRegistroModifiche() {
