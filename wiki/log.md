@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] fix | Hotfix Sintassi JS in epika.js (v1.03.68)
+- Corretta la parentesi graffa di chiusura mancante per `renderAthleteDashboard()` in `portal/epika.js`.
+- Verificata la validità della sintassi tramite `node -c portal/epika.js`.
+- Versionamento portato a `v1.03.68`.
+
 ## [2026-07-31] feat | Sanatoria & Automazione Abilitazioni SCAB dal Primo Accesso (v1.03.67)
 - **Database (Supabase DML & Stored Procedure):**
   - Creata ed eseguita la funzione `public.inizializza_abilitazioni_mancanti(2026)` che ha sanato massivamente **44 combattenti** (creati/allineati 33 record mancanti o difformi).

@@ -931,6 +931,8 @@ async function renderAthleteDashboard() {
     } catch (err) {
         console.error("Errore rendering dashboard atleta:", err);
     }
+}
+
 async function syncAbilitazioneScab(ruolo, allenatoreId) {
     if (ruolo === 'combattente' && allenatoreId) {
         try {
