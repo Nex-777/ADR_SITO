@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-01] feat | Navigazione Sequenziale Rapida Gruppi Storici Admin (v1.03.82)
+- **Frontend Epika (`portal/epika.html` & `portal/epika.js`)**:
+  - Aggiunti i pulsanti di navigazione `◀ PRECEDENTE` (`#epk-btn-prev-gruppo`) e `SUCCESSIVO ▶` (`#epk-btn-next-gruppo`) nella barra superiore del pannello `GESTIONE GRUPPO`.
+  - Creata la variabile di cache `adminGruppiListCache` mantenuta sincronizzata in ordine alfabetico con l'elenco della vista principale.
+  - Implementata la funzione `navigaGruppoDettaglio(direzione)` e la gestione dinamica degli stati abilitato/disabilitato per i tasti ai margini della lista.
+- **Versione**: Incrementata la versione globale a `v1.03.82`.
+
+---
+
 ## [2026-08-01] feat | Apertura Portale Epika in Nuova Tab Browser & Smart Tab (v1.03.81)
 - **Frontend Dashboard (`portal/dashboard.html`)**:
   - Convertiti i pulsanti della sidebar laterale "PORTALE EPIKA" (`#tab-btn-user-epika`) e "GESTIONE EPIKA" (`#tab-btn-epika-presidente`) da elementi `<button>` con `window.location.href` a tag ancora nativi `<a>` con `target="portale_epika"`.

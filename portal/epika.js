@@ -15,6 +15,7 @@ let allenatoriLista = [];
 let gruppiLavoro = [];
 let isEpikaAdmin = false;
 let tesseratiCache = [];
+let adminGruppiListCache = [];
 let scabStrutture = [];
 let soggettiValidatori = [];
 let soggettiAllenatori = [];
@@ -3545,6 +3546,8 @@ async function renderGruppiStoriciAdmin() {
 
         if (error) throw error;
 
+        adminGruppiListCache = gruppi || [];
+
         if (!gruppi || gruppi.length === 0) {
             listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Nessun gruppo storico registrato.</p>';
             return;
@@ -3928,6 +3931,40 @@ async function apriDettaglioGruppo(gruppoId) {
         document.getElementById('det-gruppo-id').value = g.id;
         document.getElementById('det-gruppo-nome').value = g.nome;
         
+        // Logica Abilitazione Tasti Navigazione Precedente / Successivo
+        if (adminGruppiListCache.length === 0) {
+            const { data: fallbackGruppi } = await supabaseClient.from('epika_gruppi_storici').select('id, nome').order('nome', { ascending: true });
+            if (fallbackGruppi) adminGruppiListCache = fallbackGruppi;
+        }
+        
+        const currentIndex = adminGruppiListCache.findIndex(x => x.id === parseInt(gruppoId));
+        const btnPrev = document.getElementById('epk-btn-prev-gruppo');
+        const btnNext = document.getElementById('epk-btn-next-gruppo');
+        
+        if (btnPrev) {
+            if (currentIndex <= 0) {
+                btnPrev.disabled = true;
+                btnPrev.style.opacity = '0.4';
+                btnPrev.style.cursor = 'not-allowed';
+            } else {
+                btnPrev.disabled = false;
+                btnPrev.style.opacity = '1';
+                btnPrev.style.cursor = 'pointer';
+            }
+        }
+        
+        if (btnNext) {
+            if (currentIndex === -1 || currentIndex >= adminGruppiListCache.length - 1) {
+                btnNext.disabled = true;
+                btnNext.style.opacity = '0.4';
+                btnNext.style.cursor = 'not-allowed';
+            } else {
+                btnNext.disabled = false;
+                btnNext.style.opacity = '1';
+                btnNext.style.cursor = 'pointer';
+            }
+        }
+        
         const detPopolo = document.getElementById('det-gruppo-popolo');
         const detCapo = document.getElementById('det-gruppo-capo');
         const detVice = document.getElementById('det-gruppo-vice');
@@ -4150,6 +4187,20 @@ async function sincronizzaStatoAttualeGruppo(gruppoId) {
         }
     } catch (e) {
         console.error("Errore sincronizzazione stato attuale gruppo:", e);
+    }
+}
+
+async function navigaGruppoDettaglio(direzione) {
+    const currentIdStr = document.getElementById('det-gruppo-id').value;
+    if (!currentIdStr || adminGruppiListCache.length === 0) return;
+    
+    const currentIndex = adminGruppiListCache.findIndex(x => x.id === parseInt(currentIdStr));
+    if (currentIndex === -1) return;
+    
+    const targetIndex = currentIndex + direzione;
+    if (targetIndex >= 0 && targetIndex < adminGruppiListCache.length) {
+        const targetId = adminGruppiListCache[targetIndex].id;
+        await apriDettaglioGruppo(targetId);
     }
 }
 

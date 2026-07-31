@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.03.81">
+    <link rel="stylesheet" href="epika.css?v=1.03.82">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.03.81"></script>
+    <script src="config.js?v=1.03.82"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.03.81</span>
+            <span class="epk-version-badge">Vs. 1.03.82</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -463,7 +463,11 @@
                                 <h2 id="epk-dettaglio-titolo" class="epk-headline" style="margin: 0; font-size: 18px;">
                                     GESTIONE GRUPPO
                                 </h2>
-                                <button class="epk-btn-secondary" onclick="chiudiDettaglioGruppo()" style="font-size: 10px; padding: 6px 12px;">← TORNA AI GRUPPI</button>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button id="epk-btn-prev-gruppo" class="epk-btn-secondary" onclick="navigaGruppoDettaglio(-1)" style="font-size: 10px; padding: 6px 10px;" title="Gruppo Precedente">◀ PRECEDENTE</button>
+                                    <button id="epk-btn-next-gruppo" class="epk-btn-secondary" onclick="navigaGruppoDettaglio(1)" style="font-size: 10px; padding: 6px 10px;" title="Gruppo Successivo">SUCCESSIVO ▶</button>
+                                    <button class="epk-btn-secondary" onclick="chiudiDettaglioGruppo()" style="font-size: 10px; padding: 6px 12px;">← TORNA AI GRUPPI</button>
+                                </div>
                             </div>
                             
                             <div class="epk-grid-2">
@@ -1865,6 +1869,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.03.81"></script>
+    <script src="epika.js?v=1.03.82"></script>
 </body>
 </html>
