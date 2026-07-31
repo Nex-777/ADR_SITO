@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-07-31] fix | Layout Responsivo Widget CSEN & Batch Limit 25 (v1.03.72)
+- **Frontend Admin (`portal/dashboard.html`)**:
+  - Estratto il widget matrice Tessere CSEN dal container dell'header e riposizionato in una riga dedicata a larghezza piena con container scrollabile orizzontalmente (`overflow-x-auto`). Garantita visibilità su tutti gli schermi (desktop, laptop 13"/15" e schermi mobili).
+- **Backend & Script (`scripts/csen_sync_active.js`)**:
+  - Incrementato il limite di processamento atleti in coda da 10 a 25 per singola esecuzione per smaltire l'intera coda senza rimanenze tra i run.
+
+---
+
 ## [2026-07-31] feat | Matrice Contatori Tessere CSEN (Residue, Da Comunicare, Da Richiedere) (v1.03.71)
 - **Frontend Admin (`portal/dashboard.html`, `portal/dashboard.js`)**:
   - Riprogettato il widget contatore del Registro Tesserati in una tabella/matrice analitica 3 righe x 4 colonne (Base Silver, Base Gold, Integ. A, Integ. B).

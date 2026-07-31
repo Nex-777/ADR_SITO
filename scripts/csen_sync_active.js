@@ -207,7 +207,7 @@ async function syncCsen() {
         `)
         .in('sync_csen_status', ['PENDING', 'RENEWAL_SUBMITTED'])
         .or('numero_tessera_csen.is.null,numero_tessera_csen.ilike.IT%')
-        .limit(10);
+        .limit(25);
 
     if (fetchErr) {
         const errMsg = `Errore nel recupero dati da Supabase: ${fetchErr.message}`;

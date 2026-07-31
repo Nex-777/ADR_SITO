@@ -22,7 +22,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.03.71"></script>
+    <script src="config.js?v=1.03.72"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -495,7 +495,7 @@
             color: #C9A84C;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.03.71">
+    <link rel="stylesheet" href="../output.css?v=1.03.72">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -507,7 +507,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.71</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.72</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1084,15 +1084,22 @@
 
             <!-- TAB 3: TESSERATI (TUTTI I RUOLI - PRESIDENTE/VP E SEGRETARIO CON AZIONI) -->
             <div id="panel-tesserati" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Registro Tesserati</h2>
-                        <p class="text-xs text-gray-500 uppercase">Flusso atleti e trasmissione RASD / CSEN</p>
+                    <!-- Header Registro Tesserati -->
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h2 class="font-headline text-lg font-bold uppercase">Registro Tesserati</h2>
+                            <p class="text-xs text-gray-500 uppercase">Flusso atleti e trasmissione RASD / CSEN</p>
+                        </div>
+
+                        <!-- Bottone Esportazione CSEN -->
+                        <button class="bg-primary hover:bg-primary-dim text-white font-headline text-xs font-bold px-4 py-2 uppercase tracking-wider flex items-center gap-2" id="auto-dashboard-click-15">
+                            <span class="material-symbols-outlined text-sm">download</span> ESPORTA CSV CSEN
+                        </button>
                     </div>
 
-                    <!-- Widget Matrice Tessere CSEN -->
-                    <div class="hidden xl:block bg-black/60 border border-white/10 p-3 shadow-[4px_4px_0_0_rgba(223,41,62,0.2)]">
-                        <table class="w-full text-center font-mono text-xs">
+                    <!-- Widget Matrice Tessere CSEN (Riga Dedicata, Responsiva e Scrollabile su Mobile) -->
+                    <div class="w-full bg-black/60 border border-white/10 p-3 mb-6 shadow-[4px_4px_0_0_rgba(223,41,62,0.2)] overflow-x-auto">
+                        <table class="w-full min-w-[600px] text-center font-mono text-xs">
                             <thead>
                                 <tr class="border-b border-white/10 text-[9px] text-gray-400 font-headline uppercase tracking-wider">
                                     <th class="text-left pb-1.5 font-normal flex items-center gap-1">
@@ -1135,12 +1142,6 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- Bottone Esportazione CSEN -->
-                    <button class="bg-primary hover:bg-primary-dim text-white font-headline text-xs font-bold px-4 py-2 uppercase tracking-wider flex items-center gap-2" id="auto-dashboard-click-15">
-                        <span class="material-symbols-outlined text-sm">download</span> ESPORTA CSV CSEN
-                    </button>
-                </div>
 
                 <!-- Sezione Certificati Medici da Revisionare (GIALLO) -->
                 <div id="giallo-certificati-container" class="hidden border border-yellow-500/20 bg-yellow-500/5 p-6 space-y-4">
@@ -3075,8 +3076,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.03.71"></script>
-    <script src="dashboard.js?v=1.03.71"></script>
+    <script src="password-validator.js?v=1.03.72"></script>
+    <script src="dashboard.js?v=1.03.72"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
