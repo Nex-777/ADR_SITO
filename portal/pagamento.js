@@ -3,7 +3,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.82"
+                VERSION: "1.03.83"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -46,7 +46,7 @@
                 // Fetch utente details directly from Supabase
                 const { data: userProfile, error } = await supabaseClient
                     .from('utenti')
-                    .select('nome, cognome, email, quota_totale, tipo_adesione, anagrafiche(id, registro_soci(stato_socio), certificati_medici(*))')
+                    .select('nome, cognome, email, quota_totale, tipo_adesione, tipo_tessera, anagrafiche(id, registro_soci(stato_socio), registro_approvazioni(*), certificati_medici(*))')
                     .eq('id', utenteId)
                     .maybeSingle();
 
@@ -57,6 +57,7 @@
 
                 const anag = Array.isArray(userProfile.anagrafiche) ? userProfile.anagrafiche[0] : userProfile.anagrafiche;
                 const regSocio = anag && anag.registro_soci ? (Array.isArray(anag.registro_soci) ? anag.registro_soci[0] : anag.registro_soci) : null;
+                const regAppr = anag && anag.registro_approvazioni ? (Array.isArray(anag.registro_approvazioni) ? anag.registro_approvazioni[0] : anag.registro_approvazioni) : null;
                 let cert = null;
                 if (anag && anag.certificati_medici) {
                     if (Array.isArray(anag.certificati_medici)) {
@@ -107,6 +108,31 @@
                 }
 
                 quota = parseFloat(userProfile.quota_totale) || 0;
+                if (quota <= 0 && regAppr && regAppr.stato === 'IN_ATTESA_PAGAMENTO') {
+                    // Fallback calcolo dinamico da configurazioni_tariffe per utenti con quota non valorizzata
+                    try {
+                        const { data: tariffeData } = await supabaseClient.from('configurazioni_tariffe').select('*');
+                        const tariffeMap = {};
+                        if (tariffeData) tariffeData.forEach(t => tariffeMap[t.chiave] = parseFloat(t.valore) || 0);
+                        
+                        let calcQuota = 0;
+                        if (userProfile.tipo_adesione === 'socio') {
+                            calcQuota = tariffeMap.quota_socio || 50;
+                        } else if (userProfile.tipo_adesione === 'tesserato' && userProfile.tipo_tessera) {
+                            calcQuota = tariffeMap[userProfile.tipo_tessera] || 0;
+                        } else if (userProfile.tipo_adesione === 'socio_tesserato') {
+                            calcQuota = (tariffeMap.quota_socio || 50) + (tariffeMap[userProfile.tipo_tessera] || 0);
+                        }
+                        
+                        if (calcQuota > 0) {
+                            quota = calcQuota;
+                            await supabaseClient.from('utenti').update({ quota_totale: quota }).eq('id', utenteId);
+                        }
+                    } catch (e) {
+                        console.warn("Errore calcolo fallback quota:", e);
+                    }
+                }
+
                 if (quota <= 0) {
                     showError("Questa quota è già stata saldata o non presenta importi insoluti.");
                     return;

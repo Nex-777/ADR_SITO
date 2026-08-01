@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-01] fix | Sanatoria Quota Nicolò Rottura & Fallback Quota Dinamico Checkout (v1.03.83)
+- **Database & Sanatoria (`scripts/fix_nicolo_rottura.js`)**:
+  - Sanato l'account dell'utente Nicolò Rottura (`nicolorottura@gmail.com`), impostando `quota_totale = 20.00` € su DB in base alla sua `tessera_integrativa_a`.
+- **Frontend Checkout (`portal/pagamento.js`)**:
+  - Implementata la logica di fallback di sicurezza: se un utente in stato `IN_ATTESA_PAGAMENTO` accede alla pagina di pagamento con `quota_totale = 0`, il sistema non mostra più un errore bloccante, ma calcola automaticamente la quota spettante da `configurazioni_tariffe` in base a `tipo_adesione` e `tipo_tessera`, aggiornando la voce su DB in background.
+
+---
+
 ## [2026-08-01] feat | Navigazione Sequenziale Rapida Gruppi Storici Admin (v1.03.82)
 - **Frontend Epika (`portal/epika.html` & `portal/epika.js`)**:
   - Aggiunti i pulsanti di navigazione `◀ PRECEDENTE` (`#epk-btn-prev-gruppo`) e `SUCCESSIVO ▶` (`#epk-btn-next-gruppo`) nella barra superiore del pannello `GESTIONE GRUPPO`.
