@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.83"
+                VERSION: "1.03.84"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -546,7 +546,7 @@
                     iconColor = "text-red-500";
                 } else if (cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || !cert.file_url.startsWith('http'))) {
                     bannerTitle = "AZIONE RICHIESTA: AGGIORNAMENTO CERTIFICATO MEDICO (DATO STORICO)";
-                    bannerMessage = "Risulti tesserato all'associazione da prima della creazione del portale digitale. Per questo motivo, il sistema non possiede ancora la scansione digitale del tuo certificato medico.<br>Ti preghiamo gentilmente di ricaricarlo al fine di completare l'allineamento dei tuoi dati soci e tesserati.";
+                    bannerMessage = "Nonostante il certificato che ci hai mandato quando ti sei iscritto alla vecchia piattaforma, non è stato possibile portarlo nella nuova. Ti chiediamo gentilmente di ricaricarlo, così da completare il tuo profilo sulla nuova piattaforma.";
                     bannerColorClass = "border-yellow-500/40 bg-yellow-500/10 border-l-4 border-yellow-500";
                     iconColor = "text-yellow-500";
                 }
@@ -604,18 +604,62 @@
                 document.getElementById('tab-btn-user_certificato').classList.remove('hidden');
                 document.getElementById('tab-btn-user_pagamenti').classList.remove('hidden');
                 
-                // Mostra il pulsante Epika SOLO se l'iscrizione e il pagamento sono stati completati con successo
-                const isEpikaAllowed = anag && !hasPendingPayment && !isBlocked && (
+                // Il pulsante Epika è SEMPRE VISIBILE nei menu (Desktop & Mobile)
+                const isApproved = anag && (
                     (Array.isArray(anag.registro_approvazioni) && anag.registro_approvazioni.some(a => a.stato === 'APPROVATO')) ||
                     (anag.registro_approvazioni && anag.registro_approvazioni.stato === 'APPROVATO')
                 );
+                const isTessStorico = cert && cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || !cert.file_url.startsWith('http'));
+
                 const epikaBtn = document.getElementById('tab-btn-user-epika');
                 if (epikaBtn) {
-                    if (isEpikaAllowed) {
-                        epikaBtn.classList.remove('hidden');
-                    } else {
-                        epikaBtn.classList.add('hidden');
-                    }
+                    epikaBtn.classList.remove('hidden');
+                    epikaBtn.onclick = (e) => {
+                        e.preventDefault();
+                        if (isApproved && !isBlocked && !hasPendingPayment) {
+                            window.open('epika.html', 'portale_epika');
+                        } else if (hasPendingPayment) {
+                            showEpikaAccessModal({
+                                title: "SALDO QUOTA RICHIESTO",
+                                body: "La tua richiesta di tesseramento Adrenalina è stata approvata ed è in attesa del saldo della quota associativa. Completa il pagamento per attivare l'accesso al portale Epika.",
+                                ctaLabel: "PAGA ORA LA QUOTA",
+                                ctaAction: () => {
+                                    document.getElementById('epika-access-modal').classList.add('hidden');
+                                    vaiAlPagamento();
+                                }
+                            });
+                        } else if (isTessStorico) {
+                            showEpikaAccessModal({
+                                title: "AGGIORNAMENTO CERTIFICATO RICHIESTO",
+                                body: "Nonostante il certificato che ci hai mandato quando ti sei iscritto alla vecchia piattaforma, non è stato possibile portarlo nella nuova. Ti chiediamo gentilmente di ricaricarlo, così da completare il tuo profilo sulla nuova piattaforma.",
+                                ctaLabel: "CARICA CERTIFICATO ORA",
+                                ctaAction: () => {
+                                    document.getElementById('epika-access-modal').classList.add('hidden');
+                                    switchTab('user_certificato');
+                                }
+                            });
+                        } else if (isBlocked) {
+                            showEpikaAccessModal({
+                                title: "CERTIFICATO MEDICO RICHIESTO",
+                                body: "Il tuo certificato medico risulta mancante, scaduto o non valido. Per poter accedere al portale Epika, carica un certificato in corso di validità.",
+                                ctaLabel: "VAI AL CERTIFICATO",
+                                ctaAction: () => {
+                                    document.getElementById('epika-access-modal').classList.add('hidden');
+                                    switchTab('user_certificato');
+                                }
+                            });
+                        } else {
+                            showEpikaAccessModal({
+                                title: "ISCRIZIONE IN ATTESA",
+                                body: "La tua procedura di iscrizione non è ancora completa o non risulta approvata. Verifica il tuo stato in Dashboard per procedere.",
+                                ctaLabel: "VAI ALLA PANORAMICA",
+                                ctaAction: () => {
+                                    document.getElementById('epika-access-modal').classList.add('hidden');
+                                    switchTab('panoramica');
+                                }
+                            });
+                        }
+                    };
                 }
                 
                 if (isBlocked) {

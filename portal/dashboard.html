@@ -22,7 +22,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.03.83"></script>
+    <script src="config.js?v=1.03.84"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -495,7 +495,7 @@
             color: #C9A84C;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.03.83">
+    <link rel="stylesheet" href="../output.css?v=1.03.84">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -507,7 +507,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.83</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.03.84</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -607,9 +607,9 @@
                 </button>
 
                 <!-- Active EPIKA button for athletes -->
-                <a id="tab-btn-user-epika" href="epika.html" target="portale_epika" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all flex items-center gap-3 hidden">
+                <button id="tab-btn-user-epika" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all flex items-center gap-3 text-gray-400 hover:text-white hover:bg-white/5 border border-transparent border-l-2 hover:border-l-primary hidden">
                     <span class="material-symbols-outlined text-sm">theater_comedy</span> PORTALE EPIKA
-                </a>
+                </button>
 
                 <!-- Instructor Dashboard Navigation -->
                 <button id="tab-btn-instructor_corsi" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
@@ -3076,8 +3076,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.03.83"></script>
-    <script src="dashboard.js?v=1.03.83"></script>
+    <script src="password-validator.js?v=1.03.84"></script>
+    <script src="dashboard.js?v=1.03.84"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -3264,6 +3264,19 @@
             <button id="modal-proceed-btn" onclick="submitModalCheckout()" class="w-full bg-primary text-black font-headline font-bold text-xs md:text-sm uppercase py-3.5 tracking-wider hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2 rounded-sm shadow-lg">
                 PROCEDI AL PAGAMENTO CON STRIPE ➔
             </button>
+        </div>
+    <!-- Epika Access Alert Modal -->
+    <div id="epika-access-modal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#0d1117] border border-gray-700 rounded-lg p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-amber-500 text-2xl shrink-0">warning</span>
+                <h2 id="epika-modal-title" class="font-headline font-bold text-white text-sm uppercase tracking-wider"></h2>
+            </div>
+            <p id="epika-modal-body" class="text-gray-300 text-xs leading-relaxed font-sans"></p>
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button onclick="document.getElementById('epika-access-modal').classList.add('hidden')" class="text-gray-400 hover:text-white font-headline text-[10px] uppercase px-3 py-2 transition-colors cursor-pointer">CHIUDI</button>
+                <button id="epika-modal-cta" class="bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-4 py-2 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm shadow-md"></button>
+            </div>
         </div>
     </div>
 

@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-01] feat | Tasto Epika Sempre Visibile, Modal Intercept & Allineamento 42 Atleti Storici (v1.03.84)
+- **Database & Script (`scripts/align_legacy_active_tesserati.js`)**:
+  - Eseguito l'allineamento automatico dei registri di approvazione per tutti i 42 tesserati/soci storici attivi (inclusa Michelle Scibelli `michellescibelli@icloud.com`).
+- **Frontend Dashboard (`portal/dashboard.html` & `portal/dashboard.js`)**:
+  - Reso il pulsante **PORTALE EPIKA** (`#tab-btn-user-epika`) sempre visibile per tutti gli utenti sia su Desktop che su Mobile/iPhone.
+  - Implementata la gestione avanzata dell'intercettazione click: se l'utente è in regola entra direttamente, altrimenti viene mostrato un modal popup moderno con spiegazione dettagliata e pulsante d'azione rapida (CTA).
+  - Inserito il messaggio personalizzato dedicato agli atleti della vecchia piattaforma per l'aggiornamento del certificato medico.
+- **Frontend Epika (`portal/epika.js`)**:
+  - Aggiornato l'alert di blocco per tentativi di accesso diretto via URL con messaggio chiaro e comprensibile.
+
+---
+
 ## [2026-08-01] fix | Sanatoria Quota Nicolò Rottura & Fallback Quota Dinamico Checkout (v1.03.83)
 - **Database & Sanatoria (`scripts/fix_nicolo_rottura.js`)**:
   - Sanato l'account dell'utente Nicolò Rottura (`nicolorottura@gmail.com`), impostando `quota_totale = 20.00` € su DB in base alla sua `tessera_integrativa_a`.

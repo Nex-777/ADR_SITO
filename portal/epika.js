@@ -77,7 +77,7 @@ async function initPortal() {
         const isApprovedAndPaid = apprs.some(a => a && a.stato === 'APPROVATO');
 
         if (!hasAnagrafica || !isApprovedAndPaid) {
-            alert("La tua registrazione ad Adrenalina Club ed il relativo pagamento della quota non risultano completati. Devi prima completare l'iscrizione ed il saldo della quota dal portale per poter accedere ad Epika.");
+            alert("Per accedere al Portale Epika è necessario completare l'iscrizione ed il saldo della quota associativa dal portale Adrenalina Club.");
             window.location.href = "dashboard.html";
             return;
         }
