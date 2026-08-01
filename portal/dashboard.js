@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.84"
+                VERSION: "1.03.85"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -617,7 +617,7 @@
                     epikaBtn.onclick = (e) => {
                         e.preventDefault();
                         if (isApproved && !isBlocked && !hasPendingPayment) {
-                            window.open('epika.html', 'portale_epika');
+                            window.location.href = 'epika.html';
                         } else if (hasPendingPayment) {
                             showEpikaAccessModal({
                                 title: "SALDO QUOTA RICHIESTO",
@@ -932,6 +932,20 @@
                 const btnNomina = document.getElementById('btn-nomina-direttivo-toggle');
                 if (btnNomina) btnNomina.classList.add('hidden');
             }
+        }
+
+        // Funzione per mostrare il modal di accesso a Epika
+        function showEpikaAccessModal({ title, body, ctaLabel, ctaAction }) {
+            const modal = document.getElementById('epika-access-modal');
+            const titleEl = document.getElementById('epika-modal-title');
+            const bodyEl = document.getElementById('epika-modal-body');
+            const ctaBtn = document.getElementById('epika-modal-cta');
+            if (!modal || !titleEl || !bodyEl || !ctaBtn) return;
+            titleEl.textContent = title;
+            bodyEl.innerHTML = body;
+            ctaBtn.textContent = ctaLabel;
+            ctaBtn.onclick = ctaAction;
+            modal.classList.remove('hidden');
         }
 
         // Funzione per reindirizzare al pagamento Stripe

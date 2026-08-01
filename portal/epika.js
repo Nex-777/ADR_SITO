@@ -60,7 +60,7 @@ async function initPortal() {
         // Recupera info utente reale ed enum dei ruoli Adrenalina
         const { data: userData, error: userError } = await supabaseClient
             .from('utenti')
-            .select('nome, cognome, ruolo, tipo_tessera, anagrafiche(id, registro_approvazioni(stato))')
+            .select('nome, cognome, ruolo, tipo_tessera, anagrafiche(id, registro_approvazioni(stato), registro_tesserati(stato_tesseramento), registro_soci(stato_socio))')
             .eq('id', currentUser.id)
             .maybeSingle();
 
@@ -74,7 +74,11 @@ async function initPortal() {
         const anagObj = Array.isArray(anagCheck) ? anagCheck[0] : anagCheck;
         const hasAnagrafica = !!anagObj?.id;
         const apprs = Array.isArray(anagObj?.registro_approvazioni) ? anagObj.registro_approvazioni : [anagObj?.registro_approvazioni];
-        const isApprovedAndPaid = apprs.some(a => a && a.stato === 'APPROVATO');
+        const regTess = anagObj?.registro_tesserati;
+        const regSoci = anagObj?.registro_soci;
+        const isTessActive = Array.isArray(regTess) ? regTess.some(t => t.stato_tesseramento === 'ATTIVO') : regTess?.stato_tesseramento === 'ATTIVO';
+        const isSocioActive = Array.isArray(regSoci) ? regSoci.some(s => s.stato_socio === 'ATTIVO') : regSoci?.stato_socio === 'ATTIVO';
+        const isApprovedAndPaid = apprs.some(a => a && a.stato === 'APPROVATO') || isTessActive || isSocioActive;
 
         if (!hasAnagrafica || !isApprovedAndPaid) {
             alert("Per accedere al Portale Epika è necessario completare l'iscrizione ed il saldo della quota associativa dal portale Adrenalina Club.");

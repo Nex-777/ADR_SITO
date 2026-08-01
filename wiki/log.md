@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-01] fix | Definizione showEpikaAccessModal, Navigazione Stesso Tab su iOS e Tolleranza Epika (v1.03.85)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Risolto il bug critico `TypeError: showEpikaAccessModal is not a function` definendo esplicitamente la funzione globale in `dashboard.js`.
+  - Sostituito `window.open('epika.html', 'portale_epika')` con `window.location.href = 'epika.html'` per evitare il blocco Pop-Up di iOS Safari su iPhone e garantire la conservazione della sessione Supabase.
+- **Frontend Epika (`portal/epika.js`)**:
+  - Aggiornata la select query e la logica `isApprovedAndPaid` per considerare sia `registro_approvazioni`, sia `registro_tesserati` attivi e `registro_soci` attivi per la massima resilienza.
+
+---
+
 ## [2026-08-01] feat | Tasto Epika Sempre Visibile, Modal Intercept & Allineamento 42 Atleti Storici (v1.03.84)
 - **Database & Script (`scripts/align_legacy_active_tesserati.js`)**:
   - Eseguito l'allineamento automatico dei registri di approvazione per tutti i 42 tesserati/soci storici attivi (inclusa Michelle Scibelli `michellescibelli@icloud.com`).
