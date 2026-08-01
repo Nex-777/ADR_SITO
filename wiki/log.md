@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-01] fix | Gating Epika: query semplificata, errore con return, redirect silenzioso (v1.03.86)
+- **`portal/epika.js`**:
+  - Rimossi i nested select `registro_tesserati(stato_tesseramento)` e `registro_soci(stato_socio)` dalla query di gating (potevano causare errori RLS con anon key, portando a `userData=null` → redirect silenzioso).
+  - Aggiunto `return` dopo `userError` per evitare prosecuzione con dati null.
+  - Eliminato l'`alert()` bloccante nel gating check; redirect cambiato in `dashboard.html?epika_blocked=1`.
+- **`portal/dashboard.js`**:
+  - Aggiunta gestione del parametro `epika_blocked=1` in `renderContextUI()`: mostra il modal informativo senza alert bloccanti su iOS Safari.
+
+---
+
 ## [2026-08-01] fix | Definizione showEpikaAccessModal, Navigazione Stesso Tab su iOS e Tolleranza Epika (v1.03.85)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Risolto il bug critico `TypeError: showEpikaAccessModal is not a function` definendo esplicitamente la funzione globale in `dashboard.js`.

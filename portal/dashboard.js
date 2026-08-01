@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.85"
+                VERSION: "1.03.86"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -780,6 +780,21 @@
                 document.getElementById('tab-btn-bilanci').classList.remove('hidden');
 
                 switchTab('panoramica');
+            }
+
+            // Gestione redirect da epika.js con parametro epika_blocked
+            const epkParams = new URLSearchParams(window.location.search);
+            if (epkParams.get('epika_blocked') === '1') {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showEpikaAccessModal({
+                    title: "ACCESSO EPIKA NON DISPONIBILE",
+                    body: "Non hai ancora i requisiti per accedere al Portale Epika. Completa la registrazione, il pagamento della quota e il caricamento del certificato medico valido.",
+                    ctaLabel: "VAI ALLA PANORAMICA",
+                    ctaAction: () => {
+                        document.getElementById('epika-access-modal').classList.add('hidden');
+                        switchTab('panoramica');
+                    }
+                });
             }
         }
 
