@@ -351,12 +351,27 @@ export default async function handler(req, res) {
 
             const description = `Iscrizione Corso: ${evento.titolo}${causaleDettaglio} per ${profile?.nome || ''} ${profile?.cognome || ''}`;
 
-            const isInstallment = req.body?.is_installment === true || req.body?.is_installment === 'true';
+            let isInstallment = req.body?.is_installment === true || req.body?.is_installment === 'true';
+            let numRate = 1;
+
+            if (nomePiano) {
+                const lower = nomePiano.toLowerCase();
+                if (lower.includes('trimest') || lower.includes('3 mes')) {
+                    // Trimestrale NON rateizzabile internamente
+                    isInstallment = false;
+                    numRate = 1;
+                } else if (lower.includes('semest') || lower.includes('6 mes')) {
+                    numRate = 6;
+                } else if (lower.includes('annu') || lower.includes('12 mes')) {
+                    numRate = 12;
+                } else {
+                    isInstallment = false;
+                }
+            } else {
+                isInstallment = false;
+            }
 
             if (isInstallment) {
-                let numRate = parseInt(req.body?.num_rate || '12');
-                if (isNaN(numRate) || numRate <= 0) numRate = 12;
-                if (numRate > 12) numRate = 12;
 
                 const monthlyBaseQuota = Math.round((prezzo / numRate) * 100);
                 const monthlyFeeQuota = Math.round((prezzo / numRate) * 0.02 * 100);

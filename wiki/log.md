@@ -2,6 +2,12 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-03] feature | Disabilitazione Rateizzazione Interna per il Trimestrale e Validazione Backend (v1.03.89)
+- **`api/create-checkout-session.js`**: Implementata validazione deterministica lato server per `isInstallment` e `numRate` basata sul nome del piano. Per i piani Trimestrali (`trimest`/`3 mes`), la rateizzazione viene forzata a `false` nel backend prevenendo qualsiasi elusione via API.
+- **`portal/dashboard.js`**: Disabilitata la rateizzazione interna nell'interfaccia della `openCheckoutModal` per i piani Trimestrali (mantenendo il codice commentato per eventuale ripristino futuro).
+
+---
+
 ## [2026-08-03] fix | Aggiornamento Dicitura Promemoria Scadenza Certificato Medico (v1.03.88)
 - **`api/cron-scadenze.js`**:
   - Aggiornata la dicitura evidenziata in rosso per i promemoria di scadenza a 30 e 15 giorni.
