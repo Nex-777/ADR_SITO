@@ -121,7 +121,7 @@ export default async function handler(req, res) {
                                     <p>Ciao ${anag.nome}, ti ricordiamo che il tuo certificato medico scadrà il <strong>${dataScadenza}</strong> (tra 30 giorni).</p>
                                     <p>Ti invitiamo a rinnovarlo al più presto ed effettuare l'upload nel portale per evitare la sospensione delle attività sportive.</p>
                                     <p style="color: #df293e; font-weight: bold;">
-                                      Fino al caricamento e alla successiva approvazione del nuovo certificato medico, l'accesso ai corsi, agli eventi e alle attività sportive sarà sospeso. Il portale sarà limitato esclusivamente al caricamento della documentazione.
+                                      Dal giorno successivo alla scadenza e fino al caricamento e alla successiva approvazione del nuovo certificato medico, l'accesso ai corsi, agli eventi e alle attività sportive sarà sospeso. Il portale sarà limitato esclusivamente al caricamento della documentazione.
                                     </p>
                                    </div>`
                         });
@@ -140,7 +140,7 @@ export default async function handler(req, res) {
                                     <p>Ciao ${anag.nome}, il tuo certificato medico scadrà il <strong>${dataScadenza}</strong> (tra 15 giorni).</p>
                                     <p>Se non effettuerai l'upload del nuovo certificato medico, il tuo tesseramento verrà sospeso automaticamente il giorno della scadenza.</p>
                                     <p style="color: #df293e; font-weight: bold;">
-                                      Fino al caricamento e alla successiva approvazione del nuovo certificato medico, l'accesso ai corsi, agli eventi e alle attività sportive sarà sospeso. Il portale sarà limitato esclusivamente al caricamento della documentazione.
+                                      Dal giorno successivo alla scadenza e fino al caricamento e alla successiva approvazione del nuovo certificato medico, l'accesso ai corsi, agli eventi e alle attività sportive sarà sospeso. Il portale sarà limitato esclusivamente al caricamento della documentazione.
                                     </p>
                                    </div>`
                         });

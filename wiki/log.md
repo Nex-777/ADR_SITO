@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-03] fix | Aggiornamento Dicitura Promemoria Scadenza Certificato Medico (v1.03.88)
+- **`api/cron-scadenze.js`**:
+  - Aggiornata la dicitura evidenziata in rosso per i promemoria di scadenza a 30 e 15 giorni.
+  - Testo variato in: *"Dal giorno successivo alla scadenza e fino al caricamento e alla successiva approvazione del nuovo certificato medico, l'accesso ai corsi, agli eventi e alle attività sportive sarà sospeso. Il portale sarà limitato esclusivamente al caricamento della documentazione."*
+
+---
+
+## [2026-08-03] fix | Fix Epika Access su iPhone, Smart Navigation (Mobile vs Desktop) & Hamburger Menu Fix (v1.03.87)
+- **`portal/dashboard.html`**:
+  - Trasformato `#tab-btn-epika-presidente` da tag `<a>` a `<button>` uniformandolo a `#tab-btn-user-epika`.
+  - Corretta la funzione `populateMobileMenu()` per supportare pulsanti con gestori di eventi `.onclick` programmatici Javascript (`typeof btn.onclick === 'function'`), risolvendo il bug critico per cui il tocco su "Portale Epika" nel menu hamburger mobile di iPhone veniva ignorato.
+- **`portal/dashboard.js`**:
+  - Creata la funzione centralizzata `openEpika(isAdmin)` che rileva il dispositivo.
+  - **Su Mobile/iPhone**: Navigazione nella stessa finestra (`window.location.href = targetUrl`), evitando il blocco pop-up di Safari iOS ed il partizionamento della sessione Supabase in `localStorage`.
+  - **Su Desktop**: Navigazione in nuova scheda (`window.open(targetUrl, 'portale_epika')`), mantenendo aperta la dashboard principale.
+  - Collegati sia `#tab-btn-user-epika` che `#tab-btn-epika-presidente` alla funzione `openEpika`.
+
+---
+
 ## [2026-08-01] fix | Gating Epika: query semplificata, errore con return, redirect silenzioso (v1.03.86)
 - **`portal/epika.js`**:
   - Rimossi i nested select `registro_tesserati(stato_tesseramento)` e `registro_soci(stato_socio)` dalla query di gating (potevano causare errori RLS con anon key, portando a `userData=null` → redirect silenzioso).

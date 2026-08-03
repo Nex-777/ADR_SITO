@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.86"
+                VERSION: "1.03.88"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -617,7 +617,7 @@
                     epikaBtn.onclick = (e) => {
                         e.preventDefault();
                         if (isApproved && !isBlocked && !hasPendingPayment) {
-                            window.location.href = 'epika.html';
+                            openEpika(false);
                         } else if (hasPendingPayment) {
                             showEpikaAccessModal({
                                 title: "SALDO QUOTA RICHIESTO",
@@ -771,7 +771,13 @@
                 const isDirettivoMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
                 if (isDirettivoMember) {
                     const epikaPresidenteBtn = document.getElementById('tab-btn-epika-presidente');
-                    if (epikaPresidenteBtn) epikaPresidenteBtn.classList.remove('hidden');
+                    if (epikaPresidenteBtn) {
+                        epikaPresidenteBtn.classList.remove('hidden');
+                        epikaPresidenteBtn.onclick = (e) => {
+                            e.preventDefault();
+                            openEpika(true);
+                        };
+                    }
                 }
 
                 document.getElementById('tab-btn-direttivo').classList.remove('hidden');
@@ -961,6 +967,17 @@
             ctaBtn.textContent = ctaLabel;
             ctaBtn.onclick = ctaAction;
             modal.classList.remove('hidden');
+        }
+
+        // Funzione di navigazione centralizzata verso Epika (Mobile vs Desktop)
+        function openEpika(isAdmin = false) {
+            const isMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const targetUrl = isAdmin ? 'epika.html?admin=true' : 'epika.html';
+            if (isMobile) {
+                window.location.href = targetUrl;
+            } else {
+                window.open(targetUrl, 'portale_epika');
+            }
         }
 
         // Funzione per reindirizzare al pagamento Stripe
