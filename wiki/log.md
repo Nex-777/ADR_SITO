@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] bugfix | Inclusione documenti_identita nella query di sessione utente e risoluzione falso allarme Panoramica (v1.03.99)
+- **`portal/dashboard.js`**:
+  - Inclusa la relazione `documenti_identita(*)` all'interno della `.select()` della funzione `checkSession()` (linea 325) durante il recupero relazionale dell'anagrafica utente.
+  - Risolto lo sfasamento di stato (State Desync) per cui `anag.documenti_identita` risultava `undefined` nella Panoramica producendo l'avviso errato "DOCUMENTO D'IDENTITÀ MANCANTE", a fronte di un documento regolarmente approvato e valido.
+- **Global Bump**: Bumped application version to `v1.03.99` across 22 files.
+
+---
+
+## [2026-08-05] docs | Aggiornamento GDPR Privacy Policy - Provider Mistral AI SAS (v1.03.98)
+- **`privacy.html`**:
+  - Integrazione esplicita di **Mistral AI (Mistral AI SAS)** all'interno del paragrafo *Destinatari dei Dati e Responsabili del Trattamento* (Art. 28 GDPR) come provider europeo per la validazione automatizzata e l'analisi dei certificati medici e dei documenti di riconoscimento.
+- **Global Bump**: Bumped application version to `v1.03.98` across 22 files.
+
+---
+
 ## [2026-08-05] bugfix | Correzione RPC elimina_utente_completo e Guardrail Sicurezza (v1.03.97)
 - **Supabase Database RPC (`public.elimina_utente_completo`)**:
   - Risolto il bug di *Type Mismatch* in Postgres convertendo la variabile `caller_role` in array `v_caller_roles public.ruolo_utente[]` e applicando la ricerca `ANY()` per supportare correttamente l'assegnazione da `get_user_role()`.

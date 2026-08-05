@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.97"
+                VERSION: "1.03.99"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -322,7 +322,7 @@
                 try {
                     const res = await supabaseClient
                         .from('utenti')
-                        .select('*, anagrafiche(id, certificati_medici(*), registro_approvazioni(*))')
+                        .select('*, anagrafiche(id, certificati_medici(*), documenti_identita(*), registro_approvazioni(*))')
                         .eq('id', user.id)
                         .maybeSingle();
                     profile = res.data;
