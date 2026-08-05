@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.03"
+                VERSION: "1.04.04"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2536,7 +2536,7 @@
                     actionBtn = `<div class="flex items-center justify-end gap-2">
                         ${actionContent}
                         <button onclick="apriDossierTesserato('${tess.anagrafiche.utente_id}')" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase" title="Dossier Tesserato">DOSSIER</button>
-                        <button onclick="apriAssistenzaTesserato('${tess.anagrafiche.utente_id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-purple-600/20 border border-purple-500/40 text-purple-400 hover:bg-purple-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all flex items-center justify-center" title="Assistenza Account (Vista Utente)"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                        <button onclick="apriAssistenzaTesserato('${tess.anagrafiche.utente_id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-purple-600/20 border border-purple-500/40 text-purple-400 hover:bg-purple-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all flex items-center justify-center" title="Assistenza Account (Vista Utente)"><span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">visibility</span></button>
                         <button onclick="eliminaUtente('${tess.anagrafiche.id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase">ELIMINA</button>
                     </div>`;
                 }
@@ -2693,7 +2693,7 @@
                 
                 if (typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente'].includes(r)) && tess.anagrafiche) {
                     actionHtml += `<button onclick="apriDossierTesserato('${tess.anagrafiche.utente_id}')" style="background:rgba(37,99,235,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-left:8px;">DOSSIER</button>`;
-                    actionHtml += `<button onclick="apriAssistenzaTesserato('${tess.anagrafiche.utente_id}', '${nomeComp.replace(/'/g, "\\'")}')" style="background:rgba(124,58,237,0.2);color:#a78bfa;border:1px solid rgba(124,58,237,0.4);padding:10px 14px;font-family:'Orbitron',sans-serif;font-size:11px;cursor:pointer;min-height:44px;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;" title="Assistenza Account"><svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>`;
+                    actionHtml += `<button onclick="apriAssistenzaTesserato('${tess.anagrafiche.utente_id}', '${nomeComp.replace(/'/g, "\\'")}')" style="background:rgba(124,58,237,0.2);color:#a78bfa;border:1px solid rgba(124,58,237,0.4);padding:10px 14px;font-family:'Orbitron',sans-serif;font-size:11px;cursor:pointer;min-height:44px;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;" title="Assistenza Account"><span class="material-symbols-outlined" style="font-size:16px;">visibility</span></button>`;
                 }
 
                 const card = document.createElement('div');
@@ -10074,7 +10074,7 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
         // 1. Carica profilo completo del tesserato da Supabase
         const { data: targetProfile, error } = await supabaseClient
             .from('utenti')
-            .select('*, anagrafiche(id, nome, cognome, codice_fiscale, data_nascita, comune_nascita, provincia_nascita, sesso, indirizzo, comune, provincia, cap, certificati_medici(*), documenti_identita(*), registro_approvazioni(*))')
+            .select('*, anagrafiche(id, certificati_medici(*), documenti_identita(*), registro_approvazioni(*))')
             .eq('id', utenteId)
             .maybeSingle();
 

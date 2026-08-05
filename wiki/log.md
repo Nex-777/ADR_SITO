@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] bugfix | Correzione Icona Material Symbols e Query Relazionale Supabase in Modalità Assistenza (v1.04.04)
+- **`portal/dashboard.js`**:
+  - Sostituito l'SVG grezzo inline nei pulsanti della vista Assistenza (sia per la tabella Desktop che per le Card Mobile) con l'icona ufficiale Google Material Symbols `<span class="material-symbols-outlined">visibility</span>`, risolvendo il problema del rendering a riquadro vuoto.
+  - Risolto l'errore Postgres `column anagrafiche_1.indirizzo does not exist` nella funzione `apriAssistenzaTesserato` correggendo la stringa relazionale Supabase `.select()` ed allineandola all'interrogazione nativa di `checkSession()`.
+- **Global Bump**: Bumped application version to `v1.04.04` across 22 files.
+
+---
+
 ## [2026-08-05] feature | Implementazione Modalità Assistenza Tesserato (pulsante Occhio Admin nel Registro Tesserati) (v1.04.03)
 - **`portal/dashboard.html`**:
   - Inserito il banner fisso `#banner-assistenza-admin` (con gradiente viola/indaco e pulsante di chiusura rapida) in cima al `body`.
