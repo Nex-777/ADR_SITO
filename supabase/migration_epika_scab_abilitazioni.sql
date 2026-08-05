@@ -99,10 +99,10 @@ BEGIN
 
     -- 1.5. Sincronizzazione Scheda Personaggio e Trigger Audit Log (epika_registro_modifiche_profilo)
     UPDATE public.epika_profili
-    SET allenatore_id = p_soggetto_opzione_id,
+    SET allenatore_id = v_allenatore_id,
         updated_at = NOW()
     WHERE id = v_profilo_id
-      AND (allenatore_id IS NULL OR allenatore_id IS DISTINCT FROM p_soggetto_opzione_id);
+      AND (allenatore_id IS NULL OR allenatore_id IS DISTINCT FROM v_allenatore_id);
 
     -- 2. Prevenzione sovrascrittura distruttiva (Regola EPIKA Storicizzazione)
     SELECT id, stato_allenatore, stato_validatore INTO v_existing_id, v_old_stato_a, v_old_stato_v

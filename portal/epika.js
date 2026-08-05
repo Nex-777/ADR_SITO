@@ -1382,20 +1382,36 @@ async function apriModaleIscrizione(eventoId, dataInizio, dataFine) {
         // Renderizza per la prima volta gli orari inline
         aggiornaInlinerOrari();
 
-        // Carica la lista allenatori
+        // Carica la lista allenatori e allievi allenatori
         const coachSelect = document.getElementById('epk-iscrizione-coach');
         coachSelect.innerHTML = '<option value="">SELEZIONA ALLENATORE...</option>';
-        const { data: allenatori, error: coachError } = await supabaseClient
+        const { data: opzioniAllenatori, error: coachError } = await supabaseClient
             .from('epika_opzioni')
             .select('*')
-            .eq('tipo', 'allenatore')
+            .in('tipo', ['allenatore', 'scab_allievo_allenatore'])
             .eq('attivo', true)
             .order('valore', { ascending: true });
 
-        if (!coachError && allenatori) {
-            allenatori.forEach(c => {
-                coachSelect.innerHTML += `<option value="${c.id}">${c.valore.toUpperCase()}</option>`;
-            });
+        if (!coachError && opzioniAllenatori) {
+            const allenatoriDirect = opzioniAllenatori.filter(a => a.tipo === 'allenatore');
+            const allieviDirect = opzioniAllenatori.filter(a => a.tipo === 'scab_allievo_allenatore');
+
+            if (allenatoriDirect.length) {
+                let htmlAll = '<optgroup label="ALLENATORI">';
+                allenatoriDirect.forEach(c => {
+                    htmlAll += `<option value="${c.id}">${c.valore.toUpperCase()}</option>`;
+                });
+                htmlAll += '</optgroup>';
+                coachSelect.innerHTML += htmlAll;
+            }
+            if (allieviDirect.length) {
+                let htmlAllievi = '<optgroup label="ALLIEVI ALLENATORI">';
+                allieviDirect.forEach(c => {
+                    htmlAllievi += `<option value="${c.id}">${c.valore.toUpperCase()}</option>`;
+                });
+                htmlAllievi += '</optgroup>';
+                coachSelect.innerHTML += htmlAllievi;
+            }
         }
 
         // Mostra campi combattente se applicabile

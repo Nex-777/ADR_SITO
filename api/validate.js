@@ -451,7 +451,23 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 
             const updatePayload = { stato_validazione: finalStatus, note_ai: finalNotes, data_scadenza: finalExpiry };
             let dbQuery = supabase.from('documenti_identita').update(updatePayload);
-            dbQuery = doc_id ? dbQuery.eq('id', doc_id) : dbQuery.eq('anagrafica_id', targetAnagraficaId);
+            if (doc_id) {
+                dbQuery = dbQuery.eq('id', doc_id);
+            } else {
+                const { data: latestDoc } = await supabase
+                    .from('documenti_identita')
+                    .select('id')
+                    .eq('anagrafica_id', targetAnagraficaId)
+                    .eq('stato_validazione', 'IN_ATTESA')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (!latestDoc?.id) {
+                    console.warn('[DOC VALIDATION] Nessun doc IN_ATTESA trovato per anagrafica_id:', targetAnagraficaId);
+                    return res.status(200).json({ message: 'Nessun documento IN_ATTESA trovato, skip.' });
+                }
+                dbQuery = dbQuery.eq('id', latestDoc.id);
+            }
             const { error: updateError } = await dbQuery;
             if (updateError) throw updateError;
             console.log(`[DOC VALIDATION] Updated. doc_id: ${doc_id || 'N/A'}, stato: ${finalStatus}`);

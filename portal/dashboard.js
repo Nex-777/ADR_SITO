@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.04"
+                VERSION: "1.04.06"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -7131,11 +7131,11 @@
                         });
                         if (insertErr) throw insertErr;
 
-                        alert('Documento caricato con successo! Sarà verificato automaticamente dall\'AI e, se necessario, manualmente dalla segreteria.');
+                        showToastNotification('Documento caricato con successo! Sarà verificato automaticamente.', 'success');
                         await loadUserDocumento();
                     } catch (err) {
                         console.error('Errore upload documento:', err);
-                        alert('Errore durante il caricamento: ' + err.message);
+                        showToastNotification('Errore durante il caricamento: ' + err.message, 'error');
                     } finally {
                         if (btn) { btn.disabled = false; btn.textContent = origBtnText; }
                     }

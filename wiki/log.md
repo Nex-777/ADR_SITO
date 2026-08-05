@@ -2,6 +2,28 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] fix | Risoluzione Automatica Allenatore di Riferimento da Allievi SCAB & Fix Modale Iscrizione
+- **Database (Supabase)**:
+  - Aggiornata la RPC `crea_richiesta_abilitazione`: quando l'utente seleziona un Allievo Allenatore, la procedura ora assegna nel profilo utente `epika_profili.allenatore_id` l'Allenatore di Riferimento risolto (`v_allenatore_id`) anziché l'ID dell'allievo.
+  - Eseguito Data-Fix retroattivo su `epika_profili`: riallineati tutti i profili utente collegati ad allievi allenatori (incluso il profilo di Chiara Traglia - MAKHAIRA) impostando l'Allenatore di Riferimento corretto (es. Tito per la palestra Itinerante).
+- **`portal/epika.js`**:
+  - Estesa la query di caricamento della modale di iscrizione evento per supportare sia `allenatore` che `scab_allievo_allenatore` organizzati in due distinti `<optgroup>`.
+  - Verificato il salvataggio senza blocchi del form d'iscrizione.
+
+---
+
+## [2026-08-05] fix | Risoluzione Errore Duplicate Key Caricamento Documenti & Hardening Validate AI (v1.04.05)
+- **Database (Supabase)**:
+  - Eliminato l'indice `UNIQUE` errato `documenti_identita_anagrafica_id_idx` su `public.documenti_identita(anagrafica_id)`.
+  - Ricreato l'indice come standard `INDEX` non-unico. Questo sblocca il caricamento dei documenti per Robert Miroslav e per tutti gli utenti esistenti, consentendo lo storico documenti e i doppi documenti per minorenni (personale + tutore).
+- **`api/validate.js`**:
+  - Applicato l'hardening al ramo di UPDATE per `targetType === 'doc'`: se `doc_id` non è specificato, aggiorna solo l'ultimo documento con `stato_validazione = 'IN_ATTESA'` anziché rischiare un UPDATE indiscriminato su tutti i documenti dell'anagrafica.
+- **`portal/dashboard.js`**:
+  - Sostituiti gli `alert()` bloccanti nel gestore di upload `handleDocUploadWidget` con le notifiche toast moderne `showToastNotification()`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.05`.
+
+---
+
 ## [2026-08-05] fix | Allineamento registro_approvazioni per 4 Tesserati Attivi (v1.04.05)
 - **Database (Supabase)**: Inseriti i record mancanti in `public.registro_approvazioni` (stato = `APPROVATO`) per i 4 tesserati con `registro_tesserati.stato_tesseramento = 'ATTIVO'` ma privi di record approvazione: **Arianna Pagnotta**, **Giulio De Vecchis**, **Paolo Paolantoni**, **Chiara Traglia**. Il record mancante bloccava l'accesso al portale Epika nonostante tessera CSEN e certificato medico fossero regolari. Script eseguito idempotente via `INSERT ... SELECT ... LEFT JOIN ... WHERE ra.id IS NULL`.
 
