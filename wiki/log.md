@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] bugfix | Correzione RPC elimina_utente_completo e Guardrail Sicurezza (v1.03.97)
+- **Supabase Database RPC (`public.elimina_utente_completo`)**:
+  - Risolto il bug di *Type Mismatch* in Postgres convertendo la variabile `caller_role` in array `v_caller_roles public.ruolo_utente[]` e applicando la ricerca `ANY()` per supportare correttamente l'assegnazione da `get_user_role()`.
+  - Aggiunto il **Guardrail di Sicurezza** (`v_has_history`) in linea con la regola EPIKA di storicizzazione: impedisce l'eliminazione fisica distruttiva se l'utente possiede verbali legali, spese o registro audit, suggerendo la disattivazione.
+  - Estesa la cancellazione a cascata bottom-up per includere tabelle satellite dell'ecosistema Epika (`registro_consensi`, `epika_profili`, `epika_iscrizioni_eventi`, `epika_presenze_eventi`, `presenze_eventi`, `iscrizioni_eventi`), azzerando il rischio di Foreign Key Constraint Error (HTTP 400).
+- **Global Bump**: Bumped application version to `v1.03.97` across 22 files.
+
+---
+
 ## [2026-08-05] feature | Wording Documenti, Nuova Frase Scadenza e Pulsante ELIMINA Universale Admin (v1.03.96)
 - **`portal/dashboard.js`**:
   - Dinamicizzato il titolo del box `#user-cert-title` nella Panoramica Utente per alternare correttamente l'icona ed il testo "DOCUMENTO D'IDENTITÀ" vs "CERTIFICATO MEDICO" vs "DOCUMENTAZIONE UTENTE".
