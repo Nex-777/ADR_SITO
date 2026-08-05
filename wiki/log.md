@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] bugfix | Inserimento hook loadUserDocumento in switchTab per sblocco caricamento documento d'identità (v1.04.00)
+- **`portal/dashboard.js`**:
+  - Inserita la chiamata automatica a `loadUserDocumento()` all'interno dell'event handler universale `switchTab('user_documento')`.
+  - Risolto il blocco su "Caricamento in corso..." che si verificava quando l'utente (specialmente da smartphone o da banner Panoramica) apriva la sezione Documento d'Identità, sbloccando immediatamente il rendering della scheda ed il form di upload per caricare il file.
+- **Global Bump**: Bumped application version to `v1.04.00` across 22 files.
+
+---
+
 ## [2026-08-05] bugfix | Inclusione documenti_identita nella query di sessione utente e risoluzione falso allarme Panoramica (v1.03.99)
 - **`portal/dashboard.js`**:
   - Inclusa la relazione `documenti_identita(*)` all'interno della `.select()` della funzione `checkSession()` (linea 325) durante il recupero relazionale dell'anagrafica utente.
