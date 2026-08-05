@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] bugfix | Inclusione tabella documenti_identita nel Dossier Tesserato dell'Admin (v1.04.02)
+- **`portal/dashboard.js`**:
+  - Aggiornata la funzione `openDossierModal` per interrogare la tabella relazionale `documenti_identita` anziché affidarsi al campo deprecato `ut.documento_identita_url`.
+  - Risolto l'avviso errato "Nessun documento caricato" nel modale Dossier dell'Admin, mostrando ora lo stato di validazione reale (VERDE/ROSSO/IN_ATTESA), la data di scadenza ed il pulsante per visualizzare il file.
+- **Global Bump**: Bumped application version to `v1.04.02` across 22 files.
+
+---
+
 ## [2026-08-05] bugfix | Implementazione guardrail deterministici date scadenze in api/validate.js, sanatoria record e correzione rollover minor (v1.04.01)
 - **`api/validate.js`**:
   - Inserita la comparazione temporale deterministica in Javascript (`expiryDate >= today`) sia per i certificati medici che per i documenti d'identità.

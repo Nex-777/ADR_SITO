@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.01"
+                VERSION: "1.04.02"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -8791,11 +8791,46 @@ async function apriDossierTesserato(utente_id) {
 
         // DOCUMENTO IDENTITA
         const idContainer = document.getElementById('dossier-identita-container');
-        if (ut.documento_identita_url) {
+        let docIdentita = null;
+        if (ana && ana.id) {
+            try {
+                const { data: docs } = await supabaseClient
+                    .from('documenti_identita')
+                    .select('*')
+                    .eq('anagrafica_id', ana.id)
+                    .order('created_at', { ascending: false });
+                if (docs && docs.length > 0) {
+                    docIdentita = docs.find(d => d.tipo_documento === 'PERSONALE' || !d.tipo_documento) || docs[0];
+                }
+            } catch (eDoc) {
+                console.error("Errore recupero documenti_identita dossier:", eDoc);
+            }
+        }
+
+        const docUrl = docIdentita?.file_url || ut.documento_identita_url;
+        if (docUrl) {
+            const stato = docIdentita?.stato_validazione || 'VERDE';
+            let badgeClass = 'bg-green-500/20 text-green-400 border-green-500/30';
+            let badgeLabel = 'VALIDO';
+            if (stato === 'ROSSO') {
+                badgeClass = 'bg-red-500/20 text-red-400 border-red-500/30';
+                badgeLabel = 'RIFIUTATO';
+            } else if (stato === 'IN_ATTESA' || stato === 'GIALLO') {
+                badgeClass = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+                badgeLabel = 'IN ATTESA';
+            }
+            const dataScad = docIdentita?.data_scadenza ? formatToItalianDate(docIdentita.data_scadenza) : null;
+
             idContainer.innerHTML = `
                 <div class="flex items-center justify-between">
-                    <span class="text-white text-xs flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-gray-400">badge</span> Documento salvato</span>
-                    <button onclick="openSignedFile('documenti_identita', '${escapeHtml(ut.documento_identita_url)}')" class="bg-primary/20 text-primary border border-primary/30 font-headline text-[10px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase rounded">VEDI FILE</button>
+                    <div class="space-y-1">
+                        <span class="text-white text-xs flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-gray-400">badge</span> Documento salvato
+                            <span class="border ${badgeClass} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">${badgeLabel}</span>
+                        </span>
+                        ${dataScad ? `<p class="text-[10px] text-gray-400 font-mono">Scadenza: ${dataScad}</p>` : ''}
+                    </div>
+                    <button onclick="openSignedFile('documenti_identita', '${escapeHtml(docUrl)}')" class="bg-primary/20 text-primary border border-primary/30 font-headline text-[10px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase rounded">VEDI FILE</button>
                 </div>
             `;
         } else {
