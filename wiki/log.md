@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] bugfix | Implementazione guardrail deterministici date scadenze in api/validate.js e sanatoria record (v1.04.01)
+- **`api/validate.js`**:
+  - Inserita la comparazione temporale deterministica in Javascript (`expiryDate >= today`) sia per i certificati medici che per i documenti d'identità.
+  - Risolto il fenomeno di allucinazione probabilistica del modello AI Vision (`pixtral-12b-2409`) sulle comparazioni delle date di scadenza, applicando l'override automatico a `VERDE` quando una data futura viene scambiata per passata dall'LLM.
+- **Supabase Database (`documenti_identita`)**:
+  - Applicata sanatoria SQL sul record di Arianna Pagnotta (`id: 9e34fa9b-30dc-42ea-8d86-6be26cd12df8`), correggendo lo stato da `ROSSO` a `VERDE` (scadenza 14/01/2029) e ripristinando immediatamente la sua utenza.
+- **Global Bump**: Bumped application version to `v1.04.01` across 22 files.
+
+---
+
 ## [2026-08-05] bugfix | Inserimento hook loadUserDocumento in switchTab per sblocco caricamento documento d'identità (v1.04.00)
 - **`portal/dashboard.js`**:
   - Inserita la chiamata automatica a `loadUserDocumento()` all'interno dell'event handler universale `switchTab('user_documento')`.

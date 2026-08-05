@@ -246,6 +246,23 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     finalRelease = aiResult.data_emissione || null;
                     finalExpiry = aiResult.data_scadenza || null;
                     finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
+
+                    // Guardrail Deterministico Javascript su Date Scadenza Certificati
+                    if (finalExpiry) {
+                        const expiryDate = new Date(finalExpiry);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+
+                        if (expiryDate < today) {
+                            finalStatus = 'ROSSO';
+                            finalNotes = `Certificato scaduto il ${finalExpiry}.`;
+                        } else if (expiryDate >= today && finalStatus === 'ROSSO') {
+                            if (finalType === 'AGONISTICO' || finalType === 'NON_AGONISTICO') {
+                                finalStatus = 'VERDE';
+                                finalNotes = `Certificato medico valido e leggibile fino al ${finalExpiry} (Validato da JS).`;
+                            }
+                        }
+                    }
                 } catch (aiErr) {
                     console.error('[CERT AI ERROR] Fallback a GIALLO:', aiErr.message);
                     finalStatus = 'GIALLO';
@@ -405,6 +422,26 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     finalStatus = aiResult.stato || 'GIALLO';
                     finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
                     finalExpiry = aiResult.data_scadenza || null;
+
+                    // Guardrail Deterministico Javascript su Date Scadenza Documenti d'Identità
+                    const isLegible = aiResult.leggibile === true;
+                    const isValidDocType = aiResult.tipo_documento && aiResult.tipo_documento !== 'ALTRO';
+
+                    if (finalExpiry) {
+                        const expiryDate = new Date(finalExpiry);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+
+                        if (expiryDate < today) {
+                            finalStatus = 'ROSSO';
+                            finalNotes = `Documento scaduto il ${finalExpiry}.`;
+                        } else if (expiryDate >= today && finalStatus === 'ROSSO') {
+                            if (isLegible && isValidDocType) {
+                                finalStatus = 'VERDE';
+                                finalNotes = `Documento valido e leggibile fino al ${finalExpiry} (Validato da JS).`;
+                            }
+                        }
+                    }
                 } catch (aiErr) {
                     console.error('[DOC AI ERROR] Fallback a GIALLO:', aiErr.message);
                     finalStatus = 'GIALLO';
