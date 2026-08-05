@@ -24,11 +24,17 @@ if (!targetVersion) {
     const parts = currentVersion.split('.');
     if (parts.length === 3) {
         const major = parts[0];
+        let minor = parseInt(parts[1], 10);
         let patch = parseInt(parts[2], 10);
         
         patch++;
-        const patchStr = patch < 10 && parts[2].length > 1 ? `0${patch}` : `${patch}`;
-        targetVersion = `${major}.${parts[1]}.${patchStr}`;
+        if (patch >= 100) {
+            minor++;
+            patch = patch % 100;
+        }
+        const minorStr = minor < 10 ? `0${minor}` : `${minor}`;
+        const patchStr = patch < 10 ? `0${patch}` : `${patch}`;
+        targetVersion = `${major}.${minorStr}.${patchStr}`;
     } else {
         console.error("ERRORE: Impossibile calcolare la versione automatica da:", currentVersion);
         process.exit(1);
