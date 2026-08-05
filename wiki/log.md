@@ -2,6 +2,12 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] fix | Allineamento registro_approvazioni per 4 Tesserati Attivi (v1.04.05)
+- **Database (Supabase)**: Inseriti i record mancanti in `public.registro_approvazioni` (stato = `APPROVATO`) per i 4 tesserati con `registro_tesserati.stato_tesseramento = 'ATTIVO'` ma privi di record approvazione: **Arianna Pagnotta**, **Giulio De Vecchis**, **Paolo Paolantoni**, **Chiara Traglia**. Il record mancante bloccava l'accesso al portale Epika nonostante tessera CSEN e certificato medico fossero regolari. Script eseguito idempotente via `INSERT ... SELECT ... LEFT JOIN ... WHERE ra.id IS NULL`.
+
+---
+
+
 ## [2026-08-05] bugfix | Correzione Icona Material Symbols e Query Relazionale Supabase in Modalità Assistenza (v1.04.04)
 - **`portal/dashboard.js`**:
   - Sostituito l'SVG grezzo inline nei pulsanti della vista Assistenza (sia per la tabella Desktop che per le Card Mobile) con l'icona ufficiale Google Material Symbols `<span class="material-symbols-outlined">visibility</span>`, risolvendo il problema del rendering a riquadro vuoto.
