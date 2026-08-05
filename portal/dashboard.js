@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.94"
+                VERSION: "1.03.95"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -470,8 +470,10 @@
                 
                 const anag = currentUserProfile ? (Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche) : null;
                 const cert = getCertInfo(anag);
+                const idDoc = getIdDocInfo(anag);
                 const isCertScaduto = cert ? isCertificatoScaduto(cert.data_scadenza) : false;
-                const isBlocked = !cert || isCertScaduto || cert.stato_validazione === 'ROSSO';
+                const isIdDocScaduto = idDoc ? isCertificatoScaduto(idDoc.data_scadenza) : false;
+                const isBlocked = !cert || isCertScaduto || cert.stato_validazione === 'ROSSO' || (idDoc && (idDoc.stato_validazione === 'ROSSO' || isIdDocScaduto));
                 const isRegistrazioneIncompleta = !anag;
 
                 if (isRegistrazioneIncompleta) {
@@ -519,7 +521,7 @@
                     return;
                 }
 
-                // Banner d'avviso universale per tutti gli atleti con anomalie sul certificato medico
+                // Banner d'avviso universale per tutti gli atleti con anomalie sui documenti o certificati
                 const existingBanner = document.getElementById('legacy-cert-alert-banner');
                 if (existingBanner) existingBanner.remove();
 
@@ -527,28 +529,60 @@
                 let bannerMessage = '';
                 let bannerColorClass = 'border-yellow-500/40 bg-yellow-500/10 border-l-4 border-yellow-500';
                 let iconColor = 'text-yellow-500';
+                let bannerTabTarget = 'user_certificato';
+                let bannerBtnLabel = 'VAI ALLA SEZIONE CERTIFICATO MEDICO';
 
-                if (!cert) {
-                    bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO MANCANTE";
-                    bannerMessage = "Non risulta alcun certificato medico registrato a tuo nome nel sistema. Per sbloccare la partecipazione alle attività sportive e ai corsi dell'associazione, è necessario caricare un certificato medico in corso di validità.";
+                if (idDoc && idDoc.stato_validazione === 'ROSSO') {
+                    bannerTitle = "AZIONE RICHIESTA: DOCUMENTO D'IDENTITÀ RIFIUTATO";
+                    bannerMessage = `Il documento d'identità precedentemente caricato non è stato approvato (Motivo: ${escapeHtml(idDoc.note_ai || 'File non leggibile o non conforme')}). Ti preghiamo di effettuare un nuovo caricamento con una scansione integra e leggibile.`;
                     bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
                     iconColor = "text-red-500";
-                } else if (isCertScaduto) {
+                    bannerTabTarget = 'user_documento';
+                    bannerBtnLabel = "VAI ALLA SEZIONE DOCUMENTO D'IDENTITÀ";
+                } else if (idDoc && isIdDocScaduto) {
+                    const scadenzaFormatted = formatToItalianDate(idDoc.data_scadenza);
+                    bannerTitle = "AZIONE RICHIESTA: DOCUMENTO D'IDENTITÀ SCADUTO";
+                    bannerMessage = `Il tuo documento d'identità risulta scaduto il <strong>${escapeHtml(scadenzaFormatted)}</strong>. Ti preghiamo gentilmente di ricaricare il documento aggiornato.`;
+                    bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
+                    iconColor = "text-red-500";
+                    bannerTabTarget = 'user_documento';
+                    bannerBtnLabel = "VAI ALLA SEZIONE DOCUMENTO D'IDENTITÀ";
+                } else if (cert && cert.stato_validazione === 'ROSSO') {
+                    bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO RIFIUTATO";
+                    bannerMessage = `Il certificato medico precedentemente caricato non è stato approvato (Motivo: ${escapeHtml(cert.note_ai || 'File non conforme, scaduto o poco leggibile')}). Ti preghiamo di effettuare un nuovo caricamento con una scansione integra e leggibile.`;
+                    bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
+                    iconColor = "text-red-500";
+                    bannerTabTarget = 'user_certificato';
+                    bannerBtnLabel = "VAI ALLA SEZIONE CERTIFICATO MEDICO";
+                } else if (cert && isCertScaduto) {
                     const scadenzaFormatted = formatToItalianDate(cert.data_scadenza);
                     bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO SCADUTO";
                     bannerMessage = `Il tuo certificato medico è scaduto il <strong>${escapeHtml(scadenzaFormatted)}</strong>. Per sbloccare l'iscrizione ai corsi ed agli eventi del club, ti preghiamo gentilmente di ricaricare il nuovo certificato aggiornato.`;
                     bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
                     iconColor = "text-red-500";
-                } else if (cert.stato_validazione === 'ROSSO') {
-                    bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO RIFIUTATO";
-                    bannerMessage = "Il certificato medico precedentemente caricato non è stato approvato (documento non conforme, scaduto o poco leggibile). Ti preghiamo di effettuare un nuovo caricamento con una scansione integra e leggibile.";
+                    bannerTabTarget = 'user_certificato';
+                    bannerBtnLabel = "VAI ALLA SEZIONE CERTIFICATO MEDICO";
+                } else if (!cert) {
+                    bannerTitle = "AZIONE RICHIESTA: CERTIFICATO MEDICO MANCANTE";
+                    bannerMessage = "Non risulta alcun certificato medico registrato a tuo nome nel sistema. Per sbloccare la partecipazione alle attività sportive e ai corsi dell'associazione, è necessario caricare un certificato medico in corso di validità.";
                     bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
                     iconColor = "text-red-500";
-                } else if (cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || !cert.file_url.startsWith('http'))) {
+                    bannerTabTarget = 'user_certificato';
+                    bannerBtnLabel = "VAI ALLA SEZIONE CERTIFICATO MEDICO";
+                } else if (!idDoc) {
+                    bannerTitle = "AZIONE RICHIESTA: DOCUMENTO D'IDENTITÀ MANCANTE";
+                    bannerMessage = "Non risulta alcun documento d'identità registrato a tuo nome nel sistema. Ti chiediamo gentilmente di caricarne una copia per completare il tuo profilo.";
+                    bannerColorClass = "border-red-500/40 bg-red-500/10 border-l-4 border-red-500";
+                    iconColor = "text-red-500";
+                    bannerTabTarget = 'user_documento';
+                    bannerBtnLabel = "VAI ALLA SEZIONE DOCUMENTO D'IDENTITÀ";
+                } else if (cert && cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || !cert.file_url.startsWith('http'))) {
                     bannerTitle = "AZIONE RICHIESTA: AGGIORNAMENTO CERTIFICATO MEDICO (DATO STORICO)";
                     bannerMessage = "Nonostante il certificato che ci hai mandato quando ti sei iscritto alla vecchia piattaforma, non è stato possibile portarlo nella nuova. Ti chiediamo gentilmente di ricaricarlo, così da completare il tuo profilo sulla nuova piattaforma.";
                     bannerColorClass = "border-yellow-500/40 bg-yellow-500/10 border-l-4 border-yellow-500";
                     iconColor = "text-yellow-500";
+                    bannerTabTarget = 'user_certificato';
+                    bannerBtnLabel = "VAI ALLA SEZIONE CERTIFICATO MEDICO";
                 }
 
                 const hasPendingPayment = anag && (
@@ -575,9 +609,9 @@
                             PAGA ORA LA QUOTA TESSERAMENTO
                         </button>
                     ` : `
-                        <button onclick="switchTab('user_certificato')" class="bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm mt-1">
+                        <button onclick="switchTab('${bannerTabTarget}')" class="bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer rounded-sm mt-1">
                             <span class="material-symbols-outlined text-xs">upload_file</span>
-                            VAI ALLA SEZIONE CERTIFICATO MEDICO
+                            ${bannerBtnLabel}
                         </button>
                     `;
 
@@ -884,44 +918,55 @@
                     
                     const anag = Array.isArray(profile.anagrafiche) ? profile.anagrafiche[0] : profile.anagrafiche;
                     const cert = getCertInfo(anag);
+                    const idDoc = getIdDocInfo(anag);
                     
                     const box = document.getElementById('user-cert-status-box');
                     const msg = document.getElementById('user-cert-message');
                     const form = document.getElementById('user-cert-upload-form');
                     
                     form.classList.add('hidden');
-                    
-                    if (!cert) {
+
+                    const isCertScadutoVal = cert ? isCertificatoScaduto(cert.data_scadenza) : false;
+                    const isIdDocScadutoVal = idDoc ? isCertificatoScaduto(idDoc.data_scadenza) : false;
+
+                    if (idDoc && idDoc.stato_validazione === 'ROSSO') {
+                        box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
+                        msg.innerHTML = `❌ DOCUMENTO D'IDENTITÀ RIFIUTATO.<br>Motivo: ${escapeHtml(idDoc.note_ai || 'File non leggibile o non conforme')}.<br>Ti preghiamo di ricaricarlo nella sezione <strong>Documento d'Identità</strong>.`;
+                        msg.innerHTML += `<br><button onclick="switchTab('user_documento')" class="mt-3 bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider inline-flex items-center gap-1.5 rounded-sm"><span class="material-symbols-outlined text-xs">id_card</span>VAI A DOCUMENTO D'IDENTITÀ</button>`;
+                    } else if (idDoc && isIdDocScadutoVal) {
+                        box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
+                        msg.innerHTML = `⚠️ DOCUMENTO D'IDENTITÀ SCADUTO IL ${escapeHtml(idDoc.data_scadenza)}.<br>Carica un documento aggiornato nella sezione <strong>Documento d'Identità</strong> per sbloccare il profilo.`;
+                        msg.innerHTML += `<br><button onclick="switchTab('user_documento')" class="mt-3 bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider inline-flex items-center gap-1.5 rounded-sm"><span class="material-symbols-outlined text-xs">id_card</span>VAI A DOCUMENTO D'IDENTITÀ</button>`;
+                    } else if (cert && cert.stato_validazione === 'ROSSO') {
+                        box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
+                        msg.innerHTML = `❌ CERTIFICATO MEDICO RIFIUTATO.<br>Motivo: ${escapeHtml(cert.note_ai || 'File non leggibile o non conforme')}.<br>Carica nuovamente un file corretto.`;
+                        form.classList.remove('hidden');
+                    } else if (cert && isCertScadutoVal) {
+                        box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
+                        msg.innerHTML = `⚠️ CERTIFICATO MEDICO SCADUTO IL ${escapeHtml(cert.data_scadenza)}.<br>Carica un certificato medico aggiornato per sbloccare il profilo.`;
+                        form.classList.remove('hidden');
+                    } else if (!idDoc) {
+                        box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
+                        msg.innerHTML = `⚠️ DOCUMENTO D'IDENTITÀ MANCANTE.<br>Devi caricare una copia del tuo documento d'identità nella sezione <strong>Documento d'Identità</strong>.`;
+                        msg.innerHTML += `<br><button onclick="switchTab('user_documento')" class="mt-3 bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider inline-flex items-center gap-1.5 rounded-sm"><span class="material-symbols-outlined text-xs">id_card</span>VAI A DOCUMENTO D'IDENTITÀ</button>`;
+                    } else if (!cert) {
                         box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
                         msg.innerHTML = "⚠️ CERTIFICATO MEDICO MANCANTE.<br>Devi caricare un certificato medico valido (Agonistico o Non Agonistico) per poter sbloccare il pagamento ed attivare la tua tessera.";
                         form.classList.remove('hidden');
-                    } else {
-                        const status = cert.stato_validazione;
-                        const scaduto = isCertificatoScaduto(cert.data_scadenza);
+                    } else if ((cert && cert.stato_validazione === 'IN_ATTESA') || (idDoc && idDoc.stato_validazione === 'IN_ATTESA')) {
+                        box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
+                        msg.innerHTML = "🔍 VALIDAZIONE IN CORSO...<br>La documentazione è in fase di elaborazione. Aggiorna la pagina tra qualche minuto.";
+                    } else if ((cert && cert.stato_validazione === 'GIALLO') || (idDoc && idDoc.stato_validazione === 'GIALLO')) {
+                        box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
+                        msg.innerHTML = "⏳ DOCUMENTAZIONE IN ATTESA DI APPROVAZIONE MANUALE.<br>La validazione richiede un controllo visivo da parte del Presidente. Potrai procedere al pagamento appena approvata.";
+                    } else if (cert && cert.stato_validazione === 'VERDE' && (!idDoc || idDoc.stato_validazione === 'VERDE')) {
+                        // Nascondi la schermata verde di stato se è completamente valido per ridurre l'ingombro
+                        userCertContainer.classList.add('hidden');
                         
-                        if (scaduto) {
-                            box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                            msg.innerHTML = `⚠️ CERTIFICATO MEDICO SCADUTO IL ${escapeHtml(cert.data_scadenza)}.<br>Carica un certificato medico aggiornato per sbloccare il profilo.`;
-                            form.classList.remove('hidden');
-                        } else if (status === 'ROSSO') {
-                            box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                            msg.innerHTML = `❌ CERTIFICATO MEDICO RIFIUTATO.<br>Motivo: ${escapeHtml(cert.note_ai || 'File non leggibile o non conforme')}.<br>Carica nuovamente un file corretto.`;
-                            form.classList.remove('hidden');
-                        } else if (status === 'IN_ATTESA') {
-                            box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
-                            msg.innerHTML = "🔍 VALIDAZIONE IN CORSO...<br>Il tuo certificato medico è in fase di elaborazione. Aggiorna la pagina tra qualche minuto.";
-                        } else if (status === 'GIALLO') {
-                            box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
-                            msg.innerHTML = "⏳ CERTIFICATO IN ATTESA DI APPROVAZIONE MANUALE.<br>La validazione richiede un controllo visivo da parte del Presidente. Potrai procedere al pagamento appena approvato.";
-                        } else if (status === 'VERDE') {
-                            // Nascondi la schermata verde di stato se è completamente valido per ridurre l'ingombro
-                            userCertContainer.classList.add('hidden');
-                            
-                            // Sblocca pagamento se la quota è insoluta
-                            if (quotaTotale > 0 && containerPagamento) {
-                                document.getElementById('payment-quota-amount').textContent = `€${quotaTotale.toFixed(2)}`;
-                                containerPagamento.classList.remove('hidden');
-                            }
+                        // Sblocca pagamento se la quota è insoluta
+                        if (quotaTotale > 0 && containerPagamento) {
+                            document.getElementById('payment-quota-amount').textContent = `€${quotaTotale.toFixed(2)}`;
+                            containerPagamento.classList.remove('hidden');
                         }
                     }
                 }

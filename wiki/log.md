@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] feature | Gestione Unificata Stati Documenti di Identità e Certificati Medici (v1.03.95)
+- **`portal/dashboard.js`**:
+  - Estesa la logica di valutazione della Panoramica Utente (`renderContextUI`) e del Banner Alert Superiore (`legacy-cert-alert-banner`) per interrogare in modo combinato sia `getCertInfo(anag)` che `getIdDocInfo(anag)`.
+  - Applicata una rigorosa gerarchia di blocco/priorità degli avvisi (ROSSO/SCADUTO > MANCANTE > GIALLO > VERDE) che garantisce la corretta priorità visiva agli avvisi di rifiuto del documento d'identità rispetto a certificati in attesa.
+  - Aggiunti pulsanti d'azione dedicati che reindirizzano direttamente alla sezione "DOCUMENTO D'IDENTITÀ" per facilitare il ricaricamento del documento respinto.
+- **Global Bump**: Bumped application version to `v1.03.95` across 22 files.
+
+---
+
 ## [2026-08-05] feature | Architettura Zero-Server-Load per Validazione AI e Rendering PDF (v1.03.94)
 - **`portal/registrazione.html` & `portal/dashboard.html`**:
   - Incluso il tag CDN `pdf.js` per abilitare la generazione di thumbnail JPEG lato client.
