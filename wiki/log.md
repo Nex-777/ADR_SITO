@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] feature | Wording Documenti, Nuova Frase Scadenza e Pulsante ELIMINA Universale Admin (v1.03.96)
+- **`portal/dashboard.js`**:
+  - Dinamicizzato il titolo del box `#user-cert-title` nella Panoramica Utente per alternare correttamente l'icona ed il testo "DOCUMENTO D'IDENTITÀ" vs "CERTIFICATO MEDICO" vs "DOCUMENTAZIONE UTENTE".
+  - Aggiornato il wording dei documenti respinti/mancanti introducendo la dicitura "ERRATO O MANCANTE" per massima chiarezza verso l'utente.
+  - Abilitato il pulsante **ELIMINA** (richiamando `eliminaUtente` / RPC `elimina_utente_completo`) in tutte le tabelle dell'area Admin (*Pending Soci*, *Pending Tesserati*, *Pending Pagamenti*, *Storico*) per i ruoli direttivi (`presidente`, `vice_presidente`, `segretario`, `tesoriere`).
+- **`api/cron-scadenze.js` & `scripts/send-suspended-emails-cli.js`**:
+  - Aggiornata la dicitura della mail di sospensione tesseramento includendo *"Dal giorno successivo alla scadenza e fino al caricamento e alla successiva approvazione..."*.
+- **`portal/dashboard.html`**:
+  - Aggiornata la colonna dello storico delibere in "Dettaglio / Azioni".
+- **Global Bump**: Bumped application version to `v1.03.96` across 22 files.
+
+---
+
 ## [2026-08-05] feature | Gestione Unificata Stati Documenti di Identità e Certificati Medici (v1.03.95)
 - **`portal/dashboard.js`**:
   - Estesa la logica di valutazione della Panoramica Utente (`renderContextUI`) e del Banner Alert Superiore (`legacy-cert-alert-banner`) per interrogare in modo combinato sia `getCertInfo(anag)` che `getIdDocInfo(anag)`.

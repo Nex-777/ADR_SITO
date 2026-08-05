@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.95"
+                VERSION: "1.03.96"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -923,6 +923,7 @@
                     const box = document.getElementById('user-cert-status-box');
                     const msg = document.getElementById('user-cert-message');
                     const form = document.getElementById('user-cert-upload-form');
+                    const userCertTitle = document.getElementById('user-cert-title');
                     
                     form.classList.add('hidden');
 
@@ -930,33 +931,41 @@
                     const isIdDocScadutoVal = idDoc ? isCertificatoScaduto(idDoc.data_scadenza) : false;
 
                     if (idDoc && idDoc.stato_validazione === 'ROSSO') {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">badge</span> DOCUMENTO D\'IDENTITÀ';
                         box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                        msg.innerHTML = `❌ DOCUMENTO D'IDENTITÀ RIFIUTATO.<br>Motivo: ${escapeHtml(idDoc.note_ai || 'File non leggibile o non conforme')}.<br>Ti preghiamo di ricaricarlo nella sezione <strong>Documento d'Identità</strong>.`;
+                        msg.innerHTML = `❌ DOCUMENTO D'IDENTITÀ RIFIUTATO O ERRATO.<br>Motivo: ${escapeHtml(idDoc.note_ai || 'File non leggibile o non conforme')}.<br>Ti preghiamo di ricaricarlo nella sezione <strong>Documento d'Identità</strong>.`;
                         msg.innerHTML += `<br><button onclick="switchTab('user_documento')" class="mt-3 bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider inline-flex items-center gap-1.5 rounded-sm"><span class="material-symbols-outlined text-xs">id_card</span>VAI A DOCUMENTO D'IDENTITÀ</button>`;
                     } else if (idDoc && isIdDocScadutoVal) {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">badge</span> DOCUMENTO D\'IDENTITÀ';
                         box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
                         msg.innerHTML = `⚠️ DOCUMENTO D'IDENTITÀ SCADUTO IL ${escapeHtml(idDoc.data_scadenza)}.<br>Carica un documento aggiornato nella sezione <strong>Documento d'Identità</strong> per sbloccare il profilo.`;
                         msg.innerHTML += `<br><button onclick="switchTab('user_documento')" class="mt-3 bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider inline-flex items-center gap-1.5 rounded-sm"><span class="material-symbols-outlined text-xs">id_card</span>VAI A DOCUMENTO D'IDENTITÀ</button>`;
                     } else if (cert && cert.stato_validazione === 'ROSSO') {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">medical_services</span> CERTIFICATO MEDICO';
                         box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                        msg.innerHTML = `❌ CERTIFICATO MEDICO RIFIUTATO.<br>Motivo: ${escapeHtml(cert.note_ai || 'File non leggibile o non conforme')}.<br>Carica nuovamente un file corretto.`;
+                        msg.innerHTML = `❌ CERTIFICATO MEDICO RIFIUTATO O ERRATO.<br>Motivo: ${escapeHtml(cert.note_ai || 'File non leggibile o non conforme')}.<br>Carica nuovamente un file corretto.`;
                         form.classList.remove('hidden');
                     } else if (cert && isCertScadutoVal) {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">medical_services</span> CERTIFICATO MEDICO';
                         box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
                         msg.innerHTML = `⚠️ CERTIFICATO MEDICO SCADUTO IL ${escapeHtml(cert.data_scadenza)}.<br>Carica un certificato medico aggiornato per sbloccare il profilo.`;
                         form.classList.remove('hidden');
                     } else if (!idDoc) {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">badge</span> DOCUMENTO D\'IDENTITÀ';
                         box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                        msg.innerHTML = `⚠️ DOCUMENTO D'IDENTITÀ MANCANTE.<br>Devi caricare una copia del tuo documento d'identità nella sezione <strong>Documento d'Identità</strong>.`;
+                        msg.innerHTML = `⚠️ DOCUMENTO D'IDENTITÀ ERRATO O MANCANTE.<br>Devi caricare una copia del tuo documento d'identità nella sezione <strong>Documento d'Identità</strong>.`;
                         msg.innerHTML += `<br><button onclick="switchTab('user_documento')" class="mt-3 bg-primary hover:bg-primary-dim text-white font-headline text-[10px] font-bold px-3 py-1.5 uppercase tracking-wider inline-flex items-center gap-1.5 rounded-sm"><span class="material-symbols-outlined text-xs">id_card</span>VAI A DOCUMENTO D'IDENTITÀ</button>`;
                     } else if (!cert) {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">medical_services</span> CERTIFICATO MEDICO';
                         box.className = "border p-6 space-y-4 bg-red-500/5 border-l-4 border-primary";
-                        msg.innerHTML = "⚠️ CERTIFICATO MEDICO MANCANTE.<br>Devi caricare un certificato medico valido (Agonistico o Non Agonistico) per poter sbloccare il pagamento ed attivare la tua tessera.";
+                        msg.innerHTML = "⚠️ CERTIFICATO MEDICO ERRATO O MANCANTE.<br>Devi caricare un certificato medico valido (Agonistico o Non Agonistico) per poter sbloccare il pagamento ed attivare la tua tessera.";
                         form.classList.remove('hidden');
                     } else if ((cert && cert.stato_validazione === 'IN_ATTESA') || (idDoc && idDoc.stato_validazione === 'IN_ATTESA')) {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">folder_shared</span> DOCUMENTAZIONE UTENTE';
                         box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
                         msg.innerHTML = "🔍 VALIDAZIONE IN CORSO...<br>La documentazione è in fase di elaborazione. Aggiorna la pagina tra qualche minuto.";
                     } else if ((cert && cert.stato_validazione === 'GIALLO') || (idDoc && idDoc.stato_validazione === 'GIALLO')) {
+                        if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">folder_shared</span> DOCUMENTAZIONE UTENTE';
                         box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
                         msg.innerHTML = "⏳ DOCUMENTAZIONE IN ATTESA DI APPROVAZIONE MANUALE.<br>La validazione richiede un controllo visivo da parte del Presidente. Potrai procedere al pagamento appena approvata.";
                     } else if (cert && cert.stato_validazione === 'VERDE' && (!idDoc || idDoc.stato_validazione === 'VERDE')) {
@@ -1938,6 +1947,8 @@
             const pendingPag = approvazioniData.filter(x => x.stato === 'IN_ATTESA_PAGAMENTO');
             const storico = approvazioniData.filter(x => x.stato !== 'IN_ATTESA' && x.stato !== 'IN_ATTESA_PAGAMENTO');
 
+            const canDelete = typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere'].includes(r));
+
             // Render Pending Soci
             if (pendingSoci.length === 0) {
                 sociBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessuna richiesta di socio in attesa.</td></tr>';
@@ -1949,6 +1960,8 @@
                     const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
                     const cf = escapeHtml(anag.codice_fiscale || '');
                     const dataN = escapeHtml(anag.data_nascita || '');
+                    const eliminaBtn = canDelete ? `<button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-1 transition-all uppercase">ELIMINA</button>` : '';
+                    
                     row.innerHTML = `
                         <td class="p-3 font-bold text-white">
                             ${nome}<br>
@@ -1957,8 +1970,9 @@
                         <td class="p-3 text-gray-400 font-mono">${cf}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_richiesta))}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
-                        <td class="p-3 text-right">
+                        <td class="p-3 text-right flex items-center justify-end gap-2">
                             <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase text-yellow-500 bg-yellow-500/10 border-yellow-500/30">IN ATTESA CD</span>
+                            ${eliminaBtn}
                         </td>
                     `;
                     sociBody.appendChild(row);
@@ -2050,7 +2064,7 @@
                         }
                         
                         let eliminaBtn = '';
-                        if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
+                        if (canDelete) {
                             eliminaBtn = `<button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-1 transition-all uppercase">ELIMINA</button>`;
                         }
                         
@@ -2126,7 +2140,7 @@
                         }
                         
                         let eliminaBtn = '';
-                        if (typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere'].includes(r))) {
+                        if (canDelete) {
                             eliminaBtn = `
                                 <button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white font-headline text-[9px] font-bold px-2 py-1 rounded transition-all uppercase flex items-center gap-1 ml-auto" title="Elimina utente per permettere nuova iscrizione">
                                     <span class="material-symbols-outlined text-[11px]">delete</span> ELIMINA
@@ -2172,10 +2186,10 @@
                     row.className = 'border-b border-red-500/5 hover:bg-red-900/10 transition-colors';
                     
                     let actionBtn = '';
-                    if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
+                    if (canDelete) {
                         actionBtn = `<button onclick="eliminaRegistrazioneIncompleta('${ghost.utente_id}')" class="bg-red-600 text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-red-500 transition-all uppercase">ELIMINA SBLOCCA</button>`;
                     } else {
-                        actionBtn = `<span class="text-[9px] text-gray-500" title="Solo il Presidente o Vice possono sbloccare">NON AUTORIZZATO</span>`;
+                        actionBtn = `<span class="text-[9px] text-gray-500" title="Solo il Direttivo può sbloccare">NON AUTORIZZATO</span>`;
                     }
                     
                     row.innerHTML = `
@@ -2205,6 +2219,8 @@
                         ? (item.numero_verbale ? `Verbale: ${escapeHtml(item.numero_verbale)}` : 'Attivato con Certificato')
                         : `Motivo: ${escapeHtml(item.motivo_rifiuto || 'Requisiti assenti')}`;
 
+                    const eliminaBtn = canDelete ? `<button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-1 transition-all uppercase inline-block ml-2">ELIMINA</button>` : '';
+
                     row.innerHTML = `
                         <td class="p-3 font-bold text-white">${nome}</td>
                         <td class="p-3 uppercase text-xs">${escapeHtml(item.tipo)}</td>
@@ -2212,7 +2228,7 @@
                         <td class="p-3">
                             <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeClass}">${escapeHtml(item.stato)}</span>
                         </td>
-                        <td class="p-3 text-right text-[10px] font-mono">${details}</td>
+                        <td class="p-3 text-right text-[10px] font-mono flex items-center justify-end">${details} ${eliminaBtn}</td>
                     `;
                     storicoBody.appendChild(row);
                 });

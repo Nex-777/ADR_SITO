@@ -169,7 +169,7 @@ export default async function handler(req, res) {
                                         <p>Ciao ${anag.nome}, il tuo certificato medico è scaduto in data <strong>${dataScadenza}</strong>.</p>
                                         <p>Il tuo tesseramento sportivo è stato <strong>SOSPESO</strong> in conformità alle norme sulla tutela sanitaria RASD. Non potrai accedere ai corsi o prenotare eventi fino all'upload del nuovo certificato in corso di validità.</p>
                                         <p style="color: #df293e; font-weight: bold;">
-                                          Fino al caricamento e alla successiva approvazione del nuovo certificato medico, la tua operatività sul portale sarà limitata esclusivamente al caricamento dei documenti e non potrai partecipare ad alcun corso o prenotare eventi.
+                                          Dal giorno successivo alla scadenza e fino al caricamento e alla successiva approvazione del nuovo certificato medico, la tua operatività sul portale sarà limitata esclusivamente al caricamento dei documenti e non potrai partecipare ad alcun corso o prenotare eventi.
                                         </p>
                                        </div>`
                             });

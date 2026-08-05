@@ -90,7 +90,7 @@ async function run() {
                                 <p>Ciao ${anag.nome}, ti informiamo che il tuo tesseramento sportivo è stato <strong>SOSPESO</strong> in conformità alle norme sulla tutela sanitaria RASD a causa della scadenza del certificato medico (${dataScadenza}).</p>
                                 <p>Non potrai accedere ai corsi o prenotare eventi fino all'upload del nuovo certificato in corso di validità.</p>
                                 <p style="color: #df293e; font-weight: bold;">
-                                  Fino al caricamento e alla successiva approvazione del nuovo certificato medico, la tua operatività sul portale sarà limitata esclusivamente al caricamento dei documenti e non potrai partecipare ad alcun corso o prenotare eventi.
+                                  Dal giorno successivo alla scadenza e fino al caricamento e alla successiva approvazione del nuovo certificato medico, la tua operatività sul portale sarà limitata esclusivamente al caricamento dei documenti e non potrai partecipare ad alcun corso o prenotare eventi.
                                 </p>
                                </div>`
                     });
