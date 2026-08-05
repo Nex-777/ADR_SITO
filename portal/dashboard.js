@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.93"
+                VERSION: "1.03.94"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5639,6 +5639,18 @@
                     });
                 if (uploadError) throw uploadError;
                 
+                if (filePath.toLowerCase().endsWith('.pdf')) {
+                    try {
+                        const thumbBlob = await generatePdfThumbnail(dashUploadedCertFile);
+                        if (thumbBlob) {
+                            const thumbPath = filePath.replace(/\.pdf$/i, '_thumb.jpg');
+                            await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: true });
+                        }
+                    } catch (tErr) {
+                        console.warn("Thumbnail upload error:", tErr);
+                    }
+                }
+                
                 const { data: urlData, error: signedUrlError } = await supabaseClient.storage
                     .from('certificati_medici')
                     .createSignedUrl(filePath, 300);
@@ -6227,6 +6239,18 @@
                         upsert: true
                     });
                 if (uploadError) throw uploadError;
+
+                if (filePath.toLowerCase().endsWith('.pdf')) {
+                    try {
+                        const thumbBlob = await generatePdfThumbnail(userUploadedCertFile);
+                        if (thumbBlob) {
+                            const thumbPath = filePath.replace(/\.pdf$/i, '_thumb.jpg');
+                            await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: true });
+                        }
+                    } catch (tErr) {
+                        console.warn("Thumbnail upload error:", tErr);
+                    }
+                }
 
                 const { data: urlData, error: signedUrlError } = await supabaseClient.storage
                     .from('certificati_medici')
@@ -7019,6 +7043,18 @@
                         const filePath = `${currentUser.id}/${tipoDoc.toLowerCase()}_${Date.now()}.${file.name.split('.').pop()}`;
                         const { error: uploadErr } = await supabaseClient.storage.from('documenti_identita').upload(filePath, file, { contentType: file.type, upsert: true });
                         if (uploadErr) throw uploadErr;
+
+                        if (filePath.toLowerCase().endsWith('.pdf')) {
+                            try {
+                                const thumbBlob = await generatePdfThumbnail(file);
+                                if (thumbBlob) {
+                                    const thumbPath = filePath.replace(/\.pdf$/i, '_thumb.jpg');
+                                    await supabaseClient.storage.from('documenti_identita').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: true });
+                                }
+                            } catch (tErr) {
+                                console.warn("Thumbnail upload error:", tErr);
+                            }
+                        }
 
                         const { error: insertErr } = await supabaseClient.from('documenti_identita').insert({
                             anagrafica_id: anagId,
@@ -9883,6 +9919,37 @@ function compressImageSandbox(file, maxWidth, maxHeight, quality = 0.8) {
         };
         reader.onerror = error => reject(error);
     });
+}
+
+async function generatePdfThumbnail(fileOrBlob) {
+    try {
+        if (typeof window.pdfjsLib === 'undefined') {
+            console.warn("pdf.js non disponibile.");
+            return null;
+        }
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        const arrayBuffer = await fileOrBlob.arrayBuffer();
+        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const page = await pdf.getPage(1);
+        
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+        
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                resolve(blob || null);
+            }, 'image/jpeg', 0.8);
+        });
+    } catch (err) {
+        console.error("Errore generato durante la creazione della thumbnail PDF:", err);
+        return null;
+    }
 }
 
 

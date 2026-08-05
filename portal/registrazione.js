@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.93"
+                VERSION: "1.03.94"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1391,6 +1391,19 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     if (signedUrlError) throw signedUrlError;
                     preUploadedCertificatoUrl = urlData.signedUrl;
                     console.log("Certificato medico caricato con successo in pre-upload.");
+
+                    if (filePath.toLowerCase().endsWith('.pdf')) {
+                        try {
+                            const thumbBlob = await generatePdfThumbnail(uploadedCertificatoFile);
+                            if (thumbBlob) {
+                                const thumbPath = filePath.replace(/\.pdf$/i, '_thumb.jpg');
+                                await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: true });
+                                console.log("Thumbnail certificato medico caricato con successo:", thumbPath);
+                            }
+                        } catch (tErr) {
+                            console.warn("Errore upload thumbnail certificato:", tErr);
+                        }
+                    }
                 }
 
                 // 2. Merge Fronte & Retro se retro presente
@@ -1449,6 +1462,19 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 if (idSignedUrlError) throw idSignedUrlError;
                 preUploadedDocumentoUrl = idUrlData.signedUrl;
                 console.log("Documento d'identità caricato con successo in pre-upload.");
+
+                if (idFilePath.toLowerCase().endsWith('.pdf')) {
+                    try {
+                        const idThumbBlob = await generatePdfThumbnail(uploadedDocumentoIdentitaFile);
+                        if (idThumbBlob) {
+                            const idThumbPath = idFilePath.replace(/\.pdf$/i, '_thumb.jpg');
+                            await supabaseClient.storage.from('documenti_identita').upload(idThumbPath, idThumbBlob, { contentType: 'image/jpeg', upsert: true });
+                            console.log("Thumbnail documento identità caricato con successo:", idThumbPath);
+                        }
+                    } catch (tErr) {
+                        console.warn("Errore upload thumbnail documento:", tErr);
+                    }
+                }
 
                 // 4. Generazione PDF contratto provvisorio con jsPDF
                 btnInviaOtp.textContent = "GENERAZIONE CONTRATTO...";
@@ -1670,8 +1696,38 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     };
                     img.onerror = error => reject(error);
                 };
-                reader.onerror = error => reject(error);
             });
+        }
+
+        async function generatePdfThumbnail(fileOrBlob) {
+            try {
+                if (typeof window.pdfjsLib === 'undefined') {
+                    console.warn("pdf.js non disponibile.");
+                    return null;
+                }
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                const arrayBuffer = await fileOrBlob.arrayBuffer();
+                const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const page = await pdf.getPage(1);
+                
+                const scale = 1.5;
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                
+                return new Promise((resolve) => {
+                    canvas.toBlob((blob) => {
+                        resolve(blob || null);
+                    }, 'image/jpeg', 0.8);
+                });
+            } catch (err) {
+                console.error("Errore generato durante la creazione della thumbnail PDF:", err);
+                return null;
+            }
         }
 
         function updateOtpButtonStatus(text, showSpinner = true) {

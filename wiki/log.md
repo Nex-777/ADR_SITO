@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] feature | Architettura Zero-Server-Load per Validazione AI e Rendering PDF (v1.03.94)
+- **`portal/registrazione.html` & `portal/dashboard.html`**:
+  - Incluso il tag CDN `pdf.js` per abilitare la generazione di thumbnail JPEG lato client.
+- **`portal/registrazione.js` & `portal/dashboard.js`**:
+  - Creata la funzione `generatePdfThumbnail(fileOrBlob)` basata su HTML5 Canvas e Mozilla `pdf.js`.
+  - Integrato il caricamento automatico delle thumbnail JPEG (`_thumb.jpg`) per tutti i PDF caricati dagli utenti per certificati medici e documenti d'identità.
+- **`api/validate.js`**:
+  - Implementata la risoluzione automatica delle thumbnail `_thumb.jpg` per tutti i file PDF inviati a Mistral Pixtral AI.
+  - Racchiuso il flusso AI in blocchi `try-catch` resilienti per evitare crash backend e forzare il fallback pulito a `GIALLO`.
+  - Sanitizzati i messaggi di note salvati nel DB (`note_ai`) per eliminare dump JSON / API error grezzi dalla dashboard direttiva.
+- **Global Bump**: Bumped application version to `v1.03.94` across 22 files.
+
+---
+
 ## [2026-08-05] hotfix | Fix ReferenceError apiBase in registrazione.js (v1.03.93)
 - **`portal/registrazione.js`**:
   - Risolto bug critico `ReferenceError: apiBase is not defined` durante la validazione finale OTP (`btnValidaOtp`).

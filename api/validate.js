@@ -155,23 +155,48 @@ export default async function handler(req, res) {
                 }
             } else {
                 if (!targetFileUrl) return res.status(400).json({ error: 'Parametri mancanti: file_url per AI.' });
+
+                let fileToFetchUrl = targetFileUrl;
+                if (!fileToFetchUrl.startsWith('https://')) {
+                    let pathToSign = fileToFetchUrl;
+                    if (pathToSign.toLowerCase().endsWith('.pdf')) {
+                        const thumbPath = pathToSign.replace(/\.pdf$/i, '_thumb.jpg');
+                        const { data: thumbSign } = await supabase.storage.from('certificati_medici').createSignedUrl(thumbPath, 120);
+                        if (thumbSign?.signedUrl) pathToSign = thumbPath;
+                    }
+                    const { data: signedData } = await supabase.storage.from('certificati_medici').createSignedUrl(pathToSign, 120);
+                    if (!signedData?.signedUrl) return res.status(400).json({ error: 'File non accessibile.' });
+                    fileToFetchUrl = signedData.signedUrl;
+                } else if (fileToFetchUrl.toLowerCase().includes('.pdf')) {
+                    const thumbUrl = fileToFetchUrl.replace(/\.pdf(\?.*)?$/i, '_thumb.jpg$1');
+                    try {
+                        const testResp = await fetch(thumbUrl, { method: 'HEAD' });
+                        if (testResp.ok) fileToFetchUrl = thumbUrl;
+                    } catch (hErr) {
+                        console.warn(`[CERT AI] Thumb HEAD check failed:`, hErr);
+                    }
+                }
+
                 const allowedUrlPrefix = `${supabaseUrl}/storage/v1/`;
-                if (!targetFileUrl.startsWith(allowedUrlPrefix)) {
-                    console.error(`[CERT AI] SSRF attempt blocked. URL: ${targetFileUrl}`);
+                if (!fileToFetchUrl.startsWith(allowedUrlPrefix)) {
+                    console.error(`[CERT AI] SSRF attempt blocked. URL: ${fileToFetchUrl}`);
                     return res.status(400).json({ error: 'URL del file non valido.' });
                 }
 
                 console.log(`[CERT AI] Starting validation for anagrafica_id: ${targetAnagraficaId}`);
-                const imageResponse = await fetch(targetFileUrl);
-                if (!imageResponse.ok) throw new Error('Impossibile scaricare il file.');
+                
+                try {
+                    const imageResponse = await fetch(fileToFetchUrl);
+                    if (!imageResponse.ok) throw new Error('Impossibile scaricare il file.');
 
-                const arrayBuffer = await imageResponse.arrayBuffer();
-                const base64Data = Buffer.from(arrayBuffer).toString('base64');
-                const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+                    const arrayBuffer = await imageResponse.arrayBuffer();
+                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
+                    let mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+                    if (mimeType.includes('application/pdf')) mimeType = 'image/jpeg';
 
-                const mistral = new Mistral({ apiKey: mistralApiKey });
-                const todayStr = new Date().toISOString().split('T')[0];
-                const prompt = `
+                    const mistral = new Mistral({ apiKey: mistralApiKey });
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const prompt = `
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
 Sto per fornirti un'immagine di un certificato medico.
 IMPORTANTE: La data odierna è il ${todayStr}. Utilizzala come punto di riferimento per verificare se il certificato è scaduto.
@@ -197,30 +222,35 @@ Devi estrarre le seguenti informazioni in formato JSON STRICT:
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 {"data_emissione": "2023-10-15", "data_scadenza": "2024-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico valido e leggibile."}
-                `;
+                    `;
 
-                const response = await mistral.chat.complete({
-                    model: 'pixtral-12b-2409',
-                    responseFormat: { type: 'json_object' },
-                    messages: [{
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: prompt },
-                            { type: 'image_url', imageUrl: `data:${mimeType};base64,${base64Data}` }
-                        ]
-                    }]
-                });
+                    const response = await mistral.chat.complete({
+                        model: 'pixtral-12b-2409',
+                        responseFormat: { type: 'json_object' },
+                        messages: [{
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: prompt },
+                                { type: 'image_url', imageUrl: `data:${mimeType};base64,${base64Data}` }
+                            ]
+                        }]
+                    });
 
-                let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
-                    .replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log('[CERT AI] Mistral response length:', responseText.length);
-                const aiResult = JSON.parse(responseText);
+                    let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
+                        .replace(/```json/g, '').replace(/```/g, '').trim();
+                    console.log('[CERT AI] Mistral response length:', responseText.length);
+                    const aiResult = JSON.parse(responseText);
 
-                finalStatus = aiResult.stato || 'GIALLO';
-                finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
-                finalRelease = aiResult.data_emissione || null;
-                finalExpiry = aiResult.data_scadenza || null;
-                finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
+                    finalStatus = aiResult.stato || 'GIALLO';
+                    finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
+                    finalRelease = aiResult.data_emissione || null;
+                    finalExpiry = aiResult.data_scadenza || null;
+                    finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
+                } catch (aiErr) {
+                    console.error('[CERT AI ERROR] Fallback a GIALLO:', aiErr.message);
+                    finalStatus = 'GIALLO';
+                    finalNotes = "Formato documento non leggibile automaticamente dall'AI (richiede revisione manuale).";
+                }
             }
 
             const updatePayload = { stato_validazione: finalStatus, note_ai: finalNotes, data_rilascio: finalRelease, data_scadenza: finalExpiry, tipologia: finalType };
@@ -314,50 +344,72 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
             } else {
                 if (!targetFileUrl) return res.status(400).json({ error: 'Parametri mancanti: file_url per AI.' });
 
-                // Se è un path storage (non URL completo), genera signed URL
-                if (!targetFileUrl.startsWith('https://')) {
-                    const { data: signedData } = await supabase.storage.from('documenti_identita').createSignedUrl(targetFileUrl, 60);
+                let fileToFetchUrl = targetFileUrl;
+                if (!fileToFetchUrl.startsWith('https://')) {
+                    let pathToSign = fileToFetchUrl;
+                    if (pathToSign.toLowerCase().endsWith('.pdf')) {
+                        const thumbPath = pathToSign.replace(/\.pdf$/i, '_thumb.jpg');
+                        const { data: thumbSign } = await supabase.storage.from('documenti_identita').createSignedUrl(thumbPath, 120);
+                        if (thumbSign?.signedUrl) pathToSign = thumbPath;
+                    }
+                    const { data: signedData } = await supabase.storage.from('documenti_identita').createSignedUrl(pathToSign, 120);
                     if (!signedData?.signedUrl) return res.status(400).json({ error: 'File non accessibile.' });
-                    targetFileUrl = signedData.signedUrl;
+                    fileToFetchUrl = signedData.signedUrl;
+                } else if (fileToFetchUrl.toLowerCase().includes('.pdf')) {
+                    const thumbUrl = fileToFetchUrl.replace(/\.pdf(\?.*)?$/i, '_thumb.jpg$1');
+                    try {
+                        const testResp = await fetch(thumbUrl, { method: 'HEAD' });
+                        if (testResp.ok) fileToFetchUrl = thumbUrl;
+                    } catch (hErr) {
+                        console.warn(`[DOC AI] Thumb HEAD check failed:`, hErr);
+                    }
                 }
 
                 const allowedUrlPrefix = `${supabaseUrl}/storage/v1/`;
-                if (!targetFileUrl.startsWith(allowedUrlPrefix)) {
-                    console.error(`[DOC AI] SSRF attempt blocked. URL: ${targetFileUrl}`);
+                if (!fileToFetchUrl.startsWith(allowedUrlPrefix)) {
+                    console.error(`[DOC AI] SSRF attempt blocked. URL: ${fileToFetchUrl}`);
                     return res.status(400).json({ error: 'URL del file non valido.' });
                 }
 
                 console.log(`[DOC AI] Starting validation for anagrafica_id: ${targetAnagraficaId}`);
-                const imageResponse = await fetch(targetFileUrl);
-                if (!imageResponse.ok) throw new Error('Impossibile scaricare il documento.');
 
-                const arrayBuffer = await imageResponse.arrayBuffer();
-                const base64Data = Buffer.from(arrayBuffer).toString('base64');
-                const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+                try {
+                    const imageResponse = await fetch(fileToFetchUrl);
+                    if (!imageResponse.ok) throw new Error('Impossibile scaricare il documento.');
 
-                const mistral = new Mistral({ apiKey: mistralApiKey });
-                const todayStr = new Date().toISOString().split('T')[0];
-                const prompt = `Sei un esperto di documenti di identità italiani. La data odierna è il ${todayStr}. Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida). Devi estrarre queste informazioni in formato JSON STRICT: 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO"), 2. data_scadenza (formato YYYY-MM-DD, null se non leggibile), 3. leggibile (booleano), 4. stato (stringa: "VERDE" se documento valido non scaduto e leggibile; "GIALLO" se qualcosa non è chiaro; "ROSSO" se chiaramente scaduto o non è un documento valido), 5. note (breve spiegazione). Rispondi SOLO con il JSON senza markdown. Esempio: {"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento valido e leggibile."}`;
+                    const arrayBuffer = await imageResponse.arrayBuffer();
+                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
+                    let mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+                    if (mimeType.includes('application/pdf')) mimeType = 'image/jpeg';
 
-                const response = await mistral.chat.complete({
-                    model: 'pixtral-12b-2409',
-                    responseFormat: { type: 'json_object' },
-                    messages: [{
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: prompt },
-                            { type: 'image_url', imageUrl: `data:${mimeType};base64,${base64Data}` }
-                        ]
-                    }]
-                });
+                    const mistral = new Mistral({ apiKey: mistralApiKey });
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const prompt = `Sei un esperto di documenti di identità italiani. La data odierna è il ${todayStr}. Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida). Devi estrarre queste informazioni in formato JSON STRICT: 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO"), 2. data_scadenza (formato YYYY-MM-DD, null se non leggibile), 3. leggibile (booleano), 4. stato (stringa: "VERDE" se documento valido non scaduto e leggibile; "GIALLO" se qualcosa non è chiaro; "ROSSO" se chiaramente scaduto o non è un documento valido), 5. note (breve spiegazione). Rispondi SOLO con il JSON senza markdown. Esempio: {"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento valido e leggibile."}`;
 
-                let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
-                    .replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log('[DOC AI] Mistral response length:', responseText.length);
-                const aiResult = JSON.parse(responseText);
-                finalStatus = aiResult.stato || 'GIALLO';
-                finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
-                finalExpiry = aiResult.data_scadenza || null;
+                    const response = await mistral.chat.complete({
+                        model: 'pixtral-12b-2409',
+                        responseFormat: { type: 'json_object' },
+                        messages: [{
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: prompt },
+                                { type: 'image_url', imageUrl: `data:${mimeType};base64,${base64Data}` }
+                            ]
+                        }]
+                    });
+
+                    let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
+                        .replace(/```json/g, '').replace(/```/g, '').trim();
+                    console.log('[DOC AI] Mistral response length:', responseText.length);
+                    const aiResult = JSON.parse(responseText);
+                    finalStatus = aiResult.stato || 'GIALLO';
+                    finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
+                    finalExpiry = aiResult.data_scadenza || null;
+                } catch (aiErr) {
+                    console.error('[DOC AI ERROR] Fallback a GIALLO:', aiErr.message);
+                    finalStatus = 'GIALLO';
+                    finalNotes = "Formato documento non leggibile automaticamente dall'AI (richiede revisione manuale).";
+                }
             }
 
             const updatePayload = { stato_validazione: finalStatus, note_ai: finalNotes, data_scadenza: finalExpiry };
@@ -396,7 +448,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
         if (!req.body?.is_manual) {
             try {
                 const supaFallback = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-                const fallbackNote = `Errore tecnico: ${error.message || 'Timeout/Crash'}. Richiesta revisione manuale.`;
+                const fallbackNote = "Formato o contenuto documento inviato alla direzione per revisione manuale.";
                 const targetType = req.body?.target_type || (req.body?.table === 'documenti_identita' ? 'doc' : 'cert');
 
                 if (targetType === 'cert') {
