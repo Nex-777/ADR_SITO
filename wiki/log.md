@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] feature | Legenda Stati Tessera CSEN per Account Admin nella Sidebar Dashboard (v1.04.07)
+- **`portal/dashboard.html`**:
+  - Inserito il riquadro `#sidebar-csen-legend` nella sidebar sinistra subito sotto la carta `LIVELLO AUTORIZZAZIONE`, contenente la legenda dettagliata dei 6 stati della colonna Tessera CSEN (Tessera Ufficiale Verde, Codice Richiesta Cyan, Rinnovo Inviato Arancione, In Attesa N. CSEN Blu, Da Comunicare Giallo, Errore Sync Rosso).
+- **`portal/dashboard.js`**:
+  - Integrata la visibilità condizionale del box legenda per gli account Admin/Board nel contesto direttivo.
+  - Implementata la funzione `toggleCsenLegend()` per l'apertura/chiusura della fisarmonica.
+  - Aggiunto l'hook in `switchTab('tesserati')` che espande automaticamente la legenda quando l'amministratore apre il Registro Tesserati.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.07`.
+
+---
+
 ## [2026-08-05] fix | Risoluzione Automatica Allenatore di Riferimento da Allievi SCAB & Fix Modale Iscrizione
 - **Database (Supabase)**:
   - Aggiornata la RPC `crea_richiesta_abilitazione`: quando l'utente seleziona un Allievo Allenatore, la procedura ora assegna nel profilo utente `epika_profili.allenatore_id` l'Allenatore di Riferimento risolto (`v_allenatore_id`) anziché l'ID dell'allievo.

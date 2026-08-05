@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.06"
+                VERSION: "1.04.07"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -460,6 +460,9 @@
 
 
 
+            const csenLegendEl = document.getElementById('sidebar-csen-legend');
+            if (csenLegendEl) csenLegendEl.classList.add('hidden');
+
             if (currentViewContext === 'athlete') {
                 document.body.classList.add('theme-tesserato');
                 
@@ -773,6 +776,7 @@
                 document.getElementById('board-stats-grid').classList.remove('hidden');
                 document.getElementById('board-alert-board').classList.remove('hidden');
                 document.getElementById('user-status-container').classList.add('hidden');
+                if (csenLegendEl) csenLegendEl.classList.remove('hidden');
                 
                 if (bannerApprovazioni && bannerApprovazioni.innerHTML.trim() !== '') {
                     bannerApprovazioni.classList.remove('hidden');
@@ -5620,6 +5624,11 @@
                 loadUserEventi();
             } else if (tabId === 'user_documento') {
                 loadUserDocumento();
+            } else if (tabId === 'tesserati') {
+                const csenBody = document.getElementById('csen-legend-body');
+                const csenIcon = document.getElementById('csen-legend-toggle-icon');
+                if (csenBody) csenBody.classList.remove('hidden');
+                if (csenIcon) csenIcon.style.transform = 'rotate(180deg)';
             } else if (tabId === 'logiche') {
                 setTimeout(() => {
                     if (window.mermaid) {
@@ -10147,6 +10156,21 @@ window.chiudiAssistenzaTesserato = function() {
         switchTab('tesserati');
     }
 };
+
+window.toggleCsenLegend = function() {
+    const body = document.getElementById('csen-legend-body');
+    const icon = document.getElementById('csen-legend-toggle-icon');
+    if (!body) return;
+    const isHidden = body.classList.contains('hidden');
+    if (isHidden) {
+        body.classList.remove('hidden');
+        if (icon) icon.style.transform = 'rotate(180deg)';
+    } else {
+        body.classList.add('hidden');
+        if (icon) icon.style.transform = 'rotate(0deg)';
+    }
+};
+
 
 
 
