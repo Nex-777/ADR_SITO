@@ -105,13 +105,16 @@ export default async function handler(req, res) {
             .eq('utente_id', utenteId)
             .eq('stato', 'in_attesa_otp');
 
+        const currentPrivacyVersion = process.env.CURRENT_PRIVACY_VERSION || '1.03.86';
+
         const { error: insertError } = await supabase
             .from('atti_adesione')
             .insert({
                 utente_id: utenteId,
                 ip_address: ipAddress,
                 otp_codice_hash: otpHash,
-                stato: 'in_attesa_otp'
+                stato: 'in_attesa_otp',
+                versione_privacy: currentPrivacyVersion
             });
             
         if (insertError) {

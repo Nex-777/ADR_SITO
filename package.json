@@ -1,9 +1,9 @@
 {
   "name": "adr-sito",
-  "version": "1.03.89",
+  "version": "1.03.92",
   "type": "module",
   "dependencies": {
-    "@google/genai": "^2.7.0",
+    "@mistralai/mistralai": "^2.5.0",
     "@supabase/supabase-js": "^2.108.2",
     "dotenv": "^17.4.2",
     "pdf-lib": "^1.17.1",

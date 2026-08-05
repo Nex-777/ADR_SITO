@@ -1949,3 +1949,10 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 # #   [ 2 0 2 6 - 0 7 - 1 6 ]   i n g e s t   |   F i x   I n f i n i t e   R e c u r s i o n   R L S  
  -   R e s o l v e d   ' i n f i n i t e   r e c u r s i o n   d e t e c t e d '   e r r o r   i n   e p i k a _ p r o f i l i   R L S   b y   r e m o v i n g   r e d u n d a n t   p o l i c i e s   a n d   r e w r i t i n g   a d m i n   p o l i c i e s   a s   S E C U R I T Y   D E F I N E R   t o   b r e a k   t h e   d e p e n d e n c y   c y c l e   b e t w e e n   e p i k a _ p r o f i l i ,   e p i k a _ g r u p p i _ s t o r i c i ,   a n d   u t e n t i .  
  
+
+## [2026-08-05] refactor | GDPR Compliance & Mistral AI Migration (v1.03.92)
+- Replaced Google Gemini API (@google/genai) with Mistral AI Vision (@mistralai/mistralai, model pixtral-12b-2409) in api/validate.js for scanning medical certificates and identity documents.
+- Ensured 100% GDPR compliance (Art. 9 health data & Art. 28 DPA with EU-hosted infrastructure in Paris, France).
+- Updated environment variable requirement from GEMINI_API_KEY to MISTRAL_API_KEY.
+- Updated documentation in wiki/api_endpoints.md.
+- Bumped application version to v1.03.92.

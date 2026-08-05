@@ -607,10 +607,13 @@ export default async function handler(req, res) {
             attachments: emailAttachments
         });
 
-        // 7. Update pending sign document state
+        const currentPrivacyVersion = process.env.CURRENT_PRIVACY_VERSION || '1.03.86';
+
+        // 7. Update pending sign document state & user consent profile
         const updateData = {
             stato: 'firmato_validato',
-            data_firma: new Date().toISOString()
+            data_firma: new Date().toISOString(),
+            versione_privacy: currentPrivacyVersion
         };
         if (req.body.url_pdf_generato) {
             const supabaseUrlPrefix = process.env.SUPABASE_URL + '/storage/v1/';
@@ -624,6 +627,22 @@ export default async function handler(req, res) {
             .from('atti_adesione')
             .update(updateData)
             .eq('utente_id', utenteId);
+
+        // Update consents & privacy version in public.utenti (scatena il trigger DB per registro_consensi)
+        const updateUtentiData = {
+            versione_privacy_accettata: currentPrivacyVersion
+        };
+        if (req.body.consenso_marketing !== undefined) {
+            updateUtentiData.consenso_marketing = Boolean(req.body.consenso_marketing);
+        }
+        if (req.body.consenso_audiovisivi !== undefined) {
+            updateUtentiData.consenso_audiovisivi = Boolean(req.body.consenso_audiovisivi);
+        }
+
+        await supabase
+            .from('utenti')
+            .update(updateUtentiData)
+            .eq('id', utenteId);
 
         return res.status(200).json({ success: true, message: 'OTP verified and registration records created successfully' });
         

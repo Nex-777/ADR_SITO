@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.89"
+                VERSION: "1.03.92"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1789,14 +1789,21 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 // Verify OTP and finalize sign document state server-side
                 updateOtpButtonStatus("REGISTRAZIONE FINALE...");
                 
-                const apiBase = APP_CONFIG.API_BASE_URL || "";
+                const elMktg = document.querySelector('input[name="consenso_marketing"]:checked');
+                const elAudio = document.querySelector('input[name="consenso_audiovisivi"]:checked');
+
                 const response = await fetch(`${apiBase}/api/otp-verify.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${createdUserSession.access_token}`
                     },
-                    body: JSON.stringify({ otp: code, url_pdf_generato: preUploadedPdfUrl })
+                    body: JSON.stringify({ 
+                        otp: code, 
+                        url_pdf_generato: preUploadedPdfUrl,
+                        consenso_marketing: elMktg ? elMktg.value === 'acconsento' : false,
+                        consenso_audiovisivi: elAudio ? elAudio.value === 'acconsento' : false
+                    })
                 });
 
                 if (!response.ok) {

@@ -18,8 +18,23 @@ Tracks signature attempts, OTP statuses, and associated biometric/contract signa
 | `stato` | `varchar` | Progress states: `in_attesa_otp`, `approvato`, or `scaduto`. |
 | `data_creazione` | `timestamp` | Creation time of the request. Defaults to `now()`. |
 | `data_firma` | `timestamp` | Time verification was completed. |
+| `versione_privacy` | `varchar` | Version of the privacy policy accepted at signature time (e.g. `1.03.90`). |
 
-### 2. `public.certificati_medici`
+### 2. `public.registro_consensi`
+Registro di audit append-only immutabile per la storicizzazione di ogni modifica ai consensi (marketing, audiovisivi).
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Chiave primaria della variazione consenso. |
+| `utente_id` | `uuid` (FK) | Riferimento a `public.utenti(id)` ON DELETE CASCADE. |
+| `tipo_consenso` | `varchar` | Tipo di consenso variato (`consenso_marketing`, `consenso_audiovisivi`). |
+| `stato_consenso` | `boolean` | Valore del consenso (`true` / `false`). |
+| `fonte_modifica` | `varchar` | Origine del consenso (`registrazione_otp` via service_role vs `dashboard_utente`). |
+| `versione_policy` | `varchar` | Versione dell'informativa privacy in vigore. |
+| `ip_address` | `varchar` | Indirizzo IP del firmatario/utente al momento della modifica. |
+| `created_at` | `timestamptz` | Data e ora esatta dell'operazione. |
+
+### 3. `public.certificati_medici`
 Gestisce la memorizzazione e lo stato di validazione AI/manuale dei certificati medici degli atleti.
 
 | Column | Type | Description |

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenAI } from '@google/genai';
+import { Mistral } from '@mistralai/mistralai';
 import { sendEmail } from './resend-mail.js';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -51,9 +51,9 @@ export default async function handler(req, res) {
     // --- Env ---
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const mistralApiKey = process.env.MISTRAL_API_KEY;
     if (!supabaseUrl || !supabaseServiceKey) return res.status(500).json({ error: 'Errore di configurazione del server.' });
-    if (!geminiApiKey) return res.status(500).json({ error: 'Errore di configurazione del server.' });
+    if (!mistralApiKey) return res.status(500).json({ error: 'Errore di configurazione server Mistral AI.' });
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -169,7 +169,7 @@ export default async function handler(req, res) {
                 const base64Data = Buffer.from(arrayBuffer).toString('base64');
                 const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
-                const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+                const mistral = new Mistral({ apiKey: mistralApiKey });
                 const todayStr = new Date().toISOString().split('T')[0];
                 const prompt = `
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
@@ -199,13 +199,21 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 {"data_emissione": "2023-10-15", "data_scadenza": "2024-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico valido e leggibile."}
                 `;
 
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: [{ role: 'user', parts: [{ inlineData: { data: base64Data, mimeType } }, { text: prompt }] }]
+                const response = await mistral.chat.complete({
+                    model: 'pixtral-12b-2409',
+                    responseFormat: { type: 'json_object' },
+                    messages: [{
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            { type: 'image_url', imageUrl: `data:${mimeType};base64,${base64Data}` }
+                        ]
+                    }]
                 });
-                let responseText = (typeof response.text === 'function' ? response.text() : response.text).trim()
+
+                let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
                     .replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log('[CERT AI] Gemini response length:', responseText.length);
+                console.log('[CERT AI] Mistral response length:', responseText.length);
                 const aiResult = JSON.parse(responseText);
 
                 finalStatus = aiResult.stato || 'GIALLO';
@@ -327,17 +335,25 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 const base64Data = Buffer.from(arrayBuffer).toString('base64');
                 const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
 
-                const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+                const mistral = new Mistral({ apiKey: mistralApiKey });
                 const todayStr = new Date().toISOString().split('T')[0];
                 const prompt = `Sei un esperto di documenti di identità italiani. La data odierna è il ${todayStr}. Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida). Devi estrarre queste informazioni in formato JSON STRICT: 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO"), 2. data_scadenza (formato YYYY-MM-DD, null se non leggibile), 3. leggibile (booleano), 4. stato (stringa: "VERDE" se documento valido non scaduto e leggibile; "GIALLO" se qualcosa non è chiaro; "ROSSO" se chiaramente scaduto o non è un documento valido), 5. note (breve spiegazione). Rispondi SOLO con il JSON senza markdown. Esempio: {"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento valido e leggibile."}`;
 
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.5-flash',
-                    contents: [{ role: 'user', parts: [{ inlineData: { data: base64Data, mimeType } }, { text: prompt }] }]
+                const response = await mistral.chat.complete({
+                    model: 'pixtral-12b-2409',
+                    responseFormat: { type: 'json_object' },
+                    messages: [{
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            { type: 'image_url', imageUrl: `data:${mimeType};base64,${base64Data}` }
+                        ]
+                    }]
                 });
-                let responseText = (typeof response.text === 'function' ? response.text() : response.text).trim()
+
+                let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
                     .replace(/```json/g, '').replace(/```/g, '').trim();
-                console.log('[DOC AI] Gemini response length:', responseText.length);
+                console.log('[DOC AI] Mistral response length:', responseText.length);
                 const aiResult = JSON.parse(responseText);
                 finalStatus = aiResult.stato || 'GIALLO';
                 finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
