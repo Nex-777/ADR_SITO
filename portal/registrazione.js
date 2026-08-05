@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.03.92"
+                VERSION: "1.03.93"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -50,6 +50,9 @@ function togglePasswordVisibility(inputId, buttonEl) {
         if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '8888') {
             APP_CONFIG.API_BASE_URL = 'http://127.0.0.1:8888';
         }
+
+        // --- 2.5 API Base URL Unificato ---
+        const API_BASE = APP_CONFIG.API_BASE_URL || "";
 
         // --- 3. Tariffe Configuration ---
         let tariffe = {
@@ -1076,8 +1079,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     if (createdUserSession) createdUserSession.access_token = jwtToken;
                 }
 
-                const apiBase = APP_CONFIG.API_BASE_URL || "";
-                const response = await fetch(`${apiBase}/api/otp.js`, {
+                const response = await fetch(`${API_BASE}/api/otp.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1594,8 +1596,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
             // Invio OTP
             try {
                 btnInviaOtp.textContent = "INVIO CODICE OTP...";
-                const apiBase = APP_CONFIG.API_BASE_URL || "";
-                const response = await fetch(`${apiBase}/api/otp.js`, {
+                const response = await fetch(`${API_BASE}/api/otp.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1792,7 +1793,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 const elMktg = document.querySelector('input[name="consenso_marketing"]:checked');
                 const elAudio = document.querySelector('input[name="consenso_audiovisivi"]:checked');
 
-                const response = await fetch(`${apiBase}/api/otp-verify.js`, {
+                const response = await fetch(`${API_BASE}/api/otp-verify.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

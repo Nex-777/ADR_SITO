@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] hotfix | Fix ReferenceError apiBase in registrazione.js (v1.03.93)
+- **`portal/registrazione.js`**:
+  - Risolto bug critico `ReferenceError: apiBase is not defined` durante la validazione finale OTP (`btnValidaOtp`).
+  - Dichiarata la costante unificata `API_BASE` nello scope globale di `DOMContentLoaded` (subito dopo l'auto-configurazione Dev Mode).
+  - Effettuato refactoring DRY rimuovendo le dichiarazioni ridondanti locali di `apiBase` e sostituendo l'interpolazione con `API_BASE`.
+- **Global Bump**: Bumped application version to `v1.03.93` across 22 files.
+
+---
+
 ## [2026-08-03] feature | Disabilitazione Rateizzazione Interna per il Trimestrale e Validazione Backend (v1.03.89)
 - **`api/create-checkout-session.js`**: Implementata validazione deterministica lato server per `isInstallment` e `numRate` basata sul nome del piano. Per i piani Trimestrali (`trimest`/`3 mes`), la rateizzazione viene forzata a `false` nel backend prevenendo qualsiasi elusione via API.
 - **`portal/dashboard.js`**: Disabilitata la rateizzazione interna nell'interfaccia della `openCheckoutModal` per i piani Trimestrali (mantenendo il codice commentato per eventuale ripristino futuro).
