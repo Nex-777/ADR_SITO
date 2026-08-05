@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.02"
+                VERSION: "1.04.03"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2536,6 +2536,7 @@
                     actionBtn = `<div class="flex items-center justify-end gap-2">
                         ${actionContent}
                         <button onclick="apriDossierTesserato('${tess.anagrafiche.utente_id}')" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase" title="Dossier Tesserato">DOSSIER</button>
+                        <button onclick="apriAssistenzaTesserato('${tess.anagrafiche.utente_id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-purple-600/20 border border-purple-500/40 text-purple-400 hover:bg-purple-600 hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all flex items-center justify-center" title="Assistenza Account (Vista Utente)"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
                         <button onclick="eliminaUtente('${tess.anagrafiche.id}', '${nomeComp.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase">ELIMINA</button>
                     </div>`;
                 }
@@ -2692,6 +2693,7 @@
                 
                 if (typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente'].includes(r)) && tess.anagrafiche) {
                     actionHtml += `<button onclick="apriDossierTesserato('${tess.anagrafiche.utente_id}')" style="background:rgba(37,99,235,0.2);color:#60a5fa;border:1px solid rgba(59,130,246,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-left:8px;">DOSSIER</button>`;
+                    actionHtml += `<button onclick="apriAssistenzaTesserato('${tess.anagrafiche.utente_id}', '${nomeComp.replace(/'/g, "\\'")}')" style="background:rgba(124,58,237,0.2);color:#a78bfa;border:1px solid rgba(124,58,237,0.4);padding:10px 14px;font-family:'Orbitron',sans-serif;font-size:11px;cursor:pointer;min-height:44px;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;" title="Assistenza Account"><svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>`;
                 }
 
                 const card = document.createElement('div');
@@ -10049,6 +10051,103 @@ async function generatePdfThumbnail(fileOrBlob) {
         return null;
     }
 }
+
+// ================================================
+// MODALITÀ ASSISTENZA ACCOUNT — ADMIN ONLY
+// ================================================
+let _backupCurrentUser = null;
+let _backupCurrentUserProfile = null;
+let _assistenzaAttiva = false;
+
+window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
+    if (!utenteId) return;
+    if (typeof userRoles === 'undefined' || !userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
+        alert('Accesso non autorizzato.');
+        return;
+    }
+    if (_assistenzaAttiva) {
+        alert('Modalità assistenza già attiva. Chiudila prima di aprirne un\'altra.');
+        return;
+    }
+
+    try {
+        // 1. Carica profilo completo del tesserato da Supabase
+        const { data: targetProfile, error } = await supabaseClient
+            .from('utenti')
+            .select('*, anagrafiche(id, nome, cognome, codice_fiscale, data_nascita, comune_nascita, provincia_nascita, sesso, indirizzo, comune, provincia, cap, certificati_medici(*), documenti_identita(*), registro_approvazioni(*))')
+            .eq('id', utenteId)
+            .maybeSingle();
+
+        if (error || !targetProfile) {
+            alert('Impossibile caricare il profilo del tesserato: ' + (error?.message || 'Profilo non trovato.'));
+            return;
+        }
+
+        // 2. Salva backup delle variabili globali dell'Admin
+        _backupCurrentUser = currentUser;
+        _backupCurrentUserProfile = currentUserProfile;
+        _assistenzaAttiva = true;
+
+        // 3. Sostituisci le variabili globali con i dati del tesserato
+        currentUser = { id: utenteId, email: targetProfile.email || '' };
+        currentUserProfile = targetProfile;
+
+        // 4. Mostra il banner di avviso
+        const banner = document.getElementById('banner-assistenza-admin');
+        const nomeBanner = document.getElementById('assistenza-target-nome');
+        if (banner) {
+            if (nomeBanner) nomeBanner.textContent = nomeCompleto || `${targetProfile.nome || ''} ${targetProfile.cognome || ''}`;
+            banner.style.display = 'flex';
+            document.body.style.paddingTop = banner.offsetHeight + 'px';
+        }
+
+        // 5. Passa alla vista 'athlete' (mostra le schede utente nella sidebar)
+        switchContext('athlete');
+
+        // 6. Carica tutti i dati utente con le variabili globali ora puntate al tesserato
+        await populateUserPanoramicaSummary();
+        await loadUserProfilo();
+        await loadUserCertificato();
+        await loadUserEventi();
+        await loadUserPagamenti();
+
+        // 7. Naviga alla prima scheda utente (Il Mio Profilo)
+        const tabProfilo = document.getElementById('tab-btn-user_profilo');
+        if (tabProfilo) tabProfilo.click();
+
+    } catch (err) {
+        console.error('[ASSISTENZA] Errore apertura assistenza:', err);
+        if (_backupCurrentUser) currentUser = _backupCurrentUser;
+        if (_backupCurrentUserProfile) currentUserProfile = _backupCurrentUserProfile;
+        _assistenzaAttiva = false;
+        alert('Si è verificato un errore durante l\'apertura della modalità assistenza: ' + err.message);
+    }
+};
+
+window.chiudiAssistenzaTesserato = function() {
+    if (!_assistenzaAttiva) return;
+
+    // 1. Ripristina variabili globali Admin originali
+    currentUser = _backupCurrentUser;
+    currentUserProfile = _backupCurrentUserProfile;
+    _backupCurrentUser = null;
+    _backupCurrentUserProfile = null;
+    _assistenzaAttiva = false;
+
+    // 2. Nascondi banner e rimuovi padding body
+    const banner = document.getElementById('banner-assistenza-admin');
+    if (banner) {
+        banner.style.display = 'none';
+        document.body.style.paddingTop = '';
+    }
+
+    // 3. Torna al contesto board e al pannello tesserati
+    switchContext('board');
+    if (typeof switchTab === 'function') {
+        switchTab('tesserati');
+    }
+};
+
 
 
 

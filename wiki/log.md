@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-05] feature | Implementazione Modalità Assistenza Tesserato (pulsante Occhio Admin nel Registro Tesserati) (v1.04.03)
+- **`portal/dashboard.html`**:
+  - Inserito il banner fisso `#banner-assistenza-admin` (con gradiente viola/indaco e pulsante di chiusura rapida) in cima al `body`.
+- **`portal/dashboard.js`**:
+  - Inserito il pulsante con l'icona dell'Occhio 👁️ nella colonna Azioni del **Registro Tesserati** (sia per la tabella Desktop che per le Card Mobile), ad uso esclusivo dei ruoli `presidente` e `vice_presidente`.
+  - Implementate le funzioni `apriAssistenzaTesserato(utenteId, nomeCompleto)` e `chiudiAssistenzaTesserato()`: la prima effettua lo swap temporaneo di `currentUser` e `currentUserProfile` col profilo dell'atleta selezionato e attiva il contesto `'athlete'`, permettendo all'Admin di esplorare e verificare esattamente ciò che il tesserato vede sul suo schermo; la seconda ripristina la sessione Admin e torna al Registro Tesserati.
+- **Global Bump**: Bumped application version to `v1.04.03` across 22 files.
+
+---
+
 ## [2026-08-05] bugfix | Inclusione tabella documenti_identita nel Dossier Tesserato dell'Admin (v1.04.02)
 - **`portal/dashboard.js`**:
   - Aggiornata la funzione `openDossierModal` per interrogare la tabella relazionale `documenti_identita` anziché affidarsi al campo deprecato `ut.documento_identita_url`.
