@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.09"
+                VERSION: "1.04.10"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1504,7 +1504,6 @@
                 sortArray(tesseratiData, tesseratiSort.field, tesseratiSort.direction);
                 updateSortIcon('sort-icon-tess', tesseratiSort.field, tesseratiSort.direction);
                 renderTesseratiTable();
-                renderGialloCertificati();
             } catch (err) {
                 console.error("Errore caricamento tesserati:", err);
                 document.getElementById('tesserati-list-body').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-primary font-bold">Errore nel caricamento del database tesserati.</td></tr>`;
@@ -1654,6 +1653,7 @@
 
         async function loadApprovazioni() {
             try {
+                loadCertificatiGialli();
                 const { data, error } = await supabaseClient
                     .from('registro_approvazioni')
                     .select(`
@@ -2261,57 +2261,68 @@
             }
         }
 
-        function renderGialloCertificati() {
+        async function loadCertificatiGialli() {
             const container = document.getElementById('giallo-certificati-container');
             const body = document.getElementById('giallo-certificati-list');
-            if (!body) return;
-            body.innerHTML = '';
+            if (!body || !container) return;
 
-            // Trova tutti i tesserati che hanno un certificato con stato_validazione = 'GIALLO'
-            const gialloTesserati = tesseratiData.filter(tess => {
-                const cert = getCertInfo(tess.anagrafiche);
-                return cert && cert.stato_validazione === 'GIALLO';
-            });
+            try {
+                const { data: certs, error } = await supabaseClient
+                    .from('certificati_medici')
+                    .select('id, tipologia, data_rilascio, file_url, anagrafiche(nome, cognome, codice_fiscale)')
+                    .eq('stato_validazione', 'GIALLO')
+                    .order('created_at', { ascending: false });
 
-            if (gialloTesserati.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
+                if (error) throw error;
 
-            container.classList.remove('hidden');
+                if (!certs || certs.length === 0) {
+                    container.classList.add('hidden');
+                    body.innerHTML = '';
+                    return;
+                }
 
-            gialloTesserati.forEach(tess => {
-                const cert = getCertInfo(tess.anagrafiche);
-                const nomeComp = escapeHtml(`${tess.anagrafiche.nome} ${tess.anagrafiche.cognome}`);
-                const cf = escapeHtml(tess.anagrafiche.codice_fiscale);
-                const row = document.createElement('tr');
-                row.className = 'border-b border-yellow-500/10';
+                container.classList.remove('hidden');
 
-                row.innerHTML = `
-                    <td class="p-3 text-white font-bold">${nomeComp}</td>
-                    <td class="p-3 text-gray-400 font-mono">${cf}</td>
-                    <td class="p-3 text-yellow-500 font-bold">${escapeHtml(cert.tipologia)}</td>
-                    <td class="p-3 text-gray-400">${escapeHtml(cert.data_rilascio || 'N/D')}</td>
-                    <td class="p-3 text-center">
-                        <a href="#" data-file-url="${escapeHtml(cert.file_url)}" class="giallo-view-cert-btn bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[9px] px-2 py-1 hover:bg-yellow-500 hover:text-black font-bold uppercase transition-all flex items-center gap-1 justify-center max-w-[120px] mx-auto">
-                            <span class="material-symbols-outlined text-[12px]">visibility</span> VEDI FILE
-                        </a>
-                    </td>
-                    <td class="p-3 text-right">
-                        <div class="flex items-center justify-end gap-2">
-                            <button onclick="validaCertificatoManual('${cert.id}', 'VERDE')" class="bg-green-500 text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-600 transition-all uppercase">APPROVA</button>
-                            <button onclick="validaCertificatoManual('${cert.id}', 'ROSSO')" class="bg-primary text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-primary-dim transition-all uppercase">RIFIUTA</button>
-                        </div>
-                    </td>
-                `;
-                // Add event listener to avoid inline onclick with quote escaping issues
-                row.querySelector('.giallo-view-cert-btn').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const url = e.currentTarget.getAttribute('data-file-url');
-                    openSignedFile('certificati_medici', url);
+                body.innerHTML = certs.map(cert => {
+                    const anag = cert.anagrafiche;
+                    const nomeComp = escapeHtml(`${anag?.nome || ''} ${anag?.cognome || ''}`);
+                    const cf = escapeHtml(anag?.codice_fiscale || 'N/D');
+                    const tipologia = escapeHtml(cert.tipologia || 'NON_SPECIFICATO');
+                    const dataRilascio = escapeHtml(cert.data_rilascio || 'N/D');
+                    const certId = cert.id;
+                    const fileUrl = escapeHtml(cert.file_url || '');
+                    return `
+                        <tr class="border-b border-yellow-500/10" data-cert-id="${certId}">
+                            <td class="p-3 text-white font-bold">${nomeComp}</td>
+                            <td class="p-3 text-gray-400 font-mono">${cf}</td>
+                            <td class="p-3 text-yellow-500 font-bold">${tipologia}</td>
+                            <td class="p-3 text-gray-400">${dataRilascio}</td>
+                            <td class="p-3 text-center">
+                                <a href="#" data-file-url="${fileUrl}" class="giallo-view-cert-btn bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[9px] px-2 py-1 hover:bg-yellow-500 hover:text-black font-bold uppercase transition-all flex items-center gap-1 justify-center max-w-[120px] mx-auto">
+                                    <span class="material-symbols-outlined text-[12px]">visibility</span> VEDI FILE
+                                </a>
+                            </td>
+                            <td class="p-3 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button onclick="validaCertificatoManual('${certId}', 'VERDE')" class="bg-green-500 text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-600 transition-all uppercase">APPROVA</button>
+                                    <button onclick="validaCertificatoManual('${certId}', 'ROSSO')" class="bg-primary text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-primary-dim transition-all uppercase">RIFIUTA</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                body.querySelectorAll('.giallo-view-cert-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const url = e.currentTarget.getAttribute('data-file-url');
+                        openSignedFile('certificati_medici', url);
+                    });
                 });
-                body.appendChild(row);
-            });
+
+            } catch (err) {
+                console.error('[loadCertificatiGialli] Errore:', err);
+            }
         }
 
         async function validaCertificatoManual(certId, nuovoStato, btnEl) {
@@ -7541,6 +7552,7 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('click', function(event) {
             switchTab('approvazioni');
             loadDocsAttesa();
+            loadCertificatiGialli();
         });
     }
 });

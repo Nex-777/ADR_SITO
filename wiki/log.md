@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] refactor | Riposizionamento e Refactoring Certificati Medici GIALLO nel Registro Approvazioni (v1.04.10)
+- **`portal/dashboard.html`**:
+  - Spostato il contenitore `<div id="giallo-certificati-container">` dal tab `#panel-tesserati` (Registro Tesserati) al tab `#panel-approvazioni` (Registro Approvazioni), posizionandolo sotto la sezione dei Documenti d'Identità in Attesa di Verifica.
+- **`portal/dashboard.js`**:
+  - Sostituita la funzione in-memory `renderGialloCertificati()` con la funzione asincrona `loadCertificatiGialli()` basata su query diretta alla tabella `certificati_medici` (con join su `anagrafiche`), eliminando race condition e dipendenze da `tesseratiData`.
+  - Integrato l'innesco di `loadCertificatiGialli()` sia all'avvio in `loadApprovazioni()` sia al click sul pulsante `#tab-btn-approvazioni`.
+  - Rimosso l'invocazione ridondante da `loadTesserati()`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.10`.
+
+---
+
 ## [2026-08-06] fix | Risoluzione Crash OTP 500 & Hardening Upsert Silente (v1.04.09)
 - **Database (Supabase)**:
   - Eseguita sanatoria SQL eliminando il record corrotto/incompleto di `frstuffer@gmail.com` da `auth.users`, `public.utenti` e `public.atti_adesione`.
