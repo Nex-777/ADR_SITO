@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.11"
+                VERSION: "1.04.12"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -43,6 +43,14 @@
             const now = new Date();
             const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             return data_scadenza < todayStr;
+        }
+
+        function isDocumentoIdentitaScaduto(idDoc) {
+            if (!idDoc) return false;
+            if (!idDoc.data_scadenza) return false;
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            return idDoc.data_scadenza < todayStr;
         }
 
         // Security override for window.alert to prevent raw database/exception leak
@@ -475,7 +483,7 @@
                 const cert = getCertInfo(anag);
                 const idDoc = getIdDocInfo(anag);
                 const isCertScaduto = cert ? isCertificatoScaduto(cert.data_scadenza) : false;
-                const isIdDocScaduto = idDoc ? isCertificatoScaduto(idDoc.data_scadenza) : false;
+                const isIdDocScaduto = idDoc ? isDocumentoIdentitaScaduto(idDoc) : false;
                 const isBlocked = !cert || isCertScaduto || cert.stato_validazione === 'ROSSO' || (idDoc && (idDoc.stato_validazione === 'ROSSO' || isIdDocScaduto));
                 const isRegistrazioneIncompleta = !anag;
 
@@ -932,7 +940,7 @@
                     form.classList.add('hidden');
 
                     const isCertScadutoVal = cert ? isCertificatoScaduto(cert.data_scadenza) : false;
-                    const isIdDocScadutoVal = idDoc ? isCertificatoScaduto(idDoc.data_scadenza) : false;
+                    const isIdDocScadutoVal = idDoc ? isDocumentoIdentitaScaduto(idDoc) : false;
 
                     if (idDoc && idDoc.stato_validazione === 'ROSSO') {
                         if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">badge</span> DOCUMENTO D\'IDENTITÀ';

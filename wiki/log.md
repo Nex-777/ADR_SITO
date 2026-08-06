@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] bugfix | Risoluzione falso allarme documenti identità senza data e sanatoria scadenze AI (v1.04.12)
+- **`portal/dashboard.js`**:
+  - Creata ed integrata la funzione helper `isDocumentoIdentitaScaduto(idDoc)`.
+  - Risolto il falso allarme di "Documento d'identità scaduto" nella Panoramica (Home) per tutti gli utenti il cui documento d'identità è approvato come `VERDE` ma privo di una data di scadenza registrata (`data_scadenza` IS NULL), eliminando la discrepanza tra la Home ed il tab Documento d'Identità.
+- **`scripts/fix-doc-dates.js`**:
+  - Eseguita la sanatoria automatizzata via Mistral AI Vision sui documenti approvati, recuperando ed aggiornando le date di scadenza reali nel database.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.12`.
+
+---
+
 ## [2026-08-06] fix | Fix Validazione AI PDF (Certificati e Documenti) & Inclusione pdf.js (v1.04.11)
 - **`index.html`**:
   - Inserite le librerie `pdf.js` e `pdf-lib` nell'header della pagina pubblica per abilitare la generazione lato client delle miniature `_thumb.jpg` in fase di registrazione utente.
