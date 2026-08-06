@@ -3189,7 +3189,7 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
                 utente_id,
                 giorni_presenza,
                 dettagli,
-                profilo:epika_profili(nome_di_battaglia, ruolo_combattimento, gruppo_storico_id)
+                profilo:epika_profili(nome_di_battaglia, ruolo_combattimento, gruppo_storico_id, allenatore_id)
             `)
             .eq('evento_id', eventoId)
             .order('data_iscrizione', { ascending: false })
@@ -3230,7 +3230,7 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
         const { data: allenatori } = await supabaseClient
             .from('epika_opzioni')
             .select('id, valore')
-            .eq('tipo', 'allenatore');
+            .in('tipo', ['allenatore', 'scab_allievo_allenatore']);
         
         const coachMappa = {};
         (allenatori || []).forEach(c => { coachMappa[c.id] = c.valore; });
@@ -3274,7 +3274,8 @@ async function mostraDashboardEvento(eventoId, eventoTitolo, dataInizio, dataFin
             });
 
             const dett = isc.dettagli || {};
-            const coachNome = coachMappa[dett.allenatore_id] || 'N/D';
+            const coachId = profilo.allenatore_id || dett.allenatore_id;
+            const coachNome = coachMappa[coachId] || 'N/D';
             const arm = dett.armatura || 'nessuna';
             const arc = dett.arciere || 'nessuno';
             const armiS = Array.isArray(dett.armi_speciali) ? dett.armi_speciali : [];
@@ -5154,7 +5155,57 @@ async function salvaTuttaLaListaGenerale() {
             
         if (error) throw error;
         
-        alert("Modifiche per l'anno 2026 salvate con successo!");
+        // Sincronizzazione automatica per l'anno sociale corrente
+        const currentYear = new Date().getFullYear();
+        const currentYearRows = rowsToUpsert.filter(r => r.anno_sociale === currentYear);
+
+        for (const row of currentYearRows) {
+            if (!row.profilo_id) continue;
+            
+            // 1. Aggiorna epika_profili
+            const profiliUpdate = {};
+            if (row.allenatore_id !== undefined) profiliUpdate.allenatore_id = row.allenatore_id;
+            if (row.ruolo_combattimento !== undefined) profiliUpdate.ruolo_combattimento = row.ruolo_combattimento;
+            if (row.gruppo_storico_id !== undefined) profiliUpdate.gruppo_storico_id = row.gruppo_storico_id;
+            if (row.popolo !== undefined) profiliUpdate.popolo = row.popolo;
+
+            if (Object.keys(profiliUpdate).length > 0) {
+                await supabaseClient
+                    .from('epika_profili')
+                    .update(profiliUpdate)
+                    .eq('id', row.profilo_id);
+            }
+
+            // 2. Aggiorna epika_scab_abilitazioni per l'anno corrente
+            if (row.allenatore_id !== undefined) {
+                await supabaseClient
+                    .from('epika_scab_abilitazioni')
+                    .update({ allenatore_opzione_id: row.allenatore_id })
+                    .eq('profilo_id', row.profilo_id)
+                    .eq('anno_abilitativo', currentYear);
+            }
+
+            // 3. Aggiorna epika_iscrizioni_eventi (campo JSONB dettagli.allenatore_id)
+            if (row.allenatore_id !== undefined) {
+                const { data: iscrizioni } = await supabaseClient
+                    .from('epika_iscrizioni_eventi')
+                    .select('id, dettagli')
+                    .eq('utente_id', row.profilo_id);
+
+                if (iscrizioni && iscrizioni.length > 0) {
+                    for (const isc of iscrizioni) {
+                        const dett = isc.dettagli || {};
+                        dett.allenatore_id = row.allenatore_id;
+                        await supabaseClient
+                            .from('epika_iscrizioni_eventi')
+                            .update({ dettagli: dett })
+                            .eq('id', isc.id);
+                    }
+                }
+            }
+        }
+        
+        alert("Modifiche per l'anno 2026 salvate e sincronizzate con successo!");
         // Ricarichiamo i dati dello storico
         const { data: storico } = await supabaseClient
             .from('epika_storico_organico')
