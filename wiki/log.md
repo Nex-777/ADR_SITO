@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] refactor | Semplificazione Navigazione Portale Epika (Navigazione Diretta Universale) (v1.04.14)
+- **`portal/dashboard.js`**:
+  - Rimossa completamente la logica `window.open` e il relativo fallback dalla funzione `openEpika`.
+  - Impostata la navigazione diretta (`window.location.href`) come unico standard universale per tutti gli utenti (Atleti e Admin), su tutte le piattaforme (Mobile e Desktop), garantendo la massima robustezza (100% immune ai Popup Blocker) e totale coerenza UX.
+
+---
+
+
 ## [2026-08-06] bugfix | Implementazione Fallback Antiblocco Popup per Navigazione Portale Epika (v1.04.13)
 - **`portal/dashboard.js`**:
   - Risolto il bug critico che impediva l'accesso ad Epika sui browser Desktop con Blocco Pop-up (Popup Blocker) attivo.

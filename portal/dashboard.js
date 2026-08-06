@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.13"
+                VERSION: "1.04.14"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1035,28 +1035,9 @@
             modal.classList.remove('hidden');
         }
 
-        // Funzione di navigazione centralizzata verso Epika (Mobile vs Desktop con fallback antiblocco)
+        // Funzione di navigazione centralizzata verso Epika (Navigazione Diretta Universale)
         function openEpika(isAdmin = false) {
-            const targetUrl = isAdmin ? 'epika.html?admin=true' : 'epika.html';
-            try {
-                const isMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                if (isMobile) {
-                    window.location.href = targetUrl;
-                } else {
-                    // Tenta l'apertura in nuova scheda (UX preferita per Desktop)
-                    const win = window.open(targetUrl, '_blank');
-                    
-                    // Controllo antiblocco: se il Popup Blocker ha soppresso la finestra
-                    if (!win || win.closed || typeof win.closed === 'undefined') {
-                        console.warn("[EPIKA NAV] Popup bloccato dal browser. Eseguo fallback con navigazione diretta nella scheda corrente.");
-                        window.location.href = targetUrl;
-                    }
-                }
-            } catch (err) {
-                // Fallback estremo in caso di eccezioni di sicurezza del browser
-                console.warn("[EPIKA NAV] Eccezione durante l'apertura del popup:", err);
-                window.location.href = targetUrl;
-            }
+            window.location.href = isAdmin ? 'epika.html?admin=true' : 'epika.html';
         }
 
         // Funzione per reindirizzare al pagamento Stripe
