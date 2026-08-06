@@ -150,6 +150,22 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Profilo utente non trovato o non accessibile.' });
         }
 
+        // [HARDENING v29] Null-guard: se i campi anagrafici critici sono mancanti,
+        // restituire un 400 chiaro invece di crashare con TypeError 500.
+        if (!profile.codice_fiscale || !profile.nome || !profile.cognome || !profile.indirizzo) {
+            console.error('[OTP-VERIFY] Profilo incompleto in public.utenti per utente:', utenteId, 
+                'Campi mancanti:', { 
+                    codice_fiscale: !!profile.codice_fiscale, 
+                    nome: !!profile.nome, 
+                    cognome: !!profile.cognome, 
+                    indirizzo: !!profile.indirizzo 
+                }
+            );
+            return res.status(400).json({ 
+                error: 'Il tuo profilo risulta incompleto. Torna indietro nel modulo e assicurati di aver compilato tutti i campi obbligatori (Nome, Cognome, Codice Fiscale, Indirizzo), poi richiedi un nuovo codice OTP.' 
+            });
+        }
+
         // Parse sex and address parts
         const cf = profile.codice_fiscale.toUpperCase();
         const dayPart = parseInt(cf.substring(9, 11), 10);

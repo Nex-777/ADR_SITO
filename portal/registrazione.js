@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.07"
+                VERSION: "1.04.09"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1358,6 +1358,31 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 alert("Errore nel salvataggio del profilo: " + err.message);
                 btnInviaOtp.disabled = false;
                 btnInviaOtp.textContent = "INVIA CODICE OTP";
+                return;
+            }
+
+            // [HARDENING v29] Verifica esplicita che i dati anagrafici siano stati scritti in public.utenti.
+            // Questo rileva il fallimento silente dell'upsert (Supabase v2 returning:minimal + RLS).
+            try {
+                const { data: verifyProfile, error: verifyError } = await supabaseClient
+                    .from('utenti')
+                    .select('codice_fiscale, nome')
+                    .eq('id', userId)
+                    .maybeSingle();
+
+                if (verifyError || !verifyProfile || !verifyProfile.codice_fiscale || !verifyProfile.nome) {
+                    console.error('Verifica profilo post-upsert fallita. Upsert silente bloccato da RLS o sessione non propagata.', verifyError);
+                    alert('Errore nel salvataggio dei dati anagrafici. Ricarica la pagina e riprova. Se il problema persiste, contatta la segreteria.');
+                    btnInviaOtp.disabled = false;
+                    btnInviaOtp.textContent = 'INVIA CODICE OTP';
+                    return;
+                }
+                console.log('Verifica profilo post-upsert superata. Dati anagrafici confermati su DB.');
+            } catch (verifyErr) {
+                console.error('Errore durante la verifica post-upsert:', verifyErr);
+                alert('Errore nella verifica del profilo. Riprova.');
+                btnInviaOtp.disabled = false;
+                btnInviaOtp.textContent = 'INVIA CODICE OTP';
                 return;
             }
 

@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] fix | Risoluzione Crash OTP 500 & Hardening Upsert Silente (v1.04.09)
+- **Database (Supabase)**:
+  - Eseguita sanatoria SQL eliminando il record corrotto/incompleto di `frstuffer@gmail.com` da `auth.users`, `public.utenti` e `public.atti_adesione`.
+- **`api/otp-verify.js`**:
+  - Inserito un null-guard sui campi anagrafici critici (`codice_fiscale`, `nome`, `cognome`, `indirizzo`) per restituire un errore HTTP 400 controllato in caso di dati mancanti anziché sollevare un crash 500 (`TypeError: Cannot read properties of null`).
+- **`portal/registrazione.js`**:
+  - Aggiunto un controllo di verifica post-upsert (`.select('codice_fiscale, nome').maybeSingle()`) prima dell'invio dell'OTP. Questo rileva e blocca all'istante eventuali fallimenti silenti dell'upsert (causati da sessioni non ancora propagate o RLS) senza incorrere nei falsi negativi di `.select().single()`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.09`.
+
+---
+
 ## [2026-08-05] feature | Legenda Stati Tessera CSEN per Account Admin nella Sidebar Dashboard (v1.04.07)
 - **`portal/dashboard.html`**:
   - Inserito il riquadro `#sidebar-csen-legend` nella sidebar sinistra subito sotto la carta `LIVELLO AUTORIZZAZIONE`, contenente la legenda dettagliata dei 6 stati della colonna Tessera CSEN (Tessera Ufficiale Verde, Codice Richiesta Cyan, Rinnovo Inviato Arancione, In Attesa N. CSEN Blu, Da Comunicare Giallo, Errore Sync Rosso).
