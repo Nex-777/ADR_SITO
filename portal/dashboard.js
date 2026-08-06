@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.12"
+                VERSION: "1.04.13"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1035,14 +1035,27 @@
             modal.classList.remove('hidden');
         }
 
-        // Funzione di navigazione centralizzata verso Epika (Mobile vs Desktop)
+        // Funzione di navigazione centralizzata verso Epika (Mobile vs Desktop con fallback antiblocco)
         function openEpika(isAdmin = false) {
-            const isMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             const targetUrl = isAdmin ? 'epika.html?admin=true' : 'epika.html';
-            if (isMobile) {
+            try {
+                const isMobile = window.innerWidth <= 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                    window.location.href = targetUrl;
+                } else {
+                    // Tenta l'apertura in nuova scheda (UX preferita per Desktop)
+                    const win = window.open(targetUrl, '_blank');
+                    
+                    // Controllo antiblocco: se il Popup Blocker ha soppresso la finestra
+                    if (!win || win.closed || typeof win.closed === 'undefined') {
+                        console.warn("[EPIKA NAV] Popup bloccato dal browser. Eseguo fallback con navigazione diretta nella scheda corrente.");
+                        window.location.href = targetUrl;
+                    }
+                }
+            } catch (err) {
+                // Fallback estremo in caso di eccezioni di sicurezza del browser
+                console.warn("[EPIKA NAV] Eccezione durante l'apertura del popup:", err);
                 window.location.href = targetUrl;
-            } else {
-                window.open(targetUrl, 'portale_epika');
             }
         }
 

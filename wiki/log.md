@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] bugfix | Implementazione Fallback Antiblocco Popup per Navigazione Portale Epika (v1.04.13)
+- **`portal/dashboard.js`**:
+  - Risolto il bug critico che impediva l'accesso ad Epika sui browser Desktop con Blocco Pop-up (Popup Blocker) attivo.
+  - Aggiornata la funzione `openEpika` per includere una navigazione ibrida: tenta l'apertura in nuova scheda (`_blank`) e, in caso di soppressione o errore del popup (`win === null` / `win.closed`), esegue il fallback istantaneo con navigazione nella stessa finestra (`window.location.href`).
+
+---
+
+
 ## [2026-08-06] bugfix | Risoluzione falso allarme documenti identità senza data e sanatoria scadenze AI (v1.04.12)
 - **`portal/dashboard.js`**:
   - Creata ed integrata la funzione helper `isDocumentoIdentitaScaduto(idDoc)`.
