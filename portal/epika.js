@@ -2880,7 +2880,7 @@ async function renderEventiAdmin() {
             const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})">${statusText}</button>`;
             const deleteBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="cancellaEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">CANCELLA</button>`;
             const presenzeBtnText = isReadOnly() ? 'VEDI PRESENZE' : 'GESTISCI PRESENZE';
-            const esercitiBtnHtml = isReadOnly() ? '' : `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #581c87; border-color: #a855f7;" onclick="mostraPannelloEserciti('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">GESTIONE ESERCITI</button>`;
+            const esercitiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #581c87; border-color: #a855f7;" onclick="mostraPannelloEserciti('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">GESTIONE ESERCITI</button>`;
 
             container.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
@@ -7110,8 +7110,22 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
     if (!panel) return;
 
     apriPannelloEsclusivoAdmin('adm-eserciti-panel');
-    document.getElementById('adm-eserciti-titolo').textContent = `GESTIONE ESERCITI & SCHIERAMENTI: ${eventoTitolo.toUpperCase()}`;
+    const readOnlyState = isReadOnly();
+    document.getElementById('adm-eserciti-titolo').textContent = `GESTIONE ESERCITI & SCHIERAMENTI: ${eventoTitolo.toUpperCase()}${readOnlyState ? ' 🔒 (SOLO LETTURA)' : ''}`;
     document.getElementById('adm-eserciti-evento-id').value = eventoId;
+
+    // Gestione visibilità e stato campi per Read-Only
+    const btnSalva = document.getElementById('adm-eserciti-btn-salva');
+    if (btnSalva) btnSalva.style.display = readOnlyState ? 'none' : 'inline-block';
+
+    const inputIds = [
+        'adm-esercito-a-nome', 'adm-esercito-a-grido', 'adm-esercito-a-gen-1', 'adm-esercito-a-gen-2', 'adm-esercito-a-gen-3',
+        'adm-esercito-b-nome', 'adm-esercito-b-grido', 'adm-esercito-b-gen-1', 'adm-esercito-b-gen-2', 'adm-esercito-b-gen-3'
+    ];
+    inputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = readOnlyState;
+    });
 
     esercitiCacheData.eventoId = eventoId;
     esercitiCacheData.coeff = {
@@ -7304,10 +7318,25 @@ function renderTatticaEserciti() {
         colPool.innerHTML = '<p style="font-size: 10px; color: gray; text-align: center;">Nessun gruppo iscritto all\'evento.</p>';
     }
 
+    const readOnlyState = isReadOnly();
+
     gruppiNomi.forEach(gNome => {
         const atleti = esercitiCacheData.gruppi[gNome];
         const stats = calcolaStatisticheGruppo(atleti);
         const schieramento = esercitiCacheData.assegnazioniGruppi[gNome] || null;
+
+        const bottoniAzioneGruppoHtml = readOnlyState ? '' : `
+            <div style="display: flex; gap: 4px;">
+                ${schieramento === 'A' ? 
+                    `<button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" style="font-size: 9px; padding: 4px 8px; width: 100%;">← RIMUOVI</button>` :
+                    `<button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'A')" style="font-size: 9px; padding: 4px 8px; background: #1e3a8a; border-color: #3b82f6; flex: 1;">← AD ESERCITO A</button>`
+                }
+                ${schieramento === 'B' ? 
+                    `<button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" style="font-size: 9px; padding: 4px 8px; width: 100%;">RIMUOVI →</button>` :
+                    `<button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'B')" style="font-size: 9px; padding: 4px 8px; background: #88242b; border-color: #ef4444; flex: 1;">AD ESERCITO B →</button>`
+                }
+            </div>
+        `;
 
         const cardHtml = `
             <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 4px;">
@@ -7315,19 +7344,10 @@ function renderTatticaEserciti() {
                     <span style="font-size: 11px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase;">${gNome}</span>
                     <span style="font-size: 10px; font-family: monospace; color: #60a5fa;">+${stats.forza} pts</span>
                 </div>
-                <div style="font-size: 9px; color: rgba(245, 230, 200, 0.6); margin-bottom: 8px;">
+                <div style="font-size: 9px; color: rgba(245, 230, 200, 0.6); ${readOnlyState ? '' : 'margin-bottom: 8px;'}">
                     ⚔️ ${stats.combattenti} Combattenti | 🛡️ ${stats.nonCombattenti} Non Comb.
                 </div>
-                <div style="display: flex; gap: 4px;">
-                    ${schieramento === 'A' ? 
-                        `<button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" style="font-size: 9px; padding: 4px 8px; width: 100%;">← RIMUOVI</button>` :
-                        `<button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'A')" style="font-size: 9px; padding: 4px 8px; background: #1e3a8a; border-color: #3b82f6; flex: 1;">← AD ESERCITO A</button>`
-                    }
-                    ${schieramento === 'B' ? 
-                        `<button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" style="font-size: 9px; padding: 4px 8px; width: 100%;">RIMUOVI →</button>` :
-                        `<button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'B')" style="font-size: 9px; padding: 4px 8px; background: #88242b; border-color: #ef4444; flex: 1;">AD ESERCITO B →</button>`
-                    }
-                </div>
+                ${bottoniAzioneGruppoHtml}
             </div>
         `;
 
@@ -7353,6 +7373,15 @@ function renderTatticaEserciti() {
             `<span style="color: var(--epk-gold); font-size: 9px;">COMBATTENTE (${m.armatura.toUpperCase()})</span>` : 
             `<span style="color: gray; font-size: 9px;">NON COMBATTENTE</span>`;
 
+        const bottoniAzioneMercenarioHtml = readOnlyState ? 
+            `<div style="margin-top: 4px; font-size: 9px;">${schieramentoM ? '<span style="color: var(--epk-gold); font-weight: bold;">ESERCITO ' + schieramentoM + '</span>' : '<span style="color: gray;">NON ASSEGNATO</span>'}</div>` : `
+            <div style="display: flex; gap: 4px;">
+                <button class="epk-btn" onclick="impostaMercenarioSchieramento('${m.utente_id}', 'A')" style="font-size: 9px; padding: 4px 6px; flex: 1; ${schieramentoM === 'A' ? 'background: #1e3a8a; border-color: #3b82f6;' : 'background: transparent; opacity: 0.5;'}">ESERCITO A</button>
+                <button class="epk-btn-secondary" onclick="impostaMercenarioSchieramento('${m.utente_id}', '')" style="font-size: 9px; padding: 4px 6px; ${schieramentoM === '' ? 'border-color: var(--epk-gold); color: var(--epk-gold);' : 'opacity: 0.5;'}">FREE</button>
+                <button class="epk-btn" onclick="impostaMercenarioSchieramento('${m.utente_id}', 'B')" style="font-size: 9px; padding: 4px 6px; flex: 1; ${schieramentoM === 'B' ? 'background: #88242b; border-color: #ef4444;' : 'background: transparent; opacity: 0.5;'}">ESERCITO B</button>
+            </div>
+        `;
+
         mercList.innerHTML += `
             <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between;">
                 <div style="margin-bottom: 8px;">
@@ -7362,11 +7391,7 @@ function renderTatticaEserciti() {
                     </div>
                     <div style="margin-top: 2px;">${badgeRuolo}</div>
                 </div>
-                <div style="display: flex; gap: 4px;">
-                    <button class="epk-btn" onclick="impostaMercenarioSchieramento('${m.utente_id}', 'A')" style="font-size: 9px; padding: 4px 6px; flex: 1; ${schieramentoM === 'A' ? 'background: #1e3a8a; border-color: #3b82f6;' : 'background: transparent; opacity: 0.5;'}">ESERCITO A</button>
-                    <button class="epk-btn-secondary" onclick="impostaMercenarioSchieramento('${m.utente_id}', '')" style="font-size: 9px; padding: 4px 6px; ${schieramentoM === '' ? 'border-color: var(--epk-gold); color: var(--epk-gold);' : 'opacity: 0.5;'}">FREE</button>
-                    <button class="epk-btn" onclick="impostaMercenarioSchieramento('${m.utente_id}', 'B')" style="font-size: 9px; padding: 4px 6px; flex: 1; ${schieramentoM === 'B' ? 'background: #88242b; border-color: #ef4444;' : 'background: transparent; opacity: 0.5;'}">ESERCITO B</button>
-                </div>
+                ${bottoniAzioneMercenarioHtml}
             </div>
         `;
     });
@@ -7375,6 +7400,7 @@ function renderTatticaEserciti() {
 }
 
 function impostaGruppoSchieramento(gNome, schieramento) {
+    if (isReadOnly()) return;
     if (schieramento) {
         esercitiCacheData.assegnazioniGruppi[gNome] = schieramento;
     } else {
@@ -7384,6 +7410,7 @@ function impostaGruppoSchieramento(gNome, schieramento) {
 }
 
 function impostaMercenarioSchieramento(utenteId, schieramento) {
+    if (isReadOnly()) return;
     if (schieramento) {
         esercitiCacheData.assegnazioniMercenari[utenteId] = schieramento;
     } else {
@@ -7486,6 +7513,18 @@ function apriModalCofficientiEserciti() {
     if (document.getElementById('coeff-arciere-puro')) document.getElementById('coeff-arciere-puro').value = c.arciere_puro;
     if (document.getElementById('coeff-arciere-ibrido')) document.getElementById('coeff-arciere-ibrido').value = c.arciere_ibrido;
 
+    const readOnlyState = isReadOnly();
+    const coeffInputIds = [
+        'coeff-non-combattente', 'coeff-combattente', 'coeff-armatura-leggera', 
+        'coeff-armatura-pesante', 'coeff-arciere-puro', 'coeff-arciere-ibrido'
+    ];
+    coeffInputIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = readOnlyState;
+    });
+    const btnCoeffSalva = document.getElementById('adm-eserciti-btn-coeff-salva');
+    if (btnCoeffSalva) btnCoeffSalva.style.display = readOnlyState ? 'none' : 'inline-block';
+
     document.getElementById('adm-eserciti-coeff-modal')?.classList.remove('epk-hidden');
 }
 
@@ -7494,6 +7533,7 @@ function chiudiModalCofficientiEserciti() {
 }
 
 function confermaCoefficientiEserciti() {
+    if (isReadOnly()) return;
     esercitiCacheData.coeff = {
         non_combattente: parseFloat(document.getElementById('coeff-non-combattente')?.value || 0),
         combattente: parseFloat(document.getElementById('coeff-combattente')?.value || 1.0),
@@ -7509,6 +7549,7 @@ function confermaCoefficientiEserciti() {
 }
 
 async function salvaSchieramentiEserciti() {
+    if (isReadOnly()) return;
     const eventoId = esercitiCacheData.eventoId;
     if (!eventoId) return;
 

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.17">
+    <link rel="stylesheet" href="epika.css?v=1.04.18">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.17"></script>
+    <script src="config.js?v=1.04.18"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.17</span>
+            <span class="epk-version-badge">Vs. 1.04.18</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -720,7 +720,7 @@
                                 </div>
                                 <div style="display: flex; gap: 8px;">
                                     <button class="epk-btn-secondary" onclick="apriModalCofficientiEserciti()" style="padding: 8px 12px; font-size: 10px; border-color: var(--epk-gold); color: var(--epk-gold);">⚙️ COEFFICIENTI FORZA</button>
-                                    <button class="epk-btn" onclick="salvaSchieramentiEserciti()" style="padding: 8px 16px; font-size: 10px; background: #166534; border-color: #22c55e;">💾 SALVA SCHIERAMENTI</button>
+                                    <button id="adm-eserciti-btn-salva" class="epk-btn" onclick="salvaSchieramentiEserciti()" style="padding: 8px 16px; font-size: 10px; background: #166534; border-color: #22c55e;">💾 SALVA SCHIERAMENTI</button>
                                     <button class="epk-btn-secondary" onclick="nascondiPannelloEserciti()" style="padding: 8px 12px; font-size: 10px;">CHIUDI</button>
                                 </div>
                             </div>
@@ -870,7 +870,7 @@
                                 </div>
                                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
                                     <button class="epk-btn-secondary" onclick="chiudiModalCofficientiEserciti()" style="font-size: 10px; padding: 6px 12px;">ANNULLA</button>
-                                    <button class="epk-btn" onclick="confermaCoefficientiEserciti()" style="font-size: 10px; padding: 6px 16px;">CONFERMA</button>
+                                    <button id="adm-eserciti-btn-coeff-salva" class="epk-btn" onclick="confermaCoefficientiEserciti()" style="font-size: 10px; padding: 6px 16px;">CONFERMA</button>
                                 </div>
                             </div>
                         </div>
@@ -1926,6 +1926,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.17"></script>
+    <script src="epika.js?v=1.04.18"></script>
 </body>
 </html>

@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] feature | Tasto e Vista Gestione Eserciti Read-Only per Direttivo (v1.04.18)
+- **`portal/epika.html`**:
+  - Assegnati gli ID `adm-eserciti-btn-salva` e `adm-eserciti-btn-coeff-salva` ai bottoni di salvataggio per la gestione dello stato Read-Only.
+- **`portal/epika.js`**:
+  - Rimosso il vincolo `isReadOnly()` sulla generazione del pulsante viola `GESTIONE ESERCITI` nell'elenco eventi, rendendolo accessibile sia all'Amministratore che al Direttivo.
+  - Aggiornata `mostraPannelloEserciti()` per rilevare lo stato Read-Only: disabilita tutti gli input testuali (nomi eserciti, gridi, generali) e nasconde il tasto `SALVA SCHIERAMENTI`.
+  - Aggiornata `apriModalCofficientiEserciti()` per disabilitare gli input dei coefficienti e nascondere il tasto `CONFERMA` se aperto da un Direttivo.
+  - Aggiornata `renderTatticaEserciti()` per omettere i bottoni di modifica/spostamento gruppi e mercenari in modalità Read-Only, mostrando uno stato pulito e informativo.
+  - Aggiunti controlli di sicurezza `if (isReadOnly()) return;` all'inizio delle funzioni JS di modifica (`salvaSchieramentiEserciti`, `confermaCoefficientiEserciti`, `impostaGruppoSchieramento`, `impostaMercenarioSchieramento`).
+
+---
+
 ## [2026-08-06] style | Redesign Grafico e Funzionale Dashboard Capogruppo tramite Stitch (v1.04.17)
 - **`portal/epika.css`**:
   - Aggiunti i componenti stilistici del design system Stitch (`.epk-stats-grid`, `.epk-stat-card`, `.epk-filter-box`, `.epk-dark-input`, `.epk-dark-select`, `.epk-status-badge`, `.epk-role-badge`, `.epk-tag`, `.epk-pay-badge`, `.epk-days-badge`, `.epk-table-card`).
