@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] fix | Fix Validazione AI PDF (Certificati e Documenti) & Inclusione pdf.js (v1.04.11)
+- **`index.html`**:
+  - Inserite le librerie `pdf.js` e `pdf-lib` nell'header della pagina pubblica per abilitare la generazione lato client delle miniature `_thumb.jpg` in fase di registrazione utente.
+- **`api/validate.js`**:
+  - Risolto il bug di firma token HMAC per le miniature Supabase Storage in `certificati_medici` e `documenti_identita`. L'API ora estrae il percorso relativo puro, richiede una firma nativa a Supabase con `createSignedUrl` ed applica un fallback controllato a `GIALLO` senza crashare se la miniatura non esiste.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.11`.
+
+---
+
 ## [2026-08-06] refactor | Riposizionamento e Refactoring Certificati Medici GIALLO nel Registro Approvazioni (v1.04.10)
 - **`portal/dashboard.html`**:
   - Spostato il contenitore `<div id="giallo-certificati-container">` dal tab `#panel-tesserati` (Registro Tesserati) al tab `#panel-approvazioni` (Registro Approvazioni), posizionandolo sotto la sezione dei Documenti d'Identità in Attesa di Verifica.

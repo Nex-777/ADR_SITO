@@ -157,23 +157,36 @@ export default async function handler(req, res) {
                 if (!targetFileUrl) return res.status(400).json({ error: 'Parametri mancanti: file_url per AI.' });
 
                 let fileToFetchUrl = targetFileUrl;
-                if (!fileToFetchUrl.startsWith('https://')) {
-                    let pathToSign = fileToFetchUrl;
-                    if (pathToSign.toLowerCase().endsWith('.pdf')) {
-                        const thumbPath = pathToSign.replace(/\.pdf$/i, '_thumb.jpg');
-                        const { data: thumbSign } = await supabase.storage.from('certificati_medici').createSignedUrl(thumbPath, 120);
-                        if (thumbSign?.signedUrl) pathToSign = thumbPath;
+                let relativePath = '';
+                
+                if (fileToFetchUrl.includes('/storage/v1/object/sign/certificati_medici/')) {
+                    relativePath = fileToFetchUrl.split('/storage/v1/object/sign/certificati_medici/')[1].split('?')[0];
+                } else if (fileToFetchUrl.includes('/storage/v1/object/public/certificati_medici/')) {
+                    relativePath = fileToFetchUrl.split('/storage/v1/object/public/certificati_medici/')[1].split('?')[0];
+                } else if (!fileToFetchUrl.startsWith('https://')) {
+                    relativePath = fileToFetchUrl;
+                }
+
+                if (relativePath && relativePath.toLowerCase().endsWith('.pdf')) {
+                    const thumbPath = relativePath.replace(/\.pdf$/i, '_thumb.jpg');
+                    const { data: thumbSign } = await supabase.storage.from('certificati_medici').createSignedUrl(thumbPath, 120);
+                    
+                    if (thumbSign && thumbSign.signedUrl) {
+                        fileToFetchUrl = thumbSign.signedUrl;
+                    } else {
+                        console.warn(`[CERT AI] Miniatura non trovata per: ${relativePath}. Fallback a GIALLO per revisione manuale.`);
+                        await supabase.from('certificati_medici').update({
+                            stato_validazione: 'GIALLO',
+                            note: 'File PDF senza miniatura. Richiesta revisione manuale.'
+                        }).eq('id', cert_id);
+                        return res.status(200).json({ message: 'Miniatura mancante, impostato a GIALLO.' });
                     }
-                    const { data: signedData } = await supabase.storage.from('certificati_medici').createSignedUrl(pathToSign, 120);
-                    if (!signedData?.signedUrl) return res.status(400).json({ error: 'File non accessibile.' });
-                    fileToFetchUrl = signedData.signedUrl;
-                } else if (fileToFetchUrl.toLowerCase().includes('.pdf')) {
-                    const thumbUrl = fileToFetchUrl.replace(/\.pdf(\?.*)?$/i, '_thumb.jpg$1');
-                    try {
-                        const testResp = await fetch(thumbUrl, { method: 'HEAD' });
-                        if (testResp.ok) fileToFetchUrl = thumbUrl;
-                    } catch (hErr) {
-                        console.warn(`[CERT AI] Thumb HEAD check failed:`, hErr);
+                } else if (relativePath && !fileToFetchUrl.startsWith('https://')) {
+                    const { data: imgSign } = await supabase.storage.from('certificati_medici').createSignedUrl(relativePath, 120);
+                    if (imgSign && imgSign.signedUrl) {
+                        fileToFetchUrl = imgSign.signedUrl;
+                    } else {
+                        return res.status(400).json({ error: 'File immagine non accessibile.' });
                     }
                 }
 
@@ -362,23 +375,36 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 if (!targetFileUrl) return res.status(400).json({ error: 'Parametri mancanti: file_url per AI.' });
 
                 let fileToFetchUrl = targetFileUrl;
-                if (!fileToFetchUrl.startsWith('https://')) {
-                    let pathToSign = fileToFetchUrl;
-                    if (pathToSign.toLowerCase().endsWith('.pdf')) {
-                        const thumbPath = pathToSign.replace(/\.pdf$/i, '_thumb.jpg');
-                        const { data: thumbSign } = await supabase.storage.from('documenti_identita').createSignedUrl(thumbPath, 120);
-                        if (thumbSign?.signedUrl) pathToSign = thumbPath;
+                let relativePath = '';
+                
+                if (fileToFetchUrl.includes('/storage/v1/object/sign/documenti_identita/')) {
+                    relativePath = fileToFetchUrl.split('/storage/v1/object/sign/documenti_identita/')[1].split('?')[0];
+                } else if (fileToFetchUrl.includes('/storage/v1/object/public/documenti_identita/')) {
+                    relativePath = fileToFetchUrl.split('/storage/v1/object/public/documenti_identita/')[1].split('?')[0];
+                } else if (!fileToFetchUrl.startsWith('https://')) {
+                    relativePath = fileToFetchUrl;
+                }
+
+                if (relativePath && relativePath.toLowerCase().endsWith('.pdf')) {
+                    const thumbPath = relativePath.replace(/\.pdf$/i, '_thumb.jpg');
+                    const { data: thumbSign } = await supabase.storage.from('documenti_identita').createSignedUrl(thumbPath, 120);
+                    
+                    if (thumbSign && thumbSign.signedUrl) {
+                        fileToFetchUrl = thumbSign.signedUrl;
+                    } else {
+                        console.warn(`[DOC AI] Miniatura non trovata per: ${relativePath}. Fallback a GIALLO per revisione manuale.`);
+                        await supabase.from('anagrafiche').update({
+                            stato_validazione_doc: 'GIALLO',
+                            note_validazione_doc: 'Documento PDF senza miniatura. Richiesta revisione manuale.'
+                        }).eq('id', targetAnagraficaId);
+                        return res.status(200).json({ message: 'Miniatura mancante, impostato a GIALLO.' });
                     }
-                    const { data: signedData } = await supabase.storage.from('documenti_identita').createSignedUrl(pathToSign, 120);
-                    if (!signedData?.signedUrl) return res.status(400).json({ error: 'File non accessibile.' });
-                    fileToFetchUrl = signedData.signedUrl;
-                } else if (fileToFetchUrl.toLowerCase().includes('.pdf')) {
-                    const thumbUrl = fileToFetchUrl.replace(/\.pdf(\?.*)?$/i, '_thumb.jpg$1');
-                    try {
-                        const testResp = await fetch(thumbUrl, { method: 'HEAD' });
-                        if (testResp.ok) fileToFetchUrl = thumbUrl;
-                    } catch (hErr) {
-                        console.warn(`[DOC AI] Thumb HEAD check failed:`, hErr);
+                } else if (relativePath && !fileToFetchUrl.startsWith('https://')) {
+                    const { data: imgSign } = await supabase.storage.from('documenti_identita').createSignedUrl(relativePath, 120);
+                    if (imgSign && imgSign.signedUrl) {
+                        fileToFetchUrl = imgSign.signedUrl;
+                    } else {
+                        return res.status(400).json({ error: 'File immagine non accessibile.' });
                     }
                 }
 
