@@ -5972,50 +5972,223 @@ async function renderCapoEventi() {
     }
 }
 
+let capoEventoComponentiCache = [];
+
 async function mostraIscrittiEventoCapo(eventoId, eventoTitolo) {
     const tableBody = document.getElementById('epk-capo-evento-iscritti-body');
     const detailsPanel = document.getElementById('epk-capo-evento-dettagli-panel');
     const title = document.getElementById('epk-capo-evento-dettagli-titolo');
     
-    title.textContent = `PARTECIPANTI DEL GRUPPO ALL'EVENTO: ${eventoTitolo.toUpperCase()}`;
-    tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: gray;">Caricamento partecipanti...</td></tr>';
-    detailsPanel.classList.remove('epk-hidden');
-    detailsPanel.scrollIntoView({ behavior: 'smooth' });
+    if (title) title.textContent = `PARTECIPANTI DEL GRUPPO ALL'EVENTO: ${eventoTitolo.toUpperCase()}`;
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="7" style="padding: 15px; text-align: center; color: gray;">Caricamento partecipanti e anagrafica gruppo...</td></tr>';
+    if (detailsPanel) {
+        detailsPanel.classList.remove('epk-hidden');
+        detailsPanel.scrollIntoView({ behavior: 'smooth' });
+    }
 
     try {
-        const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
-        // currentManagedGroupId è l'ID del gruppo storico (da epika_gruppi_storici).
-        // Il profilo atleta ha gruppo_storico_id che è la FK verso la stessa tabella.
-        // Il confronto è quindi diretto e corretto.
-        const iscrittiGruppo = tuttiIscritti.filter(i => Number(i.gruppo_storico_id) === Number(currentManagedGroupId));
+        // 1. Carica tutti i componenti del gruppo del capogruppo
+        const { data: profiliGruppo, error: errProf } = await supabaseClient
+            .from('epika_profili')
+            .select('id, nome_di_battaglia, ruolo_combattimento, gruppo_storico_id')
+            .eq('gruppo_storico_id', currentManagedGroupId)
+            .eq('profilo_completato', true);
 
-        if (iscrittiGruppo.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ff4d4d;">NESSUN PARTECIPANTE DEL TUO GRUPPO ISCRITTO A QUESTO EVENTO.</td></tr>';
-            return;
+        if (errProf) throw errProf;
+
+        const profIds = (profiliGruppo || []).map(p => p.id);
+        let utentiMap = {};
+        if (profIds.length > 0) {
+            const { data: utentiData } = await supabaseClient
+                .from('utenti')
+                .select('id, nome, cognome')
+                .in('id', profIds);
+            (utentiData || []).forEach(u => { utentiMap[u.id] = u; });
         }
 
-        tableBody.innerHTML = '';
-        iscrittiGruppo.forEach(i => {
-            const formatDatetime = (dt) => dt ? new Date(dt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/D';
-            const arrivoText = formatDatetime(i.arrivo);
-            const ripartenzaText = formatDatetime(i.ripartenza);
-            const giorniText = (i.giorni || []).map(formattaData).join(', ');
-            const pagBadgeStyle = i.stato_pagamento.includes('PAGATO') ? 'color: #22c55e;' : 'color: #eab308;';
-
-            tableBody.innerHTML += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${i.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${i.nome_reale}</span></td>
-                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${i.ruolo}</span></td>
-                    <td style="padding: 10px; font-size: 10px;">${giorniText}</td>
-                    <td style="padding: 10px; font-size: 10px;">ARR: ${arrivoText}<br>PART: ${ripartenzaText}</td>
-                    <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${i.equipaggiamento}</td>
-                    <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${i.stato_pagamento}</td>
-                </tr>`;
+        // 2. Carica iscrizioni dell'evento
+        const tuttiIscritti = await fetchIscrittiEventoDettagli(eventoId);
+        const iscrittiMap = {};
+        (tuttiIscritti || []).forEach(i => {
+            if (Number(i.gruppo_storico_id) === Number(currentManagedGroupId) || profIds.includes(i.utente_id)) {
+                iscrittiMap[i.utente_id] = i;
+            }
         });
+
+        // 3. Costruisce la cache unificata (in-memory merge)
+        capoEventoComponentiCache = (profiliGruppo || []).map(p => {
+            const u = utentiMap[p.id] || {};
+            const isc = iscrittiMap[p.id];
+            const nomeReale = (u.nome && u.cognome) ? `${u.nome} ${u.cognome}` : (u.nome || u.cognome || 'Non inserito');
+            const nome = u.nome || '';
+            const cognome = u.cognome || '';
+            const nomeBattaglia = p.nome_di_battaglia || 'Senza Nome';
+            const ruolo = p.ruolo_combattimento || 'non combattente';
+
+            if (isc) {
+                let armaturaVal = 'nessuna';
+                const dettArm = (isc.dettagli && isc.dettagli.armatura) ? String(isc.dettagli.armatura).toLowerCase() : '';
+                if (dettArm.includes('pesante')) armaturaVal = 'pesante';
+                else if (dettArm.includes('leggera')) armaturaVal = 'leggera';
+
+                return {
+                    id: p.id,
+                    nome_di_battaglia: nomeBattaglia,
+                    nome_reale: nomeReale,
+                    nome: nome,
+                    cognome: cognome,
+                    ruolo: ruolo,
+                    is_iscritto: true,
+                    giorni: isc.giorni || [],
+                    arrivo: isc.arrivo,
+                    ripartenza: isc.ripartenza,
+                    equipaggiamento: isc.equipaggiamento || '—',
+                    stato_pagamento: isc.stato_pagamento || 'ISCRITTO',
+                    armatura: armaturaVal,
+                    dettagli_iscrizione: isc
+                };
+            } else {
+                return {
+                    id: p.id,
+                    nome_di_battaglia: nomeBattaglia,
+                    nome_reale: nomeReale,
+                    nome: nome,
+                    cognome: cognome,
+                    ruolo: ruolo,
+                    is_iscritto: false,
+                    giorni: [],
+                    arrivo: null,
+                    ripartenza: null,
+                    equipaggiamento: '—',
+                    stato_pagamento: 'NON ISCRITTO',
+                    armatura: 'nessuna',
+                    dettagli_iscrizione: null
+                };
+            }
+        });
+
+        disegnaTabellaCapoEventoPartecipanti();
     } catch (e) {
         console.error("Errore dettagli partecipanti capogruppo:", e);
-        tableBody.innerHTML = '<tr><td colspan="6" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
+        if (tableBody) tableBody.innerHTML = '<tr><td colspan="7" style="padding: 15px; text-align: center; color: #ef4444;">ERRORE CARICAMENTO DATI.</td></tr>';
     }
+}
+
+function disegnaTabellaCapoEventoPartecipanti() {
+    const tableBody = document.getElementById('epk-capo-evento-iscritti-body');
+    const statsBadge = document.getElementById('epk-capo-evento-stats-badge');
+    if (!tableBody) return;
+
+    const elTesto = document.getElementById('epk-capo-evento-filtro-testo');
+    const elStato = document.getElementById('epk-capo-evento-filtro-stato');
+    const elRuolo = document.getElementById('epk-capo-evento-filtro-ruolo');
+    const elArmatura = document.getElementById('epk-capo-evento-filtro-armatura');
+    const elPagamento = document.getElementById('epk-capo-evento-filtro-pagamento');
+
+    const filtroTesto = elTesto ? elTesto.value.trim().toLowerCase() : '';
+    const filtroStato = elStato ? elStato.value : '';
+    const filtroRuolo = elRuolo ? elRuolo.value : '';
+    const filtroArmatura = elArmatura ? elArmatura.value : '';
+    const filtroPagamento = elPagamento ? elPagamento.value : '';
+
+    // Aggiornamento Stats Badge globale del gruppo
+    const totaleComponenti = capoEventoComponentiCache.length;
+    const totaleIscritti = capoEventoComponentiCache.filter(c => c.is_iscritto).length;
+    const perc = totaleComponenti > 0 ? Math.round((totaleIscritti / totaleComponenti) * 100) : 0;
+
+    if (statsBadge) {
+        statsBadge.textContent = `${totaleComponenti} MEMBRI GRUPPO — ${totaleIscritti} ISCRITTI (${perc}%)`;
+    }
+
+    // Filtraggio in-memory
+    let filtrati = capoEventoComponentiCache.filter(item => {
+        if (filtroTesto) {
+            const txtSearch = `${item.nome_di_battaglia} ${item.nome} ${item.cognome} ${item.nome_reale}`.toLowerCase();
+            if (!txtSearch.includes(filtroTesto)) return false;
+        }
+
+        if (filtroStato === 'ISCRITTO' && !item.is_iscritto) return false;
+        if (filtroStato === 'NON ISCRITTO' && item.is_iscritto) return false;
+
+        if (filtroRuolo && item.ruolo.toLowerCase() !== filtroRuolo.toLowerCase()) return false;
+
+        if (filtroArmatura && item.armatura.toLowerCase() !== filtroArmatura.toLowerCase()) return false;
+
+        if (filtroPagamento) {
+            if (filtroPagamento === 'NON ISCRITTO') {
+                if (item.is_iscritto) return false;
+            } else if (!item.stato_pagamento.toUpperCase().includes(filtroPagamento.toUpperCase())) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    // Ordinamento: Non iscritti in fondo, poi alfabetico per nome_di_battaglia
+    filtrati.sort((a, b) => {
+        if (a.is_iscritto !== b.is_iscritto) {
+            return a.is_iscritto ? -1 : 1; // Iscritti prima (-1), Non Iscritti dopo (1)
+        }
+        return (a.nome_di_battaglia || '').localeCompare(b.nome_di_battaglia || '', 'it', { sensitivity: 'base' });
+    });
+
+    if (filtrati.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: gray;">Nessun componente trovato con i filtri selezionati.</td></tr>';
+        return;
+    }
+
+    const formatDatetime = (dt) => dt ? new Date(dt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+    let html = '';
+    filtrati.forEach(item => {
+        if (item.is_iscritto) {
+            const arrivoText = formatDatetime(item.arrivo);
+            const ripartenzaText = formatDatetime(item.ripartenza);
+            const giorniText = (item.giorni || []).length > 0 ? (item.giorni || []).map(formattaData).join(', ') : '—';
+            const pagBadgeStyle = item.stato_pagamento.includes('PAGATO') ? 'color: #22c55e;' : 'color: #eab308;';
+
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${item.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${item.nome_reale}</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0; background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #22c55e;">🟢 ISCRITTO</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${item.ruolo}</span></td>
+                    <td style="padding: 10px; font-size: 10px;">${giorniText}</td>
+                    <td style="padding: 10px; font-size: 10px;">${(arrivoText !== '—' || ripartenzaText !== '—') ? `ARR: ${arrivoText}<br>PART: ${ripartenzaText}` : '—'}</td>
+                    <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${item.equipaggiamento}</td>
+                    <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${item.stato_pagamento}</td>
+                </tr>`;
+        } else {
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); opacity: 0.65;">
+                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${item.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${item.nome_reale}</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444;">🔴 NON ISCRITTO</span></td>
+                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0; opacity: 0.7;">${item.ruolo}</span></td>
+                    <td style="padding: 10px; font-size: 10px; color: gray;">—</td>
+                    <td style="padding: 10px; font-size: 10px; color: gray;">—</td>
+                    <td style="padding: 10px; font-size: 9px; color: gray;">—</td>
+                    <td style="padding: 10px; font-weight: bold; font-size: 10px; color: #ef4444;">NON ISCRITTO</td>
+                </tr>`;
+        }
+    });
+
+    tableBody.innerHTML = html;
+}
+
+function resetFiltriCapoEvento() {
+    const elTesto = document.getElementById('epk-capo-evento-filtro-testo');
+    const elStato = document.getElementById('epk-capo-evento-filtro-stato');
+    const elRuolo = document.getElementById('epk-capo-evento-filtro-ruolo');
+    const elArmatura = document.getElementById('epk-capo-evento-filtro-armatura');
+    const elPagamento = document.getElementById('epk-capo-evento-filtro-pagamento');
+
+    if (elTesto) elTesto.value = '';
+    if (elStato) elStato.value = '';
+    if (elRuolo) elRuolo.value = '';
+    if (elArmatura) elArmatura.value = '';
+    if (elPagamento) elPagamento.value = '';
+
+    disegnaTabellaCapoEventoPartecipanti();
 }
 
 // ===========================================================================

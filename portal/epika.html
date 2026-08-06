@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.15">
+    <link rel="stylesheet" href="epika.css?v=1.04.16">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.15"></script>
+    <script src="config.js?v=1.04.16"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.15</span>
+            <span class="epk-version-badge">Vs. 1.04.16</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -1311,12 +1311,50 @@
                                 <!-- Elenco eventi -->
                             </div>
                             <div id="epk-capo-evento-dettagli-panel" class="epk-hidden" style="border-top: 1px dashed var(--epk-gold-dim); padding-top: 20px;">
-                                <h3 id="epk-capo-evento-dettagli-titolo" class="epk-headline" style="font-size: 14px; margin-bottom: 12px; color: var(--epk-gold);">PARTECIPANTI EVENTO</h3>
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                                    <h3 id="epk-capo-evento-dettagli-titolo" class="epk-headline" style="font-size: 14px; margin: 0; color: var(--epk-gold);">PARTECIPANTI EVENTO</h3>
+                                    <span id="epk-capo-evento-stats-badge" class="epk-version-badge" style="font-size: 10px; background: rgba(212, 175, 55, 0.15); border: 1px solid var(--epk-gold-dim); color: var(--epk-gold-light); margin: 0;">0 ISCRITTI</span>
+                                </div>
+
+                                <!-- Barra Filtri Avanzata -->
+                                <div id="epk-capo-evento-filtri-bar" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; border: 1px solid rgba(212, 175, 55, 0.15); align-items: center;">
+                                    <input type="text" id="epk-capo-evento-filtro-testo" placeholder="🔍 Cerca nome, cognome, soprannome..." onkeyup="disegnaTabellaCapoEventoPartecipanti()" class="epk-input" style="flex: 1 1 200px; font-size: 11px; padding: 6px 10px; height: 32px;">
+                                    
+                                    <select id="epk-capo-evento-filtro-stato" onchange="disegnaTabellaCapoEventoPartecipanti()" class="epk-select" style="flex: 1 1 130px; font-size: 11px; padding: 4px 8px; height: 32px;">
+                                        <option value="">TUTTI GLI STATI</option>
+                                        <option value="ISCRITTO">SOLO ISCRITTI 🟢</option>
+                                        <option value="NON ISCRITTO">SOLO NON ISCRITTI 🔴</option>
+                                    </select>
+
+                                    <select id="epk-capo-evento-filtro-ruolo" onchange="disegnaTabellaCapoEventoPartecipanti()" class="epk-select" style="flex: 1 1 130px; font-size: 11px; padding: 4px 8px; height: 32px;">
+                                        <option value="">TUTTI I RUOLI</option>
+                                        <option value="COMBATTENTE">COMBATTENTI</option>
+                                        <option value="NON COMBATTENTE">NON COMBATTENTI</option>
+                                    </select>
+
+                                    <select id="epk-capo-evento-filtro-armatura" onchange="disegnaTabellaCapoEventoPartecipanti()" class="epk-select" style="flex: 1 1 130px; font-size: 11px; padding: 4px 8px; height: 32px;">
+                                        <option value="">TUTTE LE ARMATURE</option>
+                                        <option value="leggera">ARMATURA LEGGERA</option>
+                                        <option value="pesante">ARMATURA PESANTE</option>
+                                        <option value="nessuna">NESSUNA ARMATURA</option>
+                                    </select>
+
+                                    <select id="epk-capo-evento-filtro-pagamento" onchange="disegnaTabellaCapoEventoPartecipanti()" class="epk-select" style="flex: 1 1 130px; font-size: 11px; padding: 4px 8px; height: 32px;">
+                                        <option value="">TUTTI I PAGAMENTI</option>
+                                        <option value="PAGATO">PAGATO ✓</option>
+                                        <option value="ATTESA">ATTESA PAGAMENTO ⏳</option>
+                                        <option value="NON ISCRITTO">NON ISCRITTO</option>
+                                    </select>
+
+                                    <button class="epk-btn" onclick="resetFiltriCapoEvento()" style="font-size: 10px; padding: 6px 12px; height: 32px; background: rgba(255,255,255,0.05); border: 1px solid gray;">RESET</button>
+                                </div>
+
                                 <div style="overflow-x: auto;">
                                     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 11px; text-transform: uppercase;">
                                         <thead>
                                             <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold);">
                                                 <th style="padding: 10px;">Atleta</th>
+                                                <th style="padding: 10px;">Stato Evento</th>
                                                 <th style="padding: 10px;">Ruolo</th>
                                                 <th style="padding: 10px;">Presenza Giorni</th>
                                                 <th style="padding: 10px;">Arrivo / Ripartenza</th>
@@ -1869,6 +1907,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.15"></script>
+    <script src="epika.js?v=1.04.16"></script>
 </body>
 </html>

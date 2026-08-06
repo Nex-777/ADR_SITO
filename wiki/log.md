@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] feature | Vista Completa Partecipazione Gruppo ed Eventi per Capigruppo (v1.04.16)
+- **`portal/epika.html`**:
+  - Inserito il badge di sintesi iscrizioni gruppo (`#epk-capo-evento-stats-badge`).
+  - Aggiunta la barra di ricerca/filtraggio avanzata `#epk-capo-evento-filtri-bar` (ricerca testuale per nome/cognome/nome di battaglia, stato iscrizione, ruolo, armatura, stato pagamento) con pulsante di reset.
+  - Aggiornate le colonne della tabella aggiungendo l'esplicita colonna `STATO EVENTO`.
+- **`portal/epika.js`**:
+  - Rifattorizzata `mostraIscrittiEventoCapo(eventoId, eventoTitolo)`: ora carica l'intera anagrafica profili del gruppo gestito e fonde *in-memory* i dati con le iscrizioni dell'evento.
+  - Creata la funzione `disegnaTabellaCapoEventoPartecipanti()`: esegue il filtraggio in tempo reale, ordina ponendo i non iscritti in fondo ed ordinando per nome di battaglia, e renderizza visivamente gli atleti eliminando i testi "N/D".
+  - Creata la funzione `resetFiltriCapoEvento()`.
+
+---
+
 ## [2026-08-06] bugfix | Sincronizzazione Automatica Allenatore da Lista Generale (v1.04.15)
 - **Database (Data Patch)**:
   - Eseguito l'allineamento dei dati per LESLAN, impostando l'allenatore su MINOR (`allenatore_id = 7`) nelle tabelle `epika_profili`, `epika_scab_abilitazioni` e nelle iscrizioni agli eventi `epika_iscrizioni_eventi`.
