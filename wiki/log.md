@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] bugfix | Sincronizzazione Automatica Allenatore da Lista Generale (v1.04.15)
+- **Database (Data Patch)**:
+  - Eseguito l'allineamento dei dati per LESLAN, impostando l'allenatore su MINOR (`allenatore_id = 7`) nelle tabelle `epika_profili`, `epika_scab_abilitazioni` e nelle iscrizioni agli eventi `epika_iscrizioni_eventi`.
+- **`portal/epika.js`**:
+  - Aggiornata la funzione `salvaTuttaLaListaGenerale()`: salvando le modifiche per l'anno corrente, il sistema sincronizza in tempo reale anche `epika_profili.allenatore_id`, `epika_scab_abilitazioni.allenatore_opzione_id` per il 2026 ed il campo JSONB `dettagli.allenatore_id` nelle iscrizioni agli eventi dell'anno.
+  - Aggiornata `mostraDashboardEvento()` per ricavare l'allenatore risolvendo in tempo reale il profilo aggiornato (`profilo.allenatore_id || dett.allenatore_id`).
+
+---
+
+
 ## [2026-08-06] refactor | Semplificazione Navigazione Portale Epika (Navigazione Diretta Universale) (v1.04.14)
 - **`portal/dashboard.js`**:
   - Rimossa completamente la logica `window.open` e il relativo fallback dalla funzione `openEpika`.
