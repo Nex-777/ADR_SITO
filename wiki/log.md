@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-06] style | Redesign Grafico e Funzionale Dashboard Capogruppo tramite Stitch (v1.04.17)
+- **`portal/epika.css`**:
+  - Aggiunti i componenti stilistici del design system Stitch (`.epk-stats-grid`, `.epk-stat-card`, `.epk-filter-box`, `.epk-dark-input`, `.epk-dark-select`, `.epk-status-badge`, `.epk-role-badge`, `.epk-tag`, `.epk-pay-badge`, `.epk-days-badge`, `.epk-table-card`).
+- **`portal/epika.html`**:
+  - Ristrutturata l'interfaccia inserendo le KPI Stats Cards (Membri Totali, Iscritti, Non Iscritti, Tasso Adesione), i controlli filtro scuri integrati ed il contenitore tabella lithic card.
+- **`portal/epika.js`**:
+  - Implementate le funzioni formatattatrici `formattaGiorniStitch`, `formattaArrivoPartenzaStitch` ed `formattaEquipaggiamentoStitch` per convertire stringhe grezze in tag/micro-badge ordinati ed eleganti.
+  - Aggiornato il rendering di `disegnaTabellaCapoEventoPartecipanti()` con aggiornamento in tempo reale delle KPI Cards e dello stato degli atleti.
+
+---
+
 ## [2026-08-06] feature | Vista Completa Partecipazione Gruppo ed Eventi per Capigruppo (v1.04.16)
 - **`portal/epika.html`**:
   - Inserito il badge di sintesi iscrizioni gruppo (`#epk-capo-evento-stats-badge`).

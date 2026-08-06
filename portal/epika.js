@@ -6074,9 +6074,78 @@ async function mostraIscrittiEventoCapo(eventoId, eventoTitolo) {
     }
 }
 
+function formattaGiorniStitch(giorniArray) {
+    if (!giorniArray || !Array.isArray(giorniArray) || giorniArray.length === 0) return '<span style="color: gray;">—</span>';
+    
+    const parsed = giorniArray.map(g => new Date(g)).filter(d => !isNaN(d.getTime())).sort((a, b) => a - b);
+    if (parsed.length === 0) return '<span style="color: gray;">—</span>';
+
+    const days = parsed.map(d => String(d.getDate()).padStart(2, '0'));
+    const month = parsed[0].toLocaleString('it-IT', { month: 'short' }).toUpperCase().replace('.', '');
+    const year = parsed[0].getFullYear();
+
+    return `
+        <div class="epk-days-badge">
+            <span class="epk-days-list">${days.join(', ')}</span>
+            <span class="epk-days-month">${month} ${year}</span>
+        </div>
+    `;
+}
+
+function formattaArrivoPartenzaStitch(arrivo, ripartenza) {
+    if (!arrivo && !ripartenza) return '<span style="color: gray;">—</span>';
+    
+    const fmt = (dt) => {
+        if (!dt) return null;
+        const d = new Date(dt);
+        if (isNaN(d.getTime())) return null;
+        const dayMonth = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+        const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        return `${dayMonth} ${time}`;
+    };
+
+    const arrStr = fmt(arrivo);
+    const partStr = fmt(ripartenza);
+    let res = '';
+    if (arrStr) res += `<span class="epk-flow-badge">📥 ARR: <strong>${arrStr}</strong></span>`;
+    if (partStr) res += `<span class="epk-flow-badge">📤 PART: <strong>${partStr}</strong></span>`;
+    return res || '<span style="color: gray;">—</span>';
+}
+
+function formattaEquipaggiamentoStitch(item) {
+    if (!item.is_iscritto) return '<span style="color: gray;">—</span>';
+    const dett = (item.dettagli_iscrizione && item.dettagli_iscrizione.dettagli) || {};
+    const isComb = item.ruolo.toLowerCase() === 'combattente';
+
+    if (!isComb) {
+        return '<span class="epk-tag epk-tag-civil">🏛️ Supporto / Civile</span>';
+    }
+
+    let tags = [];
+    if (dett.armatura) {
+        const armLabel = String(dett.armatura).toUpperCase();
+        tags.push(`<span class="epk-tag epk-tag-armor">🛡️ ${armLabel}</span>`);
+    } else {
+        tags.push(`<span class="epk-tag epk-tag-muted">🛡️ NO ARMATURA</span>`);
+    }
+
+    if (dett.arciere) {
+        tags.push(`<span class="epk-tag epk-tag-archery">🏹 ARCIERE: ${String(dett.arciere).toUpperCase()}</span>`);
+    }
+
+    if (Array.isArray(dett.armi_speciali) && dett.armi_speciali.length > 0) {
+        tags.push(`<span class="epk-tag epk-tag-weapons">⚔️ ${dett.armi_speciali.join(', ')}</span>`);
+    }
+
+    if (item.dettagli_iscrizione && item.dettagli_iscrizione.allenatore_nome) {
+        tags.push(`<span class="epk-tag epk-tag-coach">✓ ${item.dettagli_iscrizione.allenatore_nome}</span>`);
+    }
+
+    return tags.length > 0 ? `<div class="epk-tags-wrapper">${tags.join('')}</div>` : '<span style="color: gray;">—</span>';
+}
+
 function disegnaTabellaCapoEventoPartecipanti() {
     const tableBody = document.getElementById('epk-capo-evento-iscritti-body');
-    const statsBadge = document.getElementById('epk-capo-evento-stats-badge');
     if (!tableBody) return;
 
     const elTesto = document.getElementById('epk-capo-evento-filtro-testo');
@@ -6091,14 +6160,21 @@ function disegnaTabellaCapoEventoPartecipanti() {
     const filtroArmatura = elArmatura ? elArmatura.value : '';
     const filtroPagamento = elPagamento ? elPagamento.value : '';
 
-    // Aggiornamento Stats Badge globale del gruppo
+    // Aggiornamento KPI Cards
     const totaleComponenti = capoEventoComponentiCache.length;
     const totaleIscritti = capoEventoComponentiCache.filter(c => c.is_iscritto).length;
+    const totaleMancanti = totaleComponenti - totaleIscritti;
     const perc = totaleComponenti > 0 ? Math.round((totaleIscritti / totaleComponenti) * 100) : 0;
 
-    if (statsBadge) {
-        statsBadge.textContent = `${totaleComponenti} MEMBRI GRUPPO — ${totaleIscritti} ISCRITTI (${perc}%)`;
-    }
+    const statTot = document.getElementById('epk-stat-totale');
+    const statIsc = document.getElementById('epk-stat-iscritti');
+    const statMan = document.getElementById('epk-stat-mancanti');
+    const statPerc = document.getElementById('epk-stat-perc');
+
+    if (statTot) statTot.textContent = totaleComponenti;
+    if (statIsc) statIsc.textContent = totaleIscritti;
+    if (statMan) statMan.textContent = totaleMancanti;
+    if (statPerc) statPerc.textContent = `${perc}%`;
 
     // Filtraggio in-memory
     let filtrati = capoEventoComponentiCache.filter(item => {
@@ -6128,46 +6204,63 @@ function disegnaTabellaCapoEventoPartecipanti() {
     // Ordinamento: Non iscritti in fondo, poi alfabetico per nome_di_battaglia
     filtrati.sort((a, b) => {
         if (a.is_iscritto !== b.is_iscritto) {
-            return a.is_iscritto ? -1 : 1; // Iscritti prima (-1), Non Iscritti dopo (1)
+            return a.is_iscritto ? -1 : 1;
         }
         return (a.nome_di_battaglia || '').localeCompare(b.nome_di_battaglia || '', 'it', { sensitivity: 'base' });
     });
 
     if (filtrati.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: gray;">Nessun componente trovato con i filtri selezionati.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" style="padding: 24px; text-align: center; color: gray; font-style: italic;">Nessun componente trovato con i filtri selezionati.</td></tr>';
         return;
     }
 
-    const formatDatetime = (dt) => dt ? new Date(dt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-
     let html = '';
     filtrati.forEach(item => {
+        const isComb = item.ruolo.toLowerCase() === 'combattente';
+        const roleIcon = isComb ? '⚔️' : '📜';
+        const roleLabel = isComb ? 'COMBATTENTE' : 'NON COMBATTENTE';
+        const roleBadge = `<span class="epk-role-badge ${isComb ? 'role-fighter' : 'role-civil'}">${roleIcon} ${roleLabel}</span>`;
+
         if (item.is_iscritto) {
-            const arrivoText = formatDatetime(item.arrivo);
-            const ripartenzaText = formatDatetime(item.ripartenza);
-            const giorniText = (item.giorni || []).length > 0 ? (item.giorni || []).map(formattaData).join(', ') : '—';
-            const pagBadgeStyle = item.stato_pagamento.includes('PAGATO') ? 'color: #22c55e;' : 'color: #eab308;';
+            const statusBadge = `<span class="epk-status-badge epk-status-registered"><span class="epk-dot green"></span> ISCRITTO</span>`;
+            const giorniHTML = formattaGiorniStitch(item.giorni);
+            const arrPartHTML = formattaArrivoPartenzaStitch(item.arrivo, item.ripartenza);
+            const equipHTML = formattaEquipaggiamentoStitch(item);
+            
+            const isPagato = item.stato_pagamento.includes('PAGATO');
+            const payBadge = isPagato 
+                ? `<span class="epk-pay-badge epk-pay-success">PAGATO ✓</span>` 
+                : `<span class="epk-pay-badge epk-pay-warning">ATTESA PAGAMENTO ⏳</span>`;
 
             html += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${item.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${item.nome_reale}</span></td>
-                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0; background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #22c55e;">🟢 ISCRITTO</span></td>
-                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0;">${item.ruolo}</span></td>
-                    <td style="padding: 10px; font-size: 10px;">${giorniText}</td>
-                    <td style="padding: 10px; font-size: 10px;">${(arrivoText !== '—' || ripartenzaText !== '—') ? `ARR: ${arrivoText}<br>PART: ${ripartenzaText}` : '—'}</td>
-                    <td style="padding: 10px; font-size: 9px; color: rgba(245, 230, 200, 0.75);">${item.equipaggiamento}</td>
-                    <td style="padding: 10px; font-weight: bold; font-size: 10px; ${pagBadgeStyle}">${item.stato_pagamento}</td>
+                <tr>
+                    <td>
+                        <strong style="color: var(--epk-parchment); font-size: 12px;">${item.nome_di_battaglia}</strong>
+                        <br><span style="font-size: 9px; color: gray;">Real: ${item.nome_reale}</span>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td>${roleBadge}</td>
+                    <td>${giorniHTML}</td>
+                    <td>${arrPartHTML}</td>
+                    <td>${equipHTML}</td>
+                    <td>${payBadge}</td>
                 </tr>`;
         } else {
+            const statusBadge = `<span class="epk-status-badge epk-status-missing"><span class="epk-dot red"></span> NON ISCRITTO</span>`;
+            const payBadge = `<span class="epk-pay-badge epk-pay-none">NON ISCRITTO</span>`;
+
             html += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); opacity: 0.65;">
-                    <td style="padding: 10px; font-weight: bold; color: var(--epk-parchment);">${item.nome_di_battaglia}<br><span style="font-size: 9px; color: gray;">Real: ${item.nome_reale}</span></td>
-                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444;">🔴 NON ISCRITTO</span></td>
-                    <td style="padding: 10px;"><span class="epk-version-badge" style="font-size: 8px; margin: 0; opacity: 0.7;">${item.ruolo}</span></td>
-                    <td style="padding: 10px; font-size: 10px; color: gray;">—</td>
-                    <td style="padding: 10px; font-size: 10px; color: gray;">—</td>
-                    <td style="padding: 10px; font-size: 9px; color: gray;">—</td>
-                    <td style="padding: 10px; font-weight: bold; font-size: 10px; color: #ef4444;">NON ISCRITTO</td>
+                <tr class="epk-row-unregistered">
+                    <td>
+                        <strong style="color: var(--epk-parchment); font-size: 12px; opacity: 0.8;">${item.nome_di_battaglia}</strong>
+                        <br><span style="font-size: 9px; color: gray;">Real: ${item.nome_reale}</span>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td>${roleBadge}</td>
+                    <td><span style="color: gray;">—</span></td>
+                    <td><span style="color: gray;">—</span></td>
+                    <td><span style="color: gray;">—</span></td>
+                    <td>${payBadge}</td>
                 </tr>`;
         }
     });

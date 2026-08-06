@@ -286,3 +286,256 @@ body.epk-body {
     }
 }
 
+/* ===========================================================================
+   CAPOGRUPPO DASHBOARD & TABLE REDESIGN (STITCH DESIGN SYSTEM)
+   =========================================================================== */
+
+/* Stats KPI Grid */
+.epk-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.epk-stat-card {
+    background: linear-gradient(145deg, rgba(30, 18, 12, 0.9) 0%, rgba(18, 10, 6, 0.95) 100%);
+    border: 1px solid var(--epk-gold-dim);
+    border-top: 3px solid var(--epk-gold);
+    border-radius: 6px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.epk-stat-card.stat-green {
+    border-top-color: #22c55e;
+}
+.epk-stat-card.stat-red {
+    border-top-color: #ef4444;
+}
+.epk-stat-card.stat-gold {
+    border-top-color: var(--epk-gold);
+}
+
+.epk-stat-val {
+    font-family: 'Cinzel', serif;
+    font-size: 24px;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.epk-stat-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgba(245, 230, 200, 0.65);
+    text-transform: uppercase;
+}
+
+/* Filter Bar Redesign */
+.epk-filter-box {
+    background: rgba(18, 10, 6, 0.85);
+    border: 1px solid var(--epk-gold-dim);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.epk-dark-input, .epk-dark-select {
+    background-color: #1a0f0a !important;
+    border: 1px solid var(--epk-gold-dim) !important;
+    color: var(--epk-parchment) !important;
+    font-family: 'Lato', sans-serif;
+    font-size: 11px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    height: 36px;
+    box-sizing: border-box;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.epk-dark-select option {
+    background-color: #1c100a;
+    color: var(--epk-parchment);
+    padding: 6px;
+}
+
+.epk-dark-input:focus, .epk-dark-select:focus {
+    border-color: var(--epk-gold) !important;
+    box-shadow: 0 0 8px rgba(201, 168, 76, 0.35) !important;
+}
+
+/* Status Badges */
+.epk-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.epk-status-registered {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #4ade80;
+}
+
+.epk-status-missing {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #f87171;
+}
+
+.epk-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+.epk-dot.green { background-color: #22c55e; box-shadow: 0 0 6px #22c55e; }
+.epk-dot.red { background-color: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+/* Role Badges */
+.epk-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+}
+.role-fighter {
+    background: rgba(201, 168, 76, 0.12);
+    border: 1px solid rgba(201, 168, 76, 0.35);
+    color: var(--epk-gold);
+}
+.role-civil {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(245, 230, 200, 0.7);
+}
+
+/* Equipment Tags */
+.epk-tags-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.epk-tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.epk-tag-armor { background: rgba(201, 168, 76, 0.15); border: 1px solid rgba(201, 168, 76, 0.35); color: var(--epk-gold); }
+.epk-tag-archery { background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #d8b4fe; }
+.epk-tag-weapons { background: rgba(249, 115, 22, 0.15); border: 1px solid rgba(249, 115, 22, 0.35); color: #ffedd5; }
+.epk-tag-coach { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.35); color: #93c5fd; }
+.epk-tag-civil { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: gray; }
+.epk-tag-muted { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); color: rgba(255, 255, 255, 0.4); }
+
+/* Flow & Payment Badges */
+.epk-flow-badge {
+    display: block;
+    font-size: 9px;
+    line-height: 1.4;
+    color: rgba(245, 230, 200, 0.85);
+}
+.epk-flow-badge strong { color: #ffffff; }
+
+.epk-pay-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+}
+.epk-pay-success { background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #4ade80; }
+.epk-pay-warning { background: rgba(234, 179, 8, 0.15); border: 1px solid #eab308; color: #fde047; }
+.epk-pay-none { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+
+.epk-days-badge {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.epk-days-list {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--epk-gold);
+    letter-spacing: 0.05em;
+}
+.epk-days-month {
+    font-size: 8px;
+    color: rgba(245, 230, 200, 0.6);
+    font-weight: 700;
+}
+
+/* Elegant Table Styling */
+.epk-table-card {
+    background: rgba(18, 10, 6, 0.7);
+    border: 1px solid var(--epk-gold-dim);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.epk-table-card table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 11px;
+}
+
+.epk-table-card th {
+    background: rgba(42, 17, 9, 0.95);
+    color: var(--epk-gold);
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 12px 14px;
+    border-bottom: 2px solid var(--epk-gold-dim);
+    text-transform: uppercase;
+}
+
+.epk-table-card td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+}
+
+.epk-table-card tr:hover {
+    background: rgba(201, 168, 76, 0.05);
+}
+
+.epk-row-unregistered {
+    background: rgba(0, 0, 0, 0.25);
+}
+.epk-row-unregistered:hover {
+    background: rgba(239, 68, 68, 0.04);
+}
+
+
