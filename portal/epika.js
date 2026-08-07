@@ -182,10 +182,12 @@ async function initPortal() {
                 if (_banner) {
                     _banner.classList.remove('epk-hidden');
                     const targetNome = targetUserData ? `${targetUserData.nome} ${targetUserData.cognome}` : _impersonateId;
+                    // Sanificazione sicura inline (escapeHtml non è nel scope di epika.js)
+                    const _safeName = String(targetNome).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                     _banner.innerHTML = `
                         <span style="font-weight: bold; color: var(--epk-gold);">⚠️ MODALITÀ ASSISTENZA ADMIN</span>
-                        <span style="color: rgba(245, 230, 200, 0.9);">Stai visualizzando il Portale Epika di <strong>${escapeHtml(targetNome)}</strong></span>
-                        <button class="epk-btn-secondary" style="padding: 4px 12px; font-size: 9px; border-color: #ef4444; color: #ef4444;" onclick="window.close()">CHIUDI SCHEDA</button>
+                        <span style="color: rgba(245, 230, 200, 0.9);">Stai visualizzando il Portale Epika di <strong>${_safeName}</strong></span>
+                        <button class="epk-btn-secondary" style="padding: 4px 12px; font-size: 9px; border-color: #ef4444; color: #ef4444;" onclick="window.history.back()">← TORNA ALLA DASHBOARD</button>
                     `;
                 }
             } else {
