@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-07] fix | Ripristino Apertura Portale Epika nella Stessa Scheda Browser (v1.04.22)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Modificata la funzione centralizzata `openEpika()` sostituendo `window.open(epikaUrl, 'portale_epika')` con `window.location.href = epikaUrl`.
+  - Risolti i problemi di stabilità, bug cross-tab e blocco dei pop-up browser garantendo l'apertura diretta di Epika nella stessa finestra.
+- **Versione**: Incrementata la versione globale a `v1.04.22`.
+
+---
+
 ## [2026-08-07] feat | Supporto Modalità Assistenza Admin (Impersonazione Utente) nel Portale Epika (v1.04.21)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Aggiornato `apriAssistenzaTesserato()` per impostare dinamicamente `href = "epika.html?impersonate_id=${utenteId}"` sul link `#tab-btn-user-epika` quando l'Admin entra nella vista tesserato.
