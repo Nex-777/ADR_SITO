@@ -2212,3 +2212,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Updated environment variable requirement from GEMINI_API_KEY to MISTRAL_API_KEY.
 - Updated documentation in wiki/api_endpoints.md.
 - Bumped application version to v1.03.92.
+
+## [2026-08-07] fix | Rejection button for auto-validated medical certificates (v1.04.20)
+- Added `RIFIUTA CERT.` button alongside `ATTIVA` in `portal/dashboard.js` (`renderApprovazioni` and `renderTesseratiTable`) when a medical certificate is in `VERDE` status for pending tesserati (`IN_ELABORAZIONE`).
+- Allows admins to override AI validation during manual supervision and reject blurry, incomplete, or invalid documents directly from pending activation tables.
+- Bumped application version to v1.04.20.
+

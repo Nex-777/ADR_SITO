@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.18"
+                VERSION: "1.04.20"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2057,7 +2057,12 @@
                     if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                         let mainBtn = '';
                         if (isCertVerde) {
-                            mainBtn = `<button onclick="attivaTesseramentoApprovazioni('${item.anagrafica_id}')" class="bg-white text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
+                            mainBtn = `
+                                <div class="flex flex-col gap-1">
+                                    <button onclick="attivaTesseramentoApprovazioni('${item.anagrafica_id}')" class="bg-white text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-500 hover:text-white transition-all uppercase">ATTIVA</button>
+                                    <button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase">RIFIUTA CERT.</button>
+                                </div>
+                            `;
                         } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
                             mainBtn = `
                                 <div class="flex flex-col gap-1">
@@ -2702,9 +2707,13 @@
                 const isCertVerde = certInfo && certInfo.stato_validazione === 'VERDE' && !isCertificatoScaduto(certInfo.data_scadenza);
                 if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                     if (isCertVerde) {
-                        actionHtml += `<button onclick="attivaTesseramento(${tess.id_tesserato})" style="background:#fff;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">ATTIVA</button>`;
-                    } else if (certInfo && certInfo.stato_validazione === 'GIALLO') {
-                        actionHtml += `<button onclick="if(confirm('Approvare il certificato?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">APPROVA CERT.</button>`;
+                        actionHtml += `<button onclick="attivaTesseramento(${tess.id_tesserato})" style="background:#fff;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-bottom:4px;">ATTIVA</button>`;
+                        if (certInfo) {
+                            actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" style="background:rgba(223,41,62,0.2);color:#df293e;border:1px solid rgba(223,41,62,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">RIFIUTA CERT.</button>`;
+                        }
+                    } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
+                        actionHtml += `<button onclick="if(confirm('Approvare il certificato?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-bottom:4px;">APPROVA CERT.</button>`;
+                        actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" style="background:rgba(223,41,62,0.2);color:#df293e;border:1px solid rgba(223,41,62,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">RIFIUTA CERT.</button>`;
                     }
                 }
                 
