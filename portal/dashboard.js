@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.21"
+                VERSION: "1.04.22"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1037,7 +1037,13 @@
 
         // Funzione di navigazione centralizzata verso Epika (Navigazione Diretta Universale)
         function openEpika(isAdmin = false) {
-            window.location.href = isAdmin ? 'epika.html?admin=true' : 'epika.html';
+            let epikaUrl = isAdmin ? 'epika.html?admin=true' : 'epika.html';
+            // Se la modalità assistenza admin è attiva, trasmetti l'ID dell'utente assistito
+            if (_assistenzaAttiva && currentUser && currentUser.id) {
+                const sep = epikaUrl.includes('?') ? '&' : '?';
+                epikaUrl += `${sep}impersonate_id=${currentUser.id}`;
+            }
+            window.open(epikaUrl, 'portale_epika');
         }
 
         // Funzione per reindirizzare al pagamento Stripe
