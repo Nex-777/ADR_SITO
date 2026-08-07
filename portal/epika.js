@@ -58,7 +58,7 @@ async function initPortal() {
         console.log("Sessione trovata per utente ID:", currentUser.id);
 
         // Recupera info utente reale ed enum dei ruoli Adrenalina
-        const { data: userData, error: userError } = await supabaseClient
+        let { data: userData, error: userError } = await supabaseClient
             .from('utenti')
             .select('nome, cognome, ruolo, tipo_tessera, anagrafiche(id, registro_approvazioni(stato))')
             .eq('id', currentUser.id)
@@ -116,7 +116,7 @@ async function initPortal() {
         }
 
         // 2. Controlla se il profilo EPIKA esiste già
-        const { data: epikaProfile, error: epikaError } = await supabaseClient
+        let { data: epikaProfile, error: epikaError } = await supabaseClient
             .from('epika_profili')
             .select('*')
             .eq('id', currentUser.id)
@@ -130,6 +130,69 @@ async function initPortal() {
         // Determina se l'utente loggato è amministratore di EPIKA
         isEpikaAdmin = (epikaProfile && epikaProfile.is_admin_epika === true) || 
                        (userData && Array.isArray(userData.ruolo) && userData.ruolo.includes('presidente'));
+
+        // ============================================================
+        // MODALITÀ ASSISTENZA ADMIN: Impersonificazione sicura
+        // ============================================================
+        const _urlParams = new URLSearchParams(window.location.search);
+        const _impersonateId = _urlParams.get('impersonate_id');
+        let _isAssistenzaModeActive = false;
+
+        if (_impersonateId) {
+            const _isAuthorizedAdmin = isEpikaAdmin ||
+                (userData && Array.isArray(userData.ruolo) && userData.ruolo.some(r => ['presidente', 'vice_presidente'].includes(r)));
+
+            if (_isAuthorizedAdmin) {
+                currentUser = { ...currentUser, id: _impersonateId };
+                _isAssistenzaModeActive = true;
+                console.log(`[ASSISTENZA ADMIN] Modalità attiva. Visualizzando profilo: ${_impersonateId}`);
+
+                // Ricarica userData e epikaProfile per l'utente impersonato
+                const { data: targetUserData } = await supabaseClient
+                    .from('utenti')
+                    .select('nome, cognome, ruolo, tipo_tessera')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
+
+                if (targetUserData) {
+                    userData = targetUserData;
+                    document.getElementById('epk-user-real-name').textContent = `${userData.nome} ${userData.cognome}`;
+                }
+
+                // Ricarica il livello tessera per l'utente impersonato
+                try {
+                    const { data: targetTesseraLivello } = await supabaseClient
+                        .rpc('get_user_tessera_livello', { p_utente_id: currentUser.id });
+                    if (targetTesseraLivello) currentUserTessera = targetTesseraLivello;
+                } catch (e) {
+                    console.warn("Eccezione RPC tessera impersonata:", e);
+                }
+
+                // Ricarica epikaProfile per l'utente impersonato
+                const { data: targetEpikaProfile } = await supabaseClient
+                    .from('epika_profili')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .maybeSingle();
+                
+                epikaProfile = targetEpikaProfile;
+
+                // Mostra il banner di simulazione/assistenza admin
+                const _banner = document.getElementById('epk-simulation-banner');
+                if (_banner) {
+                    _banner.classList.remove('epk-hidden');
+                    const targetNome = targetUserData ? `${targetUserData.nome} ${targetUserData.cognome}` : _impersonateId;
+                    _banner.innerHTML = `
+                        <span style="font-weight: bold; color: var(--epk-gold);">⚠️ MODALITÀ ASSISTENZA ADMIN</span>
+                        <span style="color: rgba(245, 230, 200, 0.9);">Stai visualizzando il Portale Epika di <strong>${escapeHtml(targetNome)}</strong></span>
+                        <button class="epk-btn-secondary" style="padding: 4px 12px; font-size: 9px; border-color: #ef4444; color: #ef4444;" onclick="window.close()">CHIUDI SCHEDA</button>
+                    `;
+                }
+            } else {
+                console.warn('[ASSISTENZA ADMIN] Tentativo non autorizzato di impersonificazione ignorato.');
+            }
+        }
+        // ============================================================
 
         // Determina se l'utente loggato è Capogruppo o Vice Capogruppo di un gruppo attivo
         try {

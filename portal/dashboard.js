@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.20"
+                VERSION: "1.04.21"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -10120,6 +10120,10 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
         _backupCurrentUserProfile = currentUserProfile;
         _assistenzaAttiva = true;
 
+        // Aggiorna il link Epika per puntare all'utente assistito
+        const _epikaLink = document.getElementById('tab-btn-user-epika');
+        if (_epikaLink) _epikaLink.href = `epika.html?impersonate_id=${utenteId}`;
+
         // 3. Sostituisci le variabili globali con i dati del tesserato
         currentUser = { id: utenteId, email: targetProfile.email || '' };
         currentUserProfile = targetProfile;
@@ -10165,6 +10169,10 @@ window.chiudiAssistenzaTesserato = function() {
     _backupCurrentUser = null;
     _backupCurrentUserProfile = null;
     _assistenzaAttiva = false;
+
+    // Ripristina il link Epika al suo href originale
+    const _epikaLink = document.getElementById('tab-btn-user-epika');
+    if (_epikaLink) _epikaLink.href = 'epika.html';
 
     // 2. Nascondi banner e rimuovi padding body
     const banner = document.getElementById('banner-assistenza-admin');

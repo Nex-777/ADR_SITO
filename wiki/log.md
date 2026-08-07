@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-07] feat | Supporto Modalità Assistenza Admin (Impersonazione Utente) nel Portale Epika (v1.04.21)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Aggiornato `apriAssistenzaTesserato()` per impostare dinamicamente `href = "epika.html?impersonate_id=${utenteId}"` sul link `#tab-btn-user-epika` quando l'Admin entra nella vista tesserato.
+  - Aggiornato `chiudiAssistenzaTesserato()` per ripristinare il link originale `href = "epika.html"` alla chiusura della simulazione.
+- **Frontend Epika (`portal/epika.js`)**:
+  - Inserita in `initPortal()` la logica di impersonazione sicura: legge `impersonate_id` dai parametri URL e ne valida l'accesso verificando che l'utente loggato Auth sia un Presidente, Vice Presidente o Admin Epika.
+  - In caso di esito positivo, `currentUser.id` viene sostituito con `impersonate_id` e vengono ricaricati i record `userData`, `epikaProfile` e `currentUserTessera` dell'atleta impersonato, garantendo la visualizzazione istantanea della scheda personaggio, statistiche e abilitazioni dell'atleta.
+  - Attivato il banner d'avviso `#epk-simulation-banner` ("⚠️ MODALITÀ ASSISTENZA ADMIN: Stai visualizzando il Portale Epika di [Nome Atleta]") con tasto rapido "CHIUDI SCHEDA".
+  - In caso di tentativo non autorizzato (utente non admin), il parametro viene ignorato in totale sicurezza fall-backando sul profilo reale.
+- **Versione**: Incrementata la versione globale a `v1.04.21`.
+
+---
+
 ## [2026-08-06] feature | Tasto e Vista Gestione Eserciti Read-Only per Direttivo (v1.04.18)
 - **`portal/epika.html`**:
   - Assegnati gli ID `adm-eserciti-btn-salva` e `adm-eserciti-btn-coeff-salva` ai bottoni di salvataggio per la gestione dello stato Read-Only.
