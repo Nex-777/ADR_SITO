@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-10] fix | RLS Iscrizioni Evento — Capogruppo / Vice Capogruppo (v1.04.30)
+- **Database (`Supabase`)**:
+  - Risolta la limitazione della policy RLS `select_epika_iscrizioni_eventi` (in v3) per cui utenti autenticati con ruolo Capogruppo o Vice Capogruppo (come Abunos) potevano visualizzare solo il proprio record di iscrizione agli eventi.
+  - Creata ed eseguita la migrazione `supabase/migration_fix_rls_capogruppo_iscrizioni.sql` che estende la policy SELECT includendo una clausola `OR EXISTS` su `epika_gruppi_storici` con doppio percorso (`g.id = ie.gruppo_storico_id` e fallback via `epika_profili.gruppo_storico_id`).
+  - Verificato sul database che tutti i membri iscritti del gruppo (es. Pando e Pietro per Torc Na Moire) risultino ora trasparentemente accessibili a Capogruppo e Vice Capogruppo.
+
+---
+
 ## [2026-08-10] bugfix | Fix Modale Epika con Messaggio Contestuale per Blocco Documento/Certificato (v1.04.29)
 - **`portal/dashboard.js`**:
   - Risolto il difetto per cui la modale di blocco del pulsante Epika mostrava sempre genericamente "CERTIFICATO MEDICO RICHIESTO" anche quando la causa reale era il Documento d'Identità (scaduto o rifiutato).
