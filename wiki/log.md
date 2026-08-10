@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-10] feature | UX Generali Extra Collassabili su Richiesta (v1.04.27)
+- **`portal/epika.html`**:
+  - Di default viene esposta la sola casella per il **Generale 1 (Comandante)**.
+  - Inserito il pulsante interattivo in stile Stitch/Epika (`+ AGGIUNGI GENERALE`) in alto a destra nella sezione dei generali per Esercito A e B.
+  - Raggruppate le caselle per **Generale 2** e **Generale 3** all'interno di un contenitore flessibile collassato (`display: none`).
+- **`portal/epika.js`**:
+  - Implementate le funzioni `toggleExtraGenerali(esercito)` e `aggiornaVisibilitaExtraGenerali(esercito)`.
+  - In fase di caricamento degli schieramenti salvati dall'evento, se Generale 2 o 3 contengono dati, il contenitore viene espanso automaticamente per consentire l'ispezione ed il salvataggio immediato.
+- **Versione**: Incrementata la versione globale a `v1.04.27`.
+
+---
+
 ## [2026-08-10] feature | Redesign Card Statistiche Tattiche Avanzate Dashboard Eserciti (v1.04.26)
 - **`portal/epika.html`**:
   - Rimossa la riga della Forza Totale incorporata nelle card identitarie dei Nomi Esercito A e B per decongestionare l'header.

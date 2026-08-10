@@ -7254,7 +7254,6 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             if (document.getElementById('adm-esercito-a-gen-2')) document.getElementById('adm-esercito-a-gen-2').value = genA[1] || '';
             if (document.getElementById('adm-esercito-a-gen-3')) document.getElementById('adm-esercito-a-gen-3').value = genA[2] || '';
 
-            const genB = savedEserciti.generali_esercito_b || [];
             if (document.getElementById('adm-esercito-b-gen-1')) document.getElementById('adm-esercito-b-gen-1').value = genB[0] || '';
             if (document.getElementById('adm-esercito-b-gen-2')) document.getElementById('adm-esercito-b-gen-2').value = genB[1] || '';
             if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = genB[2] || '';
@@ -7281,6 +7280,9 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             if (document.getElementById('adm-esercito-b-gen-2')) document.getElementById('adm-esercito-b-gen-2').value = '';
             if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = '';
         }
+
+        aggiornaVisibilitaExtraGenerali('a');
+        aggiornaVisibilitaExtraGenerali('b');
 
         // 4. Organizza gli atleti
         (iscritti || []).forEach(isc => {
@@ -7675,6 +7677,42 @@ async function salvaSchieramentiEserciti() {
     } catch (err) {
         console.error("Errore salvataggio eserciti:", err);
         if (typeof showToast === 'function') showToast("Errore durante il salvataggio degli eserciti", "error");
+    }
+}
+
+function toggleExtraGenerali(esercito) {
+    const container = document.getElementById(`adm-esercito-${esercito}-gen-extra-container`);
+    const btn = document.getElementById(`adm-esercito-${esercito}-gen-extra-toggle`);
+    if (!container || !btn) return;
+
+    const isHidden = container.style.display === 'none' || !container.style.display;
+    if (isHidden) {
+        container.style.display = 'flex';
+        btn.textContent = '- NASCONDI GENERALI EXTRA';
+    } else {
+        container.style.display = 'none';
+        btn.textContent = '+ AGGIUNGI GENERALE';
+    }
+}
+
+function aggiornaVisibilitaExtraGenerali(esercito) {
+    const container = document.getElementById(`adm-esercito-${esercito}-gen-extra-container`);
+    const btn = document.getElementById(`adm-esercito-${esercito}-gen-extra-toggle`);
+    const gen2 = (document.getElementById(`adm-esercito-${esercito}-gen-2`)?.value || '').trim();
+    const gen3 = (document.getElementById(`adm-esercito-${esercito}-gen-3`)?.value || '').trim();
+
+    if (!container || !btn) return;
+
+    const readOnly = typeof isReadOnly === 'function' && isReadOnly();
+
+    if (gen2 || gen3) {
+        container.style.display = 'flex';
+        btn.textContent = '- NASCONDI GENERALI EXTRA';
+        btn.style.display = readOnly ? 'none' : 'inline-block';
+    } else {
+        container.style.display = 'none';
+        btn.textContent = '+ AGGIUNGI GENERALE';
+        btn.style.display = readOnly ? 'none' : 'inline-block';
     }
 }
 

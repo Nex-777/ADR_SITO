@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.26">
+    <link rel="stylesheet" href="epika.css?v=1.04.27">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.26"></script>
+    <script src="config.js?v=1.04.27"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.26</span>
+            <span class="epk-version-badge">Vs. 1.04.27</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -738,11 +738,18 @@
                                         <input type="text" id="adm-esercito-a-grido" class="epk-input" placeholder="Grido di Battaglia (es: PER LA GLORIA!)..." style="font-size: 10px; font-style: italic; margin-bottom: 8px;" oninput="aggiornaCalcoliEserciti()">
                                         
                                         <div style="margin-top: 6px;">
-                                            <label style="font-size: 9px; color: #93c5fd; font-weight: bold; text-transform: uppercase;">GENERALI ESERCITO A (DA 1 A 3):</label>
-                                            <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                <label style="font-size: 9px; color: #93c5fd; font-weight: bold; text-transform: uppercase;">GENERALI ESERCITO A (MAX 3):</label>
+                                                <button type="button" id="adm-esercito-a-gen-extra-toggle" onclick="toggleExtraGenerali('a')" style="background: transparent; border: none; color: var(--epk-gold); font-size: 9px; font-weight: bold; cursor: pointer; padding: 0; outline: none;">
+                                                    + AGGIUNGI GENERALE
+                                                </button>
+                                            </div>
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
                                                 <input type="text" id="adm-esercito-a-gen-1" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="👑 Generale 1 (Comandante)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
-                                                <input type="text" id="adm-esercito-a-gen-2" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="🛡️ Generale 2 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
-                                                <input type="text" id="adm-esercito-a-gen-3" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="⚔️ Generale 3 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
+                                                <div id="adm-esercito-a-gen-extra-container" style="display: none; flex-direction: column; gap: 4px;">
+                                                    <input type="text" id="adm-esercito-a-gen-2" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="🛡️ Generale 2 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
+                                                    <input type="text" id="adm-esercito-a-gen-3" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="⚔️ Generale 3 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -754,11 +761,18 @@
                                         <input type="text" id="adm-esercito-b-grido" class="epk-input" placeholder="Grido di Battaglia (es: NESSUN PASSO INDIETRO!)..." style="font-size: 10px; font-style: italic; margin-bottom: 8px;" oninput="aggiornaCalcoliEserciti()">
                                         
                                         <div style="margin-top: 6px;">
-                                            <label style="font-size: 9px; color: #fca5a5; font-weight: bold; text-transform: uppercase;">GENERALI ESERCITO B (DA 1 A 3):</label>
-                                            <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                <label style="font-size: 9px; color: #fca5a5; font-weight: bold; text-transform: uppercase;">GENERALI ESERCITO B (MAX 3):</label>
+                                                <button type="button" id="adm-esercito-b-gen-extra-toggle" onclick="toggleExtraGenerali('b')" style="background: transparent; border: none; color: var(--epk-gold); font-size: 9px; font-weight: bold; cursor: pointer; padding: 0; outline: none;">
+                                                    + AGGIUNGI GENERALE
+                                                </button>
+                                            </div>
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
                                                 <input type="text" id="adm-esercito-b-gen-1" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="👑 Generale 1 (Comandante)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
-                                                <input type="text" id="adm-esercito-b-gen-2" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="🛡️ Generale 2 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
-                                                <input type="text" id="adm-esercito-b-gen-3" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="⚔️ Generale 3 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
+                                                <div id="adm-esercito-b-gen-extra-container" style="display: none; flex-direction: column; gap: 4px;">
+                                                    <input type="text" id="adm-esercito-b-gen-2" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="🛡️ Generale 2 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
+                                                    <input type="text" id="adm-esercito-b-gen-3" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="⚔️ Generale 3 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1999,6 +2013,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.26"></script>
+    <script src="epika.js?v=1.04.27"></script>
 </body>
 </html>
