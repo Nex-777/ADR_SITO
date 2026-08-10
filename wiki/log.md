@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-10] feature | Redesign Card Statistiche Tattiche Avanzate Dashboard Eserciti (v1.04.26)
+- **`portal/epika.html`**:
+  - Rimossa la riga della Forza Totale incorporata nelle card identitarie dei Nomi Esercito A e B per decongestionare l'header.
+  - Creata la nuova **Card Statistiche Tattiche Avanzate** (`#adm-eserciti-stats-card`) posizionata direttamente sotto l'header dei Nomi/Generali e prima del layout a colonne dei gruppi.
+  - Centralizzato l'indicatore `VS Delta` (`#adm-eserciti-vs-delta`) all'interno della card delle statistiche per una perfetta simmetria visiva.
+  - Esposti per ciascun esercito i contatori distinti per: Forza Totale (pts), Combattenti Totali, Non Combattenti, Armature Leggere, Armature Pesanti, Arcieri Puri e Arcieri Ibridi.
+- **`portal/epika.js`**:
+  - Rifattorizzata `aggiornaCalcoliEserciti()` con accumulo in strutture dati ordinate (`statsA`, `statsB`) in singolo passaggio `O(N)`.
+  - Inserito l'aggiornamento in tempo reale di tutte le 14 metriche tattiche al variare degli schieramenti dei gruppi o dei mercenari.
+- **Versione**: Incrementata la versione globale a `v1.04.26`.
+
+---
+
 ## [2026-08-10] fix | Offloading calcolo scadenze da Mistral a Javascript Guardrail e Visualizzazione note_ai in Dashboard
 - **`api/validate.js`**:
   - Modificati i prompt di Mistral AI per certificati medici e documenti d'identità sollevando l'LLM dal calcolo matematico della scadenza temporale.

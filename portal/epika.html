@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.25">
+    <link rel="stylesheet" href="epika.css?v=1.04.26">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.25"></script>
+    <script src="config.js?v=1.04.26"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.25</span>
+            <span class="epk-version-badge">Vs. 1.04.26</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -727,9 +727,9 @@
                             <input type="hidden" id="adm-eserciti-evento-id">
                             <datalist id="adm-eserciti-atleti-datalist"></datalist>
 
-                            <!-- Header Bar: Nomi Eserciti, Gridi e VS Gauge -->
-                            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(251, 191, 36, 0.2); padding: 16px; margin-bottom: 20px; border-radius: 4px;">
-                                <div style="display: grid; grid-template-columns: 1fr 180px 1fr; gap: 16px; align-items: center;">
+                            <!-- Header Bar: Nomi Eserciti e Gridi -->
+                            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(251, 191, 36, 0.2); padding: 16px; margin-bottom: 16px; border-radius: 4px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;">
                                     
                                     <!-- Esercito A Header -->
                                     <div style="background: rgba(30, 58, 138, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px; border-radius: 4px;">
@@ -744,19 +744,6 @@
                                                 <input type="text" id="adm-esercito-a-gen-2" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="🛡️ Generale 2 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
                                                 <input type="text" id="adm-esercito-a-gen-3" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="⚔️ Generale 3 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
                                             </div>
-                                        </div>
-
-                                        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="font-size: 10px; color: rgba(255,255,255,0.7);">FORZA TOTALE:</span>
-                                            <span id="adm-esercito-a-badge" style="font-size: 12px; font-weight: bold; color: #60a5fa; font-family: monospace;">FORZA: 0.0 pts | 0 COMBATTENTI</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Centro VS Gauge -->
-                                    <div style="text-align: center;">
-                                        <div style="font-family: 'Cinzel', serif; font-size: 18px; font-weight: bold; color: var(--epk-gold); letter-spacing: 2px;">VS</div>
-                                        <div id="adm-eserciti-vs-delta" style="font-size: 11px; font-weight: bold; font-family: monospace; color: var(--epk-gold-dim); margin-top: 6px; padding: 4px 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 2px;">
-                                            BILANCIATI
                                         </div>
                                     </div>
 
@@ -774,10 +761,96 @@
                                                 <input type="text" id="adm-esercito-b-gen-3" list="adm-eserciti-atleti-datalist" class="epk-input" placeholder="⚔️ Generale 3 (Opzionale)..." style="font-size: 10px;" oninput="aggiornaCalcoliEserciti()">
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-                                            <span style="font-size: 10px; color: rgba(255,255,255,0.7);">FORZA TOTALE:</span>
-                                            <span id="adm-esercito-b-badge" style="font-size: 12px; font-weight: bold; color: #f87171; font-family: monospace;">FORZA: 0.0 pts | 0 COMBATTENTI</span>
+                                </div>
+                            </div>
+
+                            <!-- Card Statistiche Tattiche Avanzate -->
+                            <div id="adm-eserciti-stats-card" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(251, 191, 36, 0.3); padding: 16px; margin-bottom: 20px; border-radius: 4px;">
+                                <div style="display: grid; grid-template-columns: 1fr 180px 1fr; gap: 16px; align-items: center;">
+                                    
+                                    <!-- Stats Esercito A -->
+                                    <div style="background: rgba(30, 58, 138, 0.15); border: 1px solid rgba(59, 130, 246, 0.25); padding: 12px; border-radius: 4px;">
+                                        <div style="font-size: 11px; font-weight: bold; color: #93c5fd; border-bottom: 1px solid rgba(59, 130, 246, 0.3); padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                            <span>STATISTICHE TATTICHE (A)</span>
+                                            <span style="font-size: 10px; color: rgba(255,255,255,0.6);">⚙️ FORZA & ASSETTI</span>
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                            <div style="background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 3px; border-left: 3px solid #3b82f6;">
+                                                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">FORZA TOTALE</div>
+                                                <div id="adm-esercito-a-tot-pts" style="font-size: 13px; font-weight: bold; color: #60a5fa; font-family: monospace;">0.0 pts</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 3px; border-left: 3px solid #60a5fa;">
+                                                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">COMBATTENTI / NON COMB.</div>
+                                                <div style="font-size: 11px; font-weight: bold; color: #93c5fd; font-family: monospace;">
+                                                    <span id="adm-esercito-a-tot-comb">0</span> <span style="font-size:9px; color:rgba(255,255,255,0.5);">comb.</span> | <span id="adm-esercito-a-non-comb">0</span> <span style="font-size:9px; color:rgba(255,255,255,0.5);">non comb.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🛡️ ARM. LEG.</div>
+                                                <div id="adm-esercito-a-arm-leggera" style="font-size: 11px; font-weight: bold; color: #93c5fd; font-family: monospace;">0</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🦾 ARM. PES.</div>
+                                                <div id="adm-esercito-a-arm-pesante" style="font-size: 11px; font-weight: bold; color: #93c5fd; font-family: monospace;">0</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🏹 ARC. PURI</div>
+                                                <div id="adm-esercito-a-arc-puro" style="font-size: 11px; font-weight: bold; color: #93c5fd; font-family: monospace;">0</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🏹⚔️ ARC. IBR.</div>
+                                                <div id="adm-esercito-a-arc-ibrido" style="font-size: 11px; font-weight: bold; color: #93c5fd; font-family: monospace;">0</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Centro VS Gauge -->
+                                    <div style="text-align: center;">
+                                        <div style="font-family: 'Cinzel', serif; font-size: 18px; font-weight: bold; color: var(--epk-gold); letter-spacing: 2px;">VS</div>
+                                        <div id="adm-eserciti-vs-delta" style="font-size: 11px; font-weight: bold; font-family: monospace; color: var(--epk-gold-dim); margin-top: 6px; padding: 6px 8px; background: rgba(0,0,0,0.5); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 2px;">
+                                            BILANCIATI
+                                        </div>
+                                    </div>
+
+                                    <!-- Stats Esercito B -->
+                                    <div style="background: rgba(136, 36, 43, 0.15); border: 1px solid rgba(239, 68, 68, 0.25); padding: 12px; border-radius: 4px;">
+                                        <div style="font-size: 11px; font-weight: bold; color: #fca5a5; border-bottom: 1px solid rgba(239, 68, 68, 0.3); padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                            <span>STATISTICHE TATTICHE (B)</span>
+                                            <span style="font-size: 10px; color: rgba(255,255,255,0.6);">⚙️ FORZA & ASSETTI</span>
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                                            <div style="background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 3px; border-left: 3px solid #ef4444;">
+                                                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">FORZA TOTALE</div>
+                                                <div id="adm-esercito-b-tot-pts" style="font-size: 13px; font-weight: bold; color: #f87171; font-family: monospace;">0.0 pts</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 3px; border-left: 3px solid #f87171;">
+                                                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">COMBATTENTI / NON COMB.</div>
+                                                <div style="font-size: 11px; font-weight: bold; color: #fca5a5; font-family: monospace;">
+                                                    <span id="adm-esercito-b-tot-comb">0</span> <span style="font-size:9px; color:rgba(255,255,255,0.5);">comb.</span> | <span id="adm-esercito-b-non-comb">0</span> <span style="font-size:9px; color:rgba(255,255,255,0.5);">non comb.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🛡️ ARM. LEG.</div>
+                                                <div id="adm-esercito-b-arm-leggera" style="font-size: 11px; font-weight: bold; color: #fca5a5; font-family: monospace;">0</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🦾 ARM. PES.</div>
+                                                <div id="adm-esercito-b-arm-pesante" style="font-size: 11px; font-weight: bold; color: #fca5a5; font-family: monospace;">0</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🏹 ARC. PURI</div>
+                                                <div id="adm-esercito-b-arc-puro" style="font-size: 11px; font-weight: bold; color: #fca5a5; font-family: monospace;">0</div>
+                                            </div>
+                                            <div style="background: rgba(0,0,0,0.25); padding: 4px 6px; border-radius: 2px; text-align: center;">
+                                                <div style="font-size: 8px; color: rgba(255,255,255,0.6);">🏹⚔️ ARC. IBR.</div>
+                                                <div id="adm-esercito-b-arc-ibrido" style="font-size: 11px; font-weight: bold; color: #fca5a5; font-family: monospace;">0</div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1926,6 +1999,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.25"></script>
+    <script src="epika.js?v=1.04.26"></script>
 </body>
 </html>

@@ -7510,52 +7510,72 @@ function aggiornaCalcoliEserciti() {
         titleB.innerHTML = `${nomeB} (GRUPPI)<br><span style="font-size:9px; color:rgba(252,165,165,0.8); font-family:sans-serif; text-transform:none;">👑 GENERALI: ${genB.length ? genB.join(' | ') : 'Nessuno'}</span>`;
     }
 
-    let forzaA = 0;
-    let combA = 0;
-    let forzaB = 0;
-    let combB = 0;
+    const statsA = { forza: 0, comb: 0, nonComb: 0, armLeggera: 0, armPesante: 0, arcPuro: 0, arcIbrido: 0 };
+    const statsB = { forza: 0, comb: 0, nonComb: 0, armLeggera: 0, armPesante: 0, arcPuro: 0, arcIbrido: 0 };
+
+    const processAtleta = (a, schieramento) => {
+        const target = (schieramento === 'A') ? statsA : (schieramento === 'B' ? statsB : null);
+        if (!target) return;
+        
+        const f = calcolaForzaSingoloAtleta(a, esercitiCacheData.coeff);
+        target.forza += f;
+
+        if (a.ruolo === 'combattente') {
+            target.comb++;
+            if (a.armatura === 'leggera') target.armLeggera++;
+            else if (a.armatura === 'pesante') target.armPesante++;
+
+            if (a.arciere === 'puro') target.arcPuro++;
+            else if (a.arciere === 'ibrido') target.arcIbrido++;
+        } else {
+            target.nonComb++;
+        }
+    };
 
     // Calcolo Gruppi
     Object.keys(esercitiCacheData.gruppi).forEach(gNome => {
         const schieramento = esercitiCacheData.assegnazioniGruppi[gNome];
         const atleti = esercitiCacheData.gruppi[gNome];
-        atleti.forEach(a => {
-            const f = calcolaForzaSingoloAtleta(a, esercitiCacheData.coeff);
-            if (schieramento === 'A') {
-                forzaA += f;
-                if (a.ruolo === 'combattente') combA++;
-            } else if (schieramento === 'B') {
-                forzaB += f;
-                if (a.ruolo === 'combattente') combB++;
-            }
-        });
+        atleti.forEach(a => processAtleta(a, schieramento));
     });
 
     // Calcolo Mercenari
     esercitiCacheData.mercenari.forEach(m => {
         const schieramento = esercitiCacheData.assegnazioniMercenari[m.utente_id];
-        const f = calcolaForzaSingoloAtleta(m, esercitiCacheData.coeff);
-        if (schieramento === 'A') {
-            forzaA += f;
-            if (m.ruolo === 'combattente') combA++;
-        } else if (schieramento === 'B') {
-            forzaB += f;
-            if (m.ruolo === 'combattente') combB++;
-        }
+        processAtleta(m, schieramento);
     });
 
-    forzaA = parseFloat(forzaA.toFixed(2));
-    forzaB = parseFloat(forzaB.toFixed(2));
+    statsA.forza = parseFloat(statsA.forza.toFixed(2));
+    statsB.forza = parseFloat(statsB.forza.toFixed(2));
 
-    const badgeA = document.getElementById('adm-esercito-a-badge');
-    const badgeB = document.getElementById('adm-esercito-b-badge');
-    if (badgeA) badgeA.textContent = `FORZA: ${forzaA} pts | ${combA} COMBATTENTI`;
-    if (badgeB) badgeB.textContent = `FORZA: ${forzaB} pts | ${combB} COMBATTENTI`;
+    // Helper per aggiornare DOM
+    const setEl = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    // Aggiorna DOM Esercito A
+    setEl('adm-esercito-a-tot-pts', `${statsA.forza} pts`);
+    setEl('adm-esercito-a-tot-comb', statsA.comb);
+    setEl('adm-esercito-a-non-comb', statsA.nonComb);
+    setEl('adm-esercito-a-arm-leggera', statsA.armLeggera);
+    setEl('adm-esercito-a-arm-pesante', statsA.armPesante);
+    setEl('adm-esercito-a-arc-puro', statsA.arcPuro);
+    setEl('adm-esercito-a-arc-ibrido', statsA.arcIbrido);
+
+    // Aggiorna DOM Esercito B
+    setEl('adm-esercito-b-tot-pts', `${statsB.forza} pts`);
+    setEl('adm-esercito-b-tot-comb', statsB.comb);
+    setEl('adm-esercito-b-non-comb', statsB.nonComb);
+    setEl('adm-esercito-b-arm-leggera', statsB.armLeggera);
+    setEl('adm-esercito-b-arm-pesante', statsB.armPesante);
+    setEl('adm-esercito-b-arc-puro', statsB.arcPuro);
+    setEl('adm-esercito-b-arc-ibrido', statsB.arcIbrido);
 
     // Aggiorna VS Delta Indicator
     const deltaEl = document.getElementById('adm-eserciti-vs-delta');
     if (deltaEl) {
-        const diff = parseFloat((forzaA - forzaB).toFixed(2));
+        const diff = parseFloat((statsA.forza - statsB.forza).toFixed(2));
         if (diff === 0) {
             deltaEl.textContent = 'PERFETTAMENTE BILANCIATI';
             deltaEl.style.color = 'var(--epk-gold)';
