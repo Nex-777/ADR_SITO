@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-10] admin_override | Forzatura Tessera Integrativa A per atleta Mauro Corrente
+- **Database (`Supabase`)**:
+  - Eseguito aggiornamento atomico delle tabelle `registro_tesserati`, `registro_approvazioni` e `utenti` per l'atleta Mauro Corrente (`45ce82bc-1512-47ef-ad6b-dd1143ad9950`), impostando il livello copertura a `INTEGRATIVA_A` (`tessera_integrativa_a`).
+  - Verificato con l'RPC `get_user_tessera_livello()` che l'atleta sia ora abilitato nativamente all'iscrizione come **COMBATTENTE** nel Portale Epika, mantenendo intatto lo storico contabile delle ricevute.
+
+---
+
+
 ## [2026-08-10] feature | UX Generali Extra Collassabili su Richiesta (v1.04.27)
 - **`portal/epika.html`**:
   - Di default viene esposta la sola casella per il **Generale 1 (Comandante)**.
