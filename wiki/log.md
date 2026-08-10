@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-10] admin_override | Modifica Allenatore Epika per Umberto Palatroni (Minor) (v1.04.31)
+- **Database (`Supabase`)**:
+  - Aggiornata la scelta dell'allenatore per l'atleta Umberto Palatroni (`d8e6db60-7bb2-4837-85b4-0a5f4a51db95`), variando l'assegnazione da Kratos (`ID 15`) a **Minor** (`ID 7`).
+  - Sincronizzate le tabelle `epika_profili` (`allenatore_id = 7`) e `epika_scab_abilitazioni` (`allenatore_opzione_id = 7`).
+  - Storicizzata la modifica nel registro audit `epika_registro_modifiche_profilo`.
+
+---
+
+
 ## [2026-08-10] fix | RLS Iscrizioni Evento — Capogruppo / Vice Capogruppo (v1.04.30)
 - **Database (`Supabase`)**:
   - Risolta la limitazione della policy RLS `select_epika_iscrizioni_eventi` (in v3) per cui utenti autenticati con ruolo Capogruppo o Vice Capogruppo (come Abunos) potevano visualizzare solo il proprio record di iscrizione agli eventi.
