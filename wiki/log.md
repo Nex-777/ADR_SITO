@@ -2,6 +2,29 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-10] fix | Offloading calcolo scadenze da Mistral a Javascript Guardrail e Visualizzazione note_ai in Dashboard
+- **`api/validate.js`**:
+  - Modificati i prompt di Mistral AI per certificati medici e documenti d'identità sollevando l'LLM dal calcolo matematico della scadenza temporale.
+  - Riformulata la logica del Guardrail Javascript: JS valuta autonomamente e con precisione deterministica la scadenza temporale. Se il documento è scaduto viene forzato a `ROSSO`, altrimenti conserva il giudizio formale/visivo formulato dall'AI (`VERDE`, `GIALLO` o `ROSSO`).
+- **`portal/dashboard.js`**:
+  - Inclusi i campi `note_ai` e `data_scadenza` nella select della funzione `loadCertificatiGialli()`.
+  - Aggiunta la visualizzazione delle note stilizzate di Mistral AI (`note_ai`) sia per i certificati in stato `GIALLO` che per i documenti d'identità in attesa di revisione manuale.
+- **Database (Supabase)**:
+  - Applicata sanatoria sui record bloccati di Guglielmo Vaccaro e Arianna Gentili ripristinando i loro documenti validi in stato `VERDE`.
+
+---
+
+## [2026-08-10] fix | Inserimento Approvazione Mancante per Fabio Tritapepe — Accesso Epika Ripristinato
+- **Database (Supabase)**:
+  - Inserito il record mancante in `registro_approvazioni` per l'anagrafica `aa2ba36d-adfd-46c9-aba7-06eb6432c653` (Fabio Tritapepe).
+  - Parametri inseriti: `tipo = TESSERATO`, `stato = APPROVATO`, `livello_copertura = INTEGRATIVA_A`, `data_richiesta = 2025-03-26`, `data_decisione = 2025-03-26`.
+- **Esito Verifiche**:
+  - Il 100% dei tesserati attivi (104 su 104) possiede ora un record di approvazione valido con `stato = 'APPROVATO'`.
+  - Ripristinato l'accesso immediato ed automatico al Portale Epika per l'utente sia da Dashboard Desktop che da Mobile.
+- **Nessuna modifica al codice sorgente / Nessun bump di versione necessario.**
+
+---
+
 ## [2026-08-07] fix | Ripristino Apertura Portale Epika nella Stessa Scheda Browser (v1.04.22)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Modificata la funzione centralizzata `openEpika()` sostituendo `window.open(epikaUrl, 'portale_epika')` con `window.location.href = epikaUrl`.

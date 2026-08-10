@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.24"
+                VERSION: "1.04.25"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2282,7 +2282,7 @@
             try {
                 const { data: certs, error } = await supabaseClient
                     .from('certificati_medici')
-                    .select('id, tipologia, data_rilascio, file_url, anagrafiche(nome, cognome, codice_fiscale)')
+                    .select('id, tipologia, data_rilascio, data_scadenza, note_ai, file_url, anagrafiche(nome, cognome, codice_fiscale)')
                     .eq('stato_validazione', 'GIALLO')
                     .order('created_at', { ascending: false });
 
@@ -2304,9 +2304,13 @@
                     const dataRilascio = escapeHtml(cert.data_rilascio || 'N/D');
                     const certId = cert.id;
                     const fileUrl = escapeHtml(cert.file_url || '');
+                    const noteAi = escapeHtml(cert.note_ai || '');
                     return `
                         <tr class="border-b border-yellow-500/10" data-cert-id="${certId}">
-                            <td class="p-3 text-white font-bold">${nomeComp}</td>
+                            <td class="p-3 text-white font-bold">
+                                ${nomeComp}
+                                ${noteAi ? `<div class="text-[9px] text-yellow-300/80 font-mono mt-0.5">🤖 AI: "${noteAi}"</div>` : ''}
+                            </td>
                             <td class="p-3 text-gray-400 font-mono">${cf}</td>
                             <td class="p-3 text-yellow-500 font-bold">${tipologia}</td>
                             <td class="p-3 text-gray-400">${dataRilascio}</td>

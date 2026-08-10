@@ -212,10 +212,9 @@ export default async function handler(req, res) {
                     const prompt = `
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
 Sto per fornirti un'immagine di un certificato medico.
-IMPORTANTE: La data odierna è il ${todayStr}. Utilizzala come punto di riferimento per verificare se il certificato è scaduto.
+IMPORTANTE: NON verificare se la data di scadenza è passata o futura rispetto ad oggi. La verifica della scadenza temporale verrà eseguita da un sistema automatico separato.
 
 Devi estrarre le date esatte scritte sul documento. Ignora qualsiasi altra informazione esterna.
-Se le date presenti sul certificato indicano che è scaduto rispetto a oggi, lo stato DEVE essere "ROSSO".
 
 REQUISITO FONDAMENTALE SULLE DICITURE DI IDONEITÀ:
 Affinché il certificato sia valido per il tesseramento sportivo, sul documento DEVE ESSERE PRESENTE IN MODO CHIARO ED ESPLICITO almeno una delle seguenti parole/diciture (senza distinzione tra maiuscole e minuscole):
@@ -227,14 +226,14 @@ Affinché il certificato sia valido per il tesseramento sportivo, sul documento 
 Se il certificato NON contiene nessuna di queste parole esplicite (ad esempio se riporta soltanto "attività ludico-motoria", "ludico-ricreativa", "attività amatoriale" o altre diciture prive dei termini sopra indicati), il certificato NON È VALIDO ai fini del tesseramento sportivo e lo stato DEVE essere tassativamente "ROSSO".
 
 Devi estrarre le seguenti informazioni in formato JSON STRICT:
-1. data_emissione (formato YYYY-MM-DD, la data in cui il certificato è stato rilasciato)
-2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato)
+1. data_emissione (formato YYYY-MM-DD, la data in cui il certificato è stato rilasciato, null se non leggibile)
+2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato, null se non leggibile)
 3. agonistico (booleano, true se specifica idoneità agonistica, false se specifica non agonistica)
-4. stato (stringa: "VERDE" se il certificato è originale, leggibile, in corso di validità e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se c'è qualcosa di incomprensibile o non si legge bene; "ROSSO" se il certificato è scaduto rispetto a oggi, non contiene la dicitura obbligatoria o non è un certificato medico).
+4. stato (stringa: "VERDE" se il certificato è originale, ben leggibile e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se l'immagine è sfuocata, tagliata o c'è qualcosa di incomprensibile; "ROSSO" se il certificato non contiene la dicitura obbligatoria o non è un certificato medico).
 5. note (una breve spiegazione del perché hai assegnato quello stato).
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
-{"data_emissione": "2023-10-15", "data_scadenza": "2024-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico valido e leggibile."}
+{"data_emissione": "2025-10-15", "data_scadenza": "2026-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico leggibile e ben fotografato."}
                     `;
 
                     const response = await mistral.chat.complete({
@@ -268,12 +267,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 
                         if (expiryDate < today) {
                             finalStatus = 'ROSSO';
-                            finalNotes = `Certificato scaduto il ${finalExpiry}.`;
-                        } else if (expiryDate >= today && finalStatus === 'ROSSO') {
-                            if (finalType === 'AGONISTICO' || finalType === 'NON_AGONISTICO') {
-                                finalStatus = 'VERDE';
-                                finalNotes = `Certificato medico valido e leggibile fino al ${finalExpiry} (Validato da JS).`;
-                            }
+                            finalNotes = `Certificato scaduto il ${finalExpiry}. (Nota AI: ${finalNotes})`;
                         }
                     }
                 } catch (aiErr) {
@@ -426,8 +420,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     if (mimeType.includes('application/pdf')) mimeType = 'image/jpeg';
 
                     const mistral = new Mistral({ apiKey: mistralApiKey });
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const prompt = `Sei un esperto di documenti di identità italiani. La data odierna è il ${todayStr}. Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida). Devi estrarre queste informazioni in formato JSON STRICT: 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO"), 2. data_scadenza (formato YYYY-MM-DD, null se non leggibile), 3. leggibile (booleano), 4. stato (stringa: "VERDE" se documento valido non scaduto e leggibile; "GIALLO" se qualcosa non è chiaro; "ROSSO" se chiaramente scaduto o non è un documento valido), 5. note (breve spiegazione). Rispondi SOLO con il JSON senza markdown. Esempio: {"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento valido e leggibile."}`;
+                    const prompt = `Sei un esperto di documenti di identità italiani. Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida). IMPORTANTE: NON verificare se il documento è scaduto rispetto ad oggi. La verifica della scadenza temporale verrà eseguita da un sistema automatico separato. Devi estrarre queste informazioni in formato JSON STRICT: 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO"), 2. data_scadenza (formato YYYY-MM-DD, null se non leggibile), 3. leggibile (booleano), 4. stato (stringa: "VERDE" se l'immagine è un documento d'identità valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o i dati non sono ben leggibili; "ROSSO" se l'immagine non è un documento d'identità valido), 5. note (breve spiegazione). Rispondi SOLO con il JSON senza markdown. Esempio: {"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento d'identità leggibile e ben fotografato."}`;
 
                     const response = await mistral.chat.complete({
                         model: 'pixtral-12b-2409',
@@ -450,9 +443,6 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     finalExpiry = aiResult.data_scadenza || null;
 
                     // Guardrail Deterministico Javascript su Date Scadenza Documenti d'Identità
-                    const isLegible = aiResult.leggibile === true;
-                    const isValidDocType = aiResult.tipo_documento && aiResult.tipo_documento !== 'ALTRO';
-
                     if (finalExpiry) {
                         const expiryDate = new Date(finalExpiry);
                         const today = new Date();
@@ -460,12 +450,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 
                         if (expiryDate < today) {
                             finalStatus = 'ROSSO';
-                            finalNotes = `Documento scaduto il ${finalExpiry}.`;
-                        } else if (expiryDate >= today && finalStatus === 'ROSSO') {
-                            if (isLegible && isValidDocType) {
-                                finalStatus = 'VERDE';
-                                finalNotes = `Documento valido e leggibile fino al ${finalExpiry} (Validato da JS).`;
-                            }
+                            finalNotes = `Documento scaduto il ${finalExpiry}. (Nota AI: ${finalNotes})`;
                         }
                     }
                 } catch (aiErr) {
