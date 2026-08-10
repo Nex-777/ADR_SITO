@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-10] bugfix | Fix Modale Epika con Messaggio Contestuale per Blocco Documento/Certificato (v1.04.29)
+- **`portal/dashboard.js`**:
+  - Risolto il difetto per cui la modale di blocco del pulsante Epika mostrava sempre genericamente "CERTIFICATO MEDICO RICHIESTO" anche quando la causa reale era il Documento d'Identità (scaduto o rifiutato).
+  - Implementata diagnosi contestuale puntuale: la modale esplicita ora il motivo esatto (Documento d'Identità Rifiutato / Scaduto / Certificato Medico Rifiutato / Scaduto / Mancante) e reindirizza con il pulsante CTA direttamente alla sezione di rettifica appropriata (`user_documento` o `user_certificato`).
+- **Database (`Supabase`)**:
+  - Rettificata la data di scadenza del documento d'identità dell'atleta Umberto Palatroni (`2034-06-18`), sbloccando nativamente l'accesso diretto ad Epika.
+
+---
+
+
 ## [2026-08-10] admin_override | Forzatura Tessera Integrativa A per atleta Mauro Corrente
 - **Database (`Supabase`)**:
   - Eseguito aggiornamento atomico delle tabelle `registro_tesserati`, `registro_approvazioni` e `utenti` per l'atleta Mauro Corrente (`45ce82bc-1512-47ef-ad6b-dd1143ad9950`), impostando il livello copertura a `INTEGRATIVA_A` (`tessera_integrativa_a`).

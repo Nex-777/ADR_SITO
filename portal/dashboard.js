@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.28"
+                VERSION: "1.04.29"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -684,13 +684,41 @@
                                 }
                             });
                         } else if (isBlocked) {
+                            // Diagnosi contestuale: mostra il messaggio esatto in base alla causa reale del blocco
+                            let blockedTitle, blockedBody, blockedCta, blockedTab;
+                            if (idDoc && idDoc.stato_validazione === 'ROSSO') {
+                                blockedTitle = "DOCUMENTO D'IDENTITÀ RIFIUTATO";
+                                blockedBody = "Il documento d'identità caricato non è stato approvato. Per accedere al portale Epika è necessario caricare un documento leggibile (fronte e retro) e in corso di validità.";
+                                blockedCta = "VAI AL DOCUMENTO D'IDENTITÀ";
+                                blockedTab = 'user_documento';
+                            } else if (isIdDocScaduto) {
+                                blockedTitle = "DOCUMENTO D'IDENTITÀ SCADUTO";
+                                blockedBody = "Il documento d'identità registrato nel sistema risulta scaduto. Per accedere al portale Epika è necessario caricare un documento d'identità aggiornato e in corso di validità.";
+                                blockedCta = "VAI AL DOCUMENTO D'IDENTITÀ";
+                                blockedTab = 'user_documento';
+                            } else if (cert && cert.stato_validazione === 'ROSSO') {
+                                blockedTitle = "CERTIFICATO MEDICO RIFIUTATO";
+                                blockedBody = "Il certificato medico caricato non è stato approvato. Per accedere al portale Epika è necessario caricare un certificato medico leggibile e in corso di validità.";
+                                blockedCta = "VAI AL CERTIFICATO MEDICO";
+                                blockedTab = 'user_certificato';
+                            } else if (isCertScaduto) {
+                                blockedTitle = "CERTIFICATO MEDICO SCADUTO";
+                                blockedBody = "Il tuo certificato medico è scaduto. Per accedere al portale Epika è necessario caricare un nuovo certificato medico in corso di validità.";
+                                blockedCta = "VAI AL CERTIFICATO MEDICO";
+                                blockedTab = 'user_certificato';
+                            } else {
+                                blockedTitle = "CERTIFICATO MEDICO MANCANTE";
+                                blockedBody = "Non risulta alcun certificato medico registrato a tuo nome. Per accedere al portale Epika è necessario caricare un certificato medico in corso di validità.";
+                                blockedCta = "VAI AL CERTIFICATO MEDICO";
+                                blockedTab = 'user_certificato';
+                            }
                             showEpikaAccessModal({
-                                title: "CERTIFICATO MEDICO RICHIESTO",
-                                body: "Il tuo certificato medico risulta mancante, scaduto o non valido. Per poter accedere al portale Epika, carica un certificato in corso di validità.",
-                                ctaLabel: "VAI AL CERTIFICATO",
+                                title: blockedTitle,
+                                body: blockedBody,
+                                ctaLabel: blockedCta,
                                 ctaAction: () => {
                                     document.getElementById('epika-access-modal').classList.add('hidden');
-                                    switchTab('user_certificato');
+                                    switchTab(blockedTab);
                                 }
                             });
                         } else {
