@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-11] feature_ui_bugfix | Compressione Client-Side Automatica, Rimozione Alert Nativi ed Estensioni File Robuste Upload Documenti (v1.04.39)
+- **`portal/dashboard.js`**:
+  - **Compressione Client-Side Automatica**: Aggiunta la funzione helper `processSelectedFile(file, statusEl, nameEl)` per comprimere e ridimensionare trasparentemente le immagini caricate da mobile (> 2MB) tramite `compressImageSandbox` prima di settare lo stato del widget, rimuovendo il blocco rigido sui file > 5MB.
+  - **Rimozione `alert()` Nativi**: Sostituito l'alert bloccante sulla data di scadenza mancante con evidenziazione visiva del campo (`border-red-500 ring-2 ring-red-500`), `scrollIntoView` e toast informativo, per prevenire blocchi su WebView ed in-app browser.
+  - **Parsing Robusto Estensioni**: Estrazione dell'estensione file dal tipo MIME (`image/jpeg` -> `jpg`, `image/png` -> `png`, `application/pdf` -> `pdf`) prevenendo fallimenti `file.name.split('.').pop()` su scatti fotocamera iOS/Android.
+- **Data Patch**:
+  - Eseguita sanatoria manuale per l'utente Sofia Fidati (`3c1e9c4d-0793-4074-9c65-8b9d65b153e2`), caricando il documento fornito su Storage ed inserendo la riga in `documenti_identita` in stato `IN_ATTESA`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.38` (22 file aggiornati).
+
 ## [2026-08-11] feature_ui_bugfix | Visibilità Documenti in Attesa Pagamento e Guardrail Sicurezza Pagamento (v1.04.37)
 - **`portal/dashboard.html` e `portal/dashboard.js`**:
   - **Trasparenza Documenti in Attesa Pagamento**: Aggiunta la colonna "Documenti" ed i badge semaforici per `Documento d'Identità` e `Certificato Medico` nella tabella *TESSERATI E SOCI IN ATTESA DI PAGAMENTO* del Registro Approvazioni.

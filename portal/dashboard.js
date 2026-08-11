@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.37"
+                VERSION: "1.04.39"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -7229,7 +7229,62 @@
                         });
                     });
 
-                    fronteInput?.addEventListener('change', (e) => {
+                    async function processSelectedFile(file, statusEl, nameEl) {
+                        if (!file) return null;
+
+                        if (file.type === 'application/pdf' || (file.name && file.name.toLowerCase().endsWith('.pdf'))) {
+                            if (file.size > 10 * 1024 * 1024) {
+                                showToastNotification("Il file PDF supera i 10MB.", "error");
+                                if (statusEl) {
+                                    statusEl.textContent = "Errore: PDF > 10MB";
+                                    statusEl.className = "text-[9px] text-red-500 mt-1 uppercase font-bold";
+                                }
+                                return null;
+                            }
+                            if (nameEl) nameEl.textContent = file.name ? file.name.toUpperCase() : "DOCUMENTO.PDF";
+                            if (statusEl) {
+                                statusEl.textContent = `✓ PDF PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                                statusEl.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                            }
+                            return file;
+                        }
+
+                        if (file.type.startsWith('image/') || (!file.type && file.name && /\.(png|jpe?g|heic|webp)$/i.test(file.name))) {
+                            if (nameEl) nameEl.textContent = file.name ? file.name.toUpperCase() : "IMMAGINE";
+                            if (statusEl) {
+                                statusEl.textContent = "OPTIMIZING IMAGE...";
+                                statusEl.className = "text-[9px] text-amber-400 mt-1 uppercase font-bold animate-pulse";
+                            }
+                            try {
+                                const compBlob = await compressImageSandbox(file, 1600, 1600, 0.82);
+                                const rawName = file.name || `foto_${Date.now()}.jpg`;
+                                const cleanName = rawName.includes('.') ? rawName.replace(/\.[^/.]+$/, ".jpg") : `${rawName}.jpg`;
+                                const compFile = new File([compBlob], cleanName, { type: 'image/jpeg' });
+
+                                if (statusEl) {
+                                    statusEl.textContent = `✓ PRONTO (${(compFile.size / 1024 / 1024).toFixed(2)} MB)`;
+                                    statusEl.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                                }
+                                return compFile;
+                            } catch (err) {
+                                console.warn("Errore compressione foto, uso originale:", err);
+                                if (statusEl) {
+                                    statusEl.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                                    statusEl.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                                }
+                                return file;
+                            }
+                        }
+
+                        if (nameEl) nameEl.textContent = file.name ? file.name.toUpperCase() : "DOCUMENTO";
+                        if (statusEl) {
+                            statusEl.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                            statusEl.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                        }
+                        return file;
+                    }
+
+                    fronteInput?.addEventListener('change', async (e) => {
                         const file = e.target.files[0];
                         if (!file) {
                             uploadedFronte = null;
@@ -7241,27 +7296,12 @@
                             updateHelper();
                             return;
                         }
-                        if (file.size > 5 * 1024 * 1024) {
-                            alert("Il file non deve superare i 5MB.");
-                            fronteInput.value = '';
-                            uploadedFronte = null;
-                            if (fronteStatus) {
-                                fronteStatus.textContent = "Errore: File > 5MB";
-                                fronteStatus.className = "text-[9px] text-primary mt-1 uppercase font-bold";
-                            }
-                            updateHelper();
-                            return;
-                        }
-                        uploadedFronte = file;
-                        if (fronteName) fronteName.textContent = file.name.toUpperCase();
-                        if (fronteStatus) {
-                            fronteStatus.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-                            fronteStatus.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
-                        }
+                        uploadedFronte = await processSelectedFile(file, fronteStatus, fronteName);
+                        if (!uploadedFronte && fronteInput) fronteInput.value = '';
                         updateHelper();
                     });
 
-                    retroInput?.addEventListener('change', (e) => {
+                    retroInput?.addEventListener('change', async (e) => {
                         const file = e.target.files[0];
                         if (!file) {
                             uploadedRetro = null;
@@ -7273,23 +7313,8 @@
                             updateHelper();
                             return;
                         }
-                        if (file.size > 5 * 1024 * 1024) {
-                            alert("Il file non deve superare i 5MB.");
-                            retroInput.value = '';
-                            uploadedRetro = null;
-                            if (retroStatus) {
-                                retroStatus.textContent = "Errore: File > 5MB";
-                                retroStatus.className = "text-[9px] text-primary mt-1 uppercase font-bold";
-                            }
-                            updateHelper();
-                            return;
-                        }
-                        uploadedRetro = file;
-                        if (retroName) retroName.textContent = file.name.toUpperCase();
-                        if (retroStatus) {
-                            retroStatus.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-                            retroStatus.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
-                        }
+                        uploadedRetro = await processSelectedFile(file, retroStatus, retroName);
+                        if (!uploadedRetro && retroInput) retroInput.value = '';
                         updateHelper();
                     });
 
@@ -7319,7 +7344,19 @@
                     const scadenzaInput = document.getElementById(scadenzaInputId);
                     const btn = document.getElementById(btnId);
                     const scadenza = scadenzaInput?.value;
-                    if (!scadenza) { alert('Inserisci la data di scadenza del documento.'); return; }
+                    
+                    if (!scadenza) {
+                        if (scadenzaInput) {
+                            scadenzaInput.classList.add('border-red-500', 'ring-2', 'ring-red-500');
+                            scadenzaInput.focus();
+                            scadenzaInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            scadenzaInput.addEventListener('input', () => {
+                                scadenzaInput.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+                            }, { once: true });
+                        }
+                        showToastNotification('Inserisci la data di scadenza del documento prima di inviare.', 'error');
+                        return;
+                    }
 
                     const origBtnText = btn ? btn.textContent : '';
                     try {
@@ -7328,8 +7365,14 @@
                         const file = await widgetInstance.getFinalDocument();
 
                         if (btn) btn.textContent = 'CARICAMENTO IN CORSO...';
-                        const filePath = `${currentUser.id}/${tipoDoc.toLowerCase()}_${Date.now()}.${file.name.split('.').pop()}`;
-                        const { error: uploadErr } = await supabaseClient.storage.from('documenti_identita').upload(filePath, file, { contentType: file.type, upsert: true });
+                        
+                        let ext = 'jpg';
+                        if (file.type === 'application/pdf') ext = 'pdf';
+                        else if (file.type === 'image/png') ext = 'png';
+                        else if (file.name && file.name.includes('.')) ext = file.name.split('.').pop().toLowerCase();
+                        
+                        const filePath = `${currentUser.id}/${tipoDoc.toLowerCase()}_${Date.now()}.${ext}`;
+                        const { error: uploadErr } = await supabaseClient.storage.from('documenti_identita').upload(filePath, file, { contentType: file.type || 'image/jpeg', upsert: true });
                         if (uploadErr) throw uploadErr;
 
                         if (filePath.toLowerCase().endsWith('.pdf')) {
