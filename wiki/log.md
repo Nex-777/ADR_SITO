@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-11] admin_override | Rettifica Allenatore e Validatore Epika per Simone Avallone (v1.04.36)
+- **Database (`Supabase`)**:
+  - Eseguita rettifica atomica delle tabelle `epika_profili` e `epika_scab_abilitazioni` per l'atleta Simone Avallone (`4161d503-f53d-4f0a-bacc-7b0f8a9ff6c2`).
+  - Aggiornato l'allenatore a **Garid / Ascanio** (`allenatore_id = 4`) e il validatore a **Cunagato / Kuna** (`validatore_opzione_id = 34`).
+  - Resettati cautelativamente gli stati di approvazione della pratica 2026 a `'in_attesa'` e `'giallo'` per consentire una nuova valutazione pulita da parte del nuovo team.
+  - Storicizzata la modifica nel registro audit `epika_registro_modifiche_profilo`.
+
+## [2026-08-11] feature_ui_bugfix | Semplificazione UI Certificati (Rimozione Input Manuali), Autocalcolo Scadenza AI e Sanatoria Monterosso (v1.04.35)
+- **`portal/dashboard.html` e `portal/registrazione.html`**:
+  - **Rimozione Input Manuali**: Nascosti gli input della tipologia e data di emissione del certificato medico sia nel form di registrazione sia nelle varie sezioni di upload della Dashboard. L'utente carica esclusivamente il file del certificato senza compilazioni manuali ridondanti.
+- **`portal/registrazione.js` e `portal/dashboard.js`**:
+  - **Validazione Client Semplificata**: Eliminati i vincoli di compilazione manuale prima di inviare. Impostati valori di fallback trasparenti (`NON_AGONISTICO` e data odierna) al momento dell'insert iniziale in `IN_ATTESA` per consentire l'avvio della validazione AI.
+- **`api/validate.js`**:
+  - **Autocalcolo Scadenza**: Quando l'AI restituisce `data_scadenza: null` (tipico nei certificati cartacei con sola indicazione di validità annuale), il backend calcola automaticamente `data_scadenza = data_rilascio + 1 anno`, garantendo l'assenza di violazioni del vincolo `NOT NULL` PostgreSQL (SQL `23502`).
+  - **Documenti d'Identità**: Dinamizzata la costruzione di `updatePayload` per `documenti_identita` includendo `data_scadenza` solo se presente, evitando inserimenti accidentali di valori nulli.
+  - **Messaggio Fallback Chiarito**: Aggiornata la nota di emergenza nel `catch` globale a `"Errore tecnico di sistema durante l'elaborazione AI (Crash Backend). Richiesta revisione manuale."` per distinguere gli errori server dalle decisioni dell'AI.
+- **Database (`Supabase`)**:
+  - Validato con successo ed aggiornato a `VERDE` il certificato di Lorenzo Monterosso (`16eabf11-de95-45ab-a27d-2c56e5251508`) con scadenza `2027-08-11` e nota esplicativa AI.
+- **Git**: Push del commit `e17789b` su `main` completato con successo.
+
 ## [2026-08-11] bugfix | Raffinamento Prompt AI, Fix Contraddizione todayStr e Push GitHub (v1.04.34)
 - **`api/validate.js`**:
   - **Prompt certificati medici**: eliminata la riga `IMPORTANTE: NON verificare se la data di scadenza è passata...` che contraddiceva la presenza di `todayStr`. La data è ora introdotta con: *"fornita come riferimento contestuale per il formato delle date — NON usarla per calcolare se il certificato è scaduto, la verifica temporale è delegata a un sistema separato."*
