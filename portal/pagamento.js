@@ -3,7 +3,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.36"
+                VERSION: "1.04.37"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -46,7 +46,7 @@
                 // Fetch utente details directly from Supabase
                 const { data: userProfile, error } = await supabaseClient
                     .from('utenti')
-                    .select('nome, cognome, email, quota_totale, tipo_adesione, tipo_tessera, anagrafiche(id, registro_soci(stato_socio), registro_approvazioni(*), certificati_medici(*))')
+                    .select('nome, cognome, email, quota_totale, tipo_adesione, tipo_tessera, anagrafiche(id, registro_soci(stato_socio), registro_approvazioni(*), certificati_medici(*), documenti_identita(*))')
                     .eq('id', utenteId)
                     .maybeSingle();
 
@@ -72,9 +72,50 @@
                     }
                 }
 
+                let idDoc = null;
+                if (anag && anag.documenti_identita) {
+                    if (Array.isArray(anag.documenti_identita)) {
+                        const sorted = [...anag.documenti_identita].sort((a, b) => {
+                            const valA = a.created_at || a.data_caricamento || '1970-01-01';
+                            const valB = b.created_at || b.data_caricamento || '1970-01-01';
+                            return new Date(valB) - new Date(valA);
+                        });
+                        idDoc = sorted[0];
+                    } else {
+                        idDoc = anag.documenti_identita;
+                    }
+                }
+
                 // Check governance status if they are registering as a member (socio or socio_tesserato)
                 if ((userProfile.tipo_adesione === 'socio' || userProfile.tipo_adesione === 'socio_tesserato') && regSocio && regSocio.stato_socio === 'IN_ATTESA_DELIBERA') {
                     showError("La tua domanda di ammissione socio è in attesa di delibera da parte del Consiglio Direttivo. Potrai procedere al pagamento non appena la delibera sarà ratificata.");
+                    return;
+                }
+
+                // Check identity document validation status for all registering users
+                if (!idDoc) {
+                    showError("Documento d'identità mancante. Accedi al portale atleti per caricare il documento d'identità ed abilitare il pagamento.");
+                    return;
+                }
+                const docStatus = idDoc.stato_validazione;
+                const now = new Date();
+                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const docScaduto = idDoc.data_scadenza ? idDoc.data_scadenza < todayStr : false;
+
+                if (docScaduto) {
+                    showError("Il tuo documento d'identità risulta scaduto. Accedi al portale atleti per caricare un documento in corso di validità.");
+                    return;
+                }
+                if (docStatus === 'ROSSO') {
+                    showError(`Il tuo documento d'identità è stato rifiutato. Motivo: ${idDoc.note_ai || 'File non leggibile o non conforme'}. Ricarica un documento valido nel portale.`);
+                    return;
+                }
+                if (docStatus === 'IN_ATTESA') {
+                    showError("Verifica del documento d'identità in corso. Attendi qualche istante o l'approvazione per procedere al pagamento.");
+                    return;
+                }
+                if (docStatus === 'GIALLO') {
+                    showError("Il tuo documento d'identità richiede approvazione manuale da parte della segreteria. Potrai pagare non appena sarà validato.");
                     return;
                 }
 
@@ -85,8 +126,6 @@
                         return;
                     }
                     const status = cert.stato_validazione;
-                    const now = new Date();
-                    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                     const scaduto = cert.data_scadenza < todayStr;
                     
                     if (scaduto) {

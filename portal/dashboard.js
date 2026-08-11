@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.36"
+                VERSION: "1.04.37"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2198,7 +2198,7 @@
             // Render Pending Payments
             if (pagBody) {
                 if (pendingPag.length === 0) {
-                    pagBody.innerHTML = '<tr><td colspan="8" class="p-3 text-center text-gray-500">Nessun utente in attesa di pagamento.</td></tr>';
+                    pagBody.innerHTML = '<tr><td colspan="9" class="p-3 text-center text-gray-500">Nessun utente in attesa di pagamento.</td></tr>';
                 } else {
                     pendingPag.forEach(item => {
                         const row = document.createElement('tr');
@@ -2227,6 +2227,71 @@
                             contattiHtml = parts.join('');
                         }
 
+                        // Documenti d'identità e Certificato Medico
+                        const certInfo = getCertInfo(anag);
+                        const docId = getIdDocInfo(anag);
+
+                        let certHtml = '<span class="text-gray-500 text-[9px]">CERT: MANCANTE</span>';
+                        if (certInfo) {
+                            const scaduto = isCertificatoScaduto(certInfo.data_scadenza);
+                            let color = scaduto ? 'text-primary' : 'text-green-500';
+                            let statusLabel = '';
+                            if (certInfo.stato_validazione === 'ROSSO') {
+                                color = 'text-primary';
+                                statusLabel = '<span class="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">CERT RIFIUTATO</span>';
+                            } else if (certInfo.stato_validazione === 'GIALLO') {
+                                color = 'text-yellow-500';
+                                statusLabel = '<span class="text-[8px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">CERT REVISIONE</span>';
+                            } else if (certInfo.stato_validazione === 'IN_ATTESA') {
+                                color = 'text-gray-400';
+                                statusLabel = '<span class="text-[8px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold">CERT ATTESA</span>';
+                            } else {
+                                statusLabel = '<span class="text-[8px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">CERT OK</span>';
+                            }
+                            certHtml = `
+                                <div class="flex flex-col items-center gap-0.5">
+                                    <a href="#" data-file-url="${escapeHtml(certInfo.file_url)}" class="approvazioni-view-cert-btn underline ${color} font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-0.5 align-middle">medical_services</span>CERTIFICATO</a>
+                                    ${statusLabel}
+                                </div>
+                            `;
+                        }
+
+                        let docIdHtml = '<span class="text-gray-500 text-[9px]">DOC: MANCANTE</span>';
+                        if (docId) {
+                            let docIdColor = 'text-blue-400';
+                            let docIdStatusLabel = '';
+                            if (docId.stato_validazione === 'ROSSO') {
+                                docIdColor = 'text-primary';
+                                docIdStatusLabel = '<span class="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">DOC RIFIUTATO</span>';
+                            } else if (docId.stato_validazione === 'IN_ATTESA') {
+                                docIdColor = 'text-yellow-400';
+                                docIdStatusLabel = '<span class="text-[8px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">DOC ATTESA</span>';
+                            } else if (docId.stato_validazione === 'VERDE') {
+                                docIdColor = 'text-green-400';
+                                docIdStatusLabel = '<span class="text-[8px] bg-green-500/10 text-green-400 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">DOC OK</span>';
+                            }
+                            docIdHtml = `
+                                <div class="flex flex-col items-center gap-0.5 mt-1 border-t border-white/10 pt-1">
+                                    <a href="#" data-file-url="${escapeHtml(docId.file_url)}" class="approvazioni-view-id-btn underline ${docIdColor} font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-0.5 align-middle">badge</span>DOC. IDENTITÀ</a>
+                                    ${docIdStatusLabel}
+                                </div>
+                            `;
+                        }
+
+                        let docsCellHtml = `
+                            <div class="flex flex-col items-center py-1">
+                                ${certHtml}
+                                ${docIdHtml}
+                            </div>
+                        `;
+
+                        let statoWarningHtml = '';
+                        if ((docId && docId.stato_validazione === 'ROSSO') || (certInfo && certInfo.stato_validazione === 'ROSSO')) {
+                            statoWarningHtml = `<div class="mt-1"><span class="px-1.5 py-0.5 border text-[8px] font-bold rounded uppercase text-red-400 bg-red-950/60 border-red-500/60 animate-pulse block">⚠ DOC/CERT RIFIUTATO</span></div>`;
+                        } else if ((docId && docId.stato_validazione === 'IN_ATTESA') || (certInfo && certInfo.stato_validazione === 'IN_ATTESA')) {
+                            statoWarningHtml = `<div class="mt-1"><span class="px-1.5 py-0.5 border text-[8px] font-bold rounded uppercase text-yellow-400 bg-yellow-950/60 border-yellow-500/60 block">⏳ NUOVO DOC DA VALIDARE</span></div>`;
+                        }
+
                         let quotaStr = '€0.00';
                         if (anag.utenti) {
                             const quota = parseFloat(anag.utenti.quota_totale) || 0;
@@ -2247,15 +2312,33 @@
                             <td class="p-3 text-gray-400 font-mono">${cf}</td>
                             <td class="p-3 text-xs lowercase">${contattiHtml}</td>
                             <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
+                            <td class="p-3 text-center">${docsCellHtml}</td>
                             <td class="p-3 text-yellow-500 font-bold">${quotaStr}</td>
                             <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_decisione || item.data_richiesta))}</td>
                             <td class="p-3 text-center">
                                 <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase text-yellow-500 bg-yellow-500/10 border-yellow-500/30">ATTESA PAGAMENTO</span>
+                                ${statoWarningHtml}
                             </td>
                             <td class="p-3 text-right">
                                 ${eliminaBtn || '-'}
                             </td>
                         `;
+                        const viewBtn = row.querySelector('.approvazioni-view-cert-btn');
+                        if (viewBtn) {
+                            viewBtn.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                const url = e.currentTarget.getAttribute('data-file-url');
+                                openSignedFile('certificati_medici', url);
+                            });
+                        }
+                        const viewIdBtn = row.querySelector('.approvazioni-view-id-btn');
+                        if (viewIdBtn) {
+                            viewIdBtn.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                const url = e.currentTarget.getAttribute('data-file-url');
+                                openSignedFile('documenti_identita', url);
+                            });
+                        }
                         pagBody.appendChild(row);
                     });
                 }

@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-11] feature_ui_bugfix | Visibilità Documenti in Attesa Pagamento e Guardrail Sicurezza Pagamento (v1.04.37)
+- **`portal/dashboard.html` e `portal/dashboard.js`**:
+  - **Trasparenza Documenti in Attesa Pagamento**: Aggiunta la colonna "Documenti" ed i badge semaforici per `Documento d'Identità` e `Certificato Medico` nella tabella *TESSERATI E SOCI IN ATTESA DI PAGAMENTO* del Registro Approvazioni.
+  - **Badge Avviso Direttivo**: Inserito l'avviso lampeggiante `⚠ DOC/CERT RIFIUTATO` o `⏳ NUOVO DOC DA VALIDARE` per evidenziare immediatamente all'amministratore gli utenti bloccati con documenti rifiutati o nuovi caricamenti in attesa.
+  - **Pulsanti di Ispezione**: Abilitata l'apertura e visualizzazione dei file direttamente dalla riga dei pagamenti in sospeso (`approvazioni-view-cert-btn`, `approvazioni-view-id-btn`).
+- **`portal/pagamento.js`**:
+  - **Hardening Blocco Pagamento**: Integrata l'interrogazione relazionale a `documenti_identita(*)` nel recupero del profilo in `init()`.
+  - **Guardrail Tassativo Documento Identità**: Imposto il blocco irrevocabile del checkout se il Documento d'Identità è **mancante, scaduto, in stato ROSSO (rifiutato), IN_ATTESA o GIALLO**, mostrando la relativa modale esplicativa e impedendo qualsiasi bypass via URL.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.37` (22 file aggiornati).
+
 ## [2026-08-11] admin_override | Rettifica Allenatore e Validatore Epika per Simone Avallone (v1.04.36)
 - **Database (`Supabase`)**:
   - Eseguita rettifica atomica delle tabelle `epika_profili` e `epika_scab_abilitazioni` per l'atleta Simone Avallone (`4161d503-f53d-4f0a-bacc-7b0f8a9ff6c2`).
