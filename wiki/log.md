@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-11] ui_fix | Ottimizzazione Mobile Header, Ripristino Versione e Fix Registro Tesserati (v1.04.33)
+- **`portal/dashboard.html` e `portal/dashboard.js`**:
+  - **Header Navigazione Mobile**: Rimosso l'override CSS che nascondeva la versione della piattaforma (`Vs. 1.04.33`), rendendola permanentemente visibile su mobile. Spostato il blocco ruoli utente nell'overlay del menu mobile per liberare spazio nell'header. Convertito il pulsante LOGOUT in un'icona compatta su mobile (`<span class="material-symbols-outlined">logout</span>`).
+  - **Registro Tesserati Mobile**: Nascosti i pulsanti "ESPORTA CSV CSEN", "SINCRONIZZA CSEN" e il pannello di log "CSEN Sync Status" su schermi mobile con classi responsive Tailwind (`hidden lg:flex` / `hidden lg:block`). Sostituita la direttiva `space-y-6` con `flex flex-col gap-6` su `#panel-tesserati` per eliminare doppi margini.
+  - **Fix Matrice Tessere CSEN**: Assegnato l'ID univoco `tesserati-desktop-table-wrapper` al contenitore della tabella desktop e aggiornate le chiamate JS da `querySelector('#panel-tesserati .overflow-x-auto')` a `getElementById('tesserati-desktop-table-wrapper')`. Risolto il bug per cui la Matrice Tessere CSEN veniva nascosta per errore al posto della tabella desktop su mobile.
+
+---
+
+## [2026-08-11] bugfix | Fix Fallback Miniature PDF, Iniezione Data Prompt Mistral e Colonna Contatti Registro Approvazioni (v1.04.32)
+- **`api/validate.js`**:
+  - Corretti i bug SQL nei blocchi di fallback per miniatura PDF mancante: aggiornata la colonna `note_ai` in `certificati_medici` e `documenti_identita` al posto di campi inesistenti.
+  - Iniettata la stringa della data odierna `"Oggi è il ${todayStr}. "` nei prompt per Mistral AI per certificati e documenti d'identità per migliorare il contesto temporale dell'analisi.
+- **`portal/dashboard.html` e `portal/dashboard.js`**:
+  - Estesa la visualizzazione della colonna `CONTATTI` (Email, Telefono e WhatsApp) a tutti i riquadri delle tabelle del registro approvazioni ("Soci in Attesa Delibera", "TESSERATI IN ATTESA DI ATTIVAZIONE", "Cronologia Recente Decisioni / Storico").
+- **Database (`Supabase`)**:
+  - Eseguito script di sanatoria `scripts/sanatoria_sofia.js` che ha aggiornato le note di Sofia Fidati distinguendo l'errato caricamento nello slot documento di identità dal PDF del certificato medico senza miniatura.
+
+---
+
 ## [2026-08-10] admin_override | Modifica Allenatore Epika per Umberto Palatroni (Minor) (v1.04.31)
 - **Database (`Supabase`)**:
   - Aggiornata la scelta dell'allenatore per l'atleta Umberto Palatroni (`d8e6db60-7bb2-4837-85b4-0a5f4a51db95`), variando l'assegnazione da Kratos (`ID 15`) a **Minor** (`ID 7`).

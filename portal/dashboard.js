@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.31"
+                VERSION: "1.04.34"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -376,7 +376,13 @@
                 const cognome = profile.cognome || 'N/D';
                 
                 document.getElementById('user-display-name').textContent = `${nome} ${cognome}`;
-                document.getElementById('user-display-role').textContent = `Ruoli: ${userRoles.length > 0 ? userRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'N/D'}`;
+                const roleText = `Ruoli: ${userRoles.length > 0 ? userRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'N/D'}`;
+                document.getElementById('user-display-role').textContent = roleText;
+
+                const mobileNameEl = document.getElementById('mobile-user-display-name');
+                if (mobileNameEl) mobileNameEl.textContent = `${nome} ${cognome}`;
+                const mobileRoleEl = document.getElementById('mobile-user-display-role');
+                if (mobileRoleEl) mobileRoleEl.textContent = roleText;
 
                 try {
                     applyRolePermissions(profile);
@@ -1991,7 +1997,7 @@
 
             // Render Pending Soci
             if (pendingSoci.length === 0) {
-                sociBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessuna richiesta di socio in attesa.</td></tr>';
+                sociBody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-500">Nessuna richiesta di socio in attesa.</td></tr>';
             } else {
                 pendingSoci.forEach(item => {
                     const row = document.createElement('tr');
@@ -2000,6 +2006,27 @@
                     const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
                     const cf = escapeHtml(anag.codice_fiscale || '');
                     const dataN = escapeHtml(anag.data_nascita || '');
+                    
+                    const conObj = Array.isArray(anag.contatti) ? (anag.contatti[0] || {}) : (anag.contatti || {});
+                    const email = conObj.email || '';
+                    const tel = conObj.telefono || '';
+
+                    let contattiHtml = '<span class="text-gray-600 text-[10px]">-</span>';
+                    if (email || tel) {
+                        const parts = [];
+                        if (email) {
+                            parts.push(`<a href="mailto:${escapeHtml(email)}" class="text-primary hover:underline block truncate max-w-[170px] text-xs font-mono lowercase" title="${escapeHtml(email)}">✉️ ${escapeHtml(email)}</a>`);
+                        }
+                        if (tel) {
+                            const cleanTel = tel.replace(/[^0-9+]/g, '');
+                            parts.push(`<div class="flex items-center gap-1.5 mt-0.5">
+                                <a href="tel:${cleanTel}" class="text-xs text-gray-300 hover:text-white font-mono">📞 ${escapeHtml(tel)}</a>
+                                <a href="https://wa.me/${cleanTel.replace('+', '')}" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:text-green-300 font-bold text-[10px] bg-green-950/40 px-1 py-0.5 border border-green-500/30 rounded" title="Apri WhatsApp">💬 WA</a>
+                            </div>`);
+                        }
+                        contattiHtml = parts.join('');
+                    }
+
                     const eliminaBtn = canDelete ? `<button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-1 transition-all uppercase">ELIMINA</button>` : '';
                     
                     row.innerHTML = `
@@ -2008,6 +2035,7 @@
                             <span class="text-[9px] text-gray-500 font-light">Nascita: ${dataN} a ${escapeHtml(anag.comune_nascita || '')} (${escapeHtml(anag.provincia_nascita || '')})</span>
                         </td>
                         <td class="p-3 text-gray-400 font-mono">${cf}</td>
+                        <td class="p-3 text-xs lowercase">${contattiHtml}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_richiesta))}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(item.tipo)}</td>
                         <td class="p-3 text-right flex items-center justify-end gap-2">
@@ -2021,7 +2049,7 @@
 
             // Render Pending Tesserati
             if (pendingTess.length === 0) {
-                tessBody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-500">Nessuna richiesta di tesserato in attesa.</td></tr>';
+                tessBody.innerHTML = '<tr><td colspan="7" class="p-3 text-center text-gray-500">Nessuna richiesta di tesserato in attesa.</td></tr>';
             } else {
                 pendingTess.forEach(item => {
                     const row = document.createElement('tr');
@@ -2029,7 +2057,27 @@
                     const anag = item.anagrafiche || {};
                     const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
                     const cf = escapeHtml(anag.codice_fiscale || '');
-                    
+
+                    const conObj = Array.isArray(anag.contatti) ? (anag.contatti[0] || {}) : (anag.contatti || {});
+                    const email = conObj.email || '';
+                    const tel = conObj.telefono || '';
+
+                    let contattiHtml = '<span class="text-gray-600 text-[10px]">-</span>';
+                    if (email || tel) {
+                        const parts = [];
+                        if (email) {
+                            parts.push(`<a href="mailto:${escapeHtml(email)}" class="text-primary hover:underline block truncate max-w-[170px] text-xs font-mono lowercase" title="${escapeHtml(email)}">✉️ ${escapeHtml(email)}</a>`);
+                        }
+                        if (tel) {
+                            const cleanTel = tel.replace(/[^0-9+]/g, '');
+                            parts.push(`<div class="flex items-center gap-1.5 mt-0.5">
+                                <a href="tel:${cleanTel}" class="text-xs text-gray-300 hover:text-white font-mono">📞 ${escapeHtml(tel)}</a>
+                                <a href="https://wa.me/${cleanTel.replace('+', '')}" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:text-green-300 font-bold text-[10px] bg-green-950/40 px-1 py-0.5 border border-green-500/30 rounded" title="Apri WhatsApp">💬 WA</a>
+                            </div>`);
+                        }
+                        contattiHtml = parts.join('');
+                    }
+
                     const certInfo = getCertInfo(anag);
                     let certHtml = '<span class="text-primary font-bold">MANCANTE</span>';
                     let isCertVerde = false;
@@ -2121,6 +2169,7 @@
                     row.innerHTML = `
                         <td class="p-3 font-bold text-white">${nome}</td>
                         <td class="p-3 text-gray-400 font-mono">${cf}</td>
+                        <td class="p-3 text-xs lowercase">${contattiHtml}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(item.livello_copertura || 'BASE')}</td>
                         <td class="p-3 text-center">${certHtml}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(formatToItalianDate(item.data_richiesta))}</td>
@@ -2250,13 +2299,34 @@
 
             // Render Storico
             if (storico.length === 0) {
-                storicoBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessuna decisione recente.</td></tr>';
+                storicoBody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-500">Nessuna decisione recente.</td></tr>';
             } else {
                 storico.forEach(item => {
                     const row = document.createElement('tr');
                     row.className = 'border-b border-white/5';
                     const anag = item.anagrafiche || {};
                     const nome = escapeHtml(`${anag.nome || ''} ${anag.cognome || ''}`);
+
+                    const conObj = Array.isArray(anag.contatti) ? (anag.contatti[0] || {}) : (anag.contatti || {});
+                    const email = conObj.email || '';
+                    const tel = conObj.telefono || '';
+
+                    let contattiHtml = '<span class="text-gray-600 text-[10px]">-</span>';
+                    if (email || tel) {
+                        const parts = [];
+                        if (email) {
+                            parts.push(`<a href="mailto:${escapeHtml(email)}" class="text-primary hover:underline block truncate max-w-[170px] text-xs font-mono lowercase" title="${escapeHtml(email)}">✉️ ${escapeHtml(email)}</a>`);
+                        }
+                        if (tel) {
+                            const cleanTel = tel.replace(/[^0-9+]/g, '');
+                            parts.push(`<div class="flex items-center gap-1.5 mt-0.5">
+                                <a href="tel:${cleanTel}" class="text-xs text-gray-300 hover:text-white font-mono">📞 ${escapeHtml(tel)}</a>
+                                <a href="https://wa.me/${cleanTel.replace('+', '')}" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:text-green-300 font-bold text-[10px] bg-green-950/40 px-1 py-0.5 border border-green-500/30 rounded" title="Apri WhatsApp">💬 WA</a>
+                            </div>`);
+                        }
+                        contattiHtml = parts.join('');
+                    }
+
                     const badgeClass = item.stato === 'APPROVATO' 
                         ? 'text-green-500 bg-green-500/10 border-green-500/30' 
                         : 'text-primary bg-primary/10 border-primary/30';
@@ -2268,6 +2338,7 @@
 
                     row.innerHTML = `
                         <td class="p-3 font-bold text-white">${nome}</td>
+                        <td class="p-3 text-xs lowercase">${contattiHtml}</td>
                         <td class="p-3 uppercase text-xs">${escapeHtml(item.tipo)}</td>
                         <td class="p-3">${escapeHtml(formatToItalianDate(item.data_decisione))}</td>
                         <td class="p-3">
@@ -2641,7 +2712,7 @@
             let cardContainer = document.getElementById('tesserati-mobile-cards');
             if (!cardContainer) {
                 // Create the container and insert it after the table wrapper
-                const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+                const tableWrapper = document.getElementById('tesserati-desktop-table-wrapper');
                 if (!tableWrapper) return;
                 cardContainer = document.createElement('div');
                 cardContainer.id = 'tesserati-mobile-cards';
@@ -2655,13 +2726,13 @@
             // On desktop, hide the card container
             if (window.innerWidth >= 1024) {
                 cardContainer.style.display = 'none';
-                const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+                const tableWrapper = document.getElementById('tesserati-desktop-table-wrapper');
                 if (tableWrapper) tableWrapper.style.display = '';
                 return;
             }
 
             // On mobile, hide table and show cards
-            const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+            const tableWrapper = document.getElementById('tesserati-desktop-table-wrapper');
             if (tableWrapper) tableWrapper.style.display = 'none';
             cardContainer.style.display = '';
 
@@ -2794,7 +2865,7 @@
         // Re-render mobile cards on resize (desktop <-> mobile switch)
         window.addEventListener('resize', function() {
             const cardContainer = document.getElementById('tesserati-mobile-cards');
-            const tableWrapper = document.querySelector('#panel-tesserati .overflow-x-auto');
+            const tableWrapper = document.getElementById('tesserati-desktop-table-wrapper');
             if (window.innerWidth >= 1024) {
                 if (cardContainer) cardContainer.style.display = 'none';
                 if (tableWrapper) tableWrapper.style.display = '';

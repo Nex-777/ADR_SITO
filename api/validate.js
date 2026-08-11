@@ -177,7 +177,7 @@ export default async function handler(req, res) {
                         console.warn(`[CERT AI] Miniatura non trovata per: ${relativePath}. Fallback a GIALLO per revisione manuale.`);
                         await supabase.from('certificati_medici').update({
                             stato_validazione: 'GIALLO',
-                            note: 'File PDF senza miniatura. Richiesta revisione manuale.'
+                            note_ai: 'File PDF senza miniatura. Richiesta revisione manuale.'
                         }).eq('id', cert_id);
                         return res.status(200).json({ message: 'Miniatura mancante, impostato a GIALLO.' });
                     }
@@ -210,9 +210,9 @@ export default async function handler(req, res) {
                     const mistral = new Mistral({ apiKey: mistralApiKey });
                     const todayStr = new Date().toISOString().split('T')[0];
                     const prompt = `
+Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date — NON usarla per calcolare se il certificato è scaduto, la verifica temporale è delegata a un sistema separato).
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
 Sto per fornirti un'immagine di un certificato medico.
-IMPORTANTE: NON verificare se la data di scadenza è passata o futura rispetto ad oggi. La verifica della scadenza temporale verrà eseguita da un sistema automatico separato.
 
 Devi estrarre le date esatte scritte sul documento. Ignora qualsiasi altra informazione esterna.
 
@@ -387,10 +387,12 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                         fileToFetchUrl = thumbSign.signedUrl;
                     } else {
                         console.warn(`[DOC AI] Miniatura non trovata per: ${relativePath}. Fallback a GIALLO per revisione manuale.`);
-                        await supabase.from('anagrafiche').update({
-                            stato_validazione_doc: 'GIALLO',
-                            note_validazione_doc: 'Documento PDF senza miniatura. Richiesta revisione manuale.'
-                        }).eq('id', targetAnagraficaId);
+                        let docQuery = supabase.from('documenti_identita').update({
+                            stato_validazione: 'GIALLO',
+                            note_ai: 'Documento PDF senza miniatura. Richiesta revisione manuale.'
+                        });
+                        docQuery = doc_id ? docQuery.eq('id', doc_id) : docQuery.eq('anagrafica_id', targetAnagraficaId);
+                        await docQuery;
                         return res.status(200).json({ message: 'Miniatura mancante, impostato a GIALLO.' });
                     }
                 } else if (relativePath && !fileToFetchUrl.startsWith('https://')) {
@@ -420,7 +422,8 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     if (mimeType.includes('application/pdf')) mimeType = 'image/jpeg';
 
                     const mistral = new Mistral({ apiKey: mistralApiKey });
-                    const prompt = `Sei un esperto di documenti di identità italiani. Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida). IMPORTANTE: NON verificare se il documento è scaduto rispetto ad oggi. La verifica della scadenza temporale verrà eseguita da un sistema automatico separato. Devi estrarre queste informazioni in formato JSON STRICT: 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO"), 2. data_scadenza (formato YYYY-MM-DD, null se non leggibile), 3. leggibile (booleano), 4. stato (stringa: "VERDE" se l'immagine è un documento d'identità valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o i dati non sono ben leggibili; "ROSSO" se l'immagine non è un documento d'identità valido), 5. note (breve spiegazione). Rispondi SOLO con il JSON senza markdown. Esempio: {"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento d'identità leggibile e ben fotografato."}`;
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const prompt = `Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date — NON usarla per calcolare se il documento è scaduto, la verifica temporale è delegata a un sistema separato). Sei un esperto di documenti di identità italiani. Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida). Devi estrarre queste informazioni in formato JSON STRICT: 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO"), 2. data_scadenza (formato YYYY-MM-DD, null se non leggibile), 3. leggibile (booleano), 4. stato (stringa: "VERDE" se l'immagine è un documento d'identità valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o i dati non sono ben leggibili; "ROSSO" se l'immagine non è un documento d'identità valido), 5. note (breve spiegazione). Rispondi SOLO con il JSON senza markdown. Esempio: {"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento d'identità leggibile e ben fotografato."}`;
 
                     const response = await mistral.chat.complete({
                         model: 'pixtral-12b-2409',
