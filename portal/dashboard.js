@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.39"
+                VERSION: "1.04.40"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -101,11 +101,15 @@
             if (!anag.documenti_identita) return null;
             if (Array.isArray(anag.documenti_identita)) {
                 if (anag.documenti_identita.length === 0) return null;
-                // Ordina per created_at decrescente per ottenere l'ultimo caricato
+                // Ordina per created_at / data_caricamento decrescente per ottenere l'ultimo documento caricato
                 const sorted = [...anag.documenti_identita].sort((a, b) => {
-                    const valA = a.created_at || a.data_caricamento || '1970-01-01';
-                    const valB = b.created_at || b.data_caricamento || '1970-01-01';
-                    return new Date(valB) - new Date(valA);
+                    const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.data_caricamento ? new Date(a.data_caricamento).getTime() : 0);
+                    const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.data_caricamento ? new Date(b.data_caricamento).getTime() : 0);
+                    if (timeA !== timeB) return timeB - timeA;
+                    // Fallback in caso di date identiche/assenti: preferisci VERDE o IN_ATTESA rispetto a ROSSO
+                    if (a.stato_validazione === 'VERDE' && b.stato_validazione !== 'VERDE') return -1;
+                    if (b.stato_validazione === 'VERDE' && a.stato_validazione !== 'VERDE') return 1;
+                    return 0;
                 });
                 return sorted[0];
             }
@@ -1742,7 +1746,9 @@
                                 file_url,
                                 stato_validazione,
                                 note_ai,
-                                data_scadenza
+                                data_scadenza,
+                                data_caricamento,
+                                created_at
                             )
                         )
                     `)
