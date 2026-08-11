@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.34"
+                VERSION: "1.04.35"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5818,12 +5818,12 @@
         }, 1000);
 
         async function uploadCertificatoDashboard() {
-            const tipologia = document.getElementById('dash-cert-tipologia').value;
-            const emissionDate = document.getElementById('dash-cert-data-emissione').value;
+            const tipologia = document.getElementById('dash-cert-tipologia')?.value || 'NON_AGONISTICO';
+            const emissionDate = document.getElementById('dash-cert-data-emissione')?.value || new Date().toISOString().split('T')[0];
             const btn = document.getElementById('btn-upload-cert-dash');
             
-            if (!tipologia || !emissionDate || !dashUploadedCertFile) {
-                alert("Per favore seleziona la tipologia, la data di emissione e carica un file.");
+            if (!dashUploadedCertFile) {
+                alert("Per favore seleziona o trascina un file prima di inviare.");
                 return;
             }
             
@@ -6419,13 +6419,13 @@
         }
 
         async function uploadNewCertificate() {
-            const tipologia = document.getElementById('user-new-cert-tipo').value;
-            const emissionDate = document.getElementById('user-new-cert-data').value;
-            const medico = "N/D";
+            const tipologia = document.getElementById('user-new-cert-tipo')?.value || 'NON_AGONISTICO';
+            const emissionDate = document.getElementById('user-new-cert-data')?.value || new Date().toISOString().split('T')[0];
+            const medico = "In elaborazione AI...";
             const btn = document.getElementById('btn-user-upload-cert');
 
-            if (!tipologia || !emissionDate || !userUploadedCertFile) {
-                alert("Tutti i campi (tipo, emissione e file) sono obbligatori.");
+            if (!userUploadedCertFile) {
+                alert("Per favore seleziona un file da caricare.");
                 return;
             }
 

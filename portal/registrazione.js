@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.34"
+                VERSION: "1.04.35"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -842,26 +842,6 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         alert("Devi selezionare e caricare il certificato medico prima di procedere.");
                         return false;
                     }
-                    const certTipo = document.getElementById('certificato_tipologia');
-                    if (!certTipo.value) {
-                        alert("Seleziona la tipologia di certificato medico.");
-                        certTipo.focus();
-                        return false;
-                    }
-                    const certData = document.getElementById('certificato_data_emissione');
-                    if (!certData.value) {
-                        alert("Seleziona la data di emissione del certificato medico.");
-                        certData.focus();
-                        return false;
-                    }
-
-                    // Verifica che la data non sia nel futuro
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    if (certData.value > todayStr) {
-                        alert("La data di emissione del certificato non può essere successiva a quella odierna.");
-                        certData.focus();
-                        return false;
-                    }
                 }
             } else if (step === 3) {
                 // Check Identity Document (Mandatory for all)
@@ -1615,8 +1595,8 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     const updatePayload = {};
                     if (preUploadedCertificatoUrl) {
                         updatePayload.certificato_medico_url = preUploadedCertificatoUrl;
-                        updatePayload.certificato_tipologia = document.getElementById('certificato_tipologia').value;
-                        updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione').value;
+                        updatePayload.certificato_tipologia = document.getElementById('certificato_tipologia')?.value || 'NON_AGONISTICO';
+                        updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione')?.value || new Date().toISOString().split('T')[0];
                     }
                     if (preUploadedTutoreUrl) {
                         updatePayload.tutore_documento_url = preUploadedTutoreUrl;

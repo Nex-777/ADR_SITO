@@ -255,9 +255,17 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 
                     finalStatus = aiResult.stato || 'GIALLO';
                     finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
-                    finalRelease = aiResult.data_emissione || null;
-                    finalExpiry = aiResult.data_scadenza || null;
+                    finalRelease = aiResult.data_emissione || new Date().toISOString().split('T')[0];
                     finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
+
+                    if (aiResult.data_scadenza) {
+                        finalExpiry = aiResult.data_scadenza;
+                    } else {
+                        // Se l'AI non trova la data di scadenza esplicita, autocalcola 1 anno dalla data di rilascio
+                        const relDate = new Date(finalRelease);
+                        relDate.setFullYear(relDate.getFullYear() + 1);
+                        finalExpiry = relDate.toISOString().split('T')[0];
+                    }
 
                     // Guardrail Deterministico Javascript su Date Scadenza Certificati
                     if (finalExpiry) {
@@ -463,7 +471,9 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 }
             }
 
-            const updatePayload = { stato_validazione: finalStatus, note_ai: finalNotes, data_scadenza: finalExpiry };
+            const updatePayload = { stato_validazione: finalStatus, note_ai: finalNotes };
+            if (finalExpiry) updatePayload.data_scadenza = finalExpiry;
+
             let dbQuery = supabase.from('documenti_identita').update(updatePayload);
             if (doc_id) {
                 dbQuery = dbQuery.eq('id', doc_id);
@@ -515,7 +525,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
         if (!req.body?.is_manual) {
             try {
                 const supaFallback = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-                const fallbackNote = "Formato o contenuto documento inviato alla direzione per revisione manuale.";
+                const fallbackNote = "Errore tecnico di sistema durante l'elaborazione AI (Crash Backend). Richiesta revisione manuale.";
                 const targetType = req.body?.target_type || (req.body?.table === 'documenti_identita' ? 'doc' : 'cert');
 
                 if (targetType === 'cert') {

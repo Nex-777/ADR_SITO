@@ -18,7 +18,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.04.34"></script>
+    <script src="config.js?v=1.04.35"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -144,7 +144,7 @@
             transform: translateY(0);
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.04.34">
+    <link rel="stylesheet" href="../output.css?v=1.04.35">
 </head>
 <body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen flex flex-col justify-between overflow-x-hidden">
     <div class="noise-overlay"></div>
@@ -157,7 +157,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.04.34</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.04.35</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -381,13 +381,12 @@
                                 <p class="text-xs text-white uppercase font-bold" id="certificato-file-name">SELEZIONA O TRASCINA IL CERTIFICATO</p>
                                 <p class="text-[9px] text-gray-400 mt-1 uppercase" id="certificato-file-status">Nessun file selezionato</p>
                             </div>
-                            <!-- Nuovi Campi Certificato (Tipologia e Data Emissione) -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Nuovi Campi Certificato (Tipologia e Data Emissione - Nascosti per Gestione Automatica AI) -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
                                 <div class="group">
                                     <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">TIPOLOGIA CERTIFICATO *</label>
                                     <select id="certificato_tipologia" class="brutalist-select text-xs">
-                                        <option value="" disabled="" selected="">SELEZIONA TIPOLOGIA</option>
-                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
+                                        <option value="NON_AGONISTICO" selected="">NON AGONISTICO</option>
                                         <option value="AGONISTICO">AGONISTICO</option>
                                     </select>
                                 </div>
@@ -727,8 +726,8 @@
     </footer>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.04.34"></script>
-    <script src="registrazione.js?v=1.04.34"></script>
+    <script src="password-validator.js?v=1.04.35"></script>
+    <script src="registrazione.js?v=1.04.35"></script>
 
 
 

@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-11] bugfix | Raffinamento Prompt AI, Fix Contraddizione todayStr e Push GitHub (v1.04.34)
+- **`api/validate.js`**:
+  - **Prompt certificati medici**: eliminata la riga `IMPORTANTE: NON verificare se la data di scadenza è passata...` che contraddiceva la presenza di `todayStr`. La data è ora introdotta con: *"fornita come riferimento contestuale per il formato delle date — NON usarla per calcolare se il certificato è scaduto, la verifica temporale è delegata a un sistema separato."*
+  - **Prompt documenti d'identità**: stessa correzione applicata — rimossa la doppia istruzione contraddittoria e riformulata la direttiva `todayStr` come contesto di formato, non di calcolo.
+- **Database (`Supabase`)**:
+  - Completata manualmente la sanatoria di Sofia Fidati: aggiornata `note_ai` del certificato medico `8f40f7d6` da messaggio generico di crash a `"File PDF senza miniatura. Richiesta revisione manuale."`. (Lo script `sanatoria_sofia.js` aveva usato un `anagrafica_id` errato e non aveva aggiornato il certificato.)
+- **Git**: Push a `main` su GitHub completato con successo (`40290a3`). Incluده anche tutte le modifiche v1.04.32 che erano rimaste non pushate.
+
 ## [2026-08-11] ui_fix | Ottimizzazione Mobile Header, Ripristino Versione e Fix Registro Tesserati (v1.04.33)
 - **`portal/dashboard.html` e `portal/dashboard.js`**:
   - **Header Navigazione Mobile**: Rimosso l'override CSS che nascondeva la versione della piattaforma (`Vs. 1.04.33`), rendendola permanentemente visibile su mobile. Spostato il blocco ruoli utente nell'overlay del menu mobile per liberare spazio nell'header. Convertito il pulsante LOGOUT in un'icona compatta su mobile (`<span class="material-symbols-outlined">logout</span>`).

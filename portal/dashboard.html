@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.04.34"></script>
+    <script src="config.js?v=1.04.35"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -493,7 +493,7 @@
             color: #C9A84C;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.04.34">
+    <link rel="stylesheet" href="../output.css?v=1.04.35">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -519,7 +519,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.04.34</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.04.35</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -836,12 +836,11 @@
                         <!-- Form di ricaricamento (nascosto di default, mostrato solo se mancante o rosso) -->
                         <div id="user-cert-upload-form" class="hidden space-y-4 border-t border-white/5 pt-4">
                             <p class="text-[10px] text-gray-400 uppercase font-headline">CARICA NUOVO CERTIFICATO MEDICO</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
                                 <div class="group">
                                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">TIPOLOGIA CERTIFICATO</label>
                                     <select id="dash-cert-tipologia" class="w-full brutalist-input bg-black text-white text-xs p-2 border border-white/20">
-                                        <option value="" disabled="" selected="">SELEZIONA</option>
-                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
+                                        <option value="NON_AGONISTICO" selected="">NON AGONISTICO</option>
                                         <option value="AGONISTICO">AGONISTICO</option>
                                     </select>
                                 </div>
@@ -1922,15 +1921,12 @@
                         <div class="border p-6 bg-black/40 space-y-4">
                             <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest">CARICA NUOVO CERTIFICATO</h3>
                             <div class="space-y-4">
-                                <div>
+                                <div class="hidden">
                                     <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Tipologia Certificato</label>
                                     <select id="user-new-cert-tipo" class="w-full brutalist-input text-xs">
-                                        <option value="NON_AGONISTICO">NON AGONISTICO</option>
+                                        <option value="NON_AGONISTICO" selected="">NON AGONISTICO</option>
                                         <option value="AGONISTICO">AGONISTICO</option>
                                     </select>
-                                </div>
-                                <div>
-                                    <label class="block font-headline text-[9px] font-bold text-white uppercase mb-1">Data Rilascio / Emissione</label>
                                     <input type="date" id="user-new-cert-data" class="w-full brutalist-input text-xs">
                                 </div>
                                 <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative" id="auto-dashboard-click-45">
@@ -3141,8 +3137,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.04.34"></script>
-    <script src="dashboard.js?v=1.04.34"></script>
+    <script src="password-validator.js?v=1.04.35"></script>
+    <script src="dashboard.js?v=1.04.35"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
