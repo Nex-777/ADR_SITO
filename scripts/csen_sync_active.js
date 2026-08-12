@@ -628,10 +628,20 @@ async function syncCsen() {
 
             } catch (err) {
                 console.error(`   ❌ ERRORE durante elaborazione di ${nomeCompleto} (${cf}):`, err.message);
+
+                // Se il campo numero_tessera_csen conteneva un codice temporaneo IT...,
+                // azzerarlo esplicitamente: la registrazione è fallita e il codice è invalido.
+                // Un codice IT... fantasma con stato ERROR viene silenziosamente nascosto dalla UI
+                // e impedisce all'amministratore di accorgersi del problema.
+                const isCodiceFallito = tess.numero_tessera_csen &&
+                    String(tess.numero_tessera_csen).toUpperCase().startsWith('IT');
+
                 await supabase.from('registro_tesserati').update({
                     sync_csen_status: 'ERROR',
-                    sync_csen_log: err.message.substring(0, 500)
+                    sync_csen_log: err.message.substring(0, 500),
+                    ...(isCodiceFallito ? { numero_tessera_csen: null } : {})
                 }).eq('id_tesserato', tess.id_tesserato);
+
                 risultati.errori++;
                 risultati.falliti.push({ nome: nomeCompleto, cf, errore: err.message.substring(0, 200) });
             }

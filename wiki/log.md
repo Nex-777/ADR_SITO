@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-12] bugfix | Fix Bug UI CSEN ERROR Nascosto + Hardening Sync Bot + Allineamento Codici Fantasma IT...
+- **Problema Risolto**: Identificato e corretto un bug critico in `portal/dashboard.js` (vista desktop righe ~2705–2739, vista mobile righe ~2870–2901): la struttura `if/else` dava priorità assoluta al campo `numero_tessera_csen` rispetto a `sync_csen_status`. Di conseguenza, se un atleta aveva un codice temporaneo `IT...` nel campo ma lo stato `ERROR`, la UI mostrava la label cyan (codice richiesta) nascondendo silenziosamente l'errore di sincronizzazione.
+- **Fix UI**: `ERROR` ora ha priorità assoluta. Se `sync_csen_status === 'ERROR'`, la colonna CSEN mostra sempre l'etichetta rossa **ERRORE SYNC**, indipendentemente dal valore in `numero_tessera_csen`.
+- **Fix Backend** (`scripts/csen_sync_active.js`): Hardening del blocco `catch` del loop atleti: se la registrazione CSEN fallisce su un atleta con codice `IT...` nel campo, il codice viene azzerato a `null` contestualmente alla scrittura dello stato `ERROR`. Questo previene la persistenza di codici fantasma.
+- **Allineamento DB**: Azzerati tutti i codici `IT...` fantasma (mai registrati su CSEN) per 4 atleti in stato `PENDING`: Giulia Rughetti (T_104_2026), Francesco Stuffer (T_119_2026), Simone Gravina (T_121_2026), Sofia Fidati (T_120_2026). Tutti ora hanno `numero_tessera_csen = NULL` e sono pronti per la prossima run del bot CSEN.
+- **Correzione Livelli Copertura**: Giulia Rughetti: `BASE` → `INTEGRATIVA_B` (comunicazione CSEN deve avvenire con Silver B). Paolo Alesi (T_058_2026): `BASE` → `INTEGRATIVA_B` (allineamento con dato reale CSEN portale).
+- **Script Creati**: `scripts/fix_csen_coverage_and_ghost_codes.js` (idempotente per i 3 atleti target), `scripts/fix_all_it_ghost_codes.js` (generico per tutti i PENDING con IT...).
+- **Global Bump**: Versionamento aggiornato tramite `npm run bump`.
+
 ## [2026-08-11] bugfix | Fix Ordinamento Documenti d'Identità in Registro Approvazioni (v1.04.40)
 - **`portal/dashboard.js`**:
   - **Inclusione `created_at` e `data_caricamento`**: Inseriti i campi `created_at` e `data_caricamento` nella query `.select()` dei `documenti_identita` dentro `loadApprovazioni()`. Precedentemente erano omessi, azzerando l'ordinamento in `getIdDocInfo(anag)` e facendo mostrare per errore il vecchio documento rifiutato (`ROSSO`) invece del nuovo documento approvato (`VERDE`).

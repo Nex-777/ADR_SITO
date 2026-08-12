@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.40"
+                VERSION: "1.04.41"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2703,10 +2703,17 @@
                 if (tess.stato_tesseramento === 'SOSPESO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
 
                 // ---- Colore e testo badge tessera CSEN (tabella) ----
+                // REGOLA: sync_csen_status === 'ERROR' ha priorità assoluta su qualsiasi valore
+                // in numero_tessera_csen (inclusi i codici IT... fantasma) per evitare che
+                // un errore di sincronizzazione venga silenziosamente nascosto dalla UI.
                 let csenTextColor = 'text-yellow-500';  // PENDING default
                 let csenTextStr = 'DA COMUNICARE';
                 let isTempReqCode = false;
-                if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
+                if (tess.sync_csen_status === 'ERROR') {
+                    // ERROR ha priorità assoluta — indipendentemente dal campo numero_tessera_csen
+                    csenTextColor = 'text-primary';
+                    csenTextStr = 'ERRORE SYNC';
+                } else if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
                     isTempReqCode = String(tess.numero_tessera_csen).toUpperCase().startsWith('IT');
                     if (isTempReqCode) {
                         // Codice richiesta temporaneo (es. IT26149086) → Cyan/Azzurro per distinguerlo dalla tessera ufficiale
@@ -2726,10 +2733,6 @@
                         case 'SYNCED_NO_NUM':
                             csenTextColor = 'text-blue-400';
                             csenTextStr = 'IN ATTESA N. CSEN';
-                            break;
-                        case 'ERROR':
-                            csenTextColor = 'text-primary';
-                            csenTextStr = 'ERRORE SYNC';
                             break;
                         case 'PENDING':
                         default:
@@ -2868,9 +2871,16 @@
                 if (tess.stato_tesseramento === 'SOSPESO') tessColor = '#df293e';
 
                 // ---- Colore e testo badge tessera CSEN (card) ----
+                // REGOLA: sync_csen_status === 'ERROR' ha priorità assoluta su qualsiasi valore
+                // in numero_tessera_csen (inclusi i codici IT... fantasma) per evitare che
+                // un errore di sincronizzazione venga silenziosamente nascosto dalla UI.
                 let csenTextColorHex = '#eab308'; // yellow — PENDING default
                 let csenTextStr = 'DA COMUNICARE';
-                if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
+                if (tess.sync_csen_status === 'ERROR') {
+                    // ERROR ha priorità assoluta — indipendentemente dal campo numero_tessera_csen
+                    csenTextColorHex = '#df293e'; // red
+                    csenTextStr = 'ERRORE SYNC';
+                } else if (tess.numero_tessera_csen && tess.numero_tessera_csen !== '0') {
                     const isTempReqCodeCard = String(tess.numero_tessera_csen).toUpperCase().startsWith('IT');
                     if (isTempReqCodeCard) {
                         csenTextColorHex = '#22d3ee'; // cyan — codice richiesta temporaneo
@@ -2888,10 +2898,6 @@
                         case 'SYNCED_NO_NUM':
                             csenTextColorHex = '#3b82f6'; // blue
                             csenTextStr = 'IN ATTESA N. CSEN';
-                            break;
-                        case 'ERROR':
-                            csenTextColorHex = '#df293e'; // red
-                            csenTextStr = 'ERRORE SYNC';
                             break;
                         case 'PENDING':
                         default:
