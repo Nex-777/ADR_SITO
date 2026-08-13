@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] refactor | Reorder Gloria and Historical War Columns in Classifica Potenza (v1.04.56)
+- **Frontend (`portal/epika.html` & `portal/epika.js`)**:
+  - **Spostamento Colonna Gloria**: Posizionata la colonna `GLORIA` subito dopo `FORZA`.
+  - **Inversione Anni Guerra**: Invertito l'ordine delle guerre storiche da sinistra a destra (dal più recente al più vecchio: `ULTIMA GUERRA (2025)` -> `2 GUERRE FA (2024)` -> `3 GUERRE FA (2023)`).
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.56` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] refactor | Reorder POTENZA column in Classifica Potenza Table (v1.04.55)
 - **Frontend (`portal/epika.html` & `portal/epika.js`)**:
   - **Spostamento Colonna Potenza**: Riposizionata la colonna `⚡ POTENZA` subito dopo la colonna `GRUPPO STORICO` per un colpo d'occhio immediato sulla classifica generale.
