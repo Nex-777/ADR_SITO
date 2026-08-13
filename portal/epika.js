@@ -3063,6 +3063,8 @@ async function renderEventiAdmin() {
             const statusStyle = evt.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             const statusIcon = evt.attivo ? '⏸️' : '▶️';
             const statusTitle = evt.attivo ? 'Disattiva Evento' : 'Attiva Evento';
+            const mapUrl = ottieniUrlMappa(evt);
+            const mappaBadge = mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--epk-gold); text-decoration: underline;" title="Apri posizione Google Maps">🗺️ MAPPA</a>` : '';
             const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 12px; padding: 5px 9px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})" title="${statusTitle}">${statusIcon}</button>`;
             const deleteBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 12px; padding: 5px 9px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="cancellaEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" title="Cancella Evento">🗑️</button>`;
             const presenzeBtnText = isReadOnly() ? 'VEDI PRESENZE' : 'GESTISCI PRESENZE';
