@@ -8135,13 +8135,13 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); ${idx === 0 ? 'background: rgba(180, 130, 0, 0.1);' : idx % 2 === 0 ? 'background: rgba(255,255,255,0.02);' : ''}">
                 <td style="padding: 8px; text-align: left; font-weight: bold; color: ${idx === 0 ? 'var(--epk-gold)' : 'var(--epk-parchment)'}; font-size: 13px;">${idx + 1}</td>
                 <td style="padding: 8px; text-align: left; font-weight: bold; font-size: 12px;">${g.nome}${g.popolo ? ` <span style='font-size:9px; color:gray;'>(${g.popolo})</span>` : ''}</td>
+                <td style="padding: 8px; font-family: monospace; font-weight: bold; font-size: 15px; color: var(--epk-gold);">${g.potenza}</td>
                 <td style="padding: 8px; font-family: monospace; font-size: 13px; font-weight: bold;">${g.forza}</td>
                 <td style="padding: 8px; font-family: monospace; color: ${g.g3 ? '#22c55e' : 'rgba(255,255,255,0.3)'};">${g.g3}</td>
                 <td style="padding: 8px; font-family: monospace; color: ${g.g2 ? '#22c55e' : 'rgba(255,255,255,0.3)'};">${g.g2}</td>
                 <td style="padding: 8px; font-family: monospace; color: ${g.g1 ? '#22c55e' : 'rgba(255,255,255,0.3)'};">${g.g1}</td>
                 <td style="padding: 8px; font-family: monospace; font-weight: bold; color: ${g.gloriaTot > 0 ? '#4ade80' : 'rgba(255,255,255,0.3)'};">${g.gloriaTot}</td>
                 <td style="padding: 8px; font-family: monospace; font-weight: bold; color: ${g.bonusScab > 0 ? '#fbbf24' : 'rgba(255,255,255,0.3)'};">${g.bonusScab > 0 ? '+2 🏆' : '0'}</td>
-                <td style="padding: 8px; font-family: monospace; font-weight: bold; font-size: 15px; color: var(--epk-gold);">${g.potenza}</td>
             </tr>
         `).join('');
 

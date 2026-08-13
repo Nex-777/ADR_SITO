@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] refactor | Reorder POTENZA column in Classifica Potenza Table (v1.04.55)
+- **Frontend (`portal/epika.html` & `portal/epika.js`)**:
+  - **Spostamento Colonna Potenza**: Riposizionata la colonna `⚡ POTENZA` subito dopo la colonna `GRUPPO STORICO` per un colpo d'occhio immediato sulla classifica generale.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.55` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] fix | Fix ReferenceError statusStyle in renderEventiAdmin (v1.04.53)
 - **Frontend (`portal/epika.js`)**: Ripristinata la definizione della variabile `statusStyle` all'interno del loop di rendering `renderEventiAdmin()`, risolvendo l'errore `ReferenceError` che bloccava il caricamento e la visualizzazione degli eventi admin.
 - **Global Bump**: Versionamento globale aggiornato a `v1.04.53` tramite `npm run bump`.
