@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.59"
+                VERSION: "1.04.61"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5741,15 +5741,58 @@
                     
                     let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
                     if (atl.tipo_pagamento === 'A RATE') {
-                        tipoPagamentoBadge = '<span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>';
+                        const totRate = atl.totale_rate || (atl.abbonamento_scelto && atl.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
+                        const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
+                        const statoRate = atl.stato_rate || 'IN_REGOLA';
+
+                        let boxesHtml = '';
+                        for (let i = 1; i <= totRate; i++) {
+                            if (i <= ratePagate) {
+                                boxesHtml += `
+                                    <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Mese ${i}/${totRate}: Prelievo Stripe effettuato con successo (Pagato)">
+                                        ✓
+                                    </div>
+                                `;
+                            } else if (i === ratePagate + 1 && statoRate === 'INSOLUTO') {
+                                boxesHtml += `
+                                    <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Mese ${i}/${totRate}: Prelievo Stripe FALLITO (Insoluto)">
+                                        ✗
+                                    </div>
+                                `;
+                            } else {
+                                boxesHtml += `
+                                    <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-500 text-[9px] font-mono select-none cursor-default" title="Mese ${i}/${totRate}: In attesa di addebito">
+                                        ${i}
+                                    </div>
+                                `;
+                            }
+                        }
+
+                        const statusText = statoRate === 'INSOLUTO'
+                            ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider animate-pulse">🔴 INSOLUTO</span>'
+                            : (statoRate === 'ANNULLATO' ? '<span class="text-gray-500 font-bold text-[9px] uppercase tracking-wider">⚪ ANNULLATO</span>' : `<span class="text-green-500 font-mono text-[9px] font-bold">(${ratePagate}/${totRate})</span>`);
+
+                        tipoPagamentoBadge = `
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>
+                                    ${statusText}
+                                </div>
+                                <div class="flex flex-wrap items-center gap-1 mt-0.5">
+                                    ${boxesHtml}
+                                </div>
+                            </div>
+                        `;
                     } else if (atl.tipo_pagamento === 'UNICA RATA') {
                         tipoPagamentoBadge = '<span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">UNICA RATA</span>';
                     } else if (atl.tipo_pagamento === 'GRATUITO') {
                         tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">GRATUITO</span>';
                     }
 
+                    const hasIssue = !atl.cert_valido || atl.stato_rate === 'INSOLUTO';
+
                     const card = document.createElement('div');
-                    card.className = `bg-black/60 border ${!atl.cert_valido ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
+                    card.className = `bg-black/60 border ${hasIssue ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
                     card.innerHTML = `
                         <!-- Header riga -->
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${uniqueCardId}')">
@@ -5757,7 +5800,7 @@
                                 <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${uniqueCardId}">expand_more</span>
                                 <div>
                                     <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2">
-                                        ${!atl.cert_valido ? '<span class="text-red-500 font-bold" title="CERTIFICATO SCADUTO O NON VALIDO">⚠</span>' : ''}
+                                        ${hasIssue ? '<span class="text-red-500 font-bold" title="CERTIFICATO NON VALIDO O RATA INSOLUTA">⚠</span>' : ''}
                                         ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
                                     </h4>
                                     <div class="flex items-center gap-2 mt-1">

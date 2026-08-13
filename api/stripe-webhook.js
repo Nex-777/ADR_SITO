@@ -227,6 +227,9 @@ export default async function handler(req, res) {
                 const isInstallment = session.metadata?.is_installment === 'true';
                 const abbonamentoScelto = nomePiano || 'Mese';
                 const tipoPagamento = isInstallment ? 'A RATE' : 'UNICA RATA';
+                const totaleRateVal = isInstallment ? parseInt(session.metadata?.installments_total || '12') : null;
+                const ratePagateVal = isInstallment ? 1 : null;
+                const statoRateVal = isInstallment ? 'IN_REGOLA' : null;
 
                 if (renew) {
                     // Aggiorna l'iscrizione esistente per rinnovo
@@ -240,7 +243,10 @@ export default async function handler(req, res) {
                             data_scadenza_corso: dataScadenzaCorso,
                             scadenza_modificata_a_mano: false,
                             abbonamento_scelto: abbonamentoScelto,
-                            tipo_pagamento: tipoPagamento
+                            tipo_pagamento: tipoPagamento,
+                            totale_rate: totaleRateVal,
+                            rate_pagate: ratePagateVal,
+                            stato_rate: statoRateVal
                         })
                         .eq('evento_id', eventId)
                         .eq('utente_id', utenteId);
@@ -261,7 +267,10 @@ export default async function handler(req, res) {
                             data_inizio_corso: dataInizioCorso,
                             data_scadenza_corso: dataScadenzaCorso,
                             abbonamento_scelto: abbonamentoScelto,
-                            tipo_pagamento: tipoPagamento
+                            tipo_pagamento: tipoPagamento,
+                            totale_rate: totaleRateVal,
+                            rate_pagate: ratePagateVal,
+                            stato_rate: statoRateVal
                         });
                     
                     if (eventRegError) {
@@ -359,6 +368,179 @@ export default async function handler(req, res) {
         } catch (err) {
             console.error('❌ Errore durante l\'aggiornamento del database post-pagamento:', err);
             return res.status(500).json({ error: 'Errore interno del server.' });
+        }
+    }
+
+    // ==========================================
+    // CASO B: PRELIEVO RATA MENSILE RIUSCITO (invoice.paid)
+    // ==========================================
+    else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') {
+        const invoice = event.data.object;
+        const subId = invoice.subscription;
+
+        // Processa solo le rate periodiche mensili successive (subscription_cycle)
+        if (subId && invoice.billing_reason === 'subscription_cycle') {
+            try {
+                const supabase = createClient(supabaseUrl, supabaseServiceKey);
+                const stripePaymentId = invoice.payment_intent || invoice.id;
+
+                // Trova l'iscrizione collegata a questa sottoscrizione
+                const { data: iscrizione, error: iscError } = await supabase
+                    .from('iscrizioni_eventi')
+                    .select('id, utente_id, evento_id, rate_pagate, totale_rate, abbonamento_scelto')
+                    .eq('codice_transazione', subId)
+                    .maybeSingle();
+
+                if (iscError || !iscrizione) {
+                    console.log(`[INVOICE PAID] Nessuna iscrizione trovata per subscription ${subId}`);
+                    return res.status(200).json({ received: true });
+                }
+
+                // Idempotenza ricevuta
+                const { data: existingReceipt } = await supabase
+                    .from('ricevute_pagamenti')
+                    .select('id')
+                    .eq('codice_transazione', stripePaymentId)
+                    .maybeSingle();
+
+                if (!existingReceipt) {
+                    const importo = parseFloat((invoice.amount_paid / 100).toFixed(2));
+                    const annoFiscale = new Date().getFullYear();
+
+                    const { data: nextNum } = await supabase.rpc('prossimo_numero_ricevuta', { p_anno: annoFiscale });
+                    const nextNumVal = nextNum || 1;
+
+                    const newRatePagate = Math.min((iscrizione.rate_pagate || 1) + 1, iscrizione.totale_rate || 12);
+                    const causale = `Rata ${newRatePagate}/${iscrizione.totale_rate || 12} - Abbonamento ${iscrizione.abbonamento_scelto || 'Corso'}`;
+
+                    const { data: recData } = await supabase
+                        .from('ricevute_pagamenti')
+                        .insert({
+                            numero_ricevuta: nextNumVal,
+                            anno_fiscale: annoFiscale,
+                            utente_id: iscrizione.utente_id,
+                            evento_id: iscrizione.evento_id,
+                            importo: importo,
+                            causale: causale,
+                            metodo_pagamento: 'STRIPE',
+                            codice_transazione: stripePaymentId
+                        })
+                        .select()
+                        .single();
+
+                    // Aggiorna contatore rate e stato
+                    await supabase
+                        .from('iscrizioni_eventi')
+                        .update({
+                            rate_pagate: newRatePagate,
+                            stato_rate: 'IN_REGOLA'
+                        })
+                        .eq('id', iscrizione.id);
+
+                    // Audit log
+                    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Stripe Webhook';
+                    await supabase
+                        .from('registro_audit_operazioni')
+                        .insert({
+                            operatore_id: iscrizione.utente_id,
+                            azione: 'EMISSIONE_RICEVUTA_RATA',
+                            tabella_target: 'ricevute_pagamenti',
+                            record_target_id: String(recData?.id || iscrizione.id),
+                            dettagli: {
+                                numero_ricevuta: nextNumVal,
+                                anno_fiscale: annoFiscale,
+                                utente_id: iscrizione.utente_id,
+                                importo: importo,
+                                rate_pagate: newRatePagate,
+                                stripe_payment_id: stripePaymentId
+                            },
+                            ip_address: typeof ip === 'string' ? ip.split(',')[0].trim() : 'Stripe Webhook'
+                        });
+
+                    console.log(`✅ Rata ${newRatePagate}/${iscrizione.totale_rate} registrata con successo per iscrizione ${iscrizione.id}!`);
+                }
+            } catch (invErr) {
+                console.error("❌ Errore elaborazione invoice.paid:", invErr);
+                return res.status(500).json({ error: invErr.message });
+            }
+        }
+    }
+
+    // ==========================================
+    // CASO C: PRELIEVO RATA FALLITO (invoice.payment_failed)
+    // ==========================================
+    else if (event.type === 'invoice.payment_failed') {
+        const invoice = event.data.object;
+        const subId = invoice.subscription;
+
+        if (subId) {
+            try {
+                const supabase = createClient(supabaseUrl, supabaseServiceKey);
+                const { data: iscrizione } = await supabase
+                    .from('iscrizioni_eventi')
+                    .select('id, utente_id, rate_pagate, totale_rate')
+                    .eq('codice_transazione', subId)
+                    .maybeSingle();
+
+                if (iscrizione) {
+                    await supabase
+                        .from('iscrizioni_eventi')
+                        .update({
+                            stato_rate: 'INSOLUTO'
+                        })
+                        .eq('id', iscrizione.id);
+
+                    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Stripe Webhook';
+                    await supabase
+                        .from('registro_audit_operazioni')
+                        .insert({
+                            operatore_id: iscrizione.utente_id,
+                            azione: 'RATA_FALLITA_STRIPE',
+                            tabella_target: 'iscrizioni_eventi',
+                            record_target_id: String(iscrizione.id),
+                            dettagli: {
+                                subscription_id: subId,
+                                invoice_id: invoice.id,
+                                motivo: invoice.last_finalization_error?.message || 'Prelievo fallito'
+                            },
+                            ip_address: typeof ip === 'string' ? ip.split(',')[0].trim() : 'Stripe Webhook'
+                        });
+
+                    console.log(`⚠️ Segnalato stato INSOLUTO per iscrizione ${iscrizione.id} (Subscription: ${subId})`);
+                }
+            } catch (failErr) {
+                console.error("❌ Errore elaborazione invoice.payment_failed:", failErr);
+            }
+        }
+    }
+
+    // ==========================================
+    // CASO D: SOTTOSCRIZIONE CANCELLATA (customer.subscription.deleted)
+    // ==========================================
+    else if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object;
+        const subId = subscription.id;
+
+        try {
+            const supabase = createClient(supabaseUrl, supabaseServiceKey);
+            const { data: iscrizione } = await supabase
+                .from('iscrizioni_eventi')
+                .select('id, rate_pagate, totale_rate')
+                .eq('codice_transazione', subId)
+                .maybeSingle();
+
+            if (iscrizione && iscrizione.totale_rate && (iscrizione.rate_pagate || 0) < iscrizione.totale_rate) {
+                await supabase
+                    .from('iscrizioni_eventi')
+                    .update({
+                        stato_rate: 'ANNULLATO'
+                    })
+                    .eq('id', iscrizione.id);
+
+                console.log(`ℹ️ Sottoscrizione terminata/annullata anticipatamente per iscrizione ${iscrizione.id}`);
+            }
+        } catch (delErr) {
+            console.error("❌ Errore elaborazione subscription.deleted:", delErr);
         }
     }
 

@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] feature | Monitoraggio e Caselle Rate Mensili Stripe per Corsi ASD (v1.04.61)
+- **Database (Supabase `zpategmkelqmexetpaot`)**:
+  - Aggiunte colonne `totale_rate`, `rate_pagate` e `stato_rate` alla tabella `public.iscrizioni_eventi`.
+  - Eseguito backfill per gli abbonamenti rateali esistenti (Fabio Morganti: 6 rate / 1 pagata; Giulio De Vecchis: 12 rate / 1 pagata).
+  - Aggiornata la vista `public.vw_stato_atleta_corso` per esporre i dati di rateizzazione.
+- **Backend Webhook (`api/stripe-webhook.js`)**:
+  - Aggiunto il salvataggio dei campi di rateizzazione su `checkout.session.completed` per gli abbonamenti a rate.
+  - Aggiunto handler per `invoice.paid` (`billing_reason === 'subscription_cycle'`): incrementa `rate_pagate`, imposta `stato_rate = 'IN_REGOLA'`, genera la ricevuta fiscale progressiva e registra l'audit log.
+  - Aggiunto handler per `invoice.payment_failed`: imposta `stato_rate = 'INSOLUTO'` sull'iscrizione e scrive l'audit log.
+  - Aggiunto handler per `customer.subscription.deleted`: imposta `stato_rate = 'ANNULLATO'` in caso di revoca/cancellazione anticipata dell'abbonamento Stripe.
+- **Frontend (`portal/dashboard.js`)**:
+  - Nella card del tesserato (gestione corsi), per `tipo_pagamento === 'A RATE'` viene renderizzata una griglia visiva interattiva di caselle mensili:
+    - 🟩 **Verde (`✓`)**: Rata saldata con successo tramite Stripe.
+    - 🟥 **Rosso lampeggiante (`✗`)**: Rata con prelievo fallito / insoluto.
+    - ⬜ **Grigio numerato**: Rata futura in attesa di addebito.
+  - Alert ⚠ dinamico nell'header della card se il tesserato ha una rata insoluta.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.60` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] refactor | Pulizia e Rimozione Scheda Battaglie Legacy da Gestione Eserciti (v1.04.59)
 - **Frontend (`portal/epika.html`)**:
   - **Eliminazione Blocco Duplicato**: Rimosso il vecchio container HTML `<!-- Sezione Scheda Battaglie -->` annidato all'interno del pannello `#adm-eserciti-panel`.
