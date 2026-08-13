@@ -3060,6 +3060,7 @@ async function renderEventiAdmin() {
             const dataInizioF = formattaData(evt.data_inizio);
             const dataFineF = formattaData(evt.data_fine);
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
+            const statusStyle = evt.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
             const statusIcon = evt.attivo ? '⏸️' : '▶️';
             const statusTitle = evt.attivo ? 'Disattiva Evento' : 'Attiva Evento';
             const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 12px; padding: 5px 9px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})" title="${statusTitle}">${statusIcon}</button>`;
