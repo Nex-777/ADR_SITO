@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.48">
+    <link rel="stylesheet" href="epika.css?v=1.04.49">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.48"></script>
+    <script src="config.js?v=1.04.49"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.48</span>
+            <span class="epk-version-badge">Vs. 1.04.49</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -1066,6 +1066,16 @@
                                             <!-- Popolato via JS -->
                                         </tbody>
                                     </table>
+                                </div>
+
+                                <!-- Action Dichiara Vincitore -->
+                                <div style="margin-top: 16px; padding: 12px; background: rgba(22, 101, 52, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-size: 11px; color: rgba(245,230,200,0.7);">
+                                        ⚠️ Usa questa azione SOLO a fine Campo Martio per registrare il risultato nella classifica storica della Gloria.
+                                    </div>
+                                    <button class="epk-btn" onclick="dichiaraVincitoreEserciti()" style="padding: 8px 16px; font-size: 10px; background: #166534; border-color: #22c55e; white-space: nowrap;">
+                                        🏆 DICHIARA VINCITORE & REGISTRA GLORIA
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2163,6 +2173,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.48"></script>
+    <script src="epika.js?v=1.04.49"></script>
 </body>
 </html>

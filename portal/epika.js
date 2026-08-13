@@ -7911,7 +7911,7 @@ async function rimuoviBattaglia(battagliaId) {
 
 async function dichiaraVincitoreEserciti() {
     if (isReadOnly()) return;
-    const eventoId = document.getElementById('adm-eserciti-evento-id')?.value;
+    const eventoId = document.getElementById('adm-eserciti-evento-id')?.value || currentPotenzaEventoId;
     if (!eventoId) return;
 
     try {
@@ -8096,8 +8096,9 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
 
         const gloriaMap = {};
         (gloriaData || []).forEach(g => {
-            if (!gloriaMap[g.nome_gruppo]) gloriaMap[g.nome_gruppo] = {};
-            gloriaMap[g.nome_gruppo][g.anno] = true;
+            const key = g.nome_gruppo.toUpperCase();
+            if (!gloriaMap[key]) gloriaMap[key] = {};
+            gloriaMap[key][g.anno] = true;
         });
 
         // 7. Recupera CAMPIONE SCAB per l'anno corrente
@@ -8119,9 +8120,10 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
         // 8. Calcola POTENZA per ogni gruppo
         const classificaGruppi = (gruppi || []).map(g => {
             const forza = forzaPerGruppo[g.id] || 0;
-            const g3 = gloriaMap[g.nome]?.[anniGloria[0]] ? 1 : 0;
-            const g2 = gloriaMap[g.nome]?.[anniGloria[1]] ? 2 : 0;
-            const g1 = gloriaMap[g.nome]?.[anniGloria[2]] ? 3 : 0;
+            const nomeKey = g.nome.toUpperCase();
+            const g3 = gloriaMap[nomeKey]?.[anniGloria[0]] ? 1 : 0;
+            const g2 = gloriaMap[nomeKey]?.[anniGloria[1]] ? 2 : 0;
+            const g1 = gloriaMap[nomeKey]?.[anniGloria[2]] ? 3 : 0;
             const gloriaTot = g3 + g2 + g1;
             const bonusScab = (gruppoScabId === g.id) ? 2 : 0;
             const potenza = forza + gloriaTot + bonusScab;
@@ -8258,7 +8260,7 @@ async function caricaBattaglieEvento(eventoId) {
                 </td>
                 <td style="padding: 8px; text-align: left; font-size: 11px; color: rgba(245,230,200,0.8);">${b.note || '<em style="color:gray;">Nessuna nota</em>'}</td>
                 <td style="padding: 8px;">
-                    <button class="epk-btn-danger" style="padding: 3px 8px; font-size: 9px;" onclick="eliminaBattagliaEvento('${b.id}')" title="Elimina battaglia">🗑️</button>
+                    <button class="epk-btn-secondary" style="padding:3px 8px; font-size:9px; color:#ef4444; border-color:rgba(239,68,68,0.4);" onclick="eliminaBattagliaEvento('${b.id}')" title="Elimina battaglia">🗑️</button>
                 </td>
             </tr>
         `).join('');

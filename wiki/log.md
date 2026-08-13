@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] fix | Fix GloriaMap Case-Sensitivity, SCAB profilo_id, btn-danger e dichiaraVincitore (v1.04.49)
+- **Database (Supabase Remoto `zpategmkelqmexetpaot`)**:
+  - Normalizzati in UPPERCASE i `nome_gruppo` nella tabella `epika_cm_gruppi_vincenti` per allinearli ai nomi ufficiali dei gruppi storici.
+  - Collegati i `profilo_id` dei campioni SCAB (ARGOS e MINOR) dai profili `epika_profili`.
+- **Frontend (`portal/epika.html` & `portal/epika.js`)**:
+  - **GloriaMap**: Normalizzato il lookup in JS per essere insensibile a maiuscole/minuscole (`gloriaMap[nomeKey]`).
+  - **CSS Fix**: Sostituita la classe inesistente `epk-btn-danger` con `epk-btn-secondary` con bordo e testo rossi per il pulsante elimina battaglia.
+  - **Integrazione Dichiara Vincitore**: Inserito l'innesco `🏆 DICHIARA VINCITORE & REGISTRA GLORIA` direttamente dentro il tab Battaglie della dashboard Potenza e aggiunto il fallback `currentPotenzaEventoId` in `dichiaraVincitoreEserciti()`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.49` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] fix | Esecuzione Migrazione DB, Fix Mercenari, Stima Forza Numerica e UI Battaglie (v1.04.48)
 - **Database (Supabase Remoto `zpategmkelqmexetpaot`)**:
   - Eseguita la DDL del file `supabase/migration_epika_potenza_battaglie.sql` tramite MCP `apply_migration`.
