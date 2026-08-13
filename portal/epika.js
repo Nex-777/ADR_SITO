@@ -7536,14 +7536,6 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
 
         renderTatticaEserciti();
 
-        // 5. Carica le battaglie per la Scheda Battaglie
-        await caricaBattaglie(eventoId);
-
-        const btnAggiungi = document.getElementById('adm-battaglie-btn-aggiungi');
-        if (btnAggiungi) btnAggiungi.style.display = readOnlyState ? 'none' : 'inline-block';
-        const btnDichiara = document.getElementById('adm-battaglie-btn-dichiara');
-        if (btnDichiara) btnDichiara.style.display = readOnlyState ? 'none' : 'inline-block';
-
     } catch (e) {
         console.error("Errore caricamento eserciti:", e);
         if (typeof showToast === 'function') showToast("Errore caricamento dati eserciti", "error");
@@ -7955,148 +7947,9 @@ function confermaCoefficientiEserciti() {
     if (typeof showToast === 'function') showToast("Coefficienti di forza aggiornati!", "success");
 }
 
-// ─── SCHEDA BATTAGLIE ───────────────────────────────
-async function caricaBattaglie(eventoId) {
-    if (!eventoId) eventoId = document.getElementById('adm-eserciti-evento-id')?.value;
-    const lista = document.getElementById('adm-battaglie-lista');
-    if (!lista) return;
-
-    try {
-        const { data: battaglie, error } = await supabaseClient
-            .from('epika_battaglie_eventi')
-            .select('*')
-            .eq('evento_id', eventoId)
-            .order('numero_battaglia', { ascending: true });
-
-        if (error) throw error;
-
-        const nomeA = document.getElementById('adm-esercito-a-nome')?.value || 'ESE. A';
-        const nomeB = document.getElementById('adm-esercito-b-nome')?.value || 'ESE. B';
-        const readOnlyState = isReadOnly();
-
-        if (!battaglie || battaglie.length === 0) {
-            lista.innerHTML = '<div style="text-align:center; color:gray; font-size:11px; padding: 12px;">Nessuna battaglia registrata. Clicca "+ AGGIUNGI BATTAGLIA" per iniziare.</div>';
-        } else {
-            lista.innerHTML = battaglie.map(b => {
-                const selA = b.vincitore === 'A' ? 'background: rgba(30, 58, 138, 0.4); border-color: #3b82f6; color: #93c5fd;' : '';
-                const selB = b.vincitore === 'B' ? 'background: rgba(136, 36, 43, 0.4); border-color: #ef4444; color: #fca5a5;' : '';
-                const selP = b.vincitore === 'PAREGGIO' ? 'background: rgba(251, 191, 36, 0.2); border-color: var(--epk-gold); color: var(--epk-gold);' : '';
-                return `
-                <div style="display: grid; grid-template-columns: 40px 1fr 1fr 1fr 2fr auto; gap: 6px; align-items: center; padding: 6px 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 3px;">
-                    <span style="font-size: 11px; font-weight: bold; color: var(--epk-gold); font-family: monospace;">#${b.numero_battaglia}</span>
-                    <button class="epk-btn-secondary" style="font-size: 9px; padding: 4px 6px; ${selA}" ${readOnlyState ? 'disabled' : ''} onclick="aggiornaBattaglia('${b.id}', 'A')">🛡️ ${nomeA}</button>
-                    <button class="epk-btn-secondary" style="font-size: 9px; padding: 4px 6px; ${selB}" ${readOnlyState ? 'disabled' : ''} onclick="aggiornaBattaglia('${b.id}', 'B')">⚔️ ${nomeB}</button>
-                    <button class="epk-btn-secondary" style="font-size: 9px; padding: 4px 6px; ${selP}" ${readOnlyState ? 'disabled' : ''} onclick="aggiornaBattaglia('${b.id}', 'PAREGGIO')">🤝 PAREG.</button>
-                    <input type="text" class="epk-input" style="font-size: 10px; padding: 4px 6px;" value="${b.note || ''}" placeholder="Note..." ${readOnlyState ? 'disabled' : ''} onchange="aggiornaNoteBattaglia('${b.id}', this.value)">
-                    ${!readOnlyState ? `<button class="epk-btn-secondary" style="padding:4px 6px; font-size:9px; color:#ef4444; border-color:#ef4444;" onclick="rimuoviBattaglia('${b.id}')">✕</button>` : '<span></span>'}
-                </div>`;
-            }).join('');
-        }
-
-        aggiornaRiepilogoBattaglie(battaglie || []);
-
-    } catch (err) {
-        lista.innerHTML = `<div style="color:#ef4444; font-size:11px;">Errore: ${err.message}</div>`;
-    }
-}
-
-function aggiornaRiepilogoBattaglie(battaglie) {
-    const riepilogo = document.getElementById('adm-battaglie-riepilogo');
-    const vincitoreLabel = document.getElementById('adm-battaglie-vincitore-label');
-    if (!riepilogo || !vincitoreLabel) return;
-
-    const nomeA = document.getElementById('adm-esercito-a-nome')?.value || 'ESE. A';
-    const nomeB = document.getElementById('adm-esercito-b-nome')?.value || 'ESE. B';
-
-    const vittA = battaglie.filter(b => b.vincitore === 'A').length;
-    const vittB = battaglie.filter(b => b.vincitore === 'B').length;
-    const par = battaglie.filter(b => b.vincitore === 'PAREGGIO').length;
-
-    riepilogo.textContent = `${nomeA}: ${vittA} | ${nomeB}: ${vittB} | PAREGGI: ${par} | TOTALE: ${battaglie.length}`;
-
-    if (vittA > vittB) {
-        vincitoreLabel.textContent = `🏆 ${nomeA} IN VANTAGGIO (${vittA} - ${vittB})`;
-        vincitoreLabel.style.color = '#93c5fd';
-    } else if (vittB > vittA) {
-        vincitoreLabel.textContent = `🏆 ${nomeB} IN VANTAGGIO (${vittB} - ${vittA})`;
-        vincitoreLabel.style.color = '#fca5a5';
-    } else {
-        vincitoreLabel.textContent = `⚖️ SITUAZIONE IN PAREGGIO (${vittA} - ${vittB})`;
-        vincitoreLabel.style.color = 'var(--epk-gold)';
-    }
-}
-
-async function aggiungiBattaglia() {
-    if (isReadOnly()) return;
-    const eventoId = document.getElementById('adm-eserciti-evento-id')?.value;
-    if (!eventoId) return;
-
-    try {
-        const { data: esistenti } = await supabaseClient
-            .from('epika_battaglie_eventi')
-            .select('numero_battaglia')
-            .eq('evento_id', eventoId)
-            .order('numero_battaglia', { ascending: false })
-            .limit(1);
-
-        const prossimoNum = (esistenti && esistenti.length > 0) ? esistenti[0].numero_battaglia + 1 : 1;
-
-        const { error } = await supabaseClient
-            .from('epika_battaglie_eventi')
-            .insert({ evento_id: eventoId, numero_battaglia: prossimoNum, vincitore: 'PAREGGIO', note: '' });
-
-        if (error) throw error;
-        await caricaBattaglie(eventoId);
-    } catch (err) {
-        alert('Errore aggiunta battaglia: ' + err.message);
-    }
-}
-
-async function aggiornaBattaglia(battagliaId, vincitore) {
-    if (isReadOnly()) return;
-    try {
-        const { error } = await supabaseClient
-            .from('epika_battaglie_eventi')
-            .update({ vincitore })
-            .eq('id', battagliaId);
-        if (error) throw error;
-        await caricaBattaglie();
-    } catch (err) {
-        alert('Errore: ' + err.message);
-    }
-}
-
-async function aggiornaNoteBattaglia(battagliaId, note) {
-    if (isReadOnly()) return;
-    try {
-        const { error } = await supabaseClient
-            .from('epika_battaglie_eventi')
-            .update({ note })
-            .eq('id', battagliaId);
-        if (error) throw error;
-    } catch (err) {
-        alert('Errore: ' + err.message);
-    }
-}
-
-async function rimuoviBattaglia(battagliaId) {
-    if (isReadOnly()) return;
-    if (!confirm('Rimuovere questa battaglia?')) return;
-    try {
-        const { error } = await supabaseClient
-            .from('epika_battaglie_eventi')
-            .delete()
-            .eq('id', battagliaId);
-        if (error) throw error;
-        await caricaBattaglie();
-    } catch (err) {
-        alert('Errore: ' + err.message);
-    }
-}
-
 async function dichiaraVincitoreEserciti() {
     if (isReadOnly()) return;
-    const eventoId = document.getElementById('adm-eserciti-evento-id')?.value || currentBattaglieEventoId || currentPotenzaEventoId;
+    const eventoId = currentBattaglieEventoId || esercitiCacheData?.eventoId || document.getElementById('adm-eserciti-evento-id')?.value;
     if (!eventoId) return;
 
     try {
@@ -8168,7 +8021,7 @@ async function dichiaraVincitoreEserciti() {
         }
 
         alert(`✅ ${nomeVincente} dichiarato vincitore!`);
-        await caricaBattaglie(eventoId);
+        if (currentBattaglieEventoId) await caricaBattaglieEvento(currentBattaglieEventoId);
 
     } catch (err) {
         alert('Errore dichiarazione vincitore: ' + err.message);

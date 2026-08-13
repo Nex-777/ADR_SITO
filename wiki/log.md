@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] refactor | Pulizia e Rimozione Scheda Battaglie Legacy da Gestione Eserciti (v1.04.59)
+- **Frontend (`portal/epika.html`)**:
+  - **Eliminazione Blocco Duplicato**: Rimosso il vecchio container HTML `<!-- Sezione Scheda Battaglie -->` annidato all'interno del pannello `#adm-eserciti-panel`.
+- **Frontend (`portal/epika.js`)**:
+  - **Eliminazione Debito Tecnico e Funzioni Legacy**: Rimosse le funzioni `caricaBattaglie()`, `aggiornaRiepilogoBattaglie()`, `aggiungiBattaglia()`, `aggiornaBattaglia()`, `aggiornaNoteBattaglia()`, `rimuoviBattaglia()`.
+  - **Aggiornamento Proclamazione Vincitore**: Consolidata la funzione `dichiaraVincitoreEserciti()` affinché interagisca esclusivamente con il pannello autonomo `#adm-battaglie-panel` (`caricaBattaglieEvento()`).
+  - **Separazione delle Responsabilità (SoC)**: Il pannello *Gestione Eserciti* è ora dedicato esclusivamente alla preparazione tattica e schieramento, mentre il pannello *Registro Battaglie* gestisce in modo centralizzato e privo di ridondanze l'arbitraggio dei round e la proclamazione del vincitore.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.59` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] refactor | UI/UX Redesign Tasti Schieramento Gruppi con Frecce Compatte (v1.04.58)
 - **Frontend (`portal/epika.js`)**:
   - **Redesign Compatto Tasti di Schieramento**: Rimossi i pulsanti ingombranti e testuali (`AD ESERCITO A` / `AD ESERCITO B` / `RIMUOVI`) che soffocavano le card dei gruppi storici.

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.58">
+    <link rel="stylesheet" href="epika.css?v=1.04.59">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.58"></script>
+    <script src="config.js?v=1.04.59"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.58</span>
+            <span class="epk-version-badge">Vs. 1.04.59</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -947,26 +947,6 @@
                                 </div>
                                 <div id="adm-eserciti-mercenari-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">
                                     <!-- Popolato via JS -->
-                                </div>
-                            </div>
-
-                            <!-- Sezione Scheda Battaglie -->
-                            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.2); padding: 16px; border-radius: 4px; margin-top: 20px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 8px; margin-bottom: 12px;">
-                                    <h3 style="font-size: 14px; color: var(--epk-gold); font-family: 'Cinzel', serif; margin: 0;">
-                                        📜 SCHEDA BATTAGLIE
-                                    </h3>
-                                    <div style="display: flex; gap: 8px; align-items: center;">
-                                        <div id="adm-battaglie-riepilogo" style="font-size: 11px; font-weight: bold; font-family: monospace; color: var(--epk-gold-dim);"></div>
-                                        <button id="adm-battaglie-btn-aggiungi" class="epk-btn" style="padding: 6px 12px; font-size: 9px;" onclick="aggiungiBattaglia()">+ AGGIUNGI BATTAGLIA</button>
-                                    </div>
-                                </div>
-                                <div id="adm-battaglie-lista" style="display: flex; flex-direction: column; gap: 6px; max-height: 500px; overflow-y: auto;">
-                                    <!-- Popolato via JS -->
-                                </div>
-                                <div id="adm-battaglie-vincitore-bar" style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--epk-gold-dim); border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                                    <div id="adm-battaglie-vincitore-label" style="font-size: 13px; font-weight: bold; font-family: 'Cinzel', serif; color: var(--epk-gold);"></div>
-                                    <button id="adm-battaglie-btn-dichiara" class="epk-btn" style="padding: 8px 16px; font-size: 10px; background: #166534; border-color: #22c55e;" onclick="dichiaraVincitoreEserciti()">🏆 DICHIARA VINCITORE</button>
                                 </div>
                             </div>
                         </div>
@@ -2172,6 +2152,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.58"></script>
+    <script src="epika.js?v=1.04.59"></script>
 </body>
 </html>
