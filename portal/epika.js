@@ -7990,13 +7990,49 @@ async function dichiaraVincitoreEserciti() {
     }
 }
 
-// ─── DASHBOARD POTENZA GRUPPI ───────────────────────────────
+// ─── DASHBOARD POTENZA & BATTAGLIE GRUPPI ───────────────────
+let currentPotenzaEventoId = null;
+
+function switchSubTabPotenza(tab) {
+    const viewClassifica = document.getElementById('adm-potenza-view-classifica');
+    const viewBattaglie = document.getElementById('adm-potenza-view-battaglie');
+    const btnClassifica = document.getElementById('adm-potenza-tab-btn-classifica');
+    const btnBattaglie = document.getElementById('adm-potenza-tab-btn-battaglie');
+
+    if (!viewClassifica || !viewBattaglie) return;
+
+    if (tab === 'classifica') {
+        viewClassifica.style.display = 'block';
+        viewBattaglie.style.display = 'none';
+        btnClassifica.className = 'epk-btn';
+        btnClassifica.style.background = 'var(--epk-gold)';
+        btnClassifica.style.color = '#000';
+        btnBattaglie.className = 'epk-btn-secondary';
+        btnBattaglie.style.background = 'transparent';
+        btnBattaglie.style.color = 'var(--epk-gold)';
+    } else {
+        viewClassifica.style.display = 'none';
+        viewBattaglie.style.display = 'block';
+        btnBattaglie.className = 'epk-btn';
+        btnBattaglie.style.background = 'var(--epk-gold)';
+        btnBattaglie.style.color = '#000';
+        btnClassifica.className = 'epk-btn-secondary';
+        btnClassifica.style.background = 'transparent';
+        btnClassifica.style.color = 'var(--epk-gold)';
+        if (currentPotenzaEventoId) caricaBattaglieEvento(currentPotenzaEventoId);
+    }
+}
+
 async function mostraPannelloPotenza(eventoId, eventoTitolo) {
     const panel = document.getElementById('adm-potenza-panel');
     if (!panel) return;
 
+    currentPotenzaEventoId = eventoId;
     apriPannelloEsclusivoAdmin('adm-potenza-panel');
-    document.getElementById('adm-potenza-titolo').textContent = `⚡ CLASSIFICA POTENZA GRUPPI: ${eventoTitolo.toUpperCase()}`;
+    document.getElementById('adm-potenza-titolo').textContent = `⚡ CLASSIFICA POTENZA & BATTAGLIE: ${eventoTitolo.toUpperCase()}`;
+
+    // Mostra di default il tab Classifica
+    switchSubTabPotenza('classifica');
 
     const tbody = document.getElementById('adm-potenza-table-body');
     const summary = document.getElementById('adm-potenza-summary');
@@ -8012,12 +8048,14 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
             .single();
         const annoCorrente = new Date(evento.data_inizio).getFullYear();
 
-        // 2. Recupera tutti i gruppi storici attivi (escluso Mercenari)
-        const { data: gruppi } = await supabaseClient
+        // 2. Recupera tutti i gruppi storici attivi (escluso Mercenari in modo case-insensitive)
+        const { data: rawGruppi } = await supabaseClient
             .from('epika_gruppi_storici')
             .select('id, nome, popolo')
             .eq('attivo', true)
-            .neq('nome', 'Mercenari');
+            .not('nome', 'ilike', 'mercenari');
+
+        const gruppi = (rawGruppi || []).filter(g => g.nome.toUpperCase() !== 'MERCENARI');
 
         // 3. Recupera presenze confermate per questo evento
         const { data: presenze } = await supabaseClient
@@ -8026,6 +8064,7 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
             .eq('evento_id', eventoId)
             .eq('presente', true);
         const utentiPresenti = new Set((presenze || []).map(p => p.utente_id));
+        const usaPresenzeReali = utentiPresenti.size > 0;
 
         // 4. Recupera iscrizioni con profili
         const { data: iscrizioni } = await supabaseClient
@@ -8033,18 +8072,18 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
             .select(`utente_id, gruppo_storico_id, profilo:epika_profili(ruolo_combattimento, gruppo_storico_id, nome_di_battaglia)`)
             .eq('evento_id', eventoId);
 
-        // 5. Calcola FORZA NUMERICA per gruppo
+        // 5. Calcola FORZA NUMERICA per gruppo (con fallback su Iscritti se non ci sono presenze)
         const forzaPerGruppo = {};
         (gruppi || []).forEach(g => { forzaPerGruppo[g.id] = 0; });
-        let totaleCombattentiPresenti = 0;
+        let totaleCombattentiContati = 0;
 
         (iscrizioni || []).forEach(isc => {
-            if (!utentiPresenti.has(isc.utente_id)) return;
+            if (usaPresenzeReali && !utentiPresenti.has(isc.utente_id)) return;
             if (isc.profilo?.ruolo_combattimento !== 'combattente') return;
             const gId = isc.gruppo_storico_id || isc.profilo?.gruppo_storico_id;
             if (gId && forzaPerGruppo[gId] !== undefined) {
                 forzaPerGruppo[gId]++;
-                totaleCombattentiPresenti++;
+                totaleCombattentiContati++;
             }
         });
 
@@ -8070,7 +8109,7 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
 
         let gruppoScabId = null;
         let nomeCampione = campione?.nome_campione || 'N/D';
-        if (campione?.profilo_id && utentiPresenti.has(campione.profilo_id)) {
+        if (campione?.profilo_id && (!usaPresenzeReali || utentiPresenti.has(campione.profilo_id))) {
             const iscCampione = (iscrizioni || []).find(i => i.utente_id === campione.profilo_id);
             if (iscCampione && iscCampione.profilo?.ruolo_combattimento === 'combattente') {
                 gruppoScabId = iscCampione.gruppo_storico_id || iscCampione.profilo?.gruppo_storico_id;
@@ -8101,14 +8140,15 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
         const gruppoScabNome = gruppoScabId ? (gruppi || []).find(g => g.id === gruppoScabId)?.nome || 'N/D' : null;
         summary.innerHTML = `
             <div style="background: rgba(30, 58, 138, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px; border-radius: 4px;">
-                <div style="font-size: 9px; color: rgba(255,255,255,0.6); text-transform: uppercase;">COMBATTENTI PRESENTI</div>
-                <div style="font-size: 20px; font-weight: bold; color: #93c5fd; font-family: monospace;">${totaleCombattentiPresenti}</div>
+                <div style="font-size: 9px; color: rgba(255,255,255,0.6); text-transform: uppercase;">COMBATTENTI ${usaPresenzeReali ? 'PRESENTI' : 'ISCRITTI (STIMA)'}</div>
+                <div style="font-size: 20px; font-weight: bold; color: #93c5fd; font-family: monospace;">${totaleCombattentiContati}</div>
+                ${!usaPresenzeReali ? '<div style="font-size: 9px; color: #f59e0b; margin-top: 2px;">⏳ Presenze non ancora registrate</div>' : ''}
             </div>
             <div style="background: rgba(136, 36, 43, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); padding: 12px; border-radius: 4px;">
                 <div style="font-size: 9px; color: rgba(255,255,255,0.6); text-transform: uppercase;">🏆 CAMPIONE SCAB ${annoCorrente}</div>
                 <div style="font-size: 14px; font-weight: bold; color: #fca5a5; font-family: 'Cinzel', serif;">${nomeCampione}</div>
                 <div style="font-size: 10px; color: ${gruppoScabId ? '#22c55e' : '#f97316'};">
-                    ${gruppoScabId ? `✓ Presente — +2 pt a ${gruppoScabNome}` : (campione?.profilo_id ? '⚠ Non presente all\'evento' : '⚠ Profilo non collegato')}
+                    ${gruppoScabId ? `✓ ${usaPresenzeReali ? 'Presente' : 'Iscritto'} — +2 pt a ${gruppoScabNome}` : (campione?.profilo_id ? '⚠ Non iscritto/presente all\'evento' : '⚠ Profilo non collegato')}
                 </div>
             </div>
             <div style="background: rgba(180, 130, 0, 0.15); border: 1px solid rgba(212, 175, 55, 0.3); padding: 12px; border-radius: 4px;">
@@ -8132,8 +8172,155 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
             </tr>
         `).join('');
 
+        // Carica in background anche i dati delle battaglie
+        caricaBattaglieEvento(eventoId);
+
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="9" style="padding: 20px; color: #ef4444; font-size: 11px;">Errore: ${err.message}</td></tr>`;
+    }
+}
+
+// ─── GESTIONE BATTAGLIE EVENTO (CR / SCAB) ─────────────────
+async function caricaBattaglieEvento(eventoId) {
+    const summary = document.getElementById('adm-battaglie-summary');
+    const tbody = document.getElementById('adm-battaglie-table-body');
+    if (!tbody || !summary) return;
+
+    tbody.innerHTML = '<tr><td colspan="4" style="padding: 16px; color: gray; font-size: 11px;">Caricamento battaglie...</td></tr>';
+
+    try {
+        const { data: battaglie, error } = await supabaseClient
+            .from('epika_battaglie_eventi')
+            .select('*')
+            .eq('evento_id', eventoId)
+            .order('numero_battaglia', { ascending: true });
+
+        if (error) throw error;
+
+        let vittorieA = 0;
+        let vittorieB = 0;
+        let pareggi = 0;
+
+        (battaglie || []).forEach(b => {
+            if (b.vincitore === 'A') vittorieA++;
+            else if (b.vincitore === 'B') vittorieB++;
+            else if (b.vincitore === 'PAREGGIO') pareggi++;
+        });
+
+        const totaleBattaglie = (battaglie || []).length;
+        let statoVincitore = 'PAREGGIO IN CORSO';
+        let coloreVincitore = '#f59e0b';
+        if (vittorieA > vittorieB) {
+            statoVincitore = '🏆 ESERCITO A IN VANTAGGIO';
+            coloreVincitore = '#60a5fa';
+        } else if (vittorieB > vittorieA) {
+            statoVincitore = '🏆 ESERCITO B IN VANTAGGIO';
+            coloreVincitore = '#f87171';
+        }
+
+        summary.innerHTML = `
+            <div style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 10px; border-radius: 4px;">
+                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">VITTORIE ESERCITO A</div>
+                <div style="font-size: 18px; font-weight: bold; color: #93c5fd; font-family: monospace;">${vittorieA}</div>
+            </div>
+            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 4px;">
+                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">VITTORIE ESERCITO B</div>
+                <div style="font-size: 18px; font-weight: bold; color: #fca5a5; font-family: monospace;">${vittorieB}</div>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 10px; border-radius: 4px;">
+                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">PAREGGI</div>
+                <div style="font-size: 18px; font-weight: bold; color: #fde047; font-family: monospace;">${pareggi}</div>
+            </div>
+            <div style="background: rgba(180, 130, 0, 0.15); border: 1px solid rgba(212, 175, 55, 0.3); padding: 10px; border-radius: 4px;">
+                <div style="font-size: 9px; color: rgba(255,255,255,0.6);">RISULTATO GLOBALE (${totaleBattaglie} BATTAGLIE)</div>
+                <div style="font-size: 12px; font-weight: bold; color: ${coloreVincitore}; font-family: 'Cinzel', serif; margin-top: 4px;">${statoVincitore}</div>
+            </div>`;
+
+        // Auto-imposta il prossimo numero di battaglia nel form
+        const proximaBattaglia = (battaglie || []).length > 0 
+            ? Math.max(...battaglie.map(b => b.numero_battaglia)) + 1 
+            : 1;
+        const numInput = document.getElementById('adm-battaglia-numero');
+        if (numInput) numInput.value = proximaBattaglia;
+
+        if (!battaglie || battaglie.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="padding: 16px; color: gray; font-size: 11px;">Nessuna battaglia registrata per questo evento.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = battaglie.map(b => `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 8px; font-weight: bold; font-family: monospace; color: var(--epk-gold);">#${b.numero_battaglia}</td>
+                <td style="padding: 8px;">
+                    <span class="badge" style="background: ${b.vincitore === 'A' ? '#1e3a8a' : b.vincitore === 'B' ? '#88242b' : '#78350f'}; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 10px;">
+                        ${b.vincitore === 'A' ? '⚔️ ESERCITO A' : b.vincitore === 'B' ? '⚔️ ESERCITO B' : '🤝 PAREGGIO'}
+                    </span>
+                </td>
+                <td style="padding: 8px; text-align: left; font-size: 11px; color: rgba(245,230,200,0.8);">${b.note || '<em style="color:gray;">Nessuna nota</em>'}</td>
+                <td style="padding: 8px;">
+                    <button class="epk-btn-danger" style="padding: 3px 8px; font-size: 9px;" onclick="eliminaBattagliaEvento('${b.id}')" title="Elimina battaglia">🗑️</button>
+                </td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="padding: 16px; color: #ef4444; font-size: 11px;">Errore caricamento battaglie: ${err.message}</td></tr>`;
+    }
+}
+
+async function salvaBattagliaEvento() {
+    if (isReadOnly()) return;
+    if (!currentPotenzaEventoId) {
+        if (typeof showToast === 'function') showToast("Seleziona prima un evento valido", "warning");
+        return;
+    }
+
+    const numInput = document.getElementById('adm-battaglia-numero');
+    const vincitoreSelect = document.getElementById('adm-battaglia-vincitore');
+    const noteInput = document.getElementById('adm-battaglia-note');
+
+    const numero_battaglia = parseInt(numInput?.value || '1', 10);
+    const vincitore = vincitoreSelect?.value || 'A';
+    const note = (noteInput?.value || '').trim();
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_battaglie_eventi')
+            .upsert({
+                evento_id: currentPotenzaEventoId,
+                numero_battaglia: numero_battaglia,
+                vincitore: vincitore,
+                note: note
+            }, { onConflict: 'evento_id, numero_battaglia' });
+
+        if (error) throw error;
+
+        if (typeof showToast === 'function') showToast(`⚔️ Battaglia #${numero_battaglia} salvata!`, "success");
+        if (noteInput) noteInput.value = '';
+        caricaBattaglieEvento(currentPotenzaEventoId);
+    } catch (err) {
+        console.error("Errore salvataggio battaglia:", err);
+        if (typeof showToast === 'function') showToast("Errore durante il salvataggio della battaglia", "error");
+    }
+}
+
+async function eliminaBattagliaEvento(battagliaId) {
+    if (isReadOnly()) return;
+    if (!confirm("Sei sicuro di voler eliminare questa battaglia?")) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_battaglie_eventi')
+            .delete()
+            .eq('id', battagliaId);
+
+        if (error) throw error;
+
+        if (typeof showToast === 'function') showToast("Battaglia eliminata", "info");
+        if (currentPotenzaEventoId) caricaBattaglieEvento(currentPotenzaEventoId);
+    } catch (err) {
+        console.error("Errore eliminazione battaglia:", err);
+        if (typeof showToast === 'function') showToast("Errore durante l'eliminazione", "error");
     }
 }
 

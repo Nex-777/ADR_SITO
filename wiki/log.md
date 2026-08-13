@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] fix | Esecuzione Migrazione DB, Fix Mercenari, Stima Forza Numerica e UI Battaglie (v1.04.48)
+- **Database (Supabase Remoto `zpategmkelqmexetpaot`)**:
+  - Eseguita la DDL del file `supabase/migration_epika_potenza_battaglie.sql` tramite MCP `apply_migration`.
+  - Create tabelle `epika_battaglie_eventi`, `epika_campioni_scab`, `epika_cm_gruppi_vincenti` e colonna `esercito_vincente` in `epika_eserciti_eventi`. Popolati dati seed.
+- **Frontend (`portal/epika.html` & `portal/epika.js`)**:
+  - **Fix 404 & MERCENARI**: Applicato filtro `.not('nome', 'ilike', 'mercenari')` a livello DB e filtro JS case-insensitive per escludere totalmente i Mercenari dalla classifica Potenza.
+  - **Forza Numerica**: Implementata la logica di fallback: se l'evento non ha ancora presenze confermate, il calcolo della Forza Numerica utilizza gli iscritti combattenti come stima preliminare ed espone un badge informativo.
+  - **Gestione Battaglie**: Aggiunta la navigazione sub-tab ("CLASSIFICA POTENZA" e "REGISTRO BATTAGLIE") nel pannello Potenza. La scheda battaglie permette di registrare il vincitore di ciascuno scontro (A/B/Pareggio), inserire note, cancellare battaglie ed esporre il conteggio in tempo reale del vincitore di Campo Martio.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.48` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] feature | Dashboard POTENZA Gruppi, Scheda Battaglie & Campioni SCAB (v1.04.45)
 - **Database (`supabase/migration_epika_potenza_battaglie.sql`)**:
   - Aggiunta colonna `esercito_vincente` (`A`, `B`, `PAREGGIO`) a `public.epika_eserciti_eventi`.
