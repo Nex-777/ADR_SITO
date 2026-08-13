@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.49"
+                VERSION: "1.04.52"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5594,9 +5594,9 @@
             loadRegistroIscritti();
         }
 
-        window.toggleAthleteCard = function(utenteId) {
-            const details = document.getElementById(`details-card-${utenteId}`);
-            const icon = document.getElementById(`icon-card-${utenteId}`);
+        window.toggleAthleteCard = function(cardId) {
+            const details = document.getElementById(`details-card-${cardId}`);
+            const icon = document.getElementById(`icon-card-${cardId}`);
             if (details) {
                 details.classList.toggle('hidden');
                 if (icon) {
@@ -5675,7 +5675,9 @@
 
                 container.innerHTML = '';
 
-                instructorStudentsData.forEach(atl => {
+                instructorStudentsData.forEach((atl, idx) => {
+                    const uniqueCardId = (atl.iscrizione_id || atl.utente_id) + '_' + idx;
+
                     // Badge CSEN
                     const badgeCsen = atl.stato_tesseramento === 'ATTIVO'
                         ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">ATTIVO</span>'
@@ -5750,9 +5752,9 @@
                     card.className = `bg-black/60 border ${!atl.cert_valido ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
                     card.innerHTML = `
                         <!-- Header riga -->
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${atl.utente_id}')">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${uniqueCardId}')">
                             <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${atl.utente_id}">expand_more</span>
+                                <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${uniqueCardId}">expand_more</span>
                                 <div>
                                     <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2">
                                         ${!atl.cert_valido ? '<span class="text-red-500 font-bold" title="CERTIFICATO SCADUTO O NON VALIDO">⚠</span>' : ''}
@@ -5777,7 +5779,7 @@
                         </div>
 
                         <!-- Dettagli Espandibili -->
-                        <div id="details-card-${atl.utente_id}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <div id="details-card-${uniqueCardId}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                             <div>
                                 <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">PIANO ABBONAMENTO</span>
                                 <div class="mt-1 flex items-center gap-1">

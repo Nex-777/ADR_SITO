@@ -3060,17 +3060,14 @@ async function renderEventiAdmin() {
             const dataInizioF = formattaData(evt.data_inizio);
             const dataFineF = formattaData(evt.data_fine);
             const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
-            const statusStyle = evt.attivo ? 'color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
-            const statusText = evt.attivo ? 'DISATTIVA' : 'ATTIVA';
-
-            const mapUrl = ottieniUrlMappa(evt);
-            const mappaBadge = mapUrl ? `<a href="${mapUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--epk-gold); text-decoration: underline;" title="Apri posizione Google Maps">🗺️ MAPPA</a>` : '';
-
-            const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})">${statusText}</button>`;
-            const deleteBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="cancellaEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">CANCELLA</button>`;
+            const statusIcon = evt.attivo ? '⏸️' : '▶️';
+            const statusTitle = evt.attivo ? 'Disattiva Evento' : 'Attiva Evento';
+            const toggleBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 12px; padding: 5px 9px; ${statusStyle}" onclick="toggleStatoEvento('${evt.id}', ${evt.attivo})" title="${statusTitle}">${statusIcon}</button>`;
+            const deleteBtnHtml = isReadOnly() ? '' : `<button class="epk-btn-secondary" style="font-size: 12px; padding: 5px 9px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="cancellaEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" title="Cancella Evento">🗑️</button>`;
             const presenzeBtnText = isReadOnly() ? 'VEDI PRESENZE' : 'GESTISCI PRESENZE';
             const esercitiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #581c87; border-color: #a855f7;" onclick="mostraPannelloEserciti('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">GESTIONE ESERCITI</button>`;
-            const potenzaBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: rgba(180, 130, 0, 0.5); border-color: #d4af37; color: #ffd700;" onclick="mostraPannelloPotenza('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" title="Classifica Potenza Gruppi">⚡ POTENZA</button>` : '';
+            const potenzaBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: rgba(180, 130, 0, 0.5); border-color: #d4af37; color: #ffd700;" onclick="mostraPannelloPotenza('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" title="Classifica Potenza Gruppi">POTENZA</button>` : '';
+            const battaglieBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn-secondary" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloBattaglie('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">REGISTRO BATTAGLIE</button>` : '';
 
             container.innerHTML += `
                 <div class="epk-card" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
@@ -3081,11 +3078,12 @@ async function renderEventiAdmin() {
                                 📅 ${dataFormattata} | ⏰ INIZIO: ${evt.ora_arrivo_min ? evt.ora_arrivo_min.slice(0, 5) : '09:00'} - FINE: ${evt.ora_ripartenza_max ? evt.ora_ripartenza_max.slice(0, 5) : '18:00'} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} ${mappaBadge ? '| ' + mappaBadge : ''} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')} | 💰 COSTO: €${parseFloat(evt.costo || 0).toFixed(2)}
                             </span>
                         </div>
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px; align-items: center;">
                             <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #1e3a8a; border-color: #3b82f6;" onclick="mostraDashboardEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.data_inizio}', '${evt.data_fine}')">DASHBOARD</button>
-                            <button class="epk-btn" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
-                            ${esercitiBtnHtml}
                             ${potenzaBtnHtml}
+                            ${esercitiBtnHtml}
+                            ${battaglieBtnHtml}
+                            <button class="epk-btn" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
                             ${toggleBtnHtml}
                             ${deleteBtnHtml}
                         </div>
@@ -3251,7 +3249,9 @@ function apriPannelloEsclusivoAdmin(targetPanelId) {
     const PANNELLI_EVENTO = [
         'adm-presenze-panel', 
         'adm-dashboard-evento-panel', 
-        'adm-eserciti-panel'
+        'adm-eserciti-panel',
+        'adm-potenza-panel',
+        'adm-battaglie-panel'
     ];
     PANNELLI_EVENTO.forEach(id => {
         const el = document.getElementById(id);
@@ -7911,7 +7911,7 @@ async function rimuoviBattaglia(battagliaId) {
 
 async function dichiaraVincitoreEserciti() {
     if (isReadOnly()) return;
-    const eventoId = document.getElementById('adm-eserciti-evento-id')?.value || currentPotenzaEventoId;
+    const eventoId = document.getElementById('adm-eserciti-evento-id')?.value || currentBattaglieEventoId || currentPotenzaEventoId;
     if (!eventoId) return;
 
     try {
@@ -7992,36 +7992,7 @@ async function dichiaraVincitoreEserciti() {
 
 // ─── DASHBOARD POTENZA & BATTAGLIE GRUPPI ───────────────────
 let currentPotenzaEventoId = null;
-
-function switchSubTabPotenza(tab) {
-    const viewClassifica = document.getElementById('adm-potenza-view-classifica');
-    const viewBattaglie = document.getElementById('adm-potenza-view-battaglie');
-    const btnClassifica = document.getElementById('adm-potenza-tab-btn-classifica');
-    const btnBattaglie = document.getElementById('adm-potenza-tab-btn-battaglie');
-
-    if (!viewClassifica || !viewBattaglie) return;
-
-    if (tab === 'classifica') {
-        viewClassifica.style.display = 'block';
-        viewBattaglie.style.display = 'none';
-        btnClassifica.className = 'epk-btn';
-        btnClassifica.style.background = 'var(--epk-gold)';
-        btnClassifica.style.color = '#000';
-        btnBattaglie.className = 'epk-btn-secondary';
-        btnBattaglie.style.background = 'transparent';
-        btnBattaglie.style.color = 'var(--epk-gold)';
-    } else {
-        viewClassifica.style.display = 'none';
-        viewBattaglie.style.display = 'block';
-        btnBattaglie.className = 'epk-btn';
-        btnBattaglie.style.background = 'var(--epk-gold)';
-        btnBattaglie.style.color = '#000';
-        btnClassifica.className = 'epk-btn-secondary';
-        btnClassifica.style.background = 'transparent';
-        btnClassifica.style.color = 'var(--epk-gold)';
-        if (currentPotenzaEventoId) caricaBattaglieEvento(currentPotenzaEventoId);
-    }
-}
+let currentBattaglieEventoId = null;
 
 async function mostraPannelloPotenza(eventoId, eventoTitolo) {
     const panel = document.getElementById('adm-potenza-panel');
@@ -8029,10 +8000,7 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
 
     currentPotenzaEventoId = eventoId;
     apriPannelloEsclusivoAdmin('adm-potenza-panel');
-    document.getElementById('adm-potenza-titolo').textContent = `⚡ CLASSIFICA POTENZA & BATTAGLIE: ${eventoTitolo.toUpperCase()}`;
-
-    // Mostra di default il tab Classifica
-    switchSubTabPotenza('classifica');
+    document.getElementById('adm-potenza-titolo').textContent = `⚡ CLASSIFICA POTENZA: ${eventoTitolo.toUpperCase()}`;
 
     const tbody = document.getElementById('adm-potenza-table-body');
     const summary = document.getElementById('adm-potenza-summary');
@@ -8174,12 +8142,21 @@ async function mostraPannelloPotenza(eventoId, eventoTitolo) {
             </tr>
         `).join('');
 
-        // Carica in background anche i dati delle battaglie
-        caricaBattaglieEvento(eventoId);
-
+        // Fine calcolo potenza
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="9" style="padding: 20px; color: #ef4444; font-size: 11px;">Errore: ${err.message}</td></tr>`;
     }
+}
+
+async function mostraPannelloBattaglie(eventoId, eventoTitolo) {
+    const panel = document.getElementById('adm-battaglie-panel');
+    if (!panel) return;
+
+    currentBattaglieEventoId = eventoId;
+    apriPannelloEsclusivoAdmin('adm-battaglie-panel');
+    document.getElementById('adm-battaglie-titolo').textContent = `⚔️ REGISTRO BATTAGLIE: ${eventoTitolo.toUpperCase()}`;
+
+    await caricaBattaglieEvento(eventoId);
 }
 
 // ─── GESTIONE BATTAGLIE EVENTO (CR / SCAB) ─────────────────
@@ -8272,7 +8249,7 @@ async function caricaBattaglieEvento(eventoId) {
 
 async function salvaBattagliaEvento() {
     if (isReadOnly()) return;
-    if (!currentPotenzaEventoId) {
+    if (!currentBattaglieEventoId) {
         if (typeof showToast === 'function') showToast("Seleziona prima un evento valido", "warning");
         return;
     }
@@ -8289,7 +8266,7 @@ async function salvaBattagliaEvento() {
         const { error } = await supabaseClient
             .from('epika_battaglie_eventi')
             .upsert({
-                evento_id: currentPotenzaEventoId,
+                evento_id: currentBattaglieEventoId,
                 numero_battaglia: numero_battaglia,
                 vincitore: vincitore,
                 note: note
@@ -8299,7 +8276,7 @@ async function salvaBattagliaEvento() {
 
         if (typeof showToast === 'function') showToast(`⚔️ Battaglia #${numero_battaglia} salvata!`, "success");
         if (noteInput) noteInput.value = '';
-        caricaBattaglieEvento(currentPotenzaEventoId);
+        caricaBattaglieEvento(currentBattaglieEventoId);
     } catch (err) {
         console.error("Errore salvataggio battaglia:", err);
         if (typeof showToast === 'function') showToast("Errore durante il salvataggio della battaglia", "error");
@@ -8319,7 +8296,7 @@ async function eliminaBattagliaEvento(battagliaId) {
         if (error) throw error;
 
         if (typeof showToast === 'function') showToast("Battaglia eliminata", "info");
-        if (currentPotenzaEventoId) caricaBattaglieEvento(currentPotenzaEventoId);
+        if (currentBattaglieEventoId) caricaBattaglieEvento(currentBattaglieEventoId);
     } catch (err) {
         console.error("Errore eliminazione battaglia:", err);
         if (typeof showToast === 'function') showToast("Errore durante l'eliminazione", "error");

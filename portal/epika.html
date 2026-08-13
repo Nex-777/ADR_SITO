@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.49">
+    <link rel="stylesheet" href="epika.css?v=1.04.52">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.49"></script>
+    <script src="config.js?v=1.04.52"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.49</span>
+            <span class="epk-version-badge">Vs. 1.04.52</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -971,112 +971,111 @@
                             </div>
                         </div>
 
-                        <!-- Pannello Dashboard POTENZA & BATTAGLIE Gruppi -->
+                        <!-- Pannello Dashboard POTENZA Gruppi -->
                         <div id="adm-potenza-panel" class="epk-card epk-hidden" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 12px; margin-bottom: 16px;">
                                 <div>
                                     <h2 class="epk-headline" id="adm-potenza-titolo" style="margin: 0; font-size: 16px; color: var(--epk-gold);">
-                                        ⚡ CLASSIFICA POTENZA & BATTAGLIE
+                                        ⚡ CLASSIFICA POTENZA
                                     </h2>
-                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6);">Forza Numerica + Punti Gloria + Campione SCAB + Registro Battaglie Campo Martio</span>
+                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6);">Forza Numerica + Punti Gloria + Campione SCAB</span>
                                 </div>
                                 <button class="epk-btn-secondary" onclick="apriPannelloEsclusivoAdmin(null)" style="padding: 8px 12px; font-size: 10px;">CHIUDI</button>
                             </div>
 
-                            <!-- Sub-Tab Navigation -->
-                            <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-                                <button id="adm-potenza-tab-btn-classifica" class="epk-btn" style="padding: 6px 12px; font-size: 11px; background: var(--epk-gold); color: #000;" onclick="switchSubTabPotenza('classifica')">⚡ CLASSIFICA POTENZA</button>
-                                <button id="adm-potenza-tab-btn-battaglie" class="epk-btn-secondary" style="padding: 6px 12px; font-size: 11px;" onclick="switchSubTabPotenza('battaglie')">⚔️ REGISTRO BATTAGLIE (CR / SCAB)</button>
+                            <!-- Summary Cards -->
+                            <div id="adm-potenza-summary" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                                <!-- Popolato via JS -->
+                            </div>
+                            <!-- Tabella Classifica -->
+                            <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold); font-family: 'Cinzel', serif; font-size: 10px;">
+                                        <th style="padding: 8px 4px; text-align: left;">#</th>
+                                        <th style="padding: 8px 4px; text-align: left;">GRUPPO STORICO</th>
+                                        <th style="padding: 8px 4px;">FORZA</th>
+                                        <th id="adm-potenza-col-n3" style="padding: 8px 4px;">-3G</th>
+                                        <th id="adm-potenza-col-n2" style="padding: 8px 4px;">-2G</th>
+                                        <th id="adm-potenza-col-n1" style="padding: 8px 4px;">-1G</th>
+                                        <th style="padding: 8px 4px;">GLORIA</th>
+                                        <th style="padding: 8px 4px;">🏆 SCAB</th>
+                                        <th style="padding: 8px 4px; color: var(--epk-gold); font-size: 11px;">⚡ POTENZA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adm-potenza-table-body">
+                                    <!-- Popolato via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pannello Dashboard REGISTRO BATTAGLIE -->
+                        <div id="adm-battaglie-panel" class="epk-card epk-hidden" style="margin-top: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 12px; margin-bottom: 16px;">
+                                <div>
+                                    <h2 class="epk-headline" id="adm-battaglie-titolo" style="margin: 0; font-size: 16px; color: var(--epk-gold);">
+                                        ⚔️ REGISTRO BATTAGLIE
+                                    </h2>
+                                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6);">Storico risultati battaglie del Campo Martio</span>
+                                </div>
+                                <button class="epk-btn-secondary" onclick="apriPannelloEsclusivoAdmin(null)" style="padding: 8px 12px; font-size: 10px;">CHIUDI</button>
                             </div>
 
-                            <!-- Vista 1: Classifica Potenza -->
-                            <div id="adm-potenza-view-classifica">
-                                <!-- Summary Cards -->
-                                <div id="adm-potenza-summary" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                                    <!-- Popolato via JS -->
-                                </div>
-                                <!-- Tabella Classifica -->
-                                <div style="overflow-x: auto;">
-                                    <table style="width: 100%; border-collapse: collapse; text-align: center; min-width: 900px;">
-                                        <thead>
-                                            <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold); font-family: 'Cinzel', serif; font-size: 10px;">
-                                                <th style="padding: 10px; text-align: left;">#</th>
-                                                <th style="padding: 10px; text-align: left;">GRUPPO STORICO</th>
-                                                <th style="padding: 10px;">FORZA NUM.</th>
-                                                <th id="adm-potenza-col-n3" style="padding: 10px;">3 GUERRE FA</th>
-                                                <th id="adm-potenza-col-n2" style="padding: 10px;">2 GUERRE FA</th>
-                                                <th id="adm-potenza-col-n1" style="padding: 10px;">ULTIMA GUERRA</th>
-                                                <th style="padding: 10px;">GLORIA TOT.</th>
-                                                <th style="padding: 10px;">🏆 SCAB</th>
-                                                <th style="padding: 10px; color: var(--epk-gold); font-size: 12px;">⚡ POTENZA</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="adm-potenza-table-body">
-                                            <!-- Popolato via JS -->
-                                        </tbody>
-                                    </table>
+                            <!-- Summary Score Battaglie -->
+                            <div id="adm-battaglie-summary" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                                <!-- Popolato via JS -->
+                            </div>
+
+                            <!-- Form Aggiunta / Edizione Battaglia -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212, 175, 55, 0.2); padding: 14px; border-radius: 4px; margin-bottom: 16px;">
+                                <h4 style="margin: 0 0 10px 0; font-size: 12px; color: var(--epk-gold); text-transform: uppercase;">➕ Registra Risultato Battaglia</h4>
+                                <div style="display: grid; grid-template-columns: 100px 140px 1fr 120px; gap: 10px; align-items: end;">
+                                    <div>
+                                        <label style="font-size: 9px; color: gray; display: block; margin-bottom: 4px;">N° BATTAGLIA</label>
+                                        <input type="number" id="adm-battaglia-numero" class="epk-input" min="1" max="30" value="1" style="width: 100%; text-align: center;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 9px; color: gray; display: block; margin-bottom: 4px;">VINCITORE</label>
+                                        <select id="adm-battaglia-vincitore" class="epk-input" style="width: 100%;">
+                                            <option value="A">ESERCITO A</option>
+                                            <option value="B">ESERCITO B</option>
+                                            <option value="PAREGGIO">PAREGGIO</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 9px; color: gray; display: block; margin-bottom: 4px;">NOTE (OPZIONALI)</label>
+                                        <input type="text" id="adm-battaglia-note" class="epk-input" placeholder="Es. Scontro tra avanguardie, duello di stendardi..." style="width: 100%;">
+                                    </div>
+                                    <div>
+                                        <button class="epk-btn" onclick="salvaBattagliaEvento()" style="width: 100%; padding: 8px; font-size: 10px;">💾 SALVA</button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Vista 2: Registro Battaglie -->
-                            <div id="adm-potenza-view-battaglie" style="display: none;">
-                                <!-- Summary Score Battaglie -->
-                                <div id="adm-battaglie-summary" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                                    <!-- Popolato via JS -->
-                                </div>
+                            <!-- Tabella Storico Battaglie Evento -->
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold); font-family: 'Cinzel', serif; font-size: 10px;">
+                                            <th style="padding: 10px; width: 90px;">BATTAGLIA</th>
+                                            <th style="padding: 10px; width: 140px;">VINCITORE</th>
+                                            <th style="padding: 10px; text-align: left;">NOTE</th>
+                                            <th style="padding: 10px; width: 90px;">AZIONI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adm-battaglie-table-body">
+                                        <!-- Popolato via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                <!-- Form Aggiunta / Edizione Battaglia -->
-                                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212, 175, 55, 0.2); padding: 14px; border-radius: 4px; margin-bottom: 16px;">
-                                    <h4 style="margin: 0 0 10px 0; font-size: 12px; color: var(--epk-gold); text-transform: uppercase;">➕ Registra Risultato Battaglia</h4>
-                                    <div style="display: grid; grid-template-columns: 100px 140px 1fr 120px; gap: 10px; align-items: end;">
-                                        <div>
-                                            <label style="font-size: 9px; color: gray; display: block; margin-bottom: 4px;">N° BATTAGLIA</label>
-                                            <input type="number" id="adm-battaglia-numero" class="epk-input" min="1" max="30" value="1" style="width: 100%; text-align: center;">
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 9px; color: gray; display: block; margin-bottom: 4px;">VINCITORE</label>
-                                            <select id="adm-battaglia-vincitore" class="epk-input" style="width: 100%;">
-                                                <option value="A">ESERCITO A</option>
-                                                <option value="B">ESERCITO B</option>
-                                                <option value="PAREGGIO">PAREGGIO</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 9px; color: gray; display: block; margin-bottom: 4px;">NOTE (OPZIONALI)</label>
-                                            <input type="text" id="adm-battaglia-note" class="epk-input" placeholder="Es. Scontro tra avanguardie, duello di stendardi..." style="width: 100%;">
-                                        </div>
-                                        <div>
-                                            <button class="epk-btn" onclick="salvaBattagliaEvento()" style="width: 100%; padding: 8px; font-size: 10px;">💾 SALVA</button>
-                                        </div>
-                                    </div>
+                            <!-- Action Dichiara Vincitore -->
+                            <div style="margin-top: 16px; padding: 12px; background: rgba(22, 101, 52, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-size: 11px; color: rgba(245,230,200,0.7);">
+                                    ⚠️ Usa questa azione SOLO a fine Campo Martio per registrare il risultato nella classifica storica della Gloria.
                                 </div>
-
-                                <!-- Tabella Storico Battaglie Evento -->
-                                <div style="overflow-x: auto;">
-                                    <table style="width: 100%; border-collapse: collapse; text-align: center;">
-                                        <thead>
-                                            <tr style="border-bottom: 2px solid var(--epk-gold); color: var(--epk-gold); font-family: 'Cinzel', serif; font-size: 10px;">
-                                                <th style="padding: 10px; width: 90px;">BATTAGLIA</th>
-                                                <th style="padding: 10px; width: 140px;">VINCITORE</th>
-                                                <th style="padding: 10px; text-align: left;">NOTE</th>
-                                                <th style="padding: 10px; width: 90px;">AZIONI</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="adm-battaglie-table-body">
-                                            <!-- Popolato via JS -->
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <!-- Action Dichiara Vincitore -->
-                                <div style="margin-top: 16px; padding: 12px; background: rgba(22, 101, 52, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
-                                    <div style="font-size: 11px; color: rgba(245,230,200,0.7);">
-                                        ⚠️ Usa questa azione SOLO a fine Campo Martio per registrare il risultato nella classifica storica della Gloria.
-                                    </div>
-                                    <button class="epk-btn" onclick="dichiaraVincitoreEserciti()" style="padding: 8px 16px; font-size: 10px; background: #166534; border-color: #22c55e; white-space: nowrap;">
-                                        🏆 DICHIARA VINCITORE & REGISTRA GLORIA
-                                    </button>
-                                </div>
+                                <button class="epk-btn" onclick="dichiaraVincitoreEserciti()" style="padding: 8px 16px; font-size: 10px; background: #166534; border-color: #22c55e; white-space: nowrap;">
+                                    🏆 DICHIARA VINCITORE & REGISTRA GLORIA
+                                </button>
                             </div>
                         </div>
 
@@ -2173,6 +2172,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.49"></script>
+    <script src="epika.js?v=1.04.52"></script>
 </body>
 </html>

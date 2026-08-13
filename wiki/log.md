@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] refactor | UI Redesign Admin Eventi & Registri Indipendenti (v1.04.51)
+- **Frontend (`portal/epika.html` & `portal/epika.js`)**:
+  - **Scrollbar Fix**: Rimosso `min-width: 900px` e il wrapper `overflow-x` dalla tabella Potenza per permetterne l'adattamento fluido a 100% dello schermo.
+  - **Pannello Battaglie Autonomo**: Separato il blocco Registro Battaglie dal pannello Potenza. Creato il nuovo pannello indipendente `#adm-battaglie-panel` con header proprio (titolo, sottotitolo e tasto CHIUDI).
+  - **Pannelli Esclusivi Engine**: Inseriti `adm-potenza-panel` e `adm-battaglie-panel` nell'array `PANNELLI_EVENTO` di `apriPannelloEsclusivoAdmin()` per garantire la chiusura automatica dei pannelli concorrenti.
+  - **Isolamento Stato JS**: Introdotta la variabile `currentBattaglieEventoId` per isolare il salvataggio e la cancellazione delle battaglie dallo stato del pannello potenza.
+  - **Riordino e Redesign Tasti Card**: Riordinati i pulsanti della card evento nell'ordine esatto richiesto (`DASHBOARD`, `POTENZA`, `GESTIONE ESERCITI`, `REGISTRO BATTAGLIE`, `GESTISCI PRESENZE`). Convertiti i tasti `DISATTIVA/ATTIVA` e `CANCELLA` in pulsanti iconici compatti (⏸️ / ▶️ e 🗑️).
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.51` tramite `npm run bump`.
+
+---
+
+## [2026-08-13] fix | ASD Corsi Deduplicazione Tesserati e Fix Accordion Card (v1.04.50)
+- **Database (`vw_stato_atleta_corso` - Supabase `zpategmkelqmexetpaot`)**:
+  - Corretto la vista SQL `vw_stato_atleta_corso` che utilizzava `LEFT JOIN public.anagrafiche a ON a.utente_id = u.id`. Per gli utenti con più schede anagrafiche collegate (come Giulio De Vecchis), la query SQL moltiplicava la riga d'iscrizione producendo tesserati duplicati nella lista dei corsi. Sostituita la JOIN con una `LEFT JOIN LATERAL (SELECT id FROM anagrafiche WHERE utente_id = u.id ORDER BY created_at DESC LIMIT 1)` per garantire la presenza di massimo 1 record anagrafica per utente.
+- **Frontend (`portal/dashboard.js`)**:
+  - Risolto il problema dell'accordion bloccato per le card dei tesserati. Gli ID del DOM e l'evento `onclick` utilizzavano `atl.utente_id` (`id="details-card-${atl.utente_id}"`), provocando collisione di ID in caso di card duplicate e facendo sì che `document.getElementById` targettizzasse sempre la prima card in pagina. Sostituito con un identificatore unico `uniqueCardId` per card (`atl.iscrizione_id + '_' + index`).
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.50` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] fix | Fix GloriaMap Case-Sensitivity, SCAB profilo_id, btn-danger e dichiaraVincitore (v1.04.49)
 - **Database (Supabase Remoto `zpategmkelqmexetpaot`)**:
   - Normalizzati in UPPERCASE i `nome_gruppo` nella tabella `epika_cm_gruppi_vincenti` per allinearli ai nomi ufficiali dei gruppi storici.
