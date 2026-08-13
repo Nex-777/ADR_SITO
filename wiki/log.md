@@ -2,6 +2,36 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] fix | Fix Gestione Eserciti Vuota — ReferenceError genB (v1.04.44)
+- **Frontend (`portal/epika.js`)**:
+  - Risolto l'errore fatale `ReferenceError: genB is not defined` nella funzione `mostraPannelloEserciti()` scatenato all'apertura del pannello Eserciti per gli eventi con configurazione salvata.
+  - Inserita la dichiarazione mancante `const genB = savedEserciti.generali_esercito_b || [];` prima della compilazione degli input per i generali dell'Esercito B.
+  - Ripristinata la corretta esecuzione di `renderTatticaEserciti()`, consentendo il popolamento immediato dei gruppi storici, dei mercenari e delle statistiche di forza.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.44` via `npm run bump`.
+
+---
+
+## [2026-08-13] fix | Risoluzione Caricamento Infinito e Visibilità Form Documenti d'Identità (v1.04.43)
+- **Frontend (`portal/dashboard.js`)**:
+  - **Fix Visibilità Form**: Aggiornata la logica `renderDocInfo` per nascondere esplicitamente (`uploadEl.classList.add('hidden')`) il form di caricamento quando lo stato del documento è `VERDE` o `IN_ATTESA`. Prevenuta la persistenza del form sullo schermo dopo un caricamento andato a buon fine.
+  - **Fix DOM Detachment**: Sostituito il clonaggio dei bottoni (`btnPersonale.replaceWith(btnPersonale.cloneNode(true))`) in `loadUserDocumento()` con l'assegnazione diretta della proprietà `.onclick`. Risolto il bug dell'elemento orfano che bloccava il pulsante sullo stato "CARICAMENTO IN CORSO...".
+  - **Hardening `finally`**: Aggiornata la funzione `handleDocUploadWidget` per ricalcolare dinamicamente il nodo del pulsante tramite `document.getElementById(btnId)` all'interno del blocco `finally`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.43` via `npm run bump`.
+
+---
+
+## [2026-08-13] fix | Blocco Portale Epika Giuseppe Di Giuseppe — DB Fix + Bug Assistenza Admin (v1.04.42)
+- **Database (Supabase)**:
+  - Inserito record di approvazione mancante in `registro_approvazioni` per l'anagrafica `9fcb2311-148b-4d3f-942b-1f657d57d08d` (Giuseppe Di Giuseppe).
+  - `tipo = TESSERATO`, `stato = APPROVATO`, `livello_copertura = INTEGRATIVA_A`, `data_richiesta = 2026-06-20`, `data_decisione = 2026-06-20`.
+- **Frontend (`portal/dashboard.js`)**:
+  - Corretto bug in `apriAssistenzaTesserato()`: `renderContextUI()` ricalcolava `isApproved = false` basandosi sul profilo dell'utente assistito, sovrascrivendo l'handler del pulsante Epika con uno che bloccava l'accesso per l'Admin.
+  - Aggiunto override esplicito `epikaBtn.onclick` in `apriAssistenzaTesserato()` dopo l'inizializzazione del contesto, che chiama direttamente `openEpika(false)` con `impersonate_id`.
+  - Rimosso dead code: `.href` su `<button id="tab-btn-user-epika">` in `apriAssistenzaTesserato()` e `chiudiAssistenzaTesserato()`.
+- **Global Bump**: Versionamento aggiornato a v1.04.42.
+
+---
+
 ## [2026-08-12] bugfix | Fix Bug UI CSEN ERROR Nascosto + Hardening Sync Bot + Allineamento Codici Fantasma IT...
 - **Problema Risolto**: Identificato e corretto un bug critico in `portal/dashboard.js` (vista desktop righe ~2705–2739, vista mobile righe ~2870–2901): la struttura `if/else` dava priorità assoluta al campo `numero_tessera_csen` rispetto a `sync_csen_status`. Di conseguenza, se un atleta aveva un codice temporaneo `IT...` nel campo ma lo stato `ERROR`, la UI mostrava la label cyan (codice richiesta) nascondendo silenziosamente l'errore di sincronizzazione.
 - **Fix UI**: `ERROR` ora ha priorità assoluta. Se `sync_csen_status === 'ERROR'`, la colonna CSEN mostra sempre l'etichetta rossa **ERRORE SYNC**, indipendentemente dal valore in `numero_tessera_csen`.

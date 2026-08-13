@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.41"
+                VERSION: "1.04.44"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -7114,9 +7114,14 @@
                         </div>
                     `;
 
-                    // Show upload section if doc is GIALLO, ROSSO or scaduto
-                    if (uploadEl && (doc.stato_validazione === 'GIALLO' || doc.stato_validazione === 'ROSSO' || isScaduto)) {
-                        uploadEl.classList.remove('hidden');
+                    // Gestione dinamica della visibilità del form di upload
+                    if (uploadEl) {
+                        if (doc.stato_validazione === 'GIALLO' || doc.stato_validazione === 'ROSSO' || isScaduto) {
+                            uploadEl.classList.remove('hidden');
+                        } else {
+                            // Se VERDE o IN_ATTESA, nascondi categoricamente il form
+                            uploadEl.classList.add('hidden');
+                        }
                     }
                 }
 
@@ -7415,25 +7420,27 @@
                         console.error('Errore upload documento:', err);
                         showToastNotification('Errore durante il caricamento: ' + err.message, 'error');
                     } finally {
-                        if (btn) { btn.disabled = false; btn.textContent = origBtnText; }
+                        const finalBtn = document.getElementById(btnId);
+                        if (finalBtn) {
+                            finalBtn.disabled = false;
+                            finalBtn.textContent = origBtnText;
+                        }
                     }
                 }
 
-                // Event listener sui pulsanti di invio
+                // Event listener sui pulsanti di invio (Assegnazione diretta .onclick per preservare i riferimenti DOM)
                 const btnPersonale = document.getElementById('btn-upload-doc-personale');
                 if (btnPersonale) {
-                    btnPersonale.replaceWith(btnPersonale.cloneNode(true));
-                    document.getElementById('btn-upload-doc-personale')?.addEventListener('click', () => {
+                    btnPersonale.onclick = () => {
                         handleDocUploadWidget(widgetPersonale, 'doc-personale-scadenza-input', 'btn-upload-doc-personale', 'PERSONALE');
-                    });
+                    };
                 }
 
                 const btnTutore = document.getElementById('btn-upload-doc-tutore');
                 if (btnTutore) {
-                    btnTutore.replaceWith(btnTutore.cloneNode(true));
-                    document.getElementById('btn-upload-doc-tutore')?.addEventListener('click', () => {
+                    btnTutore.onclick = () => {
                         handleDocUploadWidget(widgetTutore, 'doc-tutore-scadenza-input', 'btn-upload-doc-tutore', 'TUTORE');
-                    });
+                    };
                 }
 
             } catch (err) {
@@ -10367,10 +10374,6 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
         _backupCurrentUserProfile = currentUserProfile;
         _assistenzaAttiva = true;
 
-        // Aggiorna il link Epika per puntare all'utente assistito
-        const _epikaLink = document.getElementById('tab-btn-user-epika');
-        if (_epikaLink) _epikaLink.href = `epika.html?impersonate_id=${utenteId}`;
-
         // 3. Sostituisci le variabili globali con i dati del tesserato
         currentUser = { id: utenteId, email: targetProfile.email || '' };
         currentUserProfile = targetProfile;
@@ -10394,6 +10397,17 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
         await loadUserEventi();
         await loadUserPagamenti();
 
+        // 6b. Override dell'handler Epika per la modalità assistenza:
+        // renderContextUI() ha ricalcolato isApproved basandosi sull'utente assistito.
+        // In modalità assistenza, l'admin deve SEMPRE poter aprire Epika con impersonate_id.
+        const _epikaBtnOverride = document.getElementById('tab-btn-user-epika');
+        if (_epikaBtnOverride) {
+            _epikaBtnOverride.onclick = (e) => {
+                e.preventDefault();
+                openEpika(false);
+            };
+        }
+
         // 7. Naviga alla prima scheda utente (Il Mio Profilo)
         const tabProfilo = document.getElementById('tab-btn-user_profilo');
         if (tabProfilo) tabProfilo.click();
@@ -10416,10 +10430,6 @@ window.chiudiAssistenzaTesserato = function() {
     _backupCurrentUser = null;
     _backupCurrentUserProfile = null;
     _assistenzaAttiva = false;
-
-    // Ripristina il link Epika al suo href originale
-    const _epikaLink = document.getElementById('tab-btn-user-epika');
-    if (_epikaLink) _epikaLink.href = 'epika.html';
 
     // 2. Nascondi banner e rimuovi padding body
     const banner = document.getElementById('banner-assistenza-admin');

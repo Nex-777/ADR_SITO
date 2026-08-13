@@ -7254,6 +7254,7 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             if (document.getElementById('adm-esercito-a-gen-2')) document.getElementById('adm-esercito-a-gen-2').value = genA[1] || '';
             if (document.getElementById('adm-esercito-a-gen-3')) document.getElementById('adm-esercito-a-gen-3').value = genA[2] || '';
 
+            const genB = savedEserciti.generali_esercito_b || [];
             if (document.getElementById('adm-esercito-b-gen-1')) document.getElementById('adm-esercito-b-gen-1').value = genB[0] || '';
             if (document.getElementById('adm-esercito-b-gen-2')) document.getElementById('adm-esercito-b-gen-2').value = genB[1] || '';
             if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = genB[2] || '';
