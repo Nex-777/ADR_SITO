@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] feature | Dashboard POTENZA Gruppi, Scheda Battaglie & Campioni SCAB (v1.04.45)
+- **Database (`supabase/migration_epika_potenza_battaglie.sql`)**:
+  - Aggiunta colonna `esercito_vincente` (`A`, `B`, `PAREGGIO`) a `public.epika_eserciti_eventi`.
+  - Nuova tabella `public.epika_battaglie_eventi` per registrare le battaglie individuali (venerdì/sabato) con esito, note e RLS.
+  - Nuova tabella `public.epika_campioni_scab` per la gestione dell'Albo d'Oro dei Campioni SCAB annuali. Seed: 2024: MORS, 2025: ARGOS, 2026: MINOR.
+  - Nuova tabella `public.epika_cm_gruppi_vincenti` per lo storico vittorie gruppi negli ultimi 3 anni. Seed: 2023, 2024, 2025 dagli allegati.
+- **Frontend (`portal/epika.html` & `portal/epika.js`)**:
+  - **Campioni SCAB**: Aggiunta sub-tab "Campioni" nella sezione SCAB admin per visualizzare, inserire e rimuovere campioni SCAB annuali collegati ai profili atleti.
+  - **Scheda Battaglie**: Inserita la scheda battaglie in `GESTIONE ESERCITI` per aggiungere battaglie, registrare vincitori e note, con il pulsante `🏆 DICHIARA VINCITORE` che calcola in automatico l'esercito vincente e sincronizza lo storico vittorie.
+  - **Dashboard POTENZA**: Aggiunto il pulsante `⚡ POTENZA` sui card degli eventi Campo Martio che apre la finestra modal con la classifica di Potenza Gruppi (`Forza Numerica` + `Gloria 3 Anni` + `Bonus SCAB +2 pt`).
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.45` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] fix | Fix Gestione Eserciti Vuota — ReferenceError genB (v1.04.44)
 - **Frontend (`portal/epika.js`)**:
   - Risolto l'errore fatale `ReferenceError: genB is not defined` nella funzione `mostraPannelloEserciti()` scatenato all'apertura del pannello Eserciti per gli eventi con configurazione salvata.

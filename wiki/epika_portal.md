@@ -124,14 +124,49 @@ Stores annual SCAB combat certification state per athlete.
 3. **Validator Approval**: The Validatore sets the validation semaphore (`giallo` → `verde`/`rosso`) via `aggiorna_stato_validatore`.
 4. **Assistant Trainer View**: The Allievo Allenatore monitors athletes under their supervision in read-only mode.
 
+### 10. `public.epika_battaglie_eventi`
+Stores individual battle results during Campo Martio events (e.g. Friday/Saturday battles).
+*   `id` (UUID PK)
+*   `evento_id` (UUID FK to `epika_eventi.id` ON DELETE CASCADE)
+*   `numero_battaglia` (INT)
+*   `vincitore` (TEXT CHECK `A`, `B`, `PAREGGIO`)
+*   `note` (TEXT)
+*   Unique constraint on `(evento_id, numero_battaglia)`
+
+### 11. `public.epika_campioni_scab`
+Stores annual SCAB champion designations managed within the SCAB portal section.
+*   `id` (BIGINT PK)
+*   `anno` (INT UNIQUE)
+*   `profilo_id` (UUID FK to `epika_profili.id` ON DELETE SET NULL)
+*   `nome_campione` (TEXT)
+*   `note` (TEXT)
+
+### 12. `public.epika_cm_gruppi_vincenti`
+Stores historical winning groups lookup per year for Gloria points computation.
+*   `anno` (INT PK)
+*   `nome_gruppo` (TEXT PK)
+
+---
+
+## ⚡ POTENZA & Scheda Battaglie Workflow
+
+For each Campo Martio event, the system calculates the **POTENZA** ranking per Historical Group using the formula:
+$$\text{POTENZA} = \text{FORZA NUMERICA} + \text{PUNTI GLORIA} + \text{BONUS CAMPIONE SCAB}$$
+
+1. **Forza Numerica**: Counts active fighters (`ruolo_combattimento = 'combattente'`) with confirmed attendance (`epika_presenze_eventi.presente = TRUE`).
+2. **Punti Gloria**: Tally of past 3 years' victories (3 yrs ago: 1pt, 2 yrs ago: 2pts, 1 yr ago: 3pts) queried from `epika_cm_gruppi_vincenti`. Draws award 0 points.
+3. **Bonus Campione SCAB**: Grants +2 bonus points directly to the historical group if the year's defending SCAB Champion (`epika_campioni_scab`) is confirmed present as a fighter at the event.
+4. **Scheda Battaglie**: Administrators log individual Friday/Saturday battles within `GESTIONE ESERCITI`. Clicking **DICHIARA VINCITORE** updates `epika_eserciti_eventi.esercito_vincente` and syncs winning groups into `epika_cm_gruppi_vincenti`.
+
 ---
 
 ## 🔒 Row Level Security (RLS)
 
-- Lookups (`epika_gruppi_storici`, `epika_gruppi_lavoro`, `epika_opzioni`): Read access to all authenticated users. Write/Delete restricted to President or users with `is_admin_epika = TRUE`.
+- Lookups (`epika_gruppi_storici`, `epika_gruppi_lavoro`, `epika_opzioni`, `epika_cm_gruppi_vincenti`, `epika_campioni_scab`): Read access to all authenticated users. Write/Delete restricted to President or users with `is_admin_epika = TRUE`.
 - Profiles (`epika_profili`): Select allowed for the owner, President, `is_admin_epika = TRUE`, or any Capogruppo/Vice Capogruppo of the profile's current or historical group (to access member lists and cronologia mandati). Update allowed only for the owner, President, or `is_admin_epika = TRUE`. Insert allowed only for the owner. Validated by `BEFORE INSERT OR UPDATE` trigger `trg_check_epika_tessera_ruolo` to prevent base card holders from enrolling as `combattente` and to automatically nullify `allenatore_id` for `non_combattente`.
 - Abilitazioni (`epika_scab_abilitazioni`): Select allowed for all authenticated users. Insert/Update mutations restricted exclusively through `SECURITY DEFINER` RPCs (`crea_richiesta_abilitazione`, `aggiorna_stato_allenatore`, `aggiorna_stato_validatore`) enforcing strict caller role verification.
-- Events (`epika_eventi`): Read allowed for all authenticated users. Writes/Delete restricted to admins.
+- Events (`epika_eventi`, `epika_eserciti_eventi`, `epika_battaglie_eventi`): Read allowed for all authenticated users. Writes/Delete restricted to admins.
 - Signups & Attendance: Select/write restricted to owner/admin where appropriate.
 - Audit Log (`epika_registro_modifiche_profilo`): Select allowed for the profile owner, President, or users with `is_admin_epika = TRUE`. Write operations restricted to database trigger only.
+
 
