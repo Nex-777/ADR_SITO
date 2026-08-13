@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] feature | Capi Fazione per Potenza & Ordinamento Gerarchico Combattenti (v1.04.57)
+- **Frontend (`portal/epika.js`)**:
+  - **Capi Fazione Automatici per Potenza**: Implementato il calcolo automatico della Potenza dei gruppi all'apertura del pannello Gestione Eserciti. Il 1° gruppo per Potenza (es. *DRUKOS LIGURI*) viene pre-assegnato a **Esercito A** (in cima come *Capo Fazione Sfidante*) e il 2° gruppo per Potenza (es. *LEGIO MALASORTE*) a **Esercito B** (in cima come *Capo Fazione Sfidato*).
+  - **Esclusione e Ordinamento Non Assegnati**: I Capi Fazione vengono esclusi dalla colonna dei non assegnati. La colonna dei gruppi non assegnati è ora ordinata rigorosamente dall'alto in basso per numero decrescente di combattenti ($\text{Combattenti} \downarrow$).
+  - **Ordinamento Eserciti A e B**: In ciascun esercito il rispettivo Capo Fazione risiede fisso in cima con badge distintivo dorato (`👑 CAPO FAZIONE`), mentre gli altri gruppi assegnati a quello schieramento sono posizionati sotto ordinati per numero di combattenti decrescenti.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.57` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] refactor | Reorder Gloria and Historical War Columns in Classifica Potenza (v1.04.56)
 - **Frontend (`portal/epika.html` & `portal/epika.js`)**:
   - **Spostamento Colonna Gloria**: Posizionata la colonna `GLORIA` subito dopo `FORZA`.

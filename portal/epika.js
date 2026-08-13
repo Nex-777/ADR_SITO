@@ -7334,6 +7334,9 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
     esercitiCacheData.mercenari = [];
     esercitiCacheData.assegnazioniGruppi = {};
     esercitiCacheData.assegnazioniMercenari = {};
+    esercitiCacheData.gruppiMetadata = {};
+    esercitiCacheData.capoFazioneA = null;
+    esercitiCacheData.capoFazioneB = null;
 
     try {
         // 1. Carica iscrizioni dell'evento con profili
@@ -7341,6 +7344,7 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             .from('epika_iscrizioni_eventi')
             .select(`
                 utente_id,
+                gruppo_storico_id,
                 dettagli,
                 profilo:epika_profili(nome_di_battaglia, ruolo_combattimento, gruppo_storico_id)
             `)
@@ -7364,6 +7368,41 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             .select('id, nome');
         const gruppiMappa = {};
         (gruppiS || []).forEach(g => { gruppiMappa[g.id] = g.nome; });
+
+        // 2b. Carica dati storici per il calcolo della Potenza e Capi Fazione
+        const { data: eventoInfo } = await supabaseClient
+            .from('epika_eventi')
+            .select('data_inizio')
+            .eq('id', eventoId)
+            .single();
+        const annoCorrente = eventoInfo?.data_inizio ? new Date(eventoInfo.data_inizio).getFullYear() : new Date().getFullYear();
+        const anniGloria = [annoCorrente - 3, annoCorrente - 2, annoCorrente - 1];
+
+        const { data: gloriaData } = await supabaseClient
+            .from('epika_cm_gruppi_vincenti')
+            .select('anno, nome_gruppo')
+            .in('anno', anniGloria);
+
+        const gloriaMap = {};
+        (gloriaData || []).forEach(g => {
+            const key = g.nome_gruppo.toUpperCase();
+            if (!gloriaMap[key]) gloriaMap[key] = {};
+            gloriaMap[key][g.anno] = true;
+        });
+
+        const { data: campione } = await supabaseClient
+            .from('epika_campioni_scab')
+            .select('profilo_id, nome_campione')
+            .eq('anno', annoCorrente)
+            .maybeSingle();
+
+        let gruppoScabId = null;
+        if (campione?.profilo_id) {
+            const iscCampione = (iscritti || []).find(i => i.utente_id === campione.profilo_id);
+            if (iscCampione && iscCampione.profilo?.ruolo_combattimento === 'combattente') {
+                gruppoScabId = iscCampione.gruppo_storico_id || iscCampione.profilo?.gruppo_storico_id;
+            }
+        }
 
         // 3. Carica la configurazione eserciti salvata da Supabase
         const { data: savedEserciti } = await supabaseClient
@@ -7414,7 +7453,7 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
         aggiornaVisibilitaExtraGenerali('a');
         aggiornaVisibilitaExtraGenerali('b');
 
-        // 4. Organizza gli atleti
+        // 4. Organizza gli atleti per gruppo
         (iscritti || []).forEach(isc => {
             const prof = isc.profilo || {};
             const dett = isc.dettagli || {};
@@ -7442,6 +7481,58 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
                 esercitiCacheData.gruppi[gruppoNome].push(atleta);
             }
         });
+
+        // 4b. Calcolo Potenza per ciascun gruppo e identificazione Capi Fazione
+        esercitiCacheData.gruppiMetadata = {};
+        const classificaPotenzaGruppi = Object.keys(esercitiCacheData.gruppi).map(gNome => {
+            const atleti = esercitiCacheData.gruppi[gNome];
+            const stats = calcolaStatisticheGruppo(atleti);
+            const nomeKey = gNome.toUpperCase();
+            const g3 = gloriaMap[nomeKey]?.[anniGloria[0]] ? 1 : 0;
+            const g2 = gloriaMap[nomeKey]?.[anniGloria[1]] ? 2 : 0;
+            const g1 = gloriaMap[nomeKey]?.[anniGloria[2]] ? 3 : 0;
+            const gloriaTot = g3 + g2 + g1;
+
+            const gId = Object.keys(gruppiMappa).find(id => (gruppiMappa[id] || '').toUpperCase() === nomeKey);
+            const bonusScab = (gruppoScabId && String(gruppoScabId) === String(gId)) ? 2 : 0;
+            const potenza = stats.combattenti + gloriaTot + bonusScab;
+
+            const meta = {
+                nome: gNome,
+                combattentiCount: stats.combattenti,
+                nonCombattentiCount: stats.nonCombattenti,
+                forzaPts: stats.forza,
+                gloriaTot,
+                bonusScab,
+                potenza
+            };
+            esercitiCacheData.gruppiMetadata[gNome] = meta;
+            return meta;
+        });
+
+        classificaPotenzaGruppi.sort((a, b) => {
+            if (b.potenza !== a.potenza) return b.potenza - a.potenza;
+            if (b.combattentiCount !== a.combattentiCount) return b.combattentiCount - a.combattentiCount;
+            return b.forzaPts - a.forzaPts;
+        });
+
+        esercitiCacheData.capoFazioneA = classificaPotenzaGruppi[0]?.nome || null;
+        esercitiCacheData.capoFazioneB = classificaPotenzaGruppi[1]?.nome || null;
+
+        // Pre-assegnazione automatica Capi Fazione
+        if (savedEserciti?.assegnazione_gruppi && Object.keys(savedEserciti.assegnazione_gruppi).length > 0) {
+            esercitiCacheData.assegnazioniGruppi = { ...savedEserciti.assegnazione_gruppi };
+            if (esercitiCacheData.capoFazioneA && !esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneA]) {
+                esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneA] = 'A';
+            }
+            if (esercitiCacheData.capoFazioneB && !esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneB]) {
+                esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneB] = 'B';
+            }
+        } else {
+            esercitiCacheData.assegnazioniGruppi = {};
+            if (esercitiCacheData.capoFazioneA) esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneA] = 'A';
+            if (esercitiCacheData.capoFazioneB) esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneB] = 'B';
+        }
 
         renderTatticaEserciti();
 
@@ -7516,19 +7607,68 @@ function renderTatticaEserciti() {
     colPool.innerHTML = '';
     mercList.innerHTML = '';
 
-    // Render Gruppi
-    const gruppiNomi = Object.keys(esercitiCacheData.gruppi).sort();
+    const tuttiGruppiNomi = Object.keys(esercitiCacheData.gruppi);
     
-    if (gruppiNomi.length === 0) {
+    if (tuttiGruppiNomi.length === 0) {
         colPool.innerHTML = '<p style="font-size: 10px; color: gray; text-align: center;">Nessun gruppo iscritto all\'evento.</p>';
     }
 
     const readOnlyState = isReadOnly();
 
-    gruppiNomi.forEach(gNome => {
-        const atleti = esercitiCacheData.gruppi[gNome];
+    // Funzione comparatrice per ordinare i gruppi per grandezza numerica di combattenti decrescente
+    function confrontaGrandezzaGruppi(nomeA, nomeB) {
+        const metaA = esercitiCacheData.gruppiMetadata?.[nomeA] || { combattentiCount: 0, forzaPts: 0 };
+        const metaB = esercitiCacheData.gruppiMetadata?.[nomeB] || { combattentiCount: 0, forzaPts: 0 };
+
+        if (metaB.combattentiCount !== metaA.combattentiCount) {
+            return metaB.combattentiCount - metaA.combattentiCount; // Più combattenti in alto
+        }
+        if (metaB.forzaPts !== metaA.forzaPts) {
+            return metaB.forzaPts - metaA.forzaPts; // Più forza in punti in alto
+        }
+        return nomeA.localeCompare(nomeB);
+    }
+
+    const capoA = esercitiCacheData.capoFazioneA;
+    const capoB = esercitiCacheData.capoFazioneB;
+
+    // 1. Gruppi Non Assegnati (ordinati per combattenti decrescenti)
+    const gruppiPool = tuttiGruppiNomi
+        .filter(g => !esercitiCacheData.assegnazioniGruppi[g])
+        .sort(confrontaGrandezzaGruppi);
+
+    // 2. Esercito A (Capo Fazione A in cima, poi ordinati per combattenti decrescenti)
+    const gruppiA = tuttiGruppiNomi.filter(g => esercitiCacheData.assegnazioniGruppi[g] === 'A');
+    const altriA = gruppiA.filter(g => g !== capoA).sort(confrontaGrandezzaGruppi);
+    const gruppiAOrdinati = (capoA && gruppiA.includes(capoA)) ? [capoA, ...altriA] : altriA;
+
+    // 3. Esercito B (Capo Fazione B in cima, poi ordinati per combattenti decrescenti)
+    const gruppiB = tuttiGruppiNomi.filter(g => esercitiCacheData.assegnazioniGruppi[g] === 'B');
+    const altriB = gruppiB.filter(g => g !== capoB).sort(confrontaGrandezzaGruppi);
+    const gruppiBOrdinati = (capoB && gruppiB.includes(capoB)) ? [capoB, ...altriB] : altriB;
+
+    // Funzione helper per renderizzare la card di un gruppo
+    function renderCardGruppo(gNome, schieramento) {
+        const atleti = esercitiCacheData.gruppi[gNome] || [];
         const stats = calcolaStatisticheGruppo(atleti);
-        const schieramento = esercitiCacheData.assegnazioniGruppi[gNome] || null;
+        const meta = esercitiCacheData.gruppiMetadata?.[gNome] || {};
+
+        const isCapoA = (gNome === capoA && schieramento === 'A');
+        const isCapoB = (gNome === capoB && schieramento === 'B');
+
+        let badgeCapo = '';
+        let cardBorder = 'border: 1px solid rgba(251, 191, 36, 0.2);';
+        let cardBg = 'background: rgba(0,0,0,0.4);';
+
+        if (isCapoA) {
+            badgeCapo = `<div style="font-size: 8px; font-weight: bold; color: #93c5fd; background: rgba(30, 58, 138, 0.6); border: 1px solid #3b82f6; padding: 2px 6px; border-radius: 3px; margin-bottom: 6px; display: inline-block;">👑 CAPO FAZIONE SFIDANTE (1° POTENZA: ${meta.potenza || stats.combattenti})</div>`;
+            cardBorder = 'border: 1px solid rgba(59, 130, 246, 0.5);';
+            cardBg = 'background: rgba(30, 58, 138, 0.15);';
+        } else if (isCapoB) {
+            badgeCapo = `<div style="font-size: 8px; font-weight: bold; color: #fca5a5; background: rgba(136, 36, 43, 0.6); border: 1px solid #ef4444; padding: 2px 6px; border-radius: 3px; margin-bottom: 6px; display: inline-block;">👑 CAPO FAZIONE SFIDATO (2° POTENZA: ${meta.potenza || stats.combattenti})</div>`;
+            cardBorder = 'border: 1px solid rgba(239, 68, 68, 0.5);';
+            cardBg = 'background: rgba(136, 36, 43, 0.15);';
+        }
 
         const bottoniAzioneGruppoHtml = readOnlyState ? '' : `
             <div style="display: flex; gap: 4px;">
@@ -7543,8 +7683,9 @@ function renderTatticaEserciti() {
             </div>
         `;
 
-        const cardHtml = `
-            <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 4px;">
+        return `
+            <div style="${cardBg} ${cardBorder} padding: 10px; border-radius: 4px;">
+                ${badgeCapo}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="font-size: 11px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase;">${gNome}</span>
                     <span style="font-size: 10px; font-family: monospace; color: #60a5fa;">+${stats.forza} pts</span>
@@ -7555,14 +7696,18 @@ function renderTatticaEserciti() {
                 ${bottoniAzioneGruppoHtml}
             </div>
         `;
+    }
 
-        if (schieramento === 'A') {
-            colA.innerHTML += cardHtml;
-        } else if (schieramento === 'B') {
-            colB.innerHTML += cardHtml;
-        } else {
-            colPool.innerHTML += cardHtml;
-        }
+    gruppiAOrdinati.forEach(gNome => {
+        colA.innerHTML += renderCardGruppo(gNome, 'A');
+    });
+
+    gruppiBOrdinati.forEach(gNome => {
+        colB.innerHTML += renderCardGruppo(gNome, 'B');
+    });
+
+    gruppiPool.forEach(gNome => {
+        colPool.innerHTML += renderCardGruppo(gNome, null);
     });
 
     // Render Mercenari Singoli
