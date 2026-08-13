@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-13] refactor | UI/UX Redesign Tasti Schieramento Gruppi con Frecce Compatte (v1.04.58)
+- **Frontend (`portal/epika.js`)**:
+  - **Redesign Compatto Tasti di Schieramento**: Rimossi i pulsanti ingombranti e testuali (`AD ESERCITO A` / `AD ESERCITO B` / `RIMUOVI`) che soffocavano le card dei gruppi storici.
+  - **Controlli Direzionali a Freccia**: Sostituiti con pulsanti iconici direzionali ultra-compatti (`←` in blu per Esercito A, `→` in rosso per Esercito B e `✕` per rimozione).
+  - **Ottimizzazione Tipografia e Spazio**: Incrementata la dimensione e leggibilità del nome del gruppo storico (`12px`, bold gold, uppercase con text-overflow protetto). Il layout orizzontale a riga singola riduce l'altezza di ogni card del ~45%, massimizzando la densità visiva e la leggibilità complessiva delle 3 colonne tattiche.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.58` tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] feature | Capi Fazione per Potenza & Ordinamento Gerarchico Combattenti (v1.04.57)
 - **Frontend (`portal/epika.js`)**:
   - **Capi Fazione Automatici per Potenza**: Implementato il calcolo automatico della Potenza dei gruppi all'apertura del pannello Gestione Eserciti. Il 1° gruppo per Potenza (es. *DRUKOS LIGURI*) viene pre-assegnato a **Esercito A** (in cima come *Capo Fazione Sfidante*) e il 2° gruppo per Potenza (es. *LEGIO MALASORTE*) a **Esercito B** (in cima come *Capo Fazione Sfidato*).

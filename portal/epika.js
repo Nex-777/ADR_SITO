@@ -7661,39 +7661,76 @@ function renderTatticaEserciti() {
         let cardBg = 'background: rgba(0,0,0,0.4);';
 
         if (isCapoA) {
-            badgeCapo = `<div style="font-size: 8px; font-weight: bold; color: #93c5fd; background: rgba(30, 58, 138, 0.6); border: 1px solid #3b82f6; padding: 2px 6px; border-radius: 3px; margin-bottom: 6px; display: inline-block;">👑 CAPO FAZIONE SFIDANTE (1° POTENZA: ${meta.potenza || stats.combattenti})</div>`;
+            badgeCapo = `<div style="font-size: 8px; font-weight: bold; color: #93c5fd; background: rgba(30, 58, 138, 0.6); border: 1px solid #3b82f6; padding: 2px 6px; border-radius: 3px; margin-bottom: 4px; display: inline-block;">👑 CAPO FAZIONE SFIDANTE (1° POTENZA: ${meta.potenza || stats.combattenti})</div>`;
             cardBorder = 'border: 1px solid rgba(59, 130, 246, 0.5);';
             cardBg = 'background: rgba(30, 58, 138, 0.15);';
         } else if (isCapoB) {
-            badgeCapo = `<div style="font-size: 8px; font-weight: bold; color: #fca5a5; background: rgba(136, 36, 43, 0.6); border: 1px solid #ef4444; padding: 2px 6px; border-radius: 3px; margin-bottom: 6px; display: inline-block;">👑 CAPO FAZIONE SFIDATO (2° POTENZA: ${meta.potenza || stats.combattenti})</div>`;
+            badgeCapo = `<div style="font-size: 8px; font-weight: bold; color: #fca5a5; background: rgba(136, 36, 43, 0.6); border: 1px solid #ef4444; padding: 2px 6px; border-radius: 3px; margin-bottom: 4px; display: inline-block;">👑 CAPO FAZIONE SFIDATO (2° POTENZA: ${meta.potenza || stats.combattenti})</div>`;
             cardBorder = 'border: 1px solid rgba(239, 68, 68, 0.5);';
             cardBg = 'background: rgba(136, 36, 43, 0.15);';
         }
 
-        const bottoniAzioneGruppoHtml = readOnlyState ? '' : `
-            <div style="display: flex; gap: 4px;">
-                ${schieramento === 'A' ? 
-                    `<button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" style="font-size: 9px; padding: 4px 8px; width: 100%;">← RIMUOVI</button>` :
-                    `<button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'A')" style="font-size: 9px; padding: 4px 8px; background: #1e3a8a; border-color: #3b82f6; flex: 1;">← AD ESERCITO A</button>`
-                }
-                ${schieramento === 'B' ? 
-                    `<button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" style="font-size: 9px; padding: 4px 8px; width: 100%;">RIMUOVI →</button>` :
-                    `<button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'B')" style="font-size: 9px; padding: 4px 8px; background: #88242b; border-color: #ef4444; flex: 1;">AD ESERCITO B →</button>`
-                }
-            </div>
-        `;
+        // Layout per Gruppi Non Assegnati (Pool)
+        if (!schieramento) {
+            return `
+                <div style="${cardBg} ${cardBorder} padding: 8px 10px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    ${!readOnlyState ? `
+                        <button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'A')" title="Schiera in Esercito A" style="font-size: 13px; font-weight: bold; padding: 5px 10px; background: #1e3a8a; border-color: #3b82f6; border-radius: 3px; cursor: pointer; line-height: 1;">←</button>
+                    ` : ''}
+                    <div style="flex: 1; text-align: center; min-width: 0;">
+                        <div style="font-size: 12px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${gNome}">${gNome}</div>
+                        <div style="font-size: 9px; color: rgba(245, 230, 200, 0.65); margin-top: 2px;">
+                            ⚔️ ${stats.combattenti} Comb. | 🛡️ ${stats.nonCombattenti} Non Comb. | <span style="color: #60a5fa; font-family: monospace; font-weight: bold;">+${stats.forza} pts</span>
+                        </div>
+                    </div>
+                    ${!readOnlyState ? `
+                        <button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'B')" title="Schiera in Esercito B" style="font-size: 13px; font-weight: bold; padding: 5px 10px; background: #88242b; border-color: #ef4444; border-radius: 3px; cursor: pointer; line-height: 1;">→</button>
+                    ` : ''}
+                </div>
+            `;
+        }
 
+        // Layout per Esercito A
+        if (schieramento === 'A') {
+            return `
+                <div style="${cardBg} ${cardBorder} padding: 8px 10px; border-radius: 4px;">
+                    ${badgeCapo}
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 12px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${gNome}">${gNome}</div>
+                            <div style="font-size: 9px; color: rgba(245, 230, 200, 0.65); margin-top: 2px;">
+                                ⚔️ ${stats.combattenti} Comb. | 🛡️ ${stats.nonCombattenti} Non Comb. | <span style="color: #60a5fa; font-family: monospace; font-weight: bold;">+${stats.forza} pts</span>
+                            </div>
+                        </div>
+                        ${!readOnlyState ? `
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" title="Rimuovi da Esercito A" style="font-size: 11px; padding: 4px 7px; color: #fca5a5; border-color: rgba(239,68,68,0.4); border-radius: 3px; cursor: pointer; line-height: 1;">✕</button>
+                                <button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'B')" title="Sposta in Esercito B" style="font-size: 12px; font-weight: bold; padding: 4px 8px; background: #88242b; border-color: #ef4444; border-radius: 3px; cursor: pointer; line-height: 1;">→</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Layout per Esercito B
         return `
-            <div style="${cardBg} ${cardBorder} padding: 10px; border-radius: 4px;">
+            <div style="${cardBg} ${cardBorder} padding: 8px 10px; border-radius: 4px;">
                 ${badgeCapo}
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <span style="font-size: 11px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase;">${gNome}</span>
-                    <span style="font-size: 10px; font-family: monospace; color: #60a5fa;">+${stats.forza} pts</span>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    ${!readOnlyState ? `
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button class="epk-btn" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', 'A')" title="Sposta in Esercito A" style="font-size: 12px; font-weight: bold; padding: 4px 8px; background: #1e3a8a; border-color: #3b82f6; border-radius: 3px; cursor: pointer; line-height: 1;">←</button>
+                            <button class="epk-btn-secondary" onclick="impostaGruppoSchieramento('${gNome.replace(/'/g, "\\'")}', null)" title="Rimuovi da Esercito B" style="font-size: 11px; padding: 4px 7px; color: #fca5a5; border-color: rgba(239,68,68,0.4); border-radius: 3px; cursor: pointer; line-height: 1;">✕</button>
+                        </div>
+                    ` : ''}
+                    <div style="flex: 1; text-align: right; min-width: 0;">
+                        <div style="font-size: 12px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${gNome}">${gNome}</div>
+                        <div style="font-size: 9px; color: rgba(245, 230, 200, 0.65); margin-top: 2px;">
+                            <span style="color: #60a5fa; font-family: monospace; font-weight: bold;">+${stats.forza} pts</span> | ⚔️ ${stats.combattenti} Comb. | 🛡️ ${stats.nonCombattenti} Non Comb.
+                        </div>
+                    </div>
                 </div>
-                <div style="font-size: 9px; color: rgba(245, 230, 200, 0.6); ${readOnlyState ? '' : 'margin-bottom: 8px;'}">
-                    ⚔️ ${stats.combattenti} Combattenti | 🛡️ ${stats.nonCombattenti} Non Comb.
-                </div>
-                ${bottoniAzioneGruppoHtml}
             </div>
         `;
     }
