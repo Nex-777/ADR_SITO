@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.61">
+    <link rel="stylesheet" href="epika.css?v=1.04.63">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.61"></script>
+    <script src="config.js?v=1.04.63"></script>
 </head>
 <body class="epk-body">
 
@@ -22,7 +22,7 @@
             <!-- 2. Nome EPIKA -->
             <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
             <!-- 3. Versione -->
-            <span class="epk-version-badge">Vs. 1.04.61</span>
+            <span class="epk-version-badge">Vs. 1.04.63</span>
             <!-- 4. Selettore di vista -->
             <select id="epk-admin-switcher" class="epk-input epk-hidden" style="width: auto; padding: 4px 8px; font-size: 10px; font-weight: bold; height: auto;" onchange="switchEpikaView(this.value)">
                 <option value="athlete">VISTA ATLETA</option>
@@ -735,6 +735,10 @@
                                 <button class="epk-btn-secondary" onclick="nascondiPannelloPresenze()">CHIUDI</button>
                             </div>
                             <input type="hidden" id="adm-presenze-evento-id">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+                                <input type="text" id="adm-presenze-search" class="epk-input" placeholder="🔍 Cerca per nome storico, nome o cognome..." style="flex: 1; font-size: 11px; min-width: 200px;" oninput="filtraPresenzeUtenti()">
+                                <span id="adm-presenze-count" style="font-size: 11px; color: var(--epk-gold); text-transform: uppercase; font-weight: bold; white-space: nowrap;">0 Atleti</span>
+                            </div>
                             <div id="adm-presenze-utenti-list" style="display: flex; flex-direction: column; gap: 10px;">
                                 <!-- Iscritti con toggle presenza -->
                             </div>
@@ -2152,6 +2156,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.61"></script>
+    <script src="epika.js?v=1.04.63"></script>
 </body>
 </html>

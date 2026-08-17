@@ -3270,89 +3270,223 @@ function apriPannelloEsclusivoAdmin(targetPanelId) {
 }
 
 // D — Conferma Presenze Evento
+let presenzeIscrittiCache = [];
+let presenzeEventoAttivoId = null;
+
 async function mostraPannelloPresenze(eventoId, eventoTitolo) {
     apriPannelloEsclusivoAdmin('adm-presenze-panel');
     document.getElementById('adm-presenze-titolo').textContent = `CONFERMA PRESENZE: ${eventoTitolo.toUpperCase()}`;
     document.getElementById('adm-presenze-evento-id').value = eventoId;
+    presenzeEventoAttivoId = eventoId;
+
+    const searchInput = document.getElementById('adm-presenze-search');
+    if (searchInput) searchInput.value = '';
 
     const listContainer = document.getElementById('adm-presenze-utenti-list');
-    listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento iscritti...</p>';
+    listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento iscritti e certificati...</p>';
+    const countBadge = document.getElementById('adm-presenze-count');
+    if (countBadge) countBadge.textContent = 'Caricamento...';
 
     try {
-        // 1. Carica gli iscritti all'evento
-        const { data: iscritti, error } = await supabaseClient
-            .from('epika_iscrizioni_eventi')
-            .select(`
-                utente_id,
-                profilo:epika_profili(nome_di_battaglia)
-            `)
-            .eq('evento_id', eventoId);
+        // STEP 2: Parallelizzazione query (Evento per date, Iscritti e Presenze)
+        const [
+            { data: eventoData, error: errEvento },
+            { data: iscritti, error: errIsc },
+            { data: presenze, error: errPres }
+        ] = await Promise.all([
+            supabaseClient.from('epika_eventi').select('id, data_inizio, data_fine').eq('id', eventoId).single(),
+            supabaseClient.from('epika_iscrizioni_eventi').select('utente_id, profilo:epika_profili(nome_di_battaglia)').eq('evento_id', eventoId),
+            supabaseClient.from('epika_presenze_eventi').select('utente_id, presente').eq('evento_id', eventoId)
+        ]);
 
-        if (error) throw error;
-
-        // Recupera le presenze già salvate per questo evento
-        const { data: presenze } = await supabaseClient
-            .from('epika_presenze_eventi')
-            .select('utente_id, presente')
-            .eq('evento_id', eventoId);
+        if (errIsc) throw errIsc;
 
         const presenzeMappa = {};
-        (presenze || []).forEach(p => { presenzeMappa[p.utente_id] = p.presente; });
+        (presenze || []).forEach(p => { presenzeMappa[p.utente_id] = p.presente === true; });
 
-        listContainer.innerHTML = '';
-        
         if (!iscritti || iscritti.length === 0) {
+            presenzeIscrittiCache = [];
             listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: #ff4d4d;">Nessun atleta si è ancora iscritto a questo evento.</p>';
+            if (countBadge) countBadge.textContent = '0 Atleti';
             return;
         }
 
-        // Carica i nomi reali
+        // STEP 3: Fetching unificato anagrafiche e certificati medici
         const uids = iscritti.map(i => i.utente_id);
-        const { data: utentiD } = await supabaseClient.from('utenti').select('id, nome, cognome').in('id', uids);
-        const nomiReali = {};
-        (utentiD || []).forEach(u => { nomiReali[u.id] = `${u.nome} ${u.cognome}`; });
+        const { data: utentiD, error: errUtenti } = await supabaseClient
+            .from('utenti')
+            .select(`
+                id,
+                nome,
+                cognome,
+                anagrafiche (
+                    certificati_medici (
+                        data_scadenza
+                    )
+                )
+            `)
+            .in('id', uids);
 
-        iscritti.forEach(isc => {
-            const nomeReale = nomiReali[isc.utente_id] || 'N/D';
-            const nomeStorico = isc.profilo ? isc.profilo.nome_di_battaglia : 'N/D';
+        if (errUtenti) console.warn("Avviso query utenti/certificati:", errUtenti);
+
+        const utentiMappa = {};
+        (utentiD || []).forEach(u => { utentiMappa[u.id] = u; });
+
+        // Determinazione data limite evento (data_fine o data_inizio)
+        const dataFineEvento = (eventoData && (eventoData.data_fine || eventoData.data_inizio)) || '';
+
+        // STEP 4: Aggregazione Dati e Calcolo Validità Certificato (Semaforo)
+        presenzeIscrittiCache = iscritti.map(isc => {
+            const u = utentiMappa[isc.utente_id];
+            const nomeReale = u ? `${u.nome} ${u.cognome}`.trim() : 'N/D';
+            const nomeStorico = (isc.profilo && isc.profilo.nome_di_battaglia) ? isc.profilo.nome_di_battaglia.trim() : 'N/D';
             const isPresente = presenzeMappa[isc.utente_id] === true;
 
-            listContainer.innerHTML += `
-                <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold);">${nomeStorico}</span>
-                        <span style="font-size: 10px; color: rgba(245, 230, 200, 0.4); display: block; uppercase;">Real: ${nomeReale.toUpperCase()}</span>
-                    </div>
-                    <div>
-                        <button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${isPresente ? 'color: #22c55e; border-color: #22c55e;' : 'color: #ff4d4d; border-color: #ff4d4d;'}" onclick="togglePresenzaAtleta('${eventoId}', '${isc.utente_id}', ${isPresente})">
-                            ${isPresente ? 'PRESENTE' : 'ASSENTE'}
-                        </button>
-                    </div>
-                </div>`;
+            // Estrazione scadenze certificate
+            let scadenze = [];
+            if (u && u.anagrafiche) {
+                const anagList = Array.isArray(u.anagrafiche) ? u.anagrafiche : [u.anagrafiche];
+                anagList.forEach(a => {
+                    if (a && a.certificati_medici) {
+                        const certList = Array.isArray(a.certificati_medici) ? a.certificati_medici : [a.certificati_medici];
+                        certList.forEach(c => {
+                            if (c && c.data_scadenza) scadenze.push(c.data_scadenza);
+                        });
+                    }
+                });
+            }
+
+            let maxScadenza = null;
+            if (scadenze.length > 0) {
+                scadenze.sort((a, b) => (b > a ? 1 : b < a ? -1 : 0));
+                maxScadenza = scadenze[0];
+            }
+
+            // Calcolo semaforo rispetto alla fine evento
+            let isCertValido = false;
+            let certTooltip = '';
+            const fineFormatted = dataFineEvento ? formattaData(dataFineEvento) : 'N/D';
+
+            if (!maxScadenza) {
+                isCertValido = false;
+                certTooltip = `Certificato mancante (Fine evento: ${fineFormatted})`;
+            } else {
+                const scadFormatted = formattaData(maxScadenza);
+                if (dataFineEvento && maxScadenza >= dataFineEvento) {
+                    isCertValido = true;
+                    certTooltip = `Certificato valido fino al ${scadFormatted} (Fine evento: ${fineFormatted})`;
+                } else if (!dataFineEvento) {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    isCertValido = maxScadenza >= todayStr;
+                    certTooltip = isCertValido ? `Certificato valido fino al ${scadFormatted}` : `Certificato scaduto il ${scadFormatted}`;
+                } else {
+                    isCertValido = false;
+                    certTooltip = `Certificato SCADUTO il ${scadFormatted} (Fine evento: ${fineFormatted})`;
+                }
+            }
+
+            return {
+                utente_id: isc.utente_id,
+                nomeStorico: nomeStorico,
+                nomeReale: nomeReale,
+                presente: isPresente,
+                isCertValido: isCertValido,
+                maxScadenza: maxScadenza,
+                certTooltip: certTooltip
+            };
         });
+
+        // STEP 5: Ordinamento Alfabetico Client-Side
+        presenzeIscrittiCache.sort((a, b) => {
+            const strA = (a.nomeStorico && a.nomeStorico !== 'N/D') ? a.nomeStorico : a.nomeReale;
+            const strB = (b.nomeStorico && b.nomeStorico !== 'N/D') ? b.nomeStorico : b.nomeReale;
+            return strA.localeCompare(strB, 'it', { sensitivity: 'base' });
+        });
+
+        // STEP 6: Rendering UI
+        renderListaPresenze(presenzeIscrittiCache);
 
     } catch (err) {
         console.error("Errore caricamento presenze evento:", err);
         listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: red;">Errore durante il caricamento del registro presenze.</p>';
+        if (countBadge) countBadge.textContent = 'Errore';
     }
+}
+
+function renderListaPresenze(lista) {
+    const listContainer = document.getElementById('adm-presenze-utenti-list');
+    const countBadge = document.getElementById('adm-presenze-count');
+    if (!listContainer) return;
+
+    if (countBadge) {
+        countBadge.textContent = `${lista.length} / ${presenzeIscrittiCache.length} Atleti`;
+    }
+
+    if (!lista || lista.length === 0) {
+        if (presenzeIscrittiCache.length === 0) {
+            listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: #ff4d4d;">Nessun atleta si è ancora iscritto a questo evento.</p>';
+        } else {
+            listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: #ff9900;">Nessun atleta corrisponde alla ricerca attiva.</p>';
+        }
+        return;
+    }
+
+    const eventoId = presenzeEventoAttivoId || document.getElementById('adm-presenze-evento-id')?.value;
+
+    listContainer.innerHTML = lista.map(item => `
+        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-radius: 4px;">
+            <div style="flex: 1; min-width: 0;">
+                <span class="epk-headline" style="font-size: 12px; color: var(--epk-gold); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.nomeStorico}</span>
+                <span style="font-size: 10px; color: rgba(245, 230, 200, 0.4); display: block; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Real: ${item.nomeReale.toUpperCase()}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+                <button class="epk-btn-secondary" style="font-size: 9px; padding: 6px 12px; ${item.presente ? 'color: #22c55e; border-color: #22c55e;' : 'color: #ff4d4d; border-color: #ff4d4d;'}" onclick="togglePresenzaAtleta('${eventoId}', '${item.utente_id}', ${item.presente})">
+                    ${item.presente ? 'PRESENTE' : 'ASSENTE'}
+                </button>
+                <div title="${item.certTooltip}" style="cursor: help; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: ${item.isCertValido ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; border: 1px solid ${item.isCertValido ? '#22c55e' : '#ef4444'}; font-size: 12px;" aria-label="${item.certTooltip}">
+                    ${item.isCertValido ? '🟢' : '🔴'}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function filtraPresenzeUtenti() {
+    const q = (document.getElementById('adm-presenze-search')?.value || '').trim().toLowerCase();
+    if (!q) {
+        renderListaPresenze(presenzeIscrittiCache);
+        return;
+    }
+    const filtrati = presenzeIscrittiCache.filter(item => {
+        const sStorico = (item.nomeStorico || '').toLowerCase();
+        const sReale = (item.nomeReale || '').toLowerCase();
+        return sStorico.includes(q) || sReale.includes(q);
+    });
+    renderListaPresenze(filtrati);
 }
 
 async function togglePresenzaAtleta(eventoId, utenteId, statoAttuale) {
     try {
+        const nuovoStato = !statoAttuale;
         const { error } = await supabaseClient
             .from('epika_presenze_eventi')
             .upsert({
                 evento_id: eventoId,
                 utente_id: utenteId,
-                presente: !statoAttuale,
-                confermato_da: currentUser.id
+                presente: nuovoStato,
+                confermato_da: typeof currentUser !== 'undefined' && currentUser ? currentUser.id : null
             }, { onConflict: 'evento_id, utente_id' });
 
         if (error) throw error;
         
-        // Ricarica il pannello presenze per mostrare la variazione
-        const titolo = document.getElementById('adm-presenze-titolo').textContent.replace('CONFERMA PRESENZE: ', '');
-        await mostraPannelloPresenze(eventoId, titolo);
+        // Aggiorna lo stato locale in cache per reattività immediata
+        const target = presenzeIscrittiCache.find(x => x.utente_id === utenteId);
+        if (target) {
+            target.presente = nuovoStato;
+        }
+        
+        // Ri-applica il filtro attivo
+        filtraPresenzeUtenti();
     } catch (e) {
         console.error("Errore salvataggio presenza:", e);
     }
@@ -3360,6 +3494,8 @@ async function togglePresenzaAtleta(eventoId, utenteId, statoAttuale) {
 
 function nascondiPannelloPresenze() {
     apriPannelloEsclusivoAdmin(null);
+    presenzeEventoAttivoId = null;
+    presenzeIscrittiCache = [];
 }
 
 let dashboardIscrittiCache = [];

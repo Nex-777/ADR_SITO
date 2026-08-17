@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-17] feature | Quadro Conferma Presenze: Ordinamento A-Z, Filtro Ricerca e Semaforo Medico (v1.04.63)
+- **Frontend (`portal/epika.html`)**:
+  - Aggiunta barra di ricerca real-time (`#adm-presenze-search`) con relativo badge contatore dinamico (`#adm-presenze-count`) all'interno del pannello `#adm-presenze-panel`.
+- **Frontend (`portal/epika.js`)**:
+  - **Refactoring Query**: Implementata parallelizzazione con `Promise.all` per il recupero simultaneo di date evento (`epika_eventi`), iscrizioni (`epika_iscrizioni_eventi`) e presenze (`epika_presenze_eventi`).
+  - **Deep Fetching Certificati**: Eseguita query unificata su `utenti` con relazione innestata `anagrafiche(certificati_medici(data_scadenza))` per estrarre la data di scadenza più recente senza N+1 query né esposizione di PII superflue (piena conformità a `SECURITY.md`).
+  - **Semaforo Validità Medico**: Aggiunto indicatore visivo (🟢 / 🔴) sul lato destro di ogni atleta calcolato rispetto all'ultimo giorno dell'evento (`data_fine` o `data_inizio`), corredato di tooltip descrittivo (`title`) con data esatta.
+  - **Ordinamento Alfabetico**: Lista iscritti ordinata A-Z per nome storico di battaglia (`nome_di_battaglia`), con fallback su nome reale in caso di assenza.
+  - **Filtro Client-Side Reattivo**: Implementata funzione `filtraPresenzeUtenti()` su cache locale e aggiornato `togglePresenzaAtleta()` per preservare lo stato della ricerca attiva e velocizzare i rendering.
+- **Global Bump**: Versionamento globale aggiornato tramite `npm run bump`.
+
+---
+
 ## [2026-08-13] feature | Monitoraggio e Caselle Rate Mensili Stripe per Corsi ASD (v1.04.61)
 - **Database (Supabase `zpategmkelqmexetpaot`)**:
   - Aggiunte colonne `totale_rate`, `rate_pagate` e `stato_rate` alla tabella `public.iscrizioni_eventi`.
