@@ -3281,6 +3281,8 @@ async function mostraPannelloPresenze(eventoId, eventoTitolo) {
 
     const searchInput = document.getElementById('adm-presenze-search');
     if (searchInput) searchInput.value = '';
+    const filterRedCheckbox = document.getElementById('adm-presenze-filter-red');
+    if (filterRedCheckbox) filterRedCheckbox.checked = false;
 
     const listContainer = document.getElementById('adm-presenze-utenti-list');
     listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento iscritti e certificati...</p>';
@@ -3453,14 +3455,22 @@ function renderListaPresenze(lista) {
 
 function filtraPresenzeUtenti() {
     const q = (document.getElementById('adm-presenze-search')?.value || '').trim().toLowerCase();
-    if (!q) {
+    const onlyRed = document.getElementById('adm-presenze-filter-red')?.checked || false;
+
+    if (!q && !onlyRed) {
         renderListaPresenze(presenzeIscrittiCache);
         return;
     }
     const filtrati = presenzeIscrittiCache.filter(item => {
-        const sStorico = (item.nomeStorico || '').toLowerCase();
-        const sReale = (item.nomeReale || '').toLowerCase();
-        return sStorico.includes(q) || sReale.includes(q);
+        if (onlyRed && item.isCertValido) {
+            return false;
+        }
+        if (q) {
+            const sStorico = (item.nomeStorico || '').toLowerCase();
+            const sReale = (item.nomeReale || '').toLowerCase();
+            return sStorico.includes(q) || sReale.includes(q);
+        }
+        return true;
     });
     renderListaPresenze(filtrati);
 }

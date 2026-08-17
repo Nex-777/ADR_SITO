@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-17] feature | Filtro Checkbox Certificati Scaduti (🔴) e Layout Compatto Presenze
+- **Frontend (`portal/epika.html`)**:
+  - Ridotta e resa fluida la barra di ricerca `#adm-presenze-search` (`flex: 1 1 180px; max-width: 260px`).
+  - Aggiunta casella di spunta `#adm-presenze-filter-red` ("🔴 Solo Scaduti / Mancanti") allineata a destra nella toolbar sopra la colonna dei pallini/azioni.
+- **Frontend (`portal/epika.js`)**:
+  - In `mostraPannelloPresenze()`: forzato il reset sincrono del checkbox (`checked = false`) all'apertura del pannello per evitare stati fantasma.
+  - In `filtraPresenzeUtenti()`: integrata la valutazione logica combinata tra la ricerca testuale e il flag booleano `onlyRed` (filtraggio per `!item.isCertValido`).
+  - In `togglePresenzaAtleta()`: mantenuta la re-invocazione automatica di `filtraPresenzeUtenti()` per conservare lo stato dei filtri attivi.
+
+---
+
 ## [2026-08-17] feature | Quadro Conferma Presenze: Ordinamento A-Z, Filtro Ricerca e Semaforo Medico (v1.04.63)
 - **Frontend (`portal/epika.html`)**:
   - Aggiunta barra di ricerca real-time (`#adm-presenze-search`) con relativo badge contatore dinamico (`#adm-presenze-count`) all'interno del pannello `#adm-presenze-panel`.
