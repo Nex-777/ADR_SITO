@@ -7619,12 +7619,22 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             };
 
             if (gruppoNome.toUpperCase() === 'MERCENARI') {
-                esercitiCacheData.mercenari.push(atleta);
+                if (ruolo === 'combattente') {
+                    esercitiCacheData.mercenari.push(atleta);
+                }
             } else {
                 if (!esercitiCacheData.gruppi[gruppoNome]) {
                     esercitiCacheData.gruppi[gruppoNome] = [];
                 }
                 esercitiCacheData.gruppi[gruppoNome].push(atleta);
+            }
+        });
+
+        // 4a. Sanitizzazione assegnazioni mercenari: mantieni solo i combattenti validi in cache
+        const validMercIds = new Set(esercitiCacheData.mercenari.map(m => m.utente_id));
+        Object.keys(esercitiCacheData.assegnazioniMercenari).forEach(uid => {
+            if (!validMercIds.has(uid)) {
+                delete esercitiCacheData.assegnazioniMercenari[uid];
             }
         });
 
@@ -7887,7 +7897,7 @@ function renderTatticaEserciti() {
 
     // Render Mercenari Singoli
     if (esercitiCacheData.mercenari.length === 0) {
-        mercList.innerHTML = '<p style="font-size: 10px; color: gray; text-align: center; grid-column: 1 / -1;">Nessun mercenario iscritto a questo evento.</p>';
+        mercList.innerHTML = '<p style="font-size: 10px; color: gray; text-align: center; grid-column: 1 / -1;">Nessun mercenario combattente iscritto a questo evento.</p>';
     }
 
     esercitiCacheData.mercenari.forEach(m => {

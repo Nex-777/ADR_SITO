@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-17] fix | Esclusione Mercenari Non Combattenti da Gestione Eserciti & Sanitizzazione Assegnazioni
+- **Frontend (`portal/epika.js`)**:
+  - **Whitelisting Ingestione**: Nella funzione `mostraPannelloEserciti()`, aggiunta la condizione `ruolo === 'combattente'` per l'inclusione dei mercenari in `esercitiCacheData.mercenari`. I profili non combattenti mercenari vengono esclusi alla radice dalla pipeline tattica.
+  - **Sanitizzazione dello Stato (Garbage Collection)**: Implementata pulizia automatica dell'oggetto `esercitiCacheData.assegnazioniMercenari` eliminando eventuali ID pregressi non appartenenti alla whitelist dei mercenari combattenti validi (prevenzione ghost assignments nel DB).
+  - **UI Empty State**: Aggiornato il messaggio testuale in `renderTatticaEserciti()` quando non vi sono mercenari: `"Nessun mercenario combattente iscritto a questo evento."`.
+
+---
+
 ## [2026-08-17] feature | Filtro Checkbox Certificati Scaduti (🔴) e Layout Compatto Presenze
 - **Frontend (`portal/epika.html`)**:
   - Ridotta e resa fluida la barra di ricerca `#adm-presenze-search` (`flex: 1 1 180px; max-width: 260px`).
