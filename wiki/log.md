@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-17] fix | Mobile UI Redesign EPIKA, Griglia Azioni Eventi & Sanitizzazione Mermaid (v1.04.67)
+- **Frontend CSS (`portal/epika.css`)**:
+  - Implementate media queries per l'Header su due livelli (`.epk-header-top`, `.epk-header-bottom`).
+  - Ottimizzata la navigazione orizzontale a chip scorrevoli touch per la sidebar admin (`.epk-admin-sidebar`) con scrollbar sottile e protezione dal troncamento dei testi.
+  - Creata la griglia di azioni responsive per le card evento (`.epk-event-actions-grid`) con layout 2x2/2x3 touch su mobile e pulsante presenze espanso.
+  - Aggiunto il wrapper elastico `.epk-mermaid-wrapper` con scroll orizzontale fluido per l'organigramma.
+- **Frontend HTML (`portal/epika.html`)**:
+  - Riorganizzato l'header semantico nei container `.epk-header-top` (Logo, Titolo, Versione, Chiudi) ed `.epk-header-bottom` (Selettore Vista, Nome Utente).
+  - Avvolto l'organigramma Mermaid nel wrapper responsive `.epk-mermaid-wrapper`.
+- **Frontend JS (`portal/epika.js`)**:
+  - In `renderEventiAdmin()`: applicate le classi semantiche `.epk-event-card`, `.epk-event-header`, `.epk-event-info`, `.epk-event-actions-grid` eliminando layout inline rigidi.
+  - In `renderOrganigrammaMermaid()`: implementata la funzione `sanitizeMermaidText()` per sanificare i caratteri che rompevano il parser Mermaid o esponevano a injection/XSS; sanificati i doppi apici interni e le parentesi.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.67` tramite `npm run bump`.
+
+---
+
 ## [2026-08-17] fix | Esclusione Mercenari Non Combattenti da Gestione Eserciti & Sanitizzazione Assegnazioni
 - **Frontend (`portal/epika.js`)**:
   - **Whitelisting Ingestione**: Nella funzione `mostraPannelloEserciti()`, aggiunta la condizione `ruolo === 'combattente'` per l'inclusione dei mercenari in `esercitiCacheData.mercenari`. I profili non combattenti mercenari vengono esclusi alla radice dalla pipeline tattica.

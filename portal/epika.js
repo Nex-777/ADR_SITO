@@ -3073,22 +3073,21 @@ async function renderEventiAdmin() {
             const battaglieBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn-secondary" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloBattaglie('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">REGISTRO BATTAGLIE</button>` : '';
 
             container.innerHTML += `
-                <div class="epk-card" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.05); padding: 16px; display: flex; flex-direction: column; gap: 12px; margin: 0;">
-                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
+                <div class="epk-event-card">
+                     <div class="epk-event-header">
+                        <div class="epk-event-info">
                             <span class="epk-headline" style="font-size: 14px; color: var(--epk-gold);">${evt.titolo.toUpperCase()}</span>
-                            <span style="font-size: 10px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.5); uppercase; margin-top: 2px;">
+                            <span style="font-size: 10px; font-family: monospace; display: block; color: rgba(245, 230, 200, 0.5); text-transform: uppercase; margin-top: 2px;">
                                 📅 ${dataFormattata} | ⏰ INIZIO: ${evt.ora_arrivo_min ? evt.ora_arrivo_min.slice(0, 5) : '09:00'} - FINE: ${evt.ora_ripartenza_max ? evt.ora_ripartenza_max.slice(0, 5) : '18:00'} | 📍 ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'} ${mappaBadge ? '| ' + mappaBadge : ''} | TIPO: ${evt.tipo_evento.toUpperCase().replace('_', ' ')} | 💰 COSTO: €${parseFloat(evt.costo || 0).toFixed(2)}
                             </span>
                         </div>
-                        <div style="display: flex; gap: 8px; align-items: center;">
+                        <div class="epk-event-actions-grid">
                             <button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #1e3a8a; border-color: #3b82f6;" onclick="mostraDashboardEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.data_inizio}', '${evt.data_fine}')">DASHBOARD</button>
                             ${potenzaBtnHtml}
                             ${esercitiBtnHtml}
                             ${battaglieBtnHtml}
-                            <button class="epk-btn" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
-                            ${toggleBtnHtml}
-                            ${deleteBtnHtml}
+                            <button class="epk-btn epk-btn-presenze" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
+                            ${toggleBtnHtml || deleteBtnHtml ? `<div class="epk-event-icon-btns">${toggleBtnHtml} ${deleteBtnHtml}</div>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -3814,12 +3813,30 @@ function filtraPartecipantiDashboard() {
     });
 }
 
+// Funzione di supporto per sanificare stringhe iniettate nei grafi Mermaid
+function sanitizeMermaidText(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/["\\]/g, "'")
+        .replace(/[\[\]{}]/g, '')
+        .replace(/[<>]/g, '');
+}
+
 // E — Organigramma Dinamico (Mermaid.js)
 async function renderOrganigrammaMermaid() {
     const container = document.getElementById('epk-mermaid-container');
+    if (!container) return;
     container.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Generazione organigramma...</p>';
     
     try {
+        if (window.mermaid) {
+            try {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
+            } catch (eInit) {
+                // Già inizializzato o gestito
+            }
+        }
+
         // Carica tutti i gruppi di lavoro attivi
         const { data: gruppiL, error: glError } = await supabaseClient
             .from('epika_gruppi_lavoro')
@@ -3857,11 +3874,13 @@ async function renderOrganigrammaMermaid() {
         // Crea i nodi per ciascun gruppo di lavoro e associa i relativi tesserati
         (gruppiL || []).forEach((g, index) => {
             const listMembri = membriMappa[g.id] || [];
-            let label = `<b>${g.nome.toUpperCase()}</b>`;
+            const gNomeClean = sanitizeMermaidText(g.nome).toUpperCase();
+            let label = `<b>${gNomeClean}</b>`;
             if (listMembri.length > 0) {
-                label += `<br/>[${listMembri.join(' - ')}]`;
+                const listClean = listMembri.map(m => sanitizeMermaidText(m)).filter(Boolean);
+                label += `<br/>(${listClean.join(' - ')})`;
             } else {
-                label += `<br/><i style="font-size:9px;">NESSUNA NOMINA</i>`;
+                label += `<br/><i style='font-size:9px;'>NESSUNA NOMINA</i>`;
             }
             
             const nodeId = `G${g.id}`;
@@ -3882,7 +3901,9 @@ async function renderOrganigrammaMermaid() {
         container.innerHTML = `<pre class="mermaid">${mermaidCode}</pre>`;
 
         // Renderizza il diagramma Mermaid DOPO che il DOM è visibile
-        await mermaid.run({ nodes: [container] });
+        if (window.mermaid) {
+            await mermaid.run({ nodes: [container] });
+        }
 
     } catch (e) {
         console.error("Errore durante il rendering del diagramma Mermaid:", e);
