@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-18] fix | Inclusione Atleti Allievi Allenatori nella Vista Allenatore SCAB (v1.04.69)
+- **Frontend JS (`portal/epika.js`)**:
+  - In `getAllenatoreAllieviIds(opzioneId)`: esteso il filtro di query su `epika_profili` sostituendo `.eq('allenatore_id', opzioneId)` con `.in('allenatore_id', tuttiCoachIds)` dove `tuttiCoachIds` include sia il coach principale sia tutti gli ID degli allievi allenatori (`opzioniAllieviIds`) abbinati alle relative strutture SCAB (`epika_scab_abbinamenti`).
+  - In `fetchIscrittiEventoDettagli(eventoId)`: ampliata la query di recupero delle opzioni per `allenatoriMappa` includendo sia `'allenatore'` sia `'scab_allievo_allenatore'`, assicurando che i nomi degli allievi allenatori vengano risolti correttamente nei dettagli dei partecipanti.
+  - La correzione si propaga automaticamente a `getAllievoCoachAllieviIds`, `getValidatoreAllieviIds`, `renderAllenatoreDashboard` e `mostraIscrittiEventoAllenatore`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.69` tramite `npm run bump`.
+
+
 ## [2026-08-17] fix | Mobile UI Redesign EPIKA, Griglia Azioni Eventi & Sanitizzazione Mermaid (v1.04.67)
 - **Frontend CSS (`portal/epika.css`)**:
   - Implementate media queries per l'Header su due livelli (`.epk-header-top`, `.epk-header-bottom`).

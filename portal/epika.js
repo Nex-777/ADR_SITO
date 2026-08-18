@@ -6138,10 +6138,12 @@ async function getAllenatoreAllieviIds(opzioneId) {
             });
         }
 
+        const tuttiCoachIds = Array.from(new Set([Number(opzioneId), ...opzioniAllieviIds]));
+
         const { data: profili } = await supabaseClient
             .from('epika_profili')
             .select('id')
-            .eq('allenatore_id', opzioneId);
+            .in('allenatore_id', tuttiCoachIds);
 
         (profili || []).forEach(p => {
             allieviIds.add(p.id);
@@ -6245,7 +6247,7 @@ async function fetchIscrittiEventoDettagli(eventoId) {
     const { data: allD } = await supabaseClient
         .from('epika_opzioni')
         .select('id, valore')
-        .eq('tipo', 'allenatore');
+        .in('tipo', ['allenatore', 'scab_allievo_allenatore']);
     
     const allenatoriMappa = {};
     (allD || []).forEach(a => { allenatoriMappa[a.id] = a.valore; });

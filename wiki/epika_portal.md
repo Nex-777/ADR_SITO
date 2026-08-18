@@ -122,7 +122,7 @@ Stores annual SCAB combat certification state per athlete.
 1. **Athlete Request**: The athlete requests annual certification by selecting an Allenatore or Allievo Allenatore. The system invokes `crea_richiesta_abilitazione`, automatically resolving the supervising coach and structure validator via `epika_scab_abbinamenti`, and setting expiration (Dec 31 if Campo Marzio attended, Aug 31 otherwise).
 2. **Trainer Assessment**: The Allenatore updates evaluation state (`in_attesa` → `in_valutazione` → `video_fatto` → `video_in_valutazione`) via `aggiorna_stato_allenatore`.
 3. **Validator Approval**: The Validatore sets the validation semaphore (`giallo` → `verde`/`rosso`) via `aggiorna_stato_validatore`.
-4. **Assistant Trainer View**: The Allievo Allenatore monitors athletes under their supervision in read-only mode.
+4. **Assistant Trainer View & Hierarchical Resolution**: The Allievo Allenatore monitors athletes under their supervision in read-only mode. In the Allenatore dashboard and event participant lists, `getAllenatoreAllieviIds` dynamically resolves both direct athletes (`epika_profili.allenatore_id = coach_id`) and athletes trained by assigned assistant trainers (`epika_profili.allenatore_id IN opzioniAllieviIds` resolved via `epika_scab_abbinamenti`).
 
 ### 10. `public.epika_battaglie_eventi`
 Stores individual battle results during Campo Martio events (e.g. Friday/Saturday battles).
