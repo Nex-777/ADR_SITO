@@ -87,12 +87,35 @@ BEGIN
         LIMIT 1;
     ELSIF v_tipo = 'scab_allievo_allenatore' THEN
         v_allievo_id := p_soggetto_opzione_id;
-        SELECT allenatore_ref_id, validatore_id INTO v_allenatore_id, v_validatore_id
+        
+        -- Step 1.1: Risolvi l'Allenatore di riferimento dell'Allievo
+        SELECT allenatore_ref_id INTO v_allenatore_id
+        FROM public.epika_scab_abbinamenti
+        WHERE (allievo_ref_id = v_allievo_id OR allievi_ids @> ARRAY[v_allievo_id])
+          AND allenatore_ref_id IS NOT NULL
+        ORDER BY id ASC
+        LIMIT 1;
+
+        IF v_allenatore_id IS NULL THEN
+            RAISE EXCEPTION 'Nessun allenatore di riferimento associato all''allievo allenatore (id: %)', p_soggetto_opzione_id;
+        END IF;
+
+        -- Step 1.2: Risolvi il Validatore (prima dalla struttura dell'allievo se presente, altrimenti da quella dell'allenatore)
+        SELECT validatore_id INTO v_validatore_id
         FROM public.epika_scab_abbinamenti
         WHERE (allievo_ref_id = v_allievo_id OR allievi_ids @> ARRAY[v_allievo_id])
           AND validatore_id IS NOT NULL
         ORDER BY id ASC
         LIMIT 1;
+
+        IF v_validatore_id IS NULL THEN
+            SELECT validatore_id INTO v_validatore_id
+            FROM public.epika_scab_abbinamenti
+            WHERE (allenatore_ref_id = v_allenatore_id OR allenatori_co_ids @> ARRAY[v_allenatore_id])
+              AND validatore_id IS NOT NULL
+            ORDER BY id ASC
+            LIMIT 1;
+        END IF;
     ELSE
         RAISE EXCEPTION 'Tipo soggetto non valido per abilitazione: %', v_tipo;
     END IF;
@@ -171,6 +194,7 @@ CREATE OR REPLACE FUNCTION public.aggiorna_stato_allenatore(
 )
 RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
+    v_rec_id                BIGINT;
     v_allenatore_opzione_id BIGINT;
     v_stato_validatore      TEXT;
     v_caller_opzione_id     BIGINT;
@@ -192,14 +216,18 @@ BEGIN
         RAISE EXCEPTION 'Stato allenatore non valido: %', p_nuovo_stato;
     END IF;
 
-    -- 2. Recupera allenatore assegnato e stato validatore corrente in una sola query
-    SELECT allenatore_opzione_id, stato_validatore
-    INTO v_allenatore_opzione_id, v_stato_validatore
+    -- 2. Recupera ID record, allenatore assegnato e stato validatore corrente in una sola query
+    SELECT id, allenatore_opzione_id, stato_validatore
+    INTO v_rec_id, v_allenatore_opzione_id, v_stato_validatore
     FROM public.epika_scab_abilitazioni
     WHERE id = p_abilitazione_id;
 
-    IF v_allenatore_opzione_id IS NULL THEN
+    IF v_rec_id IS NULL THEN
         RAISE EXCEPTION 'Richiesta di abilitazione non trovata: %', p_abilitazione_id;
+    END IF;
+
+    IF v_allenatore_opzione_id IS NULL THEN
+        RAISE EXCEPTION 'Record di abilitazione corrotto (allenatore mancante per la richiesta %)', p_abilitazione_id;
     END IF;
 
     -- 3. VINCOLO: Ciclo chiuso se validatore ha approvato con VERDE
@@ -376,11 +404,28 @@ BEGIN
             ORDER BY id ASC LIMIT 1;
         ELSIF v_tipo = 'scab_allievo_allenatore' THEN
             v_allievo_id := r.allenatore_id;
-            SELECT allenatore_ref_id, validatore_id INTO v_allenatore_id, v_validatore_id
+            
+            -- Step 1.1: Risolvi allenatore di riferimento
+            SELECT allenatore_ref_id INTO v_allenatore_id
+            FROM public.epika_scab_abbinamenti
+            WHERE (allievo_ref_id = v_allievo_id OR allievi_ids @> ARRAY[v_allievo_id])
+              AND allenatore_ref_id IS NOT NULL
+            ORDER BY id ASC LIMIT 1;
+
+            -- Step 1.2: Risolvi validatore
+            SELECT validatore_id INTO v_validatore_id
             FROM public.epika_scab_abbinamenti
             WHERE (allievo_ref_id = v_allievo_id OR allievi_ids @> ARRAY[v_allievo_id])
               AND validatore_id IS NOT NULL
             ORDER BY id ASC LIMIT 1;
+
+            IF v_validatore_id IS NULL AND v_allenatore_id IS NOT NULL THEN
+                SELECT validatore_id INTO v_validatore_id
+                FROM public.epika_scab_abbinamenti
+                WHERE (allenatore_ref_id = v_allenatore_id OR allenatori_co_ids @> ARRAY[v_allenatore_id])
+                  AND validatore_id IS NOT NULL
+                ORDER BY id ASC LIMIT 1;
+            END IF;
         ELSE
             CONTINUE;
         END IF;

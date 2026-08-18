@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-18] fix | Risoluzione Gerarchica SCAB Allievi Allenatori & Integrità RPC (v1.04.70)
+- **Database (Supabase RPC):**
+  - Corretta `public.crea_richiesta_abilitazione`: introdotta la risoluzione gerarchica a 2 step per gli allievi allenatori (`scab_allievo_allenatore`), risolvendo prima l'allenatore di riferimento e poi il validatore dalla palestra principale.
+  - Corretta `public.inizializza_abilitazioni_mancanti` applicando la medesima risoluzione a 2 step per prevenire regressioni durante le sanatorie massive.
+  - Irrobustita `public.aggiorna_stato_allenatore`: introdotta la verifica su `v_rec_id` reale (evitando falsi errori di record non trovato quando un campo era nullo) e blocco per record corrotti.
+- **Data Patch:**
+  - Eseguita bonifica procedurale su `epika_scab_abilitazioni`, sanando il record di Chiara Traglia (id: 54) e collegando correttamente Tito (allenatore_opzione_id = 8) e Beleno (validatore_opzione_id = 33).
+- **Versionamento:** Eseguito `npm run bump` (versione `v1.04.70`).
+
 ## [2026-08-18] fix | Inclusione Atleti Allievi Allenatori nella Vista Allenatore SCAB (v1.04.69)
 - **Frontend JS (`portal/epika.js`)**:
   - In `getAllenatoreAllieviIds(opzioneId)`: esteso il filtro di query su `epika_profili` sostituendo `.eq('allenatore_id', opzioneId)` con `.in('allenatore_id', tuttiCoachIds)` dove `tuttiCoachIds` include sia il coach principale sia tutti gli ID degli allievi allenatori (`opzioniAllieviIds`) abbinati alle relative strutture SCAB (`epika_scab_abbinamenti`).
