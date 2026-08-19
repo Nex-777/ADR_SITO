@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-19] fix | Hardening Pre-Upload Registrazione, Gestione Errori e Allineamento RLS Storage (v1.04.72)
+- **Database & Storage (Supabase):**
+  - Allineate le policy RLS su `storage.objects` per il bucket `documenti_identita`: rimossa la policy INSERT permissiva non confinata, introdotte policy con path-guard rigoroso su `(auth.uid())::text = (storage.foldername(name))[1]` per `INSERT`, `UPDATE` e `SELECT` (con accesso consentito anche al Consiglio Direttivo).
+  - Sbloccato e rimosso il record fantasma incompleto di Marco Giordani (`auth.users`, `public.utenti`, `public.atti_adesione`).
+- **Frontend JS (`portal/registrazione.js`):**
+  - Isolato e protetto il merge PDF fronte/retro con `try/catch` dedicato e fallback automatico al caricamento del solo fronte in caso di file JPEG da smartphone con codifiche non supportate da pdf-lib, notificando l'utente e consentendo la prosecuzione.
+  - Aggiunto null-guard preventivo su `uploadedDocumentoIdentitaFile` per evitare `TypeError` prima dell'upload.
+  - Sostituito `upsert: true` con `upsert: false` per gli upload su `certificati_medici`, `documenti_identita`, `documenti_adesione` e `documenti_tutori` sfruttando i path univoci con timestamp.
+  - Arricchito il messaggio di errore finale nel catch con l'indicazione contestuale dello step di avanzamento.
+- **Versionamento:** Eseguito `npm run bump` (versione `v1.04.72`).
+
 ## [2026-08-18] fix | Risoluzione Gerarchica SCAB Allievi Allenatori & Integrità RPC (v1.04.70)
 - **Database (Supabase RPC):**
   - Corretta `public.crea_richiesta_abilitazione`: introdotta la risoluzione gerarchica a 2 step per gli allievi allenatori (`scab_allievo_allenatore`), risolvendo prima l'allenatore di riferimento e poi il validatore dalla palestra principale.

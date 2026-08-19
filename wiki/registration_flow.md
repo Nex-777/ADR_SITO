@@ -36,7 +36,7 @@ graph TD
 ### 4. Passo 4: Firma Digitale (OTP Electronic Signature & Pre-Upload)
 -   Accepts legal waivers and terms.
 -   Richiede il consenso GDPR obbligatorio sul trattamento dei dati sanitari e l'elaborazione automatizzata AI per i tesserati.
--   **Pre-Upload Strategy (v1.03.49/50)**: Al click su *"INVIA CODICE OTP"*, il sistema esegue preventivamente la compressione delle immagini, l'unione PDFLib fronte/retro, la generazione del contratto ed il caricamento su Storage (`documenti_identita`, `certificati_medici`, `documenti_adesione`, `documenti_tutori`) generando Signed URL con durata di **3600 secondi (1 ora)**.
+-   **Pre-Upload Strategy (v1.03.49/50, Hardening v1.04.71)**: Al click su *"INVIA CODICE OTP"*, il sistema esegue preventivamente la compressione delle immagini, l'unione PDFLib fronte/retro protetta da fallback su formati non standard, la generazione del contratto ed il caricamento su Storage (`documenti_identita`, `certificati_medici`, `documenti_adesione`, `documenti_tutori`) con `upsert: false` e policy RLS dedicate per utente, generando Signed URL con durata di **3600 secondi (1 ora)**.
 -   **Verifica Istantanea (< 2s)**: Al click su *"CONFERMA FIRMA"*, l'OTP viene inviato a `/api/otp-verify.js` in meno di 2 secondi, previa sanitizzazione degli spazi (`.replace(/\s+/g, '')`) e refresh preventivo della sessione JWT (`auth.refreshSession()`).
 -   Generates and validates OTP code to e-sign the registration dynamically.
 

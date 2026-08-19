@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.70"
+                VERSION: "1.04.72"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1385,7 +1385,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         .from('certificati_medici')
                         .upload(filePath, uploadedCertificatoFile, {
                             contentType: uploadedCertificatoFile.type,
-                            upsert: true
+                            upsert: false
                         });
                         
                     if (uploadError) throw uploadError;
@@ -1402,7 +1402,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                             const thumbBlob = await generatePdfThumbnail(uploadedCertificatoFile);
                             if (thumbBlob) {
                                 const thumbPath = filePath.replace(/\.pdf$/i, '_thumb.jpg');
-                                await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: true });
+                                await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: false });
                                 console.log("Thumbnail certificato medico caricato con successo:", thumbPath);
                             }
                         } catch (tErr) {
@@ -1418,37 +1418,47 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     }
                     btnInviaOtp.textContent = "ELABORAZIONE DOCUMENTI...";
                     
-                    const pdfDoc = await window.PDFLib.PDFDocument.create();
-                    const files = [uploadedDocumentoIdentitaFile, uploadedDocumentoIdentitaRetroFile];
-                    
-                    for (let i = 0; i < files.length; i++) {
-                        const file = files[i];
-                        if (file.type === 'application/pdf') {
-                            const fileBytes = await file.arrayBuffer();
-                            const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
-                            const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
-                            copiedPages.forEach(page => pdfDoc.addPage(page));
-                        } else if (file.type.startsWith('image/')) {
-                            const compBlob = await compressImage(file, 1200, 1200, 0.8);
-                            const imageBytes = await compBlob.arrayBuffer();
-                            let embeddedImage;
-                            if (file.type === 'image/png') {
-                                embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
-                            } else {
-                                embeddedImage = await pdfDoc.embedJpg(imageBytes);
+                    try {
+                        const pdfDoc = await window.PDFLib.PDFDocument.create();
+                        const files = [uploadedDocumentoIdentitaFile, uploadedDocumentoIdentitaRetroFile];
+                        
+                        for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            if (!file) continue;
+                            if (file.type === 'application/pdf') {
+                                const fileBytes = await file.arrayBuffer();
+                                const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
+                                const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
+                                copiedPages.forEach(page => pdfDoc.addPage(page));
+                            } else if (file.type.startsWith('image/')) {
+                                const compBlob = await compressImage(file, 1200, 1200, 0.8);
+                                const imageBytes = await compBlob.arrayBuffer();
+                                let embeddedImage;
+                                if (file.type === 'image/png') {
+                                    embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
+                                } else {
+                                    embeddedImage = await pdfDoc.embedJpg(imageBytes).catch(async () => await pdfDoc.embedPng(imageBytes));
+                                }
+                                const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                                page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
                             }
-                            const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
-                            page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
                         }
+                        
+                        const pdfBytes = await pdfDoc.save();
+                        const mergedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        uploadedDocumentoIdentitaFile = new File([mergedPdfBlob], "documento_unito.pdf", { type: "application/pdf" });
+                        console.log("Merge fronte/retro completato con successo.");
+                    } catch (mergeErr) {
+                        console.warn("Merge fronte/retro fallito, uso solo fronte:", mergeErr);
+                        alert("Non è stato possibile unire i due file del documento. Verrà caricato solo il fronte. Puoi caricare il retro successivamente dal portale.");
                     }
-                    
-                    const pdfBytes = await pdfDoc.save();
-                    const mergedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-                    uploadedDocumentoIdentitaFile = new File([mergedPdfBlob], "documento_unito.pdf", { type: "application/pdf" });
                 }
 
                 // 3. Upload documento identità
                 btnInviaOtp.textContent = "CARICAMENTO DOCUMENTO IDENTITÀ...";
+                if (!uploadedDocumentoIdentitaFile) {
+                    throw new Error("File del documento d'identità non disponibile. Ricarica la pagina e ricarica il file.");
+                }
                 const idFileExt = uploadedDocumentoIdentitaFile.name.split('.').pop();
                 const idFilePath = `${userId}/documento_${Date.now()}.${idFileExt}`;
                 
@@ -1456,7 +1466,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     .from('documenti_identita')
                     .upload(idFilePath, uploadedDocumentoIdentitaFile, {
                         contentType: uploadedDocumentoIdentitaFile.type,
-                        upsert: true
+                        upsert: false
                     });
                     
                 if (idUploadError) throw idUploadError;
@@ -1473,7 +1483,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         const idThumbBlob = await generatePdfThumbnail(uploadedDocumentoIdentitaFile);
                         if (idThumbBlob) {
                             const idThumbPath = idFilePath.replace(/\.pdf$/i, '_thumb.jpg');
-                            await supabaseClient.storage.from('documenti_identita').upload(idThumbPath, idThumbBlob, { contentType: 'image/jpeg', upsert: true });
+                            await supabaseClient.storage.from('documenti_identita').upload(idThumbPath, idThumbBlob, { contentType: 'image/jpeg', upsert: false });
                             console.log("Thumbnail documento identità caricato con successo:", idThumbPath);
                         }
                     } catch (tErr) {
@@ -1556,7 +1566,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     .from('documenti_adesione')
                     .upload(pdfPath, pdfBlob, {
                         contentType: 'application/pdf',
-                        upsert: true
+                        upsert: false
                     });
                     
                 if (uploadError) throw uploadError;
@@ -1577,7 +1587,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         .from('documenti_tutori')
                         .upload(filePath, uploadedTutoreDocumentoFile, {
                             contentType: uploadedTutoreDocumentoFile.type,
-                            upsert: true
+                            upsert: false
                         });
 
                     if (parentUploadError) throw parentUploadError;
@@ -1618,7 +1628,8 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
             } catch (preUploadErr) {
                 console.error("Pre-upload error:", preUploadErr);
-                alert("Errore nel caricamento dei documenti: " + preUploadErr.message);
+                const stepCorrente = btnInviaOtp.textContent;
+                alert(`Errore durante "${stepCorrente}": ${preUploadErr.message}\n\nRiprova. Se il problema persiste, contatta la segreteria con questo messaggio.`);
                 btnInviaOtp.disabled = false;
                 btnInviaOtp.textContent = "INVIA CODICE OTP";
                 return;
