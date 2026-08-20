@@ -18,7 +18,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.04.72"></script>
+    <script src="config.js?v=1.04.74"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -144,7 +144,7 @@
             transform: translateY(0);
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.04.72">
+    <link rel="stylesheet" href="../output.css?v=1.04.74">
 </head>
 <body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary min-h-screen flex flex-col justify-between overflow-x-hidden">
     <div class="noise-overlay"></div>
@@ -157,7 +157,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.04.72</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.04.74</span>
             </div>
             <div class="flex items-center gap-4">
                 <span class="font-headline text-xs text-primary font-bold tracking-widest uppercase bg-primary/10 px-3 py-1 border border-primary/20">
@@ -375,24 +375,38 @@
                                 <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary">CERTIFICATO MEDICO (OBBLIGATORIO)</label>
                                 <span class="text-[9px] text-gray-400">PDF, PNG, JPG (MAX 5MB)</span>
                             </div>
+
+                            <!-- Banner Requisiti Certificato Medico -->
+                            <div class="bg-amber-950/30 border border-amber-500/30 p-3 mb-3 rounded-sm">
+                                <p class="text-[10px] text-amber-300 font-bold uppercase tracking-wider">⚠️ Requisiti Certificato Medico</p>
+                                <ul class="text-[9px] text-amber-200/70 mt-1 space-y-0.5 list-disc list-inside">
+                                    <li>Deve riportare esplicitamente la dicitura <strong>NON AGONISTICO</strong> o <strong>AGONISTICO</strong></li>
+                                    <li>Deve essere <strong>in corso di validità</strong> (rilasciato da meno di 12 mesi)</li>
+                                    <li>Formati accettati: PDF, JPG, PNG (max 5MB)</li>
+                                </ul>
+                            </div>
+
                             <div class="border border-dashed border-white/20 p-4 hover:border-primary/50 transition-all text-center cursor-pointer relative mb-3" id="auto-registrazione-click-2">
                                 <input type="file" id="certificato_file" accept=".pdf,.png,.jpg,.jpeg" class="hidden">
                                 <span class="material-symbols-outlined text-2xl text-primary mb-1">upload_file</span>
                                 <p class="text-xs text-white uppercase font-bold" id="certificato-file-name">SELEZIONA O TRASCINA IL CERTIFICATO</p>
                                 <p class="text-[9px] text-gray-400 mt-1 uppercase" id="certificato-file-status">Nessun file selezionato</p>
                             </div>
-                            <!-- Nuovi Campi Certificato (Tipologia e Data Emissione - Nascosti per Gestione Automatica AI) -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+
+                            <!-- Campi Certificato (Tipologia e Data Emissione con validazione visiva preventiva) -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
                                 <div class="group">
-                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">TIPOLOGIA CERTIFICATO *</label>
+                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">TIPOLOGIA CERTIFICATO</label>
                                     <select id="certificato_tipologia" class="brutalist-select text-xs">
                                         <option value="NON_AGONISTICO" selected="">NON AGONISTICO</option>
                                         <option value="AGONISTICO">AGONISTICO</option>
                                     </select>
+                                    <p class="text-[9px] text-gray-400 mt-1 uppercase">Verrà verificata anche dall'AI.</p>
                                 </div>
                                 <div class="group">
-                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI EMISSIONE *</label>
-                                    <input type="date" id="certificato_data_emissione" class="w-full brutalist-input bg-black text-white text-xs p-2">
+                                    <label class="block font-headline text-[10px] font-black uppercase tracking-widest text-primary mb-1">DATA DI EMISSIONE</label>
+                                    <input type="date" id="certificato_data_emissione" class="w-full brutalist-input bg-black text-white text-xs p-2 border border-white/20">
+                                    <div id="cert-data-warning" class="hidden text-[9px] text-red-400 font-bold mt-1 uppercase"></div>
                                 </div>
                             </div>
                         </div>
@@ -726,8 +740,8 @@
     </footer>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.04.72"></script>
-    <script src="registrazione.js?v=1.04.72"></script>
+    <script src="password-validator.js?v=1.04.74"></script>
+    <script src="registrazione.js?v=1.04.74"></script>
 
 
 

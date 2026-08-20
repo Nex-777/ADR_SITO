@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.72"
+                VERSION: "1.04.74"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5934,25 +5934,61 @@
         setTimeout(() => {
             const dashFileInput = document.getElementById('dash_cert_file');
             if (dashFileInput) {
-                dashFileInput.addEventListener('change', (e) => {
+                dashFileInput.addEventListener('change', async (e) => {
                     const file = e.target.files[0];
                     const nameLabel = document.getElementById('dash-cert-file-name');
                     const statusLabel = document.getElementById('dash-cert-file-status');
                     if (!file) {
                         dashUploadedCertFile = null;
-                        nameLabel.textContent = "SELEZIONA O TRASCINA IL CERTIFICATO";
-                        statusLabel.textContent = "Nessun file selezionato";
+                        if (nameLabel) nameLabel.textContent = "SELEZIONA O TRASCINA IL CERTIFICATO";
+                        if (statusLabel) {
+                            statusLabel.textContent = "Nessun file selezionato";
+                            statusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                        }
                         return;
                     }
-                    if (file.size > 5 * 1024 * 1024) {
-                        alert("Il file supera la dimensione massima consentita di 5MB.");
+                    if (file.size > 10 * 1024 * 1024) {
+                        if (statusLabel) {
+                            statusLabel.textContent = "Il file supera la dimensione massima di 10MB";
+                            statusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                        }
+                        showToastNotification("Il file supera la dimensione massima consentita di 10MB.", "error");
                         dashFileInput.value = "";
                         dashUploadedCertFile = null;
                         return;
                     }
-                    dashUploadedCertFile = file;
-                    nameLabel.textContent = file.name.toUpperCase();
-                    statusLabel.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+
+                    if (file.type.startsWith('image/') || (!file.type && file.name && /\.(png|jpe?g|heic|webp)$/i.test(file.name))) {
+                        if (nameLabel) nameLabel.textContent = file.name ? file.name.toUpperCase() : "IMMAGINE";
+                        if (statusLabel) {
+                            statusLabel.textContent = "OTTIMIZZAZIONE IMMAGINE...";
+                            statusLabel.className = "text-[9px] text-amber-400 mt-1 uppercase font-bold animate-pulse";
+                        }
+                        try {
+                            const compBlob = await compressImageSandbox(file, 1600, 1600, 0.82);
+                            const rawName = file.name || `cert_${Date.now()}.jpg`;
+                            const cleanName = rawName.includes('.') ? rawName.replace(/\.[^/.]+$/, ".jpg") : `${rawName}.jpg`;
+                            dashUploadedCertFile = new File([compBlob], cleanName, { type: 'image/jpeg' });
+                            if (statusLabel) {
+                                statusLabel.textContent = `✓ PRONTO (${(dashUploadedCertFile.size / 1024 / 1024).toFixed(2)} MB)`;
+                                statusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                            }
+                        } catch (err) {
+                            console.warn("Errore compressione certificato, uso originale:", err);
+                            dashUploadedCertFile = file;
+                            if (statusLabel) {
+                                statusLabel.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                                statusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                            }
+                        }
+                    } else {
+                        dashUploadedCertFile = file;
+                        if (nameLabel) nameLabel.textContent = file.name ? file.name.toUpperCase() : "DOCUMENTO";
+                        if (statusLabel) {
+                            statusLabel.textContent = `✓ PRONTO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                            statusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                        }
+                    }
                 });
             }
         }, 1000);
@@ -5961,84 +5997,142 @@
             const tipologia = document.getElementById('dash-cert-tipologia')?.value || 'NON_AGONISTICO';
             const emissionDate = document.getElementById('dash-cert-data-emissione')?.value || new Date().toISOString().split('T')[0];
             const btn = document.getElementById('btn-upload-cert-dash');
+            const statusLabel = document.getElementById('dash-cert-file-status');
             
             if (!dashUploadedCertFile) {
-                alert("Per favore seleziona o trascina un file prima di inviare.");
+                if (statusLabel) {
+                    statusLabel.textContent = "Seleziona o trascina un file prima di inviare";
+                    statusLabel.className = "text-[9px] text-primary mt-1 uppercase font-bold";
+                }
+                showToastNotification("Per favore seleziona o trascina un file prima di inviare.", "error");
                 return;
             }
             
-            btn.disabled = true;
-            btn.textContent = "CARICAMENTO...";
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "CARICAMENTO...";
+            }
             
             try {
-                const userId = currentUser.id;
-                const fileExt = dashUploadedCertFile.name.split('.').pop();
+                const { data: sessionData } = await supabaseClient.auth.getSession();
+                const session = sessionData?.session;
+                const token = session?.access_token;
+                const userId = currentUser?.id || session?.user?.id;
+
+                if (!userId) throw new Error("Utente non autenticato.");
+
+                const fileExt = dashUploadedCertFile.name.split('.').pop() || 'jpg';
                 const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
                 
-                // 1. Carica il file nello storage
+                // 1. Carica il file nello storage (upsert: false per preservare)
                 const { data: uploadData, error: uploadError } = await supabaseClient.storage
                     .from('certificati_medici')
                     .upload(filePath, dashUploadedCertFile, {
-                        contentType: dashUploadedCertFile.type,
-                        upsert: true
+                        contentType: dashUploadedCertFile.type || 'image/jpeg',
+                        upsert: false
                     });
                 if (uploadError) throw uploadError;
                 
+                // 2. Se PDF, genera ed invia la miniatura
                 if (filePath.toLowerCase().endsWith('.pdf')) {
                     try {
                         const thumbBlob = await generatePdfThumbnail(dashUploadedCertFile);
                         if (thumbBlob) {
                             const thumbPath = filePath.replace(/\.pdf$/i, '_thumb.jpg');
-                            await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: true });
+                            await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: false });
                         }
                     } catch (tErr) {
                         console.warn("Thumbnail upload error:", tErr);
                     }
                 }
                 
-                const { data: urlData, error: signedUrlError } = await supabaseClient.storage
-                    .from('certificati_medici')
-                    .createSignedUrl(filePath, 300);
-                if (signedUrlError) throw signedUrlError;
-                const publicUrl = urlData.signedUrl;
-                
-                // 2. Aggiorna tabella utenti per scatenare il trigger trigger db
-                const { error: updateError } = await supabaseClient
-                    .from('utenti')
-                    .update({
-                        certificato_medico_url: publicUrl,
-                        certificato_tipologia: tipologia,
-                        certificato_data_emissione: emissionDate
-                    })
-                    .eq('id', userId);
-                if (updateError) throw updateError;
-                
-                // Imposta lo stato di validazione a IN_ATTESA per attivare la coda dei controlli
-                const { data: userAnag } = await supabaseClient
-                    .from('anagrafiche')
-                    .select('id')
-                    .eq('utente_id', userId)
-                    .maybeSingle();
-                
-                if (userAnag) {
-                    await supabaseClient
-                        .from('certificati_medici')
-                        .update({
-                            stato_validazione: 'IN_ATTESA',
-                            note_ai: 'In attesa di analisi.',
-                            confidence_score: null
-                        })
-                        .eq('anagrafica_id', userAnag.id);
+                // 3. Recupera anagrafica_id
+                let anagId = currentUserProfile?.anagrafiche?.[0]?.id || currentUserProfile?.anagrafiche?.id;
+                if (!anagId) {
+                    const { data: userAnag, error: anagErr } = await supabaseClient
+                        .from('anagrafiche')
+                        .select('id')
+                        .eq('utente_id', userId)
+                        .maybeSingle();
+                    if (anagErr) throw anagErr;
+                    if (userAnag) anagId = userAnag.id;
                 }
-                
-                alert("Certificato medico inviato correttamente in elaborazione!");
-                window.location.reload();
+
+                if (!anagId) throw new Error("Anagrafica atleta non trovata.");
+
+                // 4. Inserimento atomico in certificati_medici
+                const defaultExp = new Date(emissionDate);
+                defaultExp.setFullYear(defaultExp.getFullYear() + 1);
+                const expiryDateStr = defaultExp.toISOString().split('T')[0];
+
+                const { data: insertedCert, error: insertError } = await supabaseClient
+                    .from('certificati_medici')
+                    .insert({
+                        anagrafica_id: anagId,
+                        tipologia: tipologia,
+                        medico_rilascio: 'In elaborazione AI...',
+                        data_rilascio: emissionDate,
+                        data_scadenza: expiryDateStr,
+                        file_url: filePath,
+                        stato_validazione: 'IN_ATTESA',
+                        note_ai: 'Nuovo certificato caricato. In attesa di elaborazione AI.'
+                    })
+                    .select()
+                    .single();
+
+                if (insertError) throw insertError;
+
+                // 5. Scrittura Audit Log
+                await scriviAuditLog('CARICAMENTO_CERTIFICATO', 'certificati_medici', anagId, {
+                    tipologia: tipologia,
+                    data_rilascio: emissionDate,
+                    cert_id: insertedCert?.id
+                });
+
+                // 6. Trigger AI sincrono / asincrono via API diretta
+                if (token && insertedCert?.id) {
+                    fetch(`${APP_CONFIG.API_BASE_URL}/api/validate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            target_type: 'cert',
+                            cert_id: insertedCert.id,
+                            anagrafica_id: anagId,
+                            file_url: filePath
+                        })
+                    }).then(res => {
+                        if (!res.ok) console.warn("API validate trigger status:", res.status);
+                    }).catch(vErr => console.warn("Errore trigger validate:", vErr));
+                }
+
+                // 7. Reset form e feedback
+                dashUploadedCertFile = null;
+                const dashInput = document.getElementById('dash_cert_file');
+                if (dashInput) dashInput.value = "";
+                const nameLabel = document.getElementById('dash-cert-file-name');
+                if (nameLabel) nameLabel.textContent = "SELEZIONA O TRASCINA IL CERTIFICATO";
+                if (statusLabel) {
+                    statusLabel.textContent = "Nessun file selezionato";
+                    statusLabel.className = "text-[9px] text-gray-400 mt-1 uppercase";
+                }
+
+                showToastNotification("Certificato medico inviato correttamente! Elaborazione in corso...", "success");
+
+                // 8. Ricarica dati dinamici utente (senza reload della pagina intera)
+                await loadUserCertificato();
+                await populateUserPanoramicaSummary();
                 
             } catch (err) {
                 console.error("Errore caricamento:", err);
-                alert("Si è verificato un errore durante l'invio: " + err.message);
-                btn.disabled = false;
-                btn.textContent = "INVIA DOCUMENTO";
+                showToastNotification("Si è verificato un errore durante l'invio: " + err.message, "error");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "INVIA DOCUMENTO";
+                }
             }
         }
 
@@ -6533,29 +6627,64 @@
             }
         }
 
-        function handleNewCertFileSelected() {
+        async function handleNewCertFileSelected() {
             const input = document.getElementById('user-new-cert-file');
-            const file = input.files[0];
+            const file = input?.files?.[0];
             const nameLabel = document.getElementById('user-new-cert-file-name');
             const statusLabel = document.getElementById('user-new-cert-file-status');
 
             if (!file) {
                 userUploadedCertFile = null;
-                nameLabel.textContent = "SELEZIONA FILE CERTIFICATO";
-                statusLabel.textContent = "Nessun file (PDF, PNG, JPG)";
+                if (nameLabel) nameLabel.textContent = "SELEZIONA FILE CERTIFICATO";
+                if (statusLabel) {
+                    statusLabel.textContent = "Nessun file (PDF, PNG, JPG)";
+                    statusLabel.className = "text-[8px] text-gray-400 mt-1 uppercase";
+                }
                 return;
             }
 
-            if (file.size > 5 * 1024 * 1024) {
-                alert("Il certificato supera la dimensione consentita di 5MB.");
-                input.value = "";
+            if (file.size > 10 * 1024 * 1024) {
+                if (statusLabel) {
+                    statusLabel.textContent = "Il file supera la dimensione massima di 10MB";
+                    statusLabel.className = "text-[8px] text-primary mt-1 uppercase font-bold";
+                }
+                showToastNotification("Il certificato supera la dimensione consentita di 10MB.", "error");
+                if (input) input.value = "";
                 userUploadedCertFile = null;
                 return;
             }
 
-            userUploadedCertFile = file;
-            nameLabel.textContent = file.name.toUpperCase();
-            statusLabel.textContent = `✓ SELEZIONATO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            if (file.type.startsWith('image/') || (!file.type && file.name && /\.(png|jpe?g|heic|webp)$/i.test(file.name))) {
+                if (nameLabel) nameLabel.textContent = file.name ? file.name.toUpperCase() : "IMMAGINE";
+                if (statusLabel) {
+                    statusLabel.textContent = "OTTIMIZZAZIONE IMMAGINE...";
+                    statusLabel.className = "text-[8px] text-amber-400 mt-1 uppercase font-bold animate-pulse";
+                }
+                try {
+                    const compBlob = await compressImageSandbox(file, 1600, 1600, 0.82);
+                    const rawName = file.name || `cert_${Date.now()}.jpg`;
+                    const cleanName = rawName.includes('.') ? rawName.replace(/\.[^/.]+$/, ".jpg") : `${rawName}.jpg`;
+                    userUploadedCertFile = new File([compBlob], cleanName, { type: 'image/jpeg' });
+                    if (statusLabel) {
+                        statusLabel.textContent = `✓ SELEZIONATO (${(userUploadedCertFile.size / 1024 / 1024).toFixed(2)} MB)`;
+                        statusLabel.className = "text-[8px] text-green-500 mt-1 uppercase font-bold";
+                    }
+                } catch (err) {
+                    console.warn("Errore compressione certificato, uso originale:", err);
+                    userUploadedCertFile = file;
+                    if (statusLabel) {
+                        statusLabel.textContent = `✓ SELEZIONATO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                        statusLabel.className = "text-[8px] text-green-500 mt-1 uppercase font-bold";
+                    }
+                }
+            } else {
+                userUploadedCertFile = file;
+                if (nameLabel) nameLabel.textContent = file.name ? file.name.toUpperCase() : "DOCUMENTO";
+                if (statusLabel) {
+                    statusLabel.textContent = `✓ SELEZIONATO (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                    statusLabel.className = "text-[8px] text-green-500 mt-1 uppercase font-bold";
+                }
+            }
         }
 
         async function uploadNewCertificate() {
@@ -6563,25 +6692,38 @@
             const emissionDate = document.getElementById('user-new-cert-data')?.value || new Date().toISOString().split('T')[0];
             const medico = "In elaborazione AI...";
             const btn = document.getElementById('btn-user-upload-cert');
+            const statusLabel = document.getElementById('user-new-cert-file-status');
 
             if (!userUploadedCertFile) {
-                alert("Per favore seleziona un file da caricare.");
+                if (statusLabel) {
+                    statusLabel.textContent = "Seleziona un file da caricare";
+                    statusLabel.className = "text-[8px] text-primary mt-1 uppercase font-bold";
+                }
+                showToastNotification("Per favore seleziona un file da caricare.", "error");
                 return;
             }
 
-            btn.disabled = true;
-            btn.textContent = "CARICAMENTO...";
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "CARICAMENTO...";
+            }
 
             try {
-                const userId = currentUser.id;
-                const fileExt = userUploadedCertFile.name.split('.').pop();
+                const { data: sessionData } = await supabaseClient.auth.getSession();
+                const session = sessionData?.session;
+                const token = session?.access_token;
+                const userId = currentUser?.id || session?.user?.id;
+
+                if (!userId) throw new Error("Utente non autenticato.");
+
+                const fileExt = userUploadedCertFile.name.split('.').pop() || 'jpg';
                 const filePath = `${userId}/certificato_${Date.now()}.${fileExt}`;
 
                 const { error: uploadError } = await supabaseClient.storage
                     .from('certificati_medici')
                     .upload(filePath, userUploadedCertFile, {
-                        contentType: userUploadedCertFile.type,
-                        upsert: true
+                        contentType: userUploadedCertFile.type || 'image/jpeg',
+                        upsert: false
                     });
                 if (uploadError) throw uploadError;
 
@@ -6590,57 +6732,95 @@
                         const thumbBlob = await generatePdfThumbnail(userUploadedCertFile);
                         if (thumbBlob) {
                             const thumbPath = filePath.replace(/\.pdf$/i, '_thumb.jpg');
-                            await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: true });
+                            await supabaseClient.storage.from('certificati_medici').upload(thumbPath, thumbBlob, { contentType: 'image/jpeg', upsert: false });
                         }
                     } catch (tErr) {
                         console.warn("Thumbnail upload error:", tErr);
                     }
                 }
 
-                const { data: urlData, error: signedUrlError } = await supabaseClient.storage
-                    .from('certificati_medici')
-                    .createSignedUrl(filePath, 31536000 * 5); // 5 anni
-                if (signedUrlError) throw signedUrlError;
+                let anagId = currentUserProfile?.anagrafiche?.[0]?.id || currentUserProfile?.anagrafiche?.id;
+                if (!anagId) {
+                    const { data: userAnag, error: anagErr } = await supabaseClient
+                        .from('anagrafiche')
+                        .select('id')
+                        .eq('utente_id', userId)
+                        .maybeSingle();
+                    if (anagErr) throw anagErr;
+                    if (userAnag) anagId = userAnag.id;
+                }
 
-                const publicUrl = urlData.signedUrl;
+                if (!anagId) throw new Error("Anagrafica atleta non trovata.");
 
-                const anagId = currentUserProfile.anagrafiche?.[0]?.id || currentUserProfile.anagrafiche?.id;
+                const defaultExp = new Date(emissionDate);
+                defaultExp.setFullYear(defaultExp.getFullYear() + 1);
+                const expiryDateStr = defaultExp.toISOString().split('T')[0];
 
-                const { error: insertError } = await supabaseClient
+                const { data: insertedCert, error: insertError } = await supabaseClient
                     .from('certificati_medici')
                     .insert({
                         anagrafica_id: anagId,
                         tipologia: tipologia,
                         medico_rilascio: medico,
                         data_rilascio: emissionDate,
-                        data_scadenza: new Date(new Date(emissionDate).setFullYear(new Date(emissionDate).getFullYear() + 1)).toISOString().split('T')[0],
-                        file_url: publicUrl,
+                        data_scadenza: expiryDateStr,
+                        file_url: filePath,
                         stato_validazione: 'IN_ATTESA',
-                        note_ai: 'Nuovo certificato caricato. In attesa di elaborazione.'
-                    });
+                        note_ai: 'Nuovo certificato caricato. In attesa di elaborazione AI.'
+                    })
+                    .select()
+                    .single();
 
                 if (insertError) throw insertError;
 
                 await scriviAuditLog('CARICAMENTO_CERTIFICATO', 'certificati_medici', anagId, {
                     tipologia: tipologia,
-                    data_rilascio: emissionDate
+                    data_rilascio: emissionDate,
+                    cert_id: insertedCert?.id
                 });
 
-                alert("Nuovo certificato medico caricato con successo ed inviato per l'approvazione!");
-                document.getElementById('user-new-cert-file').value = "";
-                document.getElementById('user-new-cert-data').value = "";
+                if (token && insertedCert?.id) {
+                    fetch(`${APP_CONFIG.API_BASE_URL}/api/validate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            target_type: 'cert',
+                            cert_id: insertedCert.id,
+                            anagrafica_id: anagId,
+                            file_url: filePath
+                        })
+                    }).then(res => {
+                        if (!res.ok) console.warn("API validate trigger status:", res.status);
+                    }).catch(vErr => console.warn("Errore trigger validate:", vErr));
+                }
+
+                showToastNotification("Nuovo certificato medico caricato con successo ed inviato per l'approvazione!", "success");
+                
+                const certInput = document.getElementById('user-new-cert-file');
+                if (certInput) certInput.value = "";
+                const dateInput = document.getElementById('user-new-cert-data');
+                if (dateInput) dateInput.value = "";
                 userUploadedCertFile = null;
-                document.getElementById('user-new-cert-file-name').textContent = "SELEZIONA FILE CERTIFICATO";
-                document.getElementById('user-new-cert-file-status').textContent = "Nessun file (PDF, PNG, JPG)";
+                const nameLabel = document.getElementById('user-new-cert-file-name');
+                if (nameLabel) nameLabel.textContent = "SELEZIONA FILE CERTIFICATO";
+                if (statusLabel) {
+                    statusLabel.textContent = "Nessun file (PDF, PNG, JPG)";
+                    statusLabel.className = "text-[8px] text-gray-400 mt-1 uppercase";
+                }
 
                 await loadUserCertificato();
                 await populateUserPanoramicaSummary();
             } catch (err) {
                 console.error("Errore caricamento certificato:", err);
-                alert("Si è verificato un errore durante l'invio: " + err.message);
+                showToastNotification("Si è verificato un errore durante l'invio: " + err.message, "error");
             } finally {
-                btn.disabled = false;
-                btn.textContent = "INVIA PER APPROVAZIONE";
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "INVIA PER APPROVAZIONE";
+                }
             }
         }
 

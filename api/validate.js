@@ -69,11 +69,15 @@ export default async function handler(req, res) {
 
     try {
         // --- Auth ---
+        const webhookSecret = process.env.SUPABASE_WEBHOOK_SECRET;
+        const incomingWebhookSecret = req.headers['x-webhook-secret'];
         const internalSecret = req.headers['x-internal-secret'];
         const cronSecret = process.env.CRON_SECRET;
         let isInternalCall = false;
 
-        if (internalSecret && cronSecret && internalSecret === cronSecret) {
+        if (webhookSecret && incomingWebhookSecret && incomingWebhookSecret === webhookSecret) {
+            isInternalCall = true;
+        } else if (internalSecret && cronSecret && internalSecret === cronSecret) {
             isInternalCall = true;
         } else {
             const authHeader = req.headers.authorization;
@@ -88,8 +92,29 @@ export default async function handler(req, res) {
             if (!userProfile) return res.status(403).json({ error: 'Accesso negato.' });
 
             const userRoles = Array.isArray(userProfile.ruolo) ? userProfile.ruolo : [userProfile.ruolo];
-            if (!userRoles.some(r => BOARD_ROLES.includes(r))) {
-                return res.status(403).json({ error: 'Accesso negato: operazione riservata al direttivo.' });
+            const isBoard = userRoles.some(r => BOARD_ROLES.includes(r));
+
+            if (!isBoard) {
+                if (req.body.is_manual) {
+                    return res.status(403).json({ error: 'Accesso negato: operazione riservata al direttivo.' });
+                }
+                // Non-board user can only trigger automated AI validation on their own anagrafica
+                const { data: userAnags } = await supabase.from('anagrafiche').select('id').eq('utente_id', user.id);
+                const userAnagIds = (userAnags || []).map(a => a.id);
+
+                let reqAnagId = req.body.anagrafica_id;
+                if (!reqAnagId && req.body.cert_id) {
+                    const { data: cData } = await supabase.from('certificati_medici').select('anagrafica_id').eq('id', req.body.cert_id).maybeSingle();
+                    if (cData) reqAnagId = cData.anagrafica_id;
+                }
+                if (!reqAnagId && req.body.doc_id) {
+                    const { data: dData } = await supabase.from('documenti_identita').select('anagrafica_id').eq('id', req.body.doc_id).maybeSingle();
+                    if (dData) reqAnagId = dData.anagrafica_id;
+                }
+
+                if (!reqAnagId || !userAnagIds.includes(reqAnagId)) {
+                    return res.status(403).json({ error: 'Accesso negato: non puoi validare documenti di altri utenti.' });
+                }
             }
         }
 
@@ -126,9 +151,12 @@ export default async function handler(req, res) {
                 }
             }
 
-            if (isManual && cert_id && !targetAnagraficaId) {
-                const { data: certObj } = await supabase.from('certificati_medici').select('anagrafica_id').eq('id', cert_id).maybeSingle();
-                if (certObj) targetAnagraficaId = certObj.anagrafica_id;
+            if (cert_id && (!targetAnagraficaId || !targetFileUrl)) {
+                const { data: certObj } = await supabase.from('certificati_medici').select('anagrafica_id, file_url').eq('id', cert_id).maybeSingle();
+                if (certObj) {
+                    if (!targetAnagraficaId) targetAnagraficaId = certObj.anagrafica_id;
+                    if (!targetFileUrl) targetFileUrl = certObj.file_url;
+                }
             }
 
             if (!targetAnagraficaId) return res.status(400).json({ error: 'Parametri mancanti: anagrafica_id o cert_id non validi.' });
@@ -352,9 +380,12 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 }
             }
 
-            if (isManual && doc_id && !targetAnagraficaId) {
-                const { data: docObj } = await supabase.from('documenti_identita').select('anagrafica_id').eq('id', doc_id).maybeSingle();
-                if (docObj) targetAnagraficaId = docObj.anagrafica_id;
+            if (doc_id && (!targetAnagraficaId || !targetFileUrl)) {
+                const { data: docObj } = await supabase.from('documenti_identita').select('anagrafica_id, file_url').eq('id', doc_id).maybeSingle();
+                if (docObj) {
+                    if (!targetAnagraficaId) targetAnagraficaId = docObj.anagrafica_id;
+                    if (!targetFileUrl) targetFileUrl = docObj.file_url;
+                }
             }
 
             if (!targetAnagraficaId) return res.status(400).json({ error: 'Parametri mancanti: anagrafica_id o doc_id non validi.' });

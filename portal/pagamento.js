@@ -3,7 +3,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.72"
+                VERSION: "1.04.74"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -28,7 +28,7 @@
             // Check active session first
             const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
             if (sessionError || !session) {
-                showError("Effettua il login per accedere al pagamento.");
+                showError("Effettua il login per accedere al pagamento.", 'not_logged');
                 return;
             }
 
@@ -51,7 +51,7 @@
                     .maybeSingle();
 
                 if (error || !userProfile) {
-                    showError("Impossibile recuperare i dettagli dell'associato.");
+                    showError("Impossibile recuperare i dettagli dell'associato.", 'generic');
                     return;
                 }
 
@@ -88,13 +88,13 @@
 
                 // Check governance status if they are registering as a member (socio or socio_tesserato)
                 if ((userProfile.tipo_adesione === 'socio' || userProfile.tipo_adesione === 'socio_tesserato') && regSocio && regSocio.stato_socio === 'IN_ATTESA_DELIBERA') {
-                    showError("La tua domanda di ammissione socio è in attesa di delibera da parte del Consiglio Direttivo. Potrai procedere al pagamento non appena la delibera sarà ratificata.");
+                    showError("La tua domanda di ammissione socio è in attesa di delibera da parte del Consiglio Direttivo. Potrai procedere al pagamento non appena la delibera sarà ratificata.", 'generic');
                     return;
                 }
 
                 // Check identity document validation status for all registering users
                 if (!idDoc) {
-                    showError("Documento d'identità mancante. Accedi al portale atleti per caricare il documento d'identità ed abilitare il pagamento.");
+                    showError("Documento d'identità mancante. Accedi al portale atleti per caricare il documento d'identità ed abilitare il pagamento.", 'doc_scaduto');
                     return;
                 }
                 const docStatus = idDoc.stato_validazione;
@@ -103,45 +103,45 @@
                 const docScaduto = idDoc.data_scadenza ? idDoc.data_scadenza < todayStr : false;
 
                 if (docScaduto) {
-                    showError("Il tuo documento d'identità risulta scaduto. Accedi al portale atleti per caricare un documento in corso di validità.");
+                    showError("Il tuo documento d'identità risulta scaduto. Accedi al portale atleti per caricare un documento in corso di validità.", 'doc_scaduto');
                     return;
                 }
                 if (docStatus === 'ROSSO') {
-                    showError(`Il tuo documento d'identità è stato rifiutato. Motivo: ${idDoc.note_ai || 'File non leggibile o non conforme'}. Ricarica un documento valido nel portale.`);
+                    showError(`Il tuo documento d'identità è stato rifiutato. Motivo: ${idDoc.note_ai || 'File non leggibile o non conforme'}. Ricarica un documento valido nel portale.`, 'doc_rifiutato');
                     return;
                 }
                 if (docStatus === 'IN_ATTESA') {
-                    showError("Verifica del documento d'identità in corso. Attendi qualche istante o l'approvazione per procedere al pagamento.");
+                    showError("Verifica del documento d'identità in corso. Attendi qualche istante o l'approvazione per procedere al pagamento.", 'doc_in_attesa');
                     return;
                 }
                 if (docStatus === 'GIALLO') {
-                    showError("Il tuo documento d'identità richiede approvazione manuale da parte della segreteria. Potrai pagare non appena sarà validato.");
+                    showError("Il tuo documento d'identità richiede approvazione manuale da parte della segreteria. Potrai pagare non appena sarà validato.", 'doc_giallo');
                     return;
                 }
 
                 // Check medical certificate validation status for sport users
                 if (userProfile.tipo_adesione === 'tesserato' || userProfile.tipo_adesione === 'socio_tesserato') {
                     if (!cert) {
-                        showError("Certificato medico mancante. Accedi al portale atleti per caricare il certificato medico ed abilitare il pagamento.");
+                        showError("Certificato medico mancante. Accedi al portale atleti per caricare il certificato medico ed abilitare il pagamento.", 'cert_scaduto');
                         return;
                     }
                     const status = cert.stato_validazione;
                     const scaduto = cert.data_scadenza < todayStr;
                     
                     if (scaduto) {
-                        showError("Il tuo certificato medico risulta scaduto. Accedi al portale atleti per caricare un certificato in corso di validità.");
+                        showError("Il tuo certificato medico risulta scaduto. Accedi al portale atleti per caricare un certificato in corso di validità.", 'cert_scaduto');
                         return;
                     }
                     if (status === 'ROSSO') {
-                        showError(`Il tuo certificato medico è stato rifiutato. Motivo: ${cert.note_ai || 'File non leggibile'}. Ricarica un certificato valido nel portale.`);
+                        showError(`Il tuo certificato medico è stato rifiutato. Motivo: ${cert.note_ai || 'File non leggibile'}. Ricarica un certificato valido nel portale.`, 'cert_rifiutato');
                         return;
                     }
                     if (status === 'IN_ATTESA') {
-                        showError("Verifica del certificato medico tramite scansione AI in corso. Ricarica questa pagina tra qualche istante per procedere.");
+                        showError("Verifica del certificato medico tramite scansione AI in corso. Ricarica questa pagina tra qualche istante per procedere.", 'cert_in_attesa');
                         return;
                     }
                     if (status === 'GIALLO') {
-                        showError("Il tuo certificato medico richiede approvazione manuale da parte della segreteria. Potrai pagare non appena sarà validato.");
+                        showError("Il tuo certificato medico richiede approvazione manuale da parte della segreteria. Potrai pagare non appena sarà validato.", 'cert_giallo');
                         return;
                     }
                 }
@@ -158,9 +158,9 @@
                         if (userProfile.tipo_adesione === 'socio') {
                             calcQuota = tariffeMap.quota_socio || 50;
                         } else if (userProfile.tipo_adesione === 'tesserato' && userProfile.tipo_tessera) {
-                            calcQuota = tariffeMap[userProfile.tipo_tessera] || 0;
+                            calcQuota = tariffeMap[userProfile.tipo_tessera] || 10;
                         } else if (userProfile.tipo_adesione === 'socio_tesserato') {
-                            calcQuota = (tariffeMap.quota_socio || 50) + (tariffeMap[userProfile.tipo_tessera] || 0);
+                            calcQuota = (tariffeMap.quota_socio || 50) + (tariffeMap[userProfile.tipo_tessera] || 10);
                         }
                         
                         if (calcQuota > 0) {
@@ -173,7 +173,7 @@
                 }
 
                 if (quota <= 0) {
-                    showError("Questa quota è già stata saldata o non presenta importi insoluti.");
+                    showError("Questa quota è già stata saldata o non presenta importi insoluti.", 'generic');
                     return;
                 }
 
@@ -226,14 +226,70 @@
 
             } catch (err) {
                 console.error("Initialization error:", err);
-                showError("Errore di connessione al database.");
+                showError("Errore di connessione al database.", 'generic');
             }
         }
 
-        function showError(msg) {
+        function showError(msg, errorType = 'generic') {
             document.getElementById('loader').classList.add('hidden');
             document.getElementById('payment-content').classList.add('hidden');
             document.getElementById('error-message').textContent = msg;
+            
+            const actionsContainer = document.getElementById('error-actions');
+            if (actionsContainer) {
+                actionsContainer.innerHTML = '';
+                
+                if (errorType === 'cert_scaduto' || errorType === 'cert_rifiutato') {
+                    actionsContainer.innerHTML = `
+                        <a href="/portal/dashboard.html#user_documento" class="inline-flex items-center justify-center gap-2 bg-primary text-white font-headline text-xs font-bold px-6 py-3 uppercase tracking-wider hover:bg-red-700 transition-all">
+                            <span class="material-symbols-outlined text-sm">upload_file</span>
+                            CARICA NUOVO CERTIFICATO MEDICO
+                        </a>
+                        <a href="/portal/dashboard.html" class="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white font-headline text-xs px-6 py-3 uppercase tracking-wider hover:bg-white hover:text-black transition-all">
+                            VAI ALLA DASHBOARD
+                        </a>
+                    `;
+                } else if (errorType === 'doc_scaduto' || errorType === 'doc_rifiutato') {
+                    actionsContainer.innerHTML = `
+                        <a href="/portal/dashboard.html#user_profile" class="inline-flex items-center justify-center gap-2 bg-primary text-white font-headline text-xs font-bold px-6 py-3 uppercase tracking-wider hover:bg-red-700 transition-all">
+                            <span class="material-symbols-outlined text-sm">badge</span>
+                            CARICA DOCUMENTO D'IDENTITÀ
+                        </a>
+                        <a href="/portal/dashboard.html" class="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white font-headline text-xs px-6 py-3 uppercase tracking-wider hover:bg-white hover:text-black transition-all">
+                            VAI ALLA DASHBOARD
+                        </a>
+                    `;
+                } else if (errorType === 'cert_in_attesa' || errorType === 'doc_in_attesa') {
+                    actionsContainer.innerHTML = `
+                        <button onclick="window.location.reload()" class="inline-flex items-center justify-center gap-2 bg-white text-black font-headline text-xs font-bold px-6 py-3 uppercase tracking-wider hover:bg-primary hover:text-white transition-all">
+                            <span class="material-symbols-outlined text-sm">refresh</span>
+                            RICARICA PAGINA
+                        </button>
+                        <a href="/portal/dashboard.html" class="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white font-headline text-xs px-6 py-3 uppercase tracking-wider hover:bg-white hover:text-black transition-all">
+                            VAI ALLA DASHBOARD
+                        </a>
+                    `;
+                } else if (errorType === 'cert_giallo' || errorType === 'doc_giallo') {
+                    actionsContainer.innerHTML = `
+                        <a href="/portal/dashboard.html" class="inline-flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white font-headline text-xs px-6 py-3 uppercase tracking-wider hover:bg-white hover:text-black transition-all">
+                            VAI ALLA DASHBOARD
+                        </a>
+                    `;
+                } else if (errorType === 'not_logged') {
+                    actionsContainer.innerHTML = `
+                        <a href="/portal/login.html?redirect=/portal/pagamento.html" class="inline-flex items-center justify-center gap-2 bg-white text-black font-headline text-xs font-bold px-6 py-3 uppercase tracking-wider hover:bg-primary hover:text-white transition-all">
+                            ACCEDI PER PAGARE
+                        </a>
+                    `;
+                } else {
+                    actionsContainer.innerHTML = `
+                        <a href="/portal/dashboard.html" class="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white font-headline text-xs px-6 py-3 uppercase tracking-wider hover:bg-white hover:text-black transition-all">
+                            VAI ALLA DASHBOARD
+                        </a>
+                    `;
+                }
+            }
+
             document.getElementById('error-box').classList.remove('hidden');
         }
 

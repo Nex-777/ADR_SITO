@@ -2,6 +2,30 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-20] fix | Fix Certificato Medico Upload, Storage Path Relativo, Auth Webhook AI & Sanatoria Matera (v1.04.74)
+- **Frontend Dashboard (`portal/dashboard.js`):**
+  - **Widget Home (`uploadCertificatoDashboard`)**: Sostituita la logica di `UPDATE` distruttiva con `INSERT` atomico in `certificati_medici` preservando lo storico delle visite (regola Epika).
+  - **Storage Path Relativo**: Salvato il percorso relativo permanente (`${userId}/certificato_${Date.now()}.${fileExt}`) nel campo `file_url` anziché un Signed URL effimero a scadenza, sfruttando la risoluzione on-demand già presente in `openSignedFile()`.
+  - **Compressione Immagini Client-Side**: Integrata compressione automatica client-side con `compressImageSandbox` (max 1600x1600 @ 82% qualità) sia per l'upload dalla Home che per il tab Certificato.
+  - **Trigger Diretto AI**: Aggiunta chiamata client-side diretta e deterministica a `/api/validate` con Bearer token utente dopo ogni `INSERT`, garantendo l'elaborazione immediata senza dipendenza esclusiva da webhook.
+  - **UI/UX Modernizzata**: Rimossi tutti i `window.alert` bloccanti e `window.location.reload()`, sostituiti con aggiornamento reattivo delle sezioni (`loadUserCertificato()`, `populateUserPanoramicaSummary()`) e toast feedback (`showToastNotification`).
+- **Backend API (`api/validate.js`):**
+  - Aggiunto supporto per autenticazione via `x-webhook-secret` (`SUPABASE_WEBHOOK_SECRET`) per garantire la corretta autorizzazione dei Webhook HTTP inviati da Supabase.
+  - Abilitata autorizzazione per utenti tesserati ordinari (non direttivo) a triggerare la validazione AI automatica esclusivamente sui propri documenti/certificati.
+  - Risoluzione automatica di `targetFileUrl` da `cert_id` e `doc_id` in assenza di passaggio esplicito del parametro.
+- **Sanatoria Dati & Esecuzione AI:**
+  - Creato ed eseguito lo script `scripts/sanatoria_matera.js` per Michael Matera, inserendo il record per il file caricato (`certificato_1787215104903.jpg`) e verificando l'elaborazione AI (stato `ROSSO` per certificato antecedente al 2026).
+- **Versionamento:** Eseguito `npm run bump` (versione `v1.04.74`).
+- **Frontend Registrazione (`portal/registrazione.html`, `portal/registrazione.js`):**
+  - Esteso l'override di sicurezza `window.alert` per intercettare e tradurre in italiano chiaro e fruibile i messaggi nativi tecnici del browser come `Failed to fetch`, `NetworkError` e `Load failed`.
+  - Aggiunta la funzione helper `translateUploadError(err)` che mappa errori di connessione, payload size (413) e formati immagine invalidi, arricchendo l'alert con la fase operativa esatta.
+  - Inserito banner statico esplicito sui requisiti del certificato medico (dicitura AGONISTICO / NON AGONISTICO, validità < 12 mesi, formati ammessi).
+  - Resi visibili i selettori di Tipologia e Data di Emissione con listener reattivo per calcolo scadenza e avviso visivo in tempo reale (`#cert-data-warning`) in caso di data futura o scaduta (> 1 anno).
+- **Frontend Pagamento (`portal/pagamento.html`, `portal/pagamento.js`):**
+  - Riorganizzato il blocco `#error-box` con container `#error-actions` dinamico, eliminando il link statico che produceva un loop al login per utenti già autenticati.
+  - Refattorizzata `showError(msg, errorType)` per generare pulsanti di azione contestuali in base alla motivazione: link diretto alla sezione documenti della Dashboard (`#user_documento` per certificati, `#user_profile` per documenti identità), pulsante ricarica per validazioni in corso (`IN_ATTESA`), e avviso per revisione manuale (`GIALLO`).
+- **Versionamento:** Eseguito `npm run bump` (versione `v1.04.73`).
+
 ## [2026-08-19] fix | Hardening Pre-Upload Registrazione, Gestione Errori e Allineamento RLS Storage (v1.04.72)
 - **Database & Storage (Supabase):**
   - Allineate le policy RLS su `storage.objects` per il bucket `documenti_identita`: rimossa la policy INSERT permissiva non confinata, introdotte policy con path-guard rigoroso su `(auth.uid())::text = (storage.foldername(name))[1]` per `INSERT`, `UPDATE` e `SELECT` (con accesso consentito anche al Consiglio Direttivo).

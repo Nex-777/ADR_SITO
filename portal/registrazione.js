@@ -17,30 +17,42 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.72"
+                VERSION: "1.04.74"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-        // Security override for window.alert to prevent raw database/exception leak
+        // Security override for window.alert to prevent raw database/exception leak and technical network errors
         const _originalAlert = window.alert;
         window.alert = function(message) {
-            if (typeof message === 'string' && (
-                message.toLowerCase().includes('exception') || 
-                message.toLowerCase().includes('supabase') ||
-                message.toLowerCase().includes('postgres') ||
-                message.toLowerCase().includes('db_') ||
-                message.toLowerCase().includes('database') ||
-                message.toLowerCase().includes('relation "') ||
-                message.toLowerCase().includes('column "')
-            )) {
-                console.error("Technical error alert intercepted:", message);
-                _originalAlert("Si è verificato un errore durante l'operazione. Riprova più tardi o contatta il direttivo per assistenza.");
-            } else {
-                _originalAlert(message);
+            if (typeof message === 'string') {
+                const lowerMsg = message.toLowerCase();
+                if (
+                    lowerMsg.includes('failed to fetch') ||
+                    lowerMsg.includes('networkerror') ||
+                    lowerMsg.includes('load failed')
+                ) {
+                    console.error("Network/Fetch error alert intercepted:", message);
+                    _originalAlert("Errore di connessione durante il caricamento dei file. Verifica la tua connessione internet, ridimensiona l'immagine se molto pesante (usa una foto standard da smartphone, non RAW) e riprova.");
+                    return;
+                }
+                if (
+                    lowerMsg.includes('exception') || 
+                    lowerMsg.includes('supabase') ||
+                    lowerMsg.includes('postgres') ||
+                    lowerMsg.includes('db_') ||
+                    lowerMsg.includes('database') ||
+                    lowerMsg.includes('relation "') ||
+                    lowerMsg.includes('column "')
+                ) {
+                    console.error("Technical error alert intercepted:", message);
+                    _originalAlert("Si è verificato un errore durante l'operazione. Riprova più tardi o contatta il direttivo per assistenza.");
+                    return;
+                }
             }
+            _originalAlert(message);
         };
 
         // --- 2. Developer/Mock Mode Configuration ---
@@ -510,6 +522,52 @@ function togglePasswordVisibility(inputId, buttonEl) {
             fileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
             fileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
         });
+
+        // Validazione visiva preventiva della data di emissione del certificato medico
+        const certDataEmissioneInput = document.getElementById('certificato_data_emissione');
+        const certDataWarning = document.getElementById('cert-data-warning');
+
+        if (certDataEmissioneInput) {
+            certDataEmissioneInput.addEventListener('change', () => {
+                const emissioneVal = certDataEmissioneInput.value;
+                if (!emissioneVal) {
+                    if (certDataWarning) {
+                        certDataWarning.textContent = '';
+                        certDataWarning.classList.add('hidden');
+                    }
+                    certDataEmissioneInput.classList.remove('border-red-500');
+                    return;
+                }
+
+                const emissioneDate = new Date(emissioneVal);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // Calcolo scadenza: 1 anno dopo la data di emissione
+                const expiryDate = new Date(emissioneDate);
+                expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+                if (emissioneDate > today) {
+                    if (certDataWarning) {
+                        certDataWarning.textContent = "⚠️ Attenzione: la data di emissione non può essere nel futuro.";
+                        certDataWarning.classList.remove('hidden');
+                    }
+                    certDataEmissioneInput.classList.add('border-red-500');
+                } else if (expiryDate < today) {
+                    if (certDataWarning) {
+                        certDataWarning.textContent = "⚠️ Attenzione: questa data indica che il certificato è scaduto (validità 1 anno). Il sistema AI lo rifiuterà automaticamente. Carica un certificato aggiornato.";
+                        certDataWarning.classList.remove('hidden');
+                    }
+                    certDataEmissioneInput.classList.add('border-red-500');
+                } else {
+                    if (certDataWarning) {
+                        certDataWarning.textContent = '';
+                        certDataWarning.classList.add('hidden');
+                    }
+                    certDataEmissioneInput.classList.remove('border-red-500');
+                }
+            });
+        }
 
         // ID Document Selection handling
         const identitaFileInput = document.getElementById('documento_identita_file');
@@ -1629,7 +1687,8 @@ function togglePasswordVisibility(inputId, buttonEl) {
             } catch (preUploadErr) {
                 console.error("Pre-upload error:", preUploadErr);
                 const stepCorrente = btnInviaOtp.textContent;
-                alert(`Errore durante "${stepCorrente}": ${preUploadErr.message}\n\nRiprova. Se il problema persiste, contatta la segreteria con questo messaggio.`);
+                const messaggioLeggibile = translateUploadError(preUploadErr);
+                alert(`${messaggioLeggibile}\n\n(Fase: ${stepCorrente})\n\nSe il problema persiste, contatta la segreteria.`);
                 btnInviaOtp.disabled = false;
                 btnInviaOtp.textContent = "INVIA CODICE OTP";
                 return;
@@ -1675,6 +1734,21 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 btnInviaOtp.textContent = "INVIA CODICE OTP";
             }
         });
+
+        function translateUploadError(err) {
+            if (!err) return "Si è verificato un errore durante il caricamento dei documenti.";
+            const msg = (err.message || String(err)).toLowerCase();
+            if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) {
+                return "Connessione interrotta durante il caricamento. Verifica la connessione internet e riprova.";
+            }
+            if (msg.includes('413') || msg.includes('payload too large') || msg.includes('too large')) {
+                return "File troppo grande. Scegli un'immagine compressa (massimo 5MB).";
+            }
+            if (msg.includes('not a jpeg') || msg.includes('failed to load') || msg.includes('invalid image')) {
+                return "Il file non è un'immagine valida. Usa una foto JPEG/PNG standard o un PDF diretto.";
+            }
+            return err.message || "Errore sconosciuto durante il caricamento dei file.";
+        }
 
         function compressImage(file, maxWidth, maxHeight, quality = 0.8) {
             return new Promise((resolve, reject) => {
