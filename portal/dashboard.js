@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.04.74"
+                VERSION: "1.04.75"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2468,10 +2468,14 @@
             if (!body || !container) return;
 
             try {
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
                 const { data: certs, error } = await supabaseClient
                     .from('certificati_medici')
-                    .select('id, tipologia, data_rilascio, data_scadenza, note_ai, file_url, anagrafiche(nome, cognome, codice_fiscale)')
-                    .eq('stato_validazione', 'GIALLO')
+                    .select('id, tipologia, data_rilascio, data_scadenza, note_ai, file_url, stato_validazione, created_at, anagrafiche(nome, cognome, codice_fiscale)')
+                    .not('file_url', 'is', null)
+                    .neq('file_url', '')
+                    .neq('file_url', 'fittizio')
+                    .or(`stato_validazione.in.(GIALLO,IN_ATTESA),and(stato_validazione.eq.ROSSO,created_at.gte.${sevenDaysAgo})`)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
@@ -2493,15 +2497,33 @@
                     const certId = cert.id;
                     const fileUrl = escapeHtml(cert.file_url || '');
                     const noteAi = escapeHtml(cert.note_ai || '');
+                    const stato = cert.stato_validazione;
+
+                    let badgeHtml = '';
+                    let noteColorClass = 'text-yellow-300/80';
+                    if (stato === 'ROSSO') {
+                        badgeHtml = '<span class="px-1.5 py-0.5 text-[8px] bg-red-950/80 text-red-400 border border-red-500/30 font-bold rounded uppercase ml-1">RIFIUTATO AI</span>';
+                        noteColorClass = 'text-red-300/90';
+                    } else if (stato === 'GIALLO') {
+                        badgeHtml = '<span class="px-1.5 py-0.5 text-[8px] bg-yellow-950/80 text-yellow-400 border border-yellow-500/30 font-bold rounded uppercase ml-1">DUBBIO AI</span>';
+                        noteColorClass = 'text-yellow-300/80';
+                    } else {
+                        badgeHtml = '<span class="px-1.5 py-0.5 text-[8px] bg-blue-950/80 text-blue-400 border border-blue-500/30 font-bold rounded uppercase ml-1">IN ATTESA</span>';
+                        noteColorClass = 'text-gray-300/80';
+                    }
+
                     return `
                         <tr class="border-b border-yellow-500/10" data-cert-id="${certId}">
                             <td class="p-3 text-white font-bold">
-                                ${nomeComp}
-                                ${noteAi ? `<div class="text-[9px] text-yellow-300/80 font-mono mt-0.5">🤖 AI: "${noteAi}"</div>` : ''}
+                                ${nomeComp} ${badgeHtml}
+                                ${noteAi ? `<div class="text-[9px] ${noteColorClass} font-mono mt-0.5">🤖 AI: "${noteAi}"</div>` : ''}
                             </td>
                             <td class="p-3 text-gray-400 font-mono">${cf}</td>
                             <td class="p-3 text-yellow-500 font-bold">${tipologia}</td>
-                            <td class="p-3 text-gray-400">${dataRilascio}</td>
+                            <td class="p-3 text-gray-400">
+                                ${dataRilascio}
+                                ${cert.data_scadenza ? `<span class="text-[10px] text-gray-500 block">Scad: ${escapeHtml(formatToItalianDate(cert.data_scadenza))}</span>` : ''}
+                            </td>
                             <td class="p-3 text-center">
                                 <a href="#" data-file-url="${fileUrl}" class="giallo-view-cert-btn bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[9px] px-2 py-1 hover:bg-yellow-500 hover:text-black font-bold uppercase transition-all flex items-center gap-1 justify-center max-w-[120px] mx-auto">
                                     <span class="material-symbols-outlined text-[12px]">visibility</span> VEDI FILE
@@ -2540,10 +2562,28 @@
             }
 
             let note = null;
+            let dataScadenzaInput = null;
+
             if (nuovoStato === 'ROSSO') {
                 note = prompt("Inserisci il motivo del rifiuto del certificato (sarà mostrato all'utente):");
                 if (note === null) return; // Annullato
                 if (!note.trim()) note = "File illeggibile o documento non conforme.";
+            } else if (nuovoStato === 'VERDE') {
+                // Calcola scadenza di default a 1 anno da oggi
+                const todayPlusOneYear = new Date();
+                todayPlusOneYear.setFullYear(todayPlusOneYear.getFullYear() + 1);
+                const defaultExp = todayPlusOneYear.toISOString().split('T')[0];
+
+                const promptResult = prompt("Conferma o inserisci la Data di Scadenza del certificato medico (formato AAAA-MM-GG):", defaultExp);
+                if (promptResult === null) return; // Operazione annullata dall'admin
+
+                const cleanedDate = promptResult.trim();
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (!dateRegex.test(cleanedDate)) {
+                    showToastNotification("Formato data non valido. Inserisci la data nel formato AAAA-MM-GG (es. 2027-08-20)", "error");
+                    return;
+                }
+                dataScadenzaInput = cleanedDate;
             }
 
             let originalHtml = '';
@@ -2564,19 +2604,24 @@
                     throw new Error("Sessione scaduta o non valida.");
                 }
 
+                const payload = {
+                    target_type: 'cert',
+                    cert_id: certId,
+                    is_manual: true,
+                    nuovo_stato: nuovoStato,
+                    note: note
+                };
+                if (dataScadenzaInput) {
+                    payload.data_scadenza = dataScadenzaInput;
+                }
+
                 const response = await fetch(`${APP_CONFIG.API_BASE_URL}/api/validate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({
-                        target_type: 'cert',
-                        cert_id: certId,
-                        is_manual: true,
-                        nuovo_stato: nuovoStato,
-                        note: note
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const resData = await response.json();
@@ -2586,6 +2631,7 @@
 
                 await scriviAuditLog('DELIBERA_CERTIFICATO_MEDICO', 'certificati_medici', certId, {
                     stato_validazione: nuovoStato,
+                    data_scadenza: dataScadenzaInput,
                     note: note
                 });
 
@@ -2673,9 +2719,15 @@
                     if (certInfo.stato_validazione === 'ROSSO') {
                         color = 'text-primary';
                         statusLabel = '<br><span class="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">RIFIUTATO</span>';
+                        if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                            adminCertAction = `<br><button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" class="text-[8px] bg-green-950/60 hover:bg-green-600 border border-green-500/40 text-green-400 hover:text-white px-1.5 py-0.5 rounded font-bold uppercase mt-1 cursor-pointer transition-all inline-block">✓ FORZA / APPROVA</button>`;
+                        }
                     } else if (certInfo.stato_validazione === 'GIALLO') {
                         color = 'text-yellow-500';
                         statusLabel = '<br><span class="text-[9px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">ATTESA REVISIONE</span>';
+                        if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                            adminCertAction = `<br><button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" class="text-[8px] bg-yellow-950/60 hover:bg-yellow-600 border border-yellow-500/40 text-yellow-400 hover:text-white px-1.5 py-0.5 rounded font-bold uppercase mt-1 cursor-pointer transition-all inline-block">✓ APPROVA</button>`;
+                        }
                     } else if (certInfo.stato_validazione === 'IN_ATTESA') {
                         color = 'text-gray-400';
                         const isLegacyCert = !certInfo.file_url || certInfo.file_url.trim() === '' || !certInfo.file_url.startsWith('http');
@@ -2683,6 +2735,9 @@
                             statusLabel = '<br><span title="Dato storico prima del portale: file non presente, l\'atleta deve ricaricarlo" class="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold cursor-help">STORICO (MANCA FILE)</span>';
                         } else {
                             statusLabel = '<br><span title="In attesa di validazione AI/amministratore" class="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1 py-0.5 rounded uppercase font-bold cursor-help">ATTESA AI</span>';
+                            if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                                adminCertAction = `<br><button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" class="text-[8px] bg-blue-950/60 hover:bg-blue-600 border border-blue-500/40 text-blue-400 hover:text-white px-1.5 py-0.5 rounded font-bold uppercase mt-1 cursor-pointer transition-all inline-block">✓ APPROVA</button>`;
+                            }
                         }
                     } else {
                         statusLabel = '<br><span class="text-[9px] bg-green-500/10 text-green-500 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">VALIDATO</span>';
@@ -2745,10 +2800,16 @@
                 if (tess.stato_tesseramento === 'IN_ELABORAZIONE' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                     if (isCertVerde) {
                         actionBtn = `<button onclick="attivaTesseramento(${tess.id_tesserato})" class="bg-white text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-primary hover:text-white transition-all uppercase">ATTIVA</button>`;
-                    } else if (certInfo && certInfo.stato_validazione === 'GIALLO') {
-                        actionBtn = `<button onclick="if(confirm('Procedere con l\\'approvazione manuale del certificato medico?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" class="bg-yellow-500 text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-green-500 hover:text-white transition-all uppercase">APPROVA CERT.</button>`;
+                    } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
+                        actionBtn = `<button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" class="bg-yellow-500 text-black font-headline text-[9px] font-bold px-2 py-0.5 hover:bg-green-500 hover:text-white transition-all uppercase">APPROVA CERT.</button>`;
                     } else {
                         actionBtn = `<button disabled class="bg-gray-800 text-gray-500 font-headline text-[9px] font-bold px-2 py-0.5 cursor-not-allowed uppercase" title="Attivazione disabilitata: certificato medico non valido o in attesa di approvazione.">ATTIVA</button>`;
+                    }
+                } else if (tess.stato_tesseramento === 'SOSPESO' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                    if (certInfo && certInfo.stato_validazione !== 'VERDE') {
+                        actionBtn = `<button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-green-600 hover:text-white hover:border-green-500 font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase" title="Approva certificato e sblocca tesseramento">SBLOCCA CERT.</button>`;
+                    } else {
+                        actionBtn = '-';
                     }
                 } else {
                     actionBtn = '-';
@@ -2916,8 +2977,12 @@
                             actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" style="background:rgba(223,41,62,0.2);color:#df293e;border:1px solid rgba(223,41,62,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">RIFIUTA CERT.</button>`;
                         }
                     } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
-                        actionHtml += `<button onclick="if(confirm('Approvare il certificato?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-bottom:4px;">APPROVA CERT.</button>`;
+                        actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-bottom:4px;">APPROVA CERT.</button>`;
                         actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" style="background:rgba(223,41,62,0.2);color:#df293e;border:1px solid rgba(223,41,62,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">RIFIUTA CERT.</button>`;
+                    }
+                } else if (tess.stato_tesseramento === 'SOSPESO' && typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                    if (certInfo && certInfo.stato_validazione !== 'VERDE') {
+                        actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#22c55e;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-bottom:4px;">SBLOCCA CERT.</button>`;
                     }
                 }
                 

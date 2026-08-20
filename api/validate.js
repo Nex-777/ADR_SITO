@@ -172,7 +172,7 @@ export default async function handler(req, res) {
                     return res.status(400).json({ error: 'Stato manuale non valido.' });
                 }
                 finalStatus = nuovo_stato;
-                finalNotes = note || 'Approvazione manuale del direttivo.';
+                finalNotes = (typeof note === 'string' && note.trim()) ? note.slice(0, 500) : 'Approvazione manuale del direttivo.';
                 let certQuery = supabase.from('certificati_medici').select('*');
                 certQuery = cert_id ? certQuery.eq('id', cert_id) : certQuery.eq('anagrafica_id', targetAnagraficaId);
                 const { data: currentCert } = await certQuery.maybeSingle();
@@ -180,6 +180,17 @@ export default async function handler(req, res) {
                     finalRelease = currentCert.data_rilascio;
                     finalExpiry = currentCert.data_scadenza;
                     finalType = currentCert.tipologia;
+                }
+
+                const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                if (req.body.data_scadenza && dateRegex.test(req.body.data_scadenza)) {
+                    finalExpiry = req.body.data_scadenza;
+                }
+                if (req.body.data_rilascio && dateRegex.test(req.body.data_rilascio)) {
+                    finalRelease = req.body.data_rilascio;
+                }
+                if (req.body.tipologia && ['AGONISTICO', 'NON_AGONISTICO'].includes(req.body.tipologia)) {
+                    finalType = req.body.tipologia;
                 }
             } else {
                 if (!targetFileUrl) return res.status(400).json({ error: 'Parametri mancanti: file_url per AI.' });

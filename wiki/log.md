@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-20] fix | Gestione Manuale Certificati Medici, Override Data Scadenza, Coda Approvazioni e Sblocco Tesserati (v1.04.75)
+- **Backend API (`api/validate.js`):**
+  - Esteso il ramo `is_manual: true` per accettare e validare `data_scadenza` (formato YYYY-MM-DD), `data_rilascio` e `tipologia`.
+  - Mantenuto l'isolamento di dominio: salvataggio diretto dei campi temporali su `certificati_medici` e riattivazione automatica di `registro_tesserati.stato_tesseramento = 'ATTIVO'` per gli atleti sospesi.
+- **Frontend Dashboard (`portal/dashboard.js` & `portal/dashboard.html`):**
+  - **Registro Approvazioni (`loadCertificatiGialli`)**: Ottimizzata la query PostgREST per includere sia i certificati in `GIALLO` e `IN_ATTESA` che i certificati `ROSSO` recenti (ultimi 7 giorni con file digitale valido), escludendo i record legacy storici con `file_url: 'fittizio'`. Aggiornati i badge di stato (`RIFIUTATO AI`, `DUBBIO AI`, `IN ATTESA`) e il titolo della sezione.
+  - **Approvazione Manuale con Prompt Data (`validaCertificatoManual`)**: Introdotto prompt interattivo durante l'approvazione a `VERDE` per confermare o inserire la data di scadenza reale (default +1 anno), evitando che date errate estratte dall'AI mantengano il certificato come "scaduto".
+  - **Azioni Rapide in Registro Tesserati (`renderTesseratiTable` e mobile cards)**: Aggiunto il pulsante `✓ FORZA / APPROVA` nella colonna Certificato e l'azione `SBLOCCA CERT.` nella colonna Azioni per tesserati con stato `SOSPESO`.
+- **Versionamento:** Eseguito `npm run bump` (versione `v1.04.75`).
+
 ## [2026-08-20] fix | Fix Certificato Medico Upload, Storage Path Relativo, Auth Webhook AI & Sanatoria Matera (v1.04.74)
 - **Frontend Dashboard (`portal/dashboard.js`):**
   - **Widget Home (`uploadCertificatoDashboard`)**: Sostituita la logica di `UPDATE` distruttiva con `INSERT` atomico in `certificati_medici` preservando lo storico delle visite (regola Epika).
