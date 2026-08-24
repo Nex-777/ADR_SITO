@@ -113,14 +113,6 @@ async function initPortal() {
         }
         console.log("Livello tessera determinato per utente:", currentUserTessera);
 
-        // Default value per il primo anno di partecipazione (anno corrente)
-        const currentYear = new Date().getFullYear();
-        const yearInput = document.getElementById('fa-primo-anno');
-        if (yearInput) {
-            yearInput.value = currentYear;
-            yearInput.max = currentYear;
-        }
-
         // 2. Controlla se il profilo EPIKA esiste già
         let { data: epikaProfile, error: epikaError } = await supabaseClient
             .from('epika_profili')
@@ -645,7 +637,7 @@ async function handleFirstAccessSubmit(e) {
     
     const nomeBattaglia = document.getElementById('fa-nome-battaglia').value.trim().toUpperCase();
     const ruoloCombattimento = document.getElementById('fa-ruolo-combattimento').value;
-    const primoAnno = parseInt(document.getElementById('fa-primo-anno').value);
+    const primoAnno = new Date().getFullYear();
     const gruppoStoricoId = parseInt(document.getElementById('fa-gruppo-storico').value);
     
     const selectPopolo = document.getElementById('fa-popolo');
@@ -653,7 +645,7 @@ async function handleFirstAccessSubmit(e) {
     const allenatoreSelect = document.getElementById('fa-allenatore');
     const allenatoreId = ruoloCombattimento === 'combattente' && allenatoreSelect.value ? parseInt(allenatoreSelect.value) : null;
 
-    if (!nomeBattaglia || !ruoloCombattimento || !primoAnno || !gruppoStoricoId || !popolo) {
+    if (!nomeBattaglia || !ruoloCombattimento || !gruppoStoricoId || !popolo) {
         alert("Compila tutti i campi obbligatori.");
         return;
     }
@@ -5312,7 +5304,7 @@ async function renderListaGeneraleAdmin() {
         else saveBtn.classList.remove('epk-hidden');
     }
 
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 12px;">Caricamento lista generale...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px;">Caricamento lista generale...</td></tr>';
     
     try {
         const { data: profili, error: profError } = await supabaseClient
@@ -5406,6 +5398,7 @@ function disegnaTabellaListaGenerale() {
     const tbody = document.getElementById('adm-generale-table-body');
     if (!tbody) return;
 
+    const currentYear = new Date().getFullYear();
     const query = (document.getElementById('gen-search-input')?.value || '').toLowerCase().trim();
     const ruoloFilter = document.getElementById('gen-filter-ruolo')?.value || '';
     const gruppoFilter = document.getElementById('gen-filter-gruppo')?.value || '';
@@ -5453,7 +5446,7 @@ function disegnaTabellaListaGenerale() {
     });
 
     if (filtrati.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 12px; color: gray;">Nessun componente trovato con i filtri selezionati.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 12px; color: gray;">Nessun componente trovato con i filtri selezionati.</td></tr>';
         return;
     }
 
@@ -5529,6 +5522,14 @@ function disegnaTabellaListaGenerale() {
                     <span style="font-size: 10px; color: #a1a1aa;">${escapeHtml(nomeReal)}</span>
                     ${badgeConsensoHtml}
                 </div>
+            </td>
+            <td style="padding: 8px; text-align: center;">
+                <input type="number" class="gen-primo-anno epk-input" 
+                       data-uid="${p.id}" 
+                       data-original="${p.primo_anno_partecipazione || currentYear}" 
+                       value="${p.primo_anno_partecipazione || currentYear}" 
+                       min="1980" max="${currentYear}" 
+                       style="font-size: 10px; padding: 4px; width: 65px; text-align: center; ${selectStyle}" ${disabledSelect}>
             </td>
             <td style="padding: 8px; text-align: center;">
                 <div style="display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
@@ -5610,66 +5611,96 @@ async function salvaTuttaLaListaGenerale() {
         rowsToUpsert.push(map[key]);
     }
     
-    if (rowsToUpsert.length === 0) return;
-    
     try {
-        const { error } = await supabaseClient
-            .from('epika_storico_organico')
-            .upsert(rowsToUpsert, { onConflict: 'profilo_id,anno_sociale' });
-            
-        if (error) throw error;
-        
-        // Sincronizzazione automatica per l'anno sociale corrente
-        const currentYear = new Date().getFullYear();
-        const currentYearRows = rowsToUpsert.filter(r => r.anno_sociale === currentYear);
+        // Aggiornamento massivo e ottimizzato per primo_anno_partecipazione
+        const annoInputs = document.querySelectorAll('.gen-primo-anno');
+        const profiliAnnoDaAggiornare = [];
+        annoInputs.forEach(input => {
+            const original = input.getAttribute('data-original');
+            const current = input.value;
+            if (current && current !== original) {
+                const uid = input.getAttribute('data-uid');
+                const parsedAnno = parseInt(current);
+                if (!isNaN(parsedAnno)) {
+                    profiliAnnoDaAggiornare.push({ id: uid, anno: parsedAnno });
+                }
+            }
+        });
 
-        for (const row of currentYearRows) {
-            if (!row.profilo_id) continue;
-            
-            // 1. Aggiorna epika_profili
-            const profiliUpdate = {};
-            if (row.allenatore_id !== undefined) profiliUpdate.allenatore_id = row.allenatore_id;
-            if (row.ruolo_combattimento !== undefined) profiliUpdate.ruolo_combattimento = row.ruolo_combattimento;
-            if (row.gruppo_storico_id !== undefined) profiliUpdate.gruppo_storico_id = row.gruppo_storico_id;
-            if (row.popolo !== undefined) profiliUpdate.popolo = row.popolo;
-
-            if (Object.keys(profiliUpdate).length > 0) {
-                await supabaseClient
+        if (profiliAnnoDaAggiornare.length > 0) {
+            await Promise.all(profiliAnnoDaAggiornare.map(item => 
+                supabaseClient
                     .from('epika_profili')
-                    .update(profiliUpdate)
-                    .eq('id', row.profilo_id);
-            }
+                    .update({ primo_anno_partecipazione: item.anno })
+                    .eq('id', item.id)
+            ));
 
-            // 2. Aggiorna epika_scab_abilitazioni per l'anno corrente
-            if (row.allenatore_id !== undefined) {
-                await supabaseClient
-                    .from('epika_scab_abilitazioni')
-                    .update({ allenatore_opzione_id: row.allenatore_id })
-                    .eq('profilo_id', row.profilo_id)
-                    .eq('anno_abilitativo', currentYear);
-            }
+            // Aggiorna cache locale listaGeneraleProfili
+            profiliAnnoDaAggiornare.forEach(item => {
+                const targetProf = listaGeneraleProfili.find(p => p.id === item.id);
+                if (targetProf) targetProf.primo_anno_partecipazione = item.anno;
+            });
+        }
 
-            // 3. Aggiorna epika_iscrizioni_eventi (campo JSONB dettagli.allenatore_id)
-            if (row.allenatore_id !== undefined) {
-                const { data: iscrizioni } = await supabaseClient
-                    .from('epika_iscrizioni_eventi')
-                    .select('id, dettagli')
-                    .eq('utente_id', row.profilo_id);
+        if (rowsToUpsert.length > 0) {
+            const { error } = await supabaseClient
+                .from('epika_storico_organico')
+                .upsert(rowsToUpsert, { onConflict: 'profilo_id,anno_sociale' });
+                
+            if (error) throw error;
+            
+            // Sincronizzazione automatica per l'anno sociale corrente
+            const currentYear = new Date().getFullYear();
+            const currentYearRows = rowsToUpsert.filter(r => r.anno_sociale === currentYear);
 
-                if (iscrizioni && iscrizioni.length > 0) {
-                    for (const isc of iscrizioni) {
-                        const dett = isc.dettagli || {};
-                        dett.allenatore_id = row.allenatore_id;
-                        await supabaseClient
-                            .from('epika_iscrizioni_eventi')
-                            .update({ dettagli: dett })
-                            .eq('id', isc.id);
+            for (const row of currentYearRows) {
+                if (!row.profilo_id) continue;
+                
+                // 1. Aggiorna epika_profili
+                const profiliUpdate = {};
+                if (row.allenatore_id !== undefined) profiliUpdate.allenatore_id = row.allenatore_id;
+                if (row.ruolo_combattimento !== undefined) profiliUpdate.ruolo_combattimento = row.ruolo_combattimento;
+                if (row.gruppo_storico_id !== undefined) profiliUpdate.gruppo_storico_id = row.gruppo_storico_id;
+                if (row.popolo !== undefined) profiliUpdate.popolo = row.popolo;
+
+                if (Object.keys(profiliUpdate).length > 0) {
+                    await supabaseClient
+                        .from('epika_profili')
+                        .update(profiliUpdate)
+                        .eq('id', row.profilo_id);
+                }
+
+                // 2. Aggiorna epika_scab_abilitazioni per l'anno corrente
+                if (row.allenatore_id !== undefined) {
+                    await supabaseClient
+                        .from('epika_scab_abilitazioni')
+                        .update({ allenatore_opzione_id: row.allenatore_id })
+                        .eq('profilo_id', row.profilo_id)
+                        .eq('anno_abilitativo', currentYear);
+                }
+
+                // 3. Aggiorna epika_iscrizioni_eventi (campo JSONB dettagli.allenatore_id)
+                if (row.allenatore_id !== undefined) {
+                    const { data: iscrizioni } = await supabaseClient
+                        .from('epika_iscrizioni_eventi')
+                        .select('id, dettagli')
+                        .eq('utente_id', row.profilo_id);
+
+                    if (iscrizioni && iscrizioni.length > 0) {
+                        for (const isc of iscrizioni) {
+                            const dett = isc.dettagli || {};
+                            dett.allenatore_id = row.allenatore_id;
+                            await supabaseClient
+                                .from('epika_iscrizioni_eventi')
+                                .update({ dettagli: dett })
+                                .eq('id', isc.id);
+                        }
                     }
                 }
             }
         }
         
-        alert("Modifiche per l'anno 2026 salvate e sincronizzate con successo!");
+        alert("Modifiche salvate e sincronizzate con successo!");
         // Ricarichiamo i dati dello storico
         const { data: storico } = await supabaseClient
             .from('epika_storico_organico')

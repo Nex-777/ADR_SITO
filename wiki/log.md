@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-24] feature | Gestione Protetta e Modificabile Anno Iscrizione Epika in Lista Generale (v1.04.90)
+- **Frontend UI (`portal/epika.html`)**:
+  - Rimosso dal modulo First Access l'input vulnerabile `#fa-primo-anno` per prevenire qualsiasi falsificazione di anzianità lato client.
+  - Aggiunta la colonna `ANNO ISCRIZIONE` (`<th>Anno Iscrizione</th>`) nella tabella `#epk-adm-tab-generale` tra il Tesserato e i selettori 2026.
+- **Logica Frontend & Database (`portal/epika.js`)**:
+  - In `handleFirstAccessSubmit`: assegnazione rigida e programmatica dell'anno corrente (`new Date().getFullYear()`) in fase di creazione profilo.
+  - In `disegnaTabellaListaGenerale`: renderizzato l'input numerico `.gen-primo-anno` con attributo `data-original` e range min 1980.
+  - In `salvaTuttaLaListaGenerale`: implementato l'aggiornamento massivo e differenziale su `epika_profili.primo_anno_partecipazione` tramite `Promise.all` solo per i record effettivamente modificati dall'Admin.
+- **Versione**: Incrementata la versione globale a `v1.04.90`.
+
+---
+
 ## [2026-08-24] feature | Riprogettazione Assegnazione Mercenari a 3 Colonne in Gestione Eserciti
 - **Frontend UI (`portal/epika.html`)**:
   - Ristrutturata la sezione dei mercenari singoli in un layout a 3 colonne (`#adm-esercito-a-mercenari-list`, `#adm-eserciti-pool-mercenari-list`, `#adm-esercito-b-mercenari-list`) speculare a quello dei gruppi storici.

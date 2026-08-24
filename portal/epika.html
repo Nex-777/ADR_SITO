@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.80">
+    <link rel="stylesheet" href="epika.css?v=1.04.82">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.80"></script>
+    <script src="config.js?v=1.04.82"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.80</span>
+                <span class="epk-version-badge">Vs. 1.04.82</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -74,19 +74,13 @@
                         <input type="text" id="fa-nome-battaglia" class="epk-input" placeholder="Es. TITO, CUNAGATO, GARID..." required>
                     </div>
 
-                    <div class="epk-grid-2">
-                        <div>
-                            <label class="epk-label" for="fa-ruolo-combattimento">Ruolo Combattimento *</label>
-                            <select id="fa-ruolo-combattimento" class="epk-input" onchange="onFaRuoloChange()" required>
-                                <option value="" disabled selected>SELEZIONA</option>
-                                <option value="combattente">COMBATTENTE</option>
-                                <option value="non_combattente">NON COMBATTENTE</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="epk-label" for="fa-primo-anno">Primo Anno di Partecipazione *</label>
-                            <input type="number" id="fa-primo-anno" class="epk-input" min="2010" max="2026" required>
-                        </div>
+                    <div>
+                        <label class="epk-label" for="fa-ruolo-combattimento">Ruolo Combattimento *</label>
+                        <select id="fa-ruolo-combattimento" class="epk-input" onchange="onFaRuoloChange()" required>
+                            <option value="" disabled selected>SELEZIONA</option>
+                            <option value="combattente">COMBATTENTE</option>
+                            <option value="non_combattente">NON COMBATTENTE</option>
+                        </select>
                     </div>
 
                     <div class="epk-grid-2">
@@ -1295,6 +1289,7 @@
                                         <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif;">
                                             <th style="padding: 10px; width: 40px; text-align: center;">N.</th>
                                             <th style="padding: 10px;">Tesserato (Storico / Anagrafico)</th>
+                                            <th style="padding: 10px; text-align: center; width: 90px;">Anno Iscrizione</th>
                                             <th style="padding: 10px; text-align: center;">2026 (Ruolo / Gruppo / Popolo / Allenatore)</th>
                                         </tr>
                                     </thead>
@@ -2230,6 +2225,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.80"></script>
+    <script src="epika.js?v=1.04.82"></script>
 </body>
 </html>
