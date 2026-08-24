@@ -28,6 +28,12 @@ let currentManagedGroupId = null;
 let userScabRolesMap = {}; // Mappa dei ruoli SCAB dell'utente: tipo ('allenatore', 'scab_validatore', 'scab_allievo_allenatore') -> opzione_id
 let simulatedScabOpzioneId = null; // Per la simulazione admin
 
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initPortal();
@@ -1724,7 +1730,7 @@ function configureAdminTabs() {
     } else if (viewMode === 'direttivo_logistica') {
         visibleTabs = ['eventi', 'logistica'];
     } else if (viewMode === 'direttivo_marketing') {
-        visibleTabs = ['eventi', 'marketing'];
+        visibleTabs = ['scab', 'gruppi', 'popoli', 'eventi', 'generale', 'marketing'];
     } else if (viewMode === 'direttivo_sibis') {
         visibleTabs = ['dash'];
     }
@@ -2269,6 +2275,20 @@ async function renderSCABTab() {
         // 6. Renderizza Ruoli
         renderRuoliAdmin();
 
+        // 7. Protezioni Read-Only su form SCAB
+        const palForm = document.getElementById('scab-new-palestra-nome')?.parentElement;
+        const cpForm = document.getElementById('scab-new-centro-nome')?.parentElement;
+        if (palForm) palForm.style.display = isReadOnly() ? 'none' : 'flex';
+        if (cpForm) cpForm.style.display = isReadOnly() ? 'none' : 'flex';
+
+        const addPalBtn = document.querySelector('#epk-adm-tab-scab button[onclick="aggiungiRigaAbbinamento(\'palestra\')"]');
+        const addCpBtn = document.querySelector('#epk-adm-tab-scab button[onclick="aggiungiRigaAbbinamento(\'centro_pratica\')"]');
+        if (addPalBtn) addPalBtn.style.display = isReadOnly() ? 'none' : 'inline-block';
+        if (addCpBtn) addCpBtn.style.display = isReadOnly() ? 'none' : 'inline-block';
+
+        const formCampione = document.querySelector('#scab-panel-campioni div[style*="align-items: end"]');
+        if (formCampione) formCampione.style.display = isReadOnly() ? 'none' : 'grid';
+
     } catch (e) {
         console.error("Errore renderSCABTab:", e);
     }
@@ -2288,20 +2308,23 @@ function renderSCABAnagrafica() {
         const activeText = s.attivo ? 'Dis' : 'Att';
         const activeStyle = s.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);';
         
+        const actionBtnsHtml = isReadOnly() ? '' : `
+            <div style="display: flex; gap: 4px;">
+                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoStrutturaSCAB('${s.id}', ${s.attivo})">
+                    ${activeText}
+                </button>
+                <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="cancellaStrutturaSCAB('${s.id}')">
+                    Canc
+                </button>
+            </div>`;
+
         const html = `
             <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-radius: 2px;">
                 <div>
                     <span style="font-size: 9px; font-weight: bold; padding: 2px 4px; background: rgba(201,168,76,0.2); border: 1px solid var(--epk-gold); border-radius: 2px; margin-right: 6px;">${badge}</span>
-                    <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.nome.toUpperCase()}</span>
+                    <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${escapeHtml(s.nome.toUpperCase())}</span>
                 </div>
-                <div style="display: flex; gap: 4px;">
-                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoStrutturaSCAB('${s.id}', ${s.attivo})">
-                        ${activeText}
-                    </button>
-                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="cancellaStrutturaSCAB('${s.id}')">
-                        Canc
-                    </button>
-                </div>
+                ${actionBtnsHtml}
             </div>`;
             
         if (s.tipo === 'palestra') {
@@ -2493,6 +2516,7 @@ function rimuoviToken(strutturaId, tipo, idToRemove) {
 
 // Logiche di Salvataggio e Creazione (Step 4.3)
 async function creaStrutturaSCAB() {
+    if (isReadOnly()) return;
     const nomeInput = document.getElementById('scab-new-struttura-nome');
     const tipoSelect = document.getElementById('scab-new-struttura-tipo');
     const nome = nomeInput.value.trim();
@@ -2518,6 +2542,7 @@ async function creaStrutturaSCAB() {
 }
 
 async function toggleStatoStrutturaSCAB(id, statoAttuale) {
+    if (isReadOnly()) return;
     try {
         const { error } = await supabaseClient
             .from('epika_scab_strutture')
@@ -2532,6 +2557,7 @@ async function toggleStatoStrutturaSCAB(id, statoAttuale) {
 }
 
 async function salvaAbbinamentoSCAB(strutturaId, tipoStruttura) {
+    if (isReadOnly()) return;
     try {
         let payload = {
             struttura_id: strutturaId,
@@ -2580,6 +2606,7 @@ async function salvaAbbinamentoSCAB(strutturaId, tipoStruttura) {
 }
 
 async function pulisciAbbinamentoSCAB(strutturaId) {
+    if (isReadOnly()) return;
     if (!confirm("Vuoi azzerare gli abbinamenti per questa struttura?")) return;
     try {
         const { error } = await supabaseClient
@@ -2597,6 +2624,7 @@ async function pulisciAbbinamentoSCAB(strutturaId) {
 
 // Stub di default per aggiungere riga abbinamento
 function aggiungiRigaAbbinamento(tipo) {
+    if (isReadOnly()) return;
     alert("Per aggiungere un abbinamento, inserisci prima la struttura nel tab 'Anagrafica SCAB'. Verrà mostrata automaticamente qui.");
     switchScabSubTab('anagrafica');
 }
@@ -2807,6 +2835,14 @@ async function renderRuoliAdmin() {
         if (allList) allList.innerHTML = '';
         if (allieviList) allieviList.innerHTML = '';
 
+        // Nascondi i form di aggiunta ruoli in sola lettura
+        const ruoliForms = document.querySelectorAll('#scab-panel-allenatori .epk-card div[style*="display: flex; gap: 8px"], #scab-panel-allenatori .epk-card div[style*="display: flex; gap: 8px;"]');
+        ruoliForms.forEach(form => {
+            if (form.querySelector('input') && form.querySelector('button')) {
+                form.style.display = isReadOnly() ? 'none' : 'flex';
+            }
+        });
+
         const contatori = calcolaContatoriAbbinamentiSCAB(scabStrutture, scabAbbinamentiMap);
 
         (soggetti || []).forEach(s => {
@@ -2833,23 +2869,28 @@ async function renderRuoliAdmin() {
                     </span>`;
             }
 
+            const bindingSpan = isReadOnly()
+                ? `<span style="color: ${bindingIconColor}; font-size: 14px;" title="${bindingTitle}">${isBound ? '🔗' : '⚪'}</span>`
+                : `<span style="cursor: pointer; color: ${bindingIconColor}; font-size: 14px;" title="${bindingTitle}" onclick="apriModaleBinding(${s.id}, '${s.valore.replace(/'/g, "\\'")}', '${s.tipo}', ${s.utente_id ? `'${s.utente_id}'` : 'null'})">${isBound ? '🔗' : '➕'}</span>`;
+
+            const actionBtns = isReadOnly() ? '' : `
+                <div style="display: flex; gap: 4px;">
+                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoSoggettoRuolo('${s.id}', ${s.attivo})">
+                        ${activeText}
+                    </button>
+                    <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="cancellaSoggettoRuolo('${s.id}')">
+                        Canc
+                    </button>
+                </div>`;
+
             const html = `
                 <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(251, 191, 36, 0.1); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${s.valore.toUpperCase()}</span>
+                        <span style="font-size: 13px; font-weight: bold; ${s.attivo ? '' : 'text-decoration: line-through; opacity: 0.5;'}">${escapeHtml(s.valore.toUpperCase())}</span>
                         ${badgeAbbinamentoHtml}
-                        <span style="cursor: pointer; color: ${bindingIconColor}; font-size: 14px;" title="${bindingTitle}" onclick="apriModaleBinding(${s.id}, '${s.valore.replace(/'/g, "\\'")}', '${s.tipo}', ${s.utente_id ? `'${s.utente_id}'` : 'null'})">
-                            ${isBound ? '🔗' : '➕'}
-                        </span>
+                        ${bindingSpan}
                     </div>
-                    <div style="display: flex; gap: 4px;">
-                        <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; ${activeStyle}" onclick="toggleStatoSoggettoRuolo('${s.id}', ${s.attivo})">
-                            ${activeText}
-                        </button>
-                        <button class="epk-btn-secondary" style="font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" onclick="cancellaSoggettoRuolo('${s.id}')">
-                            Canc
-                        </button>
-                    </div>
+                    ${actionBtns}
                 </div>`;
                 
             if (s.tipo === 'scab_validatore' && valList) valList.innerHTML += html;
@@ -2864,6 +2905,7 @@ async function renderRuoliAdmin() {
 
 // Gestione Modale Binding Account Reale
 async function apriModaleBinding(opzioneId, nomeSoggetto, tipo, utenteIdCorrente) {
+    if (isReadOnly()) return;
     currentBindingOpzioneId = opzioneId;
     currentBindingSoggettoNome = nomeSoggetto;
     currentBindingTipo = tipo;
@@ -2922,7 +2964,7 @@ function chiudiModaleBinding() {
 }
 
 async function salvaBindingAccount() {
-    if (!currentBindingOpzioneId) return;
+    if (isReadOnly() || !currentBindingOpzioneId) return;
 
     const utenteId = document.getElementById('binding-utente-select').value;
     if (!utenteId) {
@@ -2960,7 +3002,7 @@ async function salvaBindingAccount() {
 }
 
 async function rimuoviBindingAccount() {
-    if (!currentBindingOpzioneId) return;
+    if (isReadOnly() || !currentBindingOpzioneId) return;
     if (!confirm(`Scollegare l'account reale da ${currentBindingSoggettoNome.toUpperCase()}?`)) return;
 
     try {
@@ -2986,6 +3028,7 @@ async function rimuoviBindingAccount() {
 }
 
 async function creaSoggettoRuolo(tipo) {
+    if (isReadOnly()) return;
     let inputId = '';
     if (tipo === 'scab_validatore') inputId = 'adm-new-validatore';
     else if (tipo === 'allenatore') inputId = 'adm-new-allenatore';
@@ -3022,6 +3065,7 @@ async function creaSoggettoRuolo(tipo) {
 }
 
 async function toggleStatoSoggettoRuolo(id, statoAttuale) {
+    if (isReadOnly()) return;
     try {
         const { error } = await supabaseClient
             .from('epika_opzioni')
@@ -3916,6 +3960,13 @@ async function renderGruppiStoriciAdmin() {
     const listContainer = document.getElementById('adm-gruppi-storici-list');
     if (!listContainer) return;
 
+    // Nascondi form creazione gruppo se sola lettura
+    const gruppoForm = document.getElementById('new-gruppo-nome')?.closest('div[style*="align-items: flex-end"]');
+    if (gruppoForm) {
+        if (isReadOnly()) gruppoForm.classList.add('epk-hidden');
+        else gruppoForm.classList.remove('epk-hidden');
+    }
+
     listContainer.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Caricamento in corso...</p>';
 
     try {
@@ -3953,7 +4004,7 @@ async function renderGruppiStoriciAdmin() {
             }
 
             const infoText = document.createElement('div');
-            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${g.nome}</strong>${statoLabel} <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${g.popolo || 'Mercenari'})</span> <span style="font-size: 10px; color: #71717a; margin-left: 12px;">Capogruppo: ${capoNome}</span>`;
+            infoText.innerHTML = `<strong style="color: var(--epk-gold);">${escapeHtml(g.nome)}</strong>${statoLabel} <span style="font-size: 11px; color: #a1a1aa; margin-left: 8px;">(${escapeHtml(g.popolo || 'Mercenari')})</span> <span style="font-size: 10px; color: #71717a; margin-left: 12px;">Capogruppo: ${escapeHtml(capoNome)}</span>`;
             
             const btnContainer = document.createElement('div');
             btnContainer.style = "display: flex; gap: 4px;";
@@ -3964,21 +4015,24 @@ async function renderGruppiStoriciAdmin() {
             detBtn.textContent = 'Gestione';
             detBtn.onclick = () => apriDettaglioGruppo(g.id);
 
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'epk-btn-secondary';
-            toggleBtn.style = `font-size: 8px; padding: 4px 8px; ${g.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);'}`;
-            toggleBtn.textContent = g.attivo ? 'Dis' : 'Att';
-            toggleBtn.onclick = () => toggleStatoGruppoStorico(g.id, !g.attivo);
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'epk-btn-secondary';
-            deleteBtn.style = 'font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);';
-            deleteBtn.textContent = 'Canc';
-            deleteBtn.onclick = () => cancellaGruppoStorico(g.id);
-
             btnContainer.appendChild(detBtn);
-            btnContainer.appendChild(toggleBtn);
-            btnContainer.appendChild(deleteBtn);
+
+            if (!isReadOnly()) {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.className = 'epk-btn-secondary';
+                toggleBtn.style = `font-size: 8px; padding: 4px 8px; ${g.attivo ? 'color: #f97316; border-color: rgba(249, 115, 22, 0.4);' : 'color: #22c55e; border-color: rgba(34, 197, 94, 0.4);'}`;
+                toggleBtn.textContent = g.attivo ? 'Dis' : 'Att';
+                toggleBtn.onclick = () => toggleStatoGruppoStorico(g.id, !g.attivo);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'epk-btn-secondary';
+                deleteBtn.style = 'font-size: 8px; padding: 4px 8px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);';
+                deleteBtn.textContent = 'Canc';
+                deleteBtn.onclick = () => cancellaGruppoStorico(g.id);
+
+                btnContainer.appendChild(toggleBtn);
+                btnContainer.appendChild(deleteBtn);
+            }
 
             row.appendChild(infoText);
             row.appendChild(btnContainer);
@@ -3991,6 +4045,7 @@ async function renderGruppiStoriciAdmin() {
 }
 
 async function creaGruppoStorico() {
+    if (isReadOnly()) return;
     const nomeInput = document.getElementById('new-gruppo-nome');
     const popoloSelect = document.getElementById('new-gruppo-popolo');
     const capoSelect = document.getElementById('new-gruppo-capo');
@@ -4076,6 +4131,7 @@ async function creaGruppoStorico() {
 }
 
 async function toggleStatoGruppoStorico(id, stato) {
+    if (isReadOnly()) return;
     try {
         const { error } = await supabaseClient
             .from('epika_gruppi_storici')
@@ -4095,6 +4151,7 @@ async function toggleStatoGruppoStorico(id, stato) {
 // --- FISICA CANCELLAZIONE ---
 
 async function cancellaStrutturaSCAB(id) {
+    if (isReadOnly()) return;
     if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questa struttura? Questa azione è irreversibile.")) return;
     try {
         const { error } = await supabaseClient
@@ -4115,6 +4172,7 @@ async function cancellaStrutturaSCAB(id) {
 }
 
 async function cancellaSoggettoRuolo(id) {
+    if (isReadOnly()) return;
     if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questo soggetto/ruolo? Questa azione è irreversibile.")) return;
     try {
         const { error } = await supabaseClient
@@ -4135,6 +4193,7 @@ async function cancellaSoggettoRuolo(id) {
 }
 
 async function cancellaGruppoStorico(id) {
+    if (isReadOnly()) return;
     if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questo gruppo storico? Questa azione è irreversibile.")) return;
     try {
         const { error } = await supabaseClient
@@ -4222,6 +4281,7 @@ async function renderPopoliAdmin() {
 }
 
 async function creaPopolo() {
+    if (isReadOnly()) return;
     const nomeInput = document.getElementById('new-popolo-nome');
     if (!nomeInput) return;
     
@@ -4249,6 +4309,7 @@ async function creaPopolo() {
 }
 
 async function toggleStatoPopolo(id, stato) {
+    if (isReadOnly()) return;
     try {
         const { error } = await supabaseClient
             .from('epika_popoli')
@@ -4266,6 +4327,7 @@ async function toggleStatoPopolo(id, stato) {
 }
 
 async function cancellaPopolo(id) {
+    if (isReadOnly()) return;
     if (!confirm("Sei sicuro di voler CANCELLARE fisicamente questo popolo? Questa azione è irreversibile.")) return;
     try {
         const { error } = await supabaseClient
@@ -4381,6 +4443,27 @@ async function apriDettaglioGruppo(gruppoId) {
                 detResp.innerHTML += `<option value="${t.id}" ${selected}>${t.nome_di_battaglia}</option>`;
             });
         }
+
+        // Disabilita controlli e nascondi pulsanti in sola lettura
+        const isRO = isReadOnly();
+        const detNome = document.getElementById('det-gruppo-nome');
+        if (detNome) detNome.disabled = isRO;
+        if (detPopolo) detPopolo.disabled = isRO;
+        if (detCapo) detCapo.disabled = isRO;
+        if (detVice) detVice.disabled = isRO;
+        if (detResp) detResp.disabled = isRO;
+
+        const saveRuoliBtn = document.querySelector('#epk-adm-tab-gruppo-dettaglio button[onclick="salvaRuoliGruppo()"]');
+        if (saveRuoliBtn) {
+            if (isRO) saveRuoliBtn.classList.add('epk-hidden');
+            else saveRuoliBtn.classList.remove('epk-hidden');
+        }
+
+        const varStatoForm = document.getElementById('det-nuovo-stato-tipo')?.closest('div[style*="border: 1px dashed"]');
+        if (varStatoForm) {
+            if (isRO) varStatoForm.classList.add('epk-hidden');
+            else varStatoForm.classList.remove('epk-hidden');
+        }
         
         oldRuoliDettaglio = {
             capogruppo_id: g.capogruppo_id || null,
@@ -4457,14 +4540,14 @@ async function caricaStoricoStatiGruppo(gruppoId) {
 
             const bgStyle = isTop ? 'background: rgba(251, 191, 36, 0.08); font-weight: bold;' : 'border-bottom: 1px solid rgba(255,255,255,0.05);';
             const attualeBadge = isTop ? '<span style="font-size: 8px; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #4ade80; padding: 2px 5px; border-radius: 3px; margin-left: 6px; font-weight: bold;">ATTUALE</span>' : '';
-            const deleteBtn = (isTop && storico.length > 1) ? `<button onclick="eliminaUltimaVariazioneStato(${s.id}, ${gruppoId})" class="epk-btn-secondary" style="font-size: 9px; padding: 2px 6px; color: #ef4444; border-color: #ef4444;" title="Elimina questa variazione errata">🗑️ ELIMINA</button>` : '-';
+            const deleteBtn = (isTop && storico.length > 1 && !isReadOnly()) ? `<button onclick="eliminaUltimaVariazioneStato(${s.id}, ${gruppoId})" class="epk-btn-secondary" style="font-size: 9px; padding: 2px 6px; color: #ef4444; border-color: #ef4444;" title="Elimina questa variazione errata">🗑️ ELIMINA</button>` : '-';
 
             const tr = document.createElement('tr');
             tr.style = bgStyle;
             tr.innerHTML = `
                 <td style="padding: 6px; color: ${colorStato}; font-weight: bold;">${statoFormatted}${attualeBadge}</td>
                 <td style="padding: 6px;">${inizioStr}</td>
-                <td style="padding: 6px; color: #aaa; font-size: 9px;">${s.note || '-'}</td>
+                <td style="padding: 6px; color: #aaa; font-size: 9px;">${escapeHtml(s.note || '-')}</td>
                 <td style="padding: 6px; text-align: center;">${deleteBtn}</td>
             `;
             tbody.appendChild(tr);
@@ -4477,6 +4560,7 @@ async function caricaStoricoStatiGruppo(gruppoId) {
 }
 
 async function aggiungiVariazioneStatoGruppo() {
+    if (isReadOnly()) return;
     const gruppoId = parseInt(document.getElementById('det-gruppo-id').value);
     const nuovoStato = document.getElementById('det-nuovo-stato-tipo').value;
     const dataInizio = document.getElementById('det-nuovo-stato-data').value;
@@ -4502,7 +4586,6 @@ async function aggiungiVariazioneStatoGruppo() {
             }]);
 
         if (insErr) throw insErr;
-
         document.getElementById('det-nuovo-stato-note').value = '';
 
         await sincronizzaStatoAttualeGruppo(gruppoId);
@@ -4517,6 +4600,7 @@ async function aggiungiVariazioneStatoGruppo() {
 }
 
 async function eliminaUltimaVariazioneStato(recordId, gruppoId) {
+    if (isReadOnly()) return;
     if (!confirm("Sei sicuro di voler eliminare questa variazione di stato? Il gruppo ripristinerà lo stato precedente.")) {
         return;
     }
@@ -4568,6 +4652,14 @@ async function sincronizzaStatoAttualeGruppo(gruppoId) {
     } catch (e) {
         console.error("Errore sincronizzazione stato attuale gruppo:", e);
     }
+}
+
+function tornaAiGruppiDaDettaglio() {
+    const panel = document.getElementById('epk-adm-tab-gruppo-dettaglio');
+    if (panel) panel.classList.add('epk-hidden');
+    
+    document.getElementById('epk-adm-tab-gruppi').classList.remove('epk-hidden');
+    renderGruppiStoriciAdmin();
 }
 
 async function navigaGruppoDettaglio(direzione) {
@@ -4629,25 +4721,17 @@ async function caricaStoricoRuoliGruppo(gruppoId) {
             const rawFine = s.data_fine ? s.data_fine.split('T')[0] : '';
             const isActive = !s.data_fine;
 
-            let azioniHtml = `
+            let azioniHtml = isReadOnly() ? '-' : `
                 <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
                     <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px;" onclick="abilitaModificaMandato(${s.id}, '${rawInizio}', '${rawFine}', ${gruppoId}, ${isActive})" title="Modifica date mandato">✏️</button>
-            `;
-            if (isActive) {
-                azioniHtml += `
-                    <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px; opacity: 0.4; cursor: not-allowed;" disabled title="Impossibile eliminare un mandato attivo. Cambia prima il ruolo dal pannello superiore.">🗑️</button>
+                    ${isActive ? `<button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px; opacity: 0.4; cursor: not-allowed;" disabled title="Impossibile eliminare un mandato attivo. Cambia prima il ruolo dal pannello superiore.">🗑️</button>` : `<button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="eliminaMandatoStorico(${s.id}, ${gruppoId})" title="Elimina mandato chiuso">🗑️</button>`}
                 </div>`;
-            } else {
-                azioniHtml += `
-                    <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 11px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="eliminaMandatoStorico(${s.id}, ${gruppoId})" title="Elimina mandato chiuso">🗑️</button>
-                </div>`;
-            }
             
             const tr = document.createElement('tr');
             tr.id = `storico-row-${s.id}`;
             tr.style = "border-bottom: 1px solid rgba(255,255,255,0.05);";
             tr.innerHTML = `
-                <td style="padding: 8px;">${nomeTesserato}</td>
+                <td style="padding: 8px;">${escapeHtml(nomeTesserato)}</td>
                 <td style="padding: 8px; color: var(--epk-gold);">${ruoloFormatted}</td>
                 <td style="padding: 8px;" id="cell-inizio-${s.id}">${inizioStr}</td>
                 <td style="padding: 8px; ${s.data_fine ? '' : 'color: #22c55e; font-weight: bold;'}" id="cell-fine-${s.id}">${fineStr}</td>
@@ -4663,6 +4747,7 @@ async function caricaStoricoRuoliGruppo(gruppoId) {
 }
 
 function abilitaModificaMandato(id, dataInizio, dataFine, gruppoId, isActive) {
+    if (isReadOnly()) return;
     const cellInizio = document.getElementById(`cell-inizio-${id}`);
     const cellFine = document.getElementById(`cell-fine-${id}`);
     const cellAzioni = document.getElementById(`cell-azioni-${id}`);
@@ -4686,6 +4771,7 @@ function abilitaModificaMandato(id, dataInizio, dataFine, gruppoId, isActive) {
 }
 
 async function salvaModificaMandato(id, gruppoId, isActive) {
+    if (isReadOnly()) return;
     const valInizio = document.getElementById(`edit-mandato-inizio-${id}`)?.value;
     if (!valInizio) {
         alert("Inserisci una data di inizio valida.");
@@ -4720,6 +4806,7 @@ async function salvaModificaMandato(id, gruppoId, isActive) {
 }
 
 async function eliminaMandatoStorico(id, gruppoId) {
+    if (isReadOnly()) return;
     if (!confirm("Sei sicuro di voler eliminare definitivamente questo mandato dallo storico?")) {
         return;
     }
@@ -4739,6 +4826,7 @@ async function eliminaMandatoStorico(id, gruppoId) {
 }
 
 async function salvaRuoliGruppo() {
+    if (isReadOnly()) return;
     const gruppoId = parseInt(document.getElementById('det-gruppo-id').value);
     const nome = document.getElementById('det-gruppo-nome').value.trim().toUpperCase();
     const popolo = document.getElementById('det-gruppo-popolo').value;
@@ -5229,7 +5317,7 @@ async function renderListaGeneraleAdmin() {
     try {
         const { data: profili, error: profError } = await supabaseClient
             .from('epika_profili')
-            .select('*, utenti(nome, cognome)')
+            .select('*, utenti(nome, cognome, consenso_audiovisivi)')
             .eq('profilo_completato', true);
             
         if (profError) throw profError;
@@ -5266,7 +5354,7 @@ async function renderListaGeneraleAdmin() {
         if (groupFilterSel) {
             groupFilterSel.innerHTML = '<option value="">TUTTI I GRUPPI 2026</option>';
             listaGeneraleGruppi.forEach(g => {
-                groupFilterSel.innerHTML += `<option value="${g.id}">${g.nome.toUpperCase()}</option>`;
+                groupFilterSel.innerHTML += `<option value="${g.id}">${escapeHtml(g.nome.toUpperCase())}</option>`;
             });
         }
 
@@ -5274,7 +5362,7 @@ async function renderListaGeneraleAdmin() {
         if (popoloFilterSel) {
             popoloFilterSel.innerHTML = '<option value="">TUTTI I POPOLI 2026</option>';
             popoliList.forEach(p => {
-                popoloFilterSel.innerHTML += `<option value="${p.nome}">${p.nome.toUpperCase()}</option>`;
+                popoloFilterSel.innerHTML += `<option value="${p.nome}">${escapeHtml(p.nome.toUpperCase())}</option>`;
             });
         }
 
@@ -5282,7 +5370,7 @@ async function renderListaGeneraleAdmin() {
         if (allenatoreFilterSel) {
             allenatoreFilterSel.innerHTML = '<option value="">TUTTI GLI ALLENATORI 2026</option>';
             soggettiAllenatori.forEach(a => {
-                allenatoreFilterSel.innerHTML += `<option value="${a.id}">${a.valore.toUpperCase()}</option>`;
+                allenatoreFilterSel.innerHTML += `<option value="${a.id}">${escapeHtml(a.valore.toUpperCase())}</option>`;
             });
         }
         
@@ -5323,6 +5411,7 @@ function disegnaTabellaListaGenerale() {
     const gruppoFilter = document.getElementById('gen-filter-gruppo')?.value || '';
     const popoloFilter = document.getElementById('gen-filter-popolo')?.value || '';
     const allenatoreFilter = document.getElementById('gen-filter-allenatore')?.value || '';
+    const consensoFilter = document.getElementById('gen-filter-consenso')?.value || '';
 
     // 1. Applica Filtri
     let filtrati = listaGeneraleProfili.filter(p => {
@@ -5331,6 +5420,13 @@ function disegnaTabellaListaGenerale() {
         const nomeReal = p.utenti ? `${p.utenti.nome} ${p.utenti.cognome}`.toLowerCase() : '';
         const matchNome = nomeStorico.includes(query) || nomeReal.includes(query);
         if (!matchNome) return false;
+
+        // Filtro Consenso Privacy Audio/Video
+        if (consensoFilter) {
+            const hasConsenso = !!(p.utenti && p.utenti.consenso_audiovisivi);
+            if (consensoFilter === 'si' && !hasConsenso) return false;
+            if (consensoFilter === 'no' && hasConsenso) return false;
+        }
 
         // Trova dati 2026 per filtri
         const row2026 = listaGeneraleStorico.find(s => s.profilo_id === p.id && s.anno_sociale === 2026);
@@ -5392,7 +5488,7 @@ function disegnaTabellaListaGenerale() {
         gruppoSelect += `<option value="" ${!gruppoIdAttivo ? 'selected' : ''}>NESSUNO</option>`;
         listaGeneraleGruppi.forEach(g => {
             const selected = (gruppoIdAttivo && Number(g.id) === Number(gruppoIdAttivo)) ? 'selected' : '';
-            gruppoSelect += `<option value="${g.id}" ${selected}>${g.nome.toUpperCase()}</option>`;
+            gruppoSelect += `<option value="${g.id}" ${selected}>${escapeHtml(g.nome.toUpperCase())}</option>`;
         });
         gruppoSelect += `</select>`;
 
@@ -5401,7 +5497,7 @@ function disegnaTabellaListaGenerale() {
         popoloSelect += `<option value="" ${!popoloAttivo ? 'selected' : ''}>NESSUNO</option>`;
         popoliList.forEach(pop => {
             const selected = (popoloAttivo && pop.nome === popoloAttivo) ? 'selected' : '';
-            popoloSelect += `<option value="${pop.nome}" ${selected}>${pop.nome.toUpperCase()}</option>`;
+            popoloSelect += `<option value="${pop.nome}" ${selected}>${escapeHtml(pop.nome.toUpperCase())}</option>`;
         });
         popoloSelect += `</select>`;
 
@@ -5415,16 +5511,23 @@ function disegnaTabellaListaGenerale() {
         allenatoreSelect += `<option value="" ${!allenatoreVal ? 'selected' : ''}>NESSUNO</option>`;
         soggettiAllenatori.forEach(aln => {
             const selected = (allenatoreVal && Number(aln.id) === Number(allenatoreVal)) ? 'selected' : '';
-            allenatoreSelect += `<option value="${aln.id}" ${selected}>${aln.valore.toUpperCase()}</option>`;
+            allenatoreSelect += `<option value="${aln.id}" ${selected}>${escapeHtml(aln.valore.toUpperCase())}</option>`;
         });
         allenatoreSelect += `</select>`;
+
+        // Badge Consenso Privacy Audio/Video
+        const haConsensoAudio = !!(p.utenti && p.utenti.consenso_audiovisivi);
+        const badgeConsensoHtml = haConsensoAudio
+            ? `<span style="font-size: 9px; color: #4ade80; font-weight: bold; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4); padding: 1px 5px; border-radius: 3px; display: inline-flex; align-items: center; gap: 3px; margin-top: 3px; width: fit-content;" title="Acconsente al trattamento di riprese audio/video e foto (GDPR)">📹 RIPRESE A/V: SÌ</span>`
+            : `<span style="font-size: 9px; color: #f87171; font-weight: bold; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); padding: 1px 5px; border-radius: 3px; display: inline-flex; align-items: center; gap: 3px; margin-top: 3px; width: fit-content;" title="Nessun consenso al trattamento di riprese audio/video e foto (GDPR)">🚫 RIPRESE A/V: NO</span>`;
 
         tr.innerHTML = `
             <td style="padding: 10px; text-align: center; color: var(--epk-gold-dim); font-weight: bold;">${rowNum}</td>
             <td style="padding: 10px;">
                 <div style="display: flex; flex-direction: column;">
-                    <strong style="color: var(--epk-gold);">${nomeStorico}</strong>
-                    <span style="font-size: 10px; color: #a1a1aa;">${nomeReal}</span>
+                    <strong style="color: var(--epk-gold);">${escapeHtml(nomeStorico)}</strong>
+                    <span style="font-size: 10px; color: #a1a1aa;">${escapeHtml(nomeReal)}</span>
+                    ${badgeConsensoHtml}
                 </div>
             </td>
             <td style="padding: 8px; text-align: center;">
@@ -7465,6 +7568,7 @@ let esercitiCacheData = {
     gruppi: {},      // { "Nome Gruppo": [ { utente_id, nome_battaglia, ruolo, armatura, arciere } ] }
     mercenari: [],   // [ { utente_id, nome_battaglia, ruolo, armatura, arciere } ]
     assegnazioniGruppi: {},    // { "Nome Gruppo": "A" | "B" | null }
+    ordineGruppi: [],          // [ "Nome Gruppo 1", "Nome Gruppo 2", ... ] ordine cronologico di scelta/draft
     assegnazioniMercenari: {}  // { utente_id: "A" | "B" | null }
 };
 
@@ -7502,6 +7606,7 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
     esercitiCacheData.gruppi = {};
     esercitiCacheData.mercenari = [];
     esercitiCacheData.assegnazioniGruppi = {};
+    esercitiCacheData.ordineGruppi = [];
     esercitiCacheData.assegnazioniMercenari = {};
     esercitiCacheData.gruppiMetadata = {};
     esercitiCacheData.capoFazioneA = null;
@@ -7597,7 +7702,8 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = genB[2] || '';
 
             if (savedEserciti.coefficienti_forza) {
-                esercitiCacheData.coeff = { ...esercitiCacheData.coeff, ...savedEserciti.coefficienti_forza };
+                const { _ordine_gruppi, ...coeffOnly } = savedEserciti.coefficienti_forza;
+                esercitiCacheData.coeff = { ...esercitiCacheData.coeff, ...coeffOnly };
             }
             if (savedEserciti.assegnazione_gruppi) {
                 esercitiCacheData.assegnazioniGruppi = { ...savedEserciti.assegnazione_gruppi };
@@ -7713,6 +7819,28 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             if (esercitiCacheData.capoFazioneB) esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneB] = 'B';
         }
 
+        // Inizializzazione e ripristino ordine cronologico di scelta gruppi (Draft Order)
+        const savedOrdine = Array.isArray(savedEserciti?.coefficienti_forza?._ordine_gruppi)
+            ? savedEserciti.coefficienti_forza._ordine_gruppi
+            : [];
+        esercitiCacheData.ordineGruppi = savedOrdine.filter(g => !!esercitiCacheData.assegnazioniGruppi[g]);
+
+        if (esercitiCacheData.capoFazioneA && esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneA] === 'A') {
+            if (!esercitiCacheData.ordineGruppi.includes(esercitiCacheData.capoFazioneA)) {
+                esercitiCacheData.ordineGruppi.unshift(esercitiCacheData.capoFazioneA);
+            }
+        }
+        if (esercitiCacheData.capoFazioneB && esercitiCacheData.assegnazioniGruppi[esercitiCacheData.capoFazioneB] === 'B') {
+            if (!esercitiCacheData.ordineGruppi.includes(esercitiCacheData.capoFazioneB)) {
+                esercitiCacheData.ordineGruppi.push(esercitiCacheData.capoFazioneB);
+            }
+        }
+        Object.keys(esercitiCacheData.assegnazioniGruppi).forEach(gNome => {
+            if (!esercitiCacheData.ordineGruppi.includes(gNome)) {
+                esercitiCacheData.ordineGruppi.push(gNome);
+            }
+        });
+
         renderTatticaEserciti();
 
     } catch (e) {
@@ -7808,15 +7936,15 @@ function renderTatticaEserciti() {
         .filter(g => !esercitiCacheData.assegnazioniGruppi[g])
         .sort(confrontaGrandezzaGruppi);
 
-    // 2. Esercito A (Capo Fazione A in cima, poi ordinati per combattenti decrescenti)
-    const gruppiA = tuttiGruppiNomi.filter(g => esercitiCacheData.assegnazioniGruppi[g] === 'A');
-    const altriA = gruppiA.filter(g => g !== capoA).sort(confrontaGrandezzaGruppi);
-    const gruppiAOrdinati = (capoA && gruppiA.includes(capoA)) ? [capoA, ...altriA] : altriA;
+    // 2. Esercito A (Capo Fazione A in cima, poi ordinati per ordine cronologico di scelta/draft)
+    const gruppiA = (esercitiCacheData.ordineGruppi || []).filter(g => esercitiCacheData.assegnazioniGruppi[g] === 'A');
+    const altriA = gruppiA.filter(g => g !== capoA);
+    const gruppiAOrdinati = (capoA && esercitiCacheData.assegnazioniGruppi[capoA] === 'A') ? [capoA, ...altriA] : gruppiA;
 
-    // 3. Esercito B (Capo Fazione B in cima, poi ordinati per combattenti decrescenti)
-    const gruppiB = tuttiGruppiNomi.filter(g => esercitiCacheData.assegnazioniGruppi[g] === 'B');
-    const altriB = gruppiB.filter(g => g !== capoB).sort(confrontaGrandezzaGruppi);
-    const gruppiBOrdinati = (capoB && gruppiB.includes(capoB)) ? [capoB, ...altriB] : altriB;
+    // 3. Esercito B (Capo Fazione B in cima, poi ordinati per ordine cronologico di scelta/draft)
+    const gruppiB = (esercitiCacheData.ordineGruppi || []).filter(g => esercitiCacheData.assegnazioniGruppi[g] === 'B');
+    const altriB = gruppiB.filter(g => g !== capoB);
+    const gruppiBOrdinati = (capoB && esercitiCacheData.assegnazioniGruppi[capoB] === 'B') ? [capoB, ...altriB] : gruppiB;
 
     // Funzione helper per renderizzare la card di un gruppo
     function renderCardGruppo(gNome, schieramento) {
@@ -7959,10 +8087,17 @@ function renderTatticaEserciti() {
 
 function impostaGruppoSchieramento(gNome, schieramento) {
     if (isReadOnly()) return;
+    if (!Array.isArray(esercitiCacheData.ordineGruppi)) {
+        esercitiCacheData.ordineGruppi = [];
+    }
     if (schieramento) {
         esercitiCacheData.assegnazioniGruppi[gNome] = schieramento;
+        // Rimuovi se già presente per riposizionarlo in fondo all'ordine di scelta
+        esercitiCacheData.ordineGruppi = esercitiCacheData.ordineGruppi.filter(g => g !== gNome);
+        esercitiCacheData.ordineGruppi.push(gNome);
     } else {
         delete esercitiCacheData.assegnazioniGruppi[gNome];
+        esercitiCacheData.ordineGruppi = esercitiCacheData.ordineGruppi.filter(g => g !== gNome);
     }
     renderTatticaEserciti();
 }
@@ -8545,7 +8680,10 @@ async function salvaSchieramentiEserciti() {
         grido_esercito_b: (document.getElementById('adm-esercito-b-grido')?.value || '').trim(),
         generali_esercito_a: genA,
         generali_esercito_b: genB,
-        coefficienti_forza: esercitiCacheData.coeff,
+        coefficienti_forza: {
+            ...esercitiCacheData.coeff,
+            _ordine_gruppi: Array.isArray(esercitiCacheData.ordineGruppi) ? esercitiCacheData.ordineGruppi : []
+        },
         assegnazione_gruppi: esercitiCacheData.assegnazioniGruppi,
         assegnazione_mercenari: esercitiCacheData.assegnazioniMercenari,
         updated_at: new Date().toISOString()

@@ -169,4 +169,28 @@ $$\text{POTENZA} = \text{FORZA NUMERICA} + \text{PUNTI GLORIA} + \text{BONUS CAM
 - Signups & Attendance: Select/write restricted to owner/admin where appropriate.
 - Audit Log (`epika_registro_modifiche_profilo`): Select allowed for the profile owner, President, or users with `is_admin_epika = TRUE`. Write operations restricted to database trigger only.
 
+---
+
+## 📢 Direttivo Marketing & Consensi GDPR
+
+### 1. Accesso e Visibilità Direttivo Marketing
+Gli utenti con ruolo `Direttivo Marketing` (`gruppo_lavoro_id = 4`) hanno accesso in modalità **Read-Only (Sola Visione)** alle seguenti sezioni del portale amministratore:
+- **SCAB** (Palestre, Centri Pratica, Validatori, Allenatori, Allievi Allenatori, Campioni)
+- **Gruppi Storici** (Lista e Dettaglio gruppo con Registro Storico Stati e Cronologia Mandati)
+- **Popoli** (Anagrafica popoli e culture)
+- **Eventi & Presenze**
+- **Lista Generale** (Planning componenti)
+- **Marketing**
+
+### 2. Sicurezza e Protezione Read-Only
+- **Frontend DOM Security**: Disabilitazione/occultamento automatico di form di inserimento, pulsanti di salvataggio, cancellazione, binding e attivazione/disattivazione in modalità `isReadOnly()`.
+- **Backend RLS**: Tutte le operazioni di scrittura (`INSERT`, `UPDATE`, `DELETE`) sulle tabelle `epika_*` rimangono protette a livello database e consentite esclusivamente agli amministratori (`is_admin_epika = TRUE` o `presidente`).
+
+### 3. Visualizzazione Consenso Riprese Audio/Video (GDPR)
+Nella **Lista Generale**, ciascun tesserato espone lo stato del consenso al trattamento delle riprese audio/video e foto (`public.utenti.consenso_audiovisivi`):
+- 🟢 `📹 RIPRESE A/V: SÌ` (se `consenso_audiovisivi = TRUE`)
+- 🔴 `🚫 RIPRESE A/V: NO` (se `consenso_audiovisivi = FALSE` o `NULL`)
+È inoltre disponibile il filtro dedicato `#gen-filter-consenso` per filtrare la tabella per consenso accordato o negato.
+
+
 

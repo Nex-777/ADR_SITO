@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-24] feature | Ordinamento Gruppi Assegnati agli Eserciti per Ordine di Scelta (Draft Order)
+- **Frontend (`portal/epika.js`)**:
+  - **Tracciamento Cronologico Scelte**: Aggiunta la proprietà `ordineGruppi: []` in `esercitiCacheData` per registrare l'ordine esatto di assegnazione e spostamento dei gruppi tra gli schieramenti.
+  - **Aggiornamento Tattico Dinamico (`impostaGruppoSchieramento`)**: All'assegnazione o spostamento di un gruppo ad Esercito A o B, il gruppo viene posizionato in coda al draft order (`ordineGruppi.push(gNome)`), mentre alla rimozione viene sfilato dall'array.
+  - **Rendering Schieramenti (`renderTatticaEserciti`)**: Nelle colonne Esercito A ed Esercito B, i gruppi vengono visualizzati in base all'ordine cronologico di scelta effettuato dall'amministratore (sotto il rispettivo Capo Fazione fisso in cima), sostituendo il precedente ordinamento forzato per numero di combattenti. Il Pool dei gruppi non assegnati mantiene invece l'ordinamento decrescente per combattenti per facilitare la selezione.
+  - **Persistenza Stato (`salvaSchieramentiEserciti` & `mostraPannelloEserciti`)**: L'array `_ordine_gruppi` viene memorizzato in `coefficienti_forza` su Supabase e ripristinato automaticamente ad ogni caricamento dell'evento.
+
+---
+
+## [2026-08-24] feature | EPIKA Direttivo Marketing Read-Only & Consensi Privacy GDPR
+- **Accesso Multisezione Direttivo Marketing (`portal/epika.js`)**:
+  - In `configureAdminTabs()`: abilitate le tab `['scab', 'gruppi', 'popoli', 'eventi', 'generale', 'marketing']` per la vista `direttivo_marketing`.
+  - Applicata la modalità `isReadOnly()` a tutte le sezioni per garantire la sola visione dei menu e relative dashboard, impedendo modifiche, aggiunte, binding o cancellazioni dal DOM.
+  - Applicate guardie di sicurezza su tutte le funzioni mutanti JS (`creaStrutturaSCAB`, `toggleStatoStrutturaSCAB`, `salvaAbbinamentoSCAB`, `pulisciAbbinamentoSCAB`, `creaSoggettoRuolo`, `toggleStatoSoggettoRuolo`, `cancellaStrutturaSCAB`, `cancellaSoggettoRuolo`, `cancellaGruppoStorico`, `creaPopolo`, `toggleStatoPopolo`, `cancellaPopolo`, `salvaRuoliGruppo`, `aggiungiVariazioneStatoGruppo`, `eliminaUltimaVariazioneStato`, `salvaModificaMandato`, `eliminaMandatoStorico`, `salvaTuttaLaListaGenerale`).
+- **Visualizzazione e Filtro Consenso Audio/Video GDPR (`portal/epika.html` & `portal/epika.js`)**:
+  - In `renderListaGeneraleAdmin()`: estesa la query verso Supabase (`.select('*, utenti(nome, cognome, consenso_audiovisivi)')`).
+  - In `epika.html`: aggiunto il dropdown di filtro `#gen-filter-consenso` con opzioni `TUTTI I CONSENSI A/V`, `CON CONSENSO SÌ`, `SENZA CONSENSO (NO)`.
+  - In `disegnaTabellaListaGenerale()`: implementata la logica di filtraggio per consenso e inserito per ogni tesserato il badge semaforico `📹 RIPRESE A/V: SÌ` (verde) o `🚫 RIPRESE A/V: NO` (rosso).
+  - Introdotto helper `escapeHtml()` per prevenire XSS su tutti i campi renderizzati.
+
 ## [2026-08-20] fix | Gestione Manuale Certificati Medici, Override Data Scadenza, Coda Approvazioni e Sblocco Tesserati (v1.04.75)
 - **Backend API (`api/validate.js`):**
   - Esteso il ramo `is_manual: true` per accettare e validare `data_scadenza` (formato YYYY-MM-DD), `data_rilascio` e `tipologia`.
