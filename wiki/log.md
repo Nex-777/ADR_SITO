@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-24] feature | Registro Generale Richiami ed Encomi & Integrazione Dashboard Eventi (v1.04.86)
+- **Database (Supabase)**:
+  - Creata la tabella `public.epika_richiami_encomi` con FK su `epika_profili` ed `epika_eventi`, CHECK constraints per `tipo`, `categoria`, `gravita`, e soft-delete `attivo = TRUE`.
+  - Create le funzioni helper `SECURITY DEFINER` stateless: `public.is_direttivo_epika`, `public.is_capogruppo_of`, `public.is_coach_of`.
+  - Definite policy RLS rigide: `SELECT` limitata ad Atleta (self), Direttivo, Capogruppo e Allenatori/Validatori di riferimento; `INSERT`/`UPDATE` consentite esclusivamente al Direttivo/Admin Epika.
+- **Frontend HTML/CSS (`portal/epika.html`, `portal/epika.css`)**:
+  - Aggiunto il pulsante `RICHIAMI & ENCOMI` nella sidebar amministrativa (`#epk-adm-btn-richiami-encomi`).
+  - Creato il pannello tab `#epk-adm-tab-richiami-encomi` con 4 card KPI (Totale Encomi, Richiami Attivi, Atleti Coinvolti, Gruppo Top), toolbar con filtri multipli reattivi e tabella registri con badge stilizzati.
+  - Aggiunto il modale `#re-modale` per l'inserimento/registrazione rapida sia globale che da singolo evento.
+  - Aggiunta la sezione `#epk-atleta-onorificenze` nella Scheda Personale Atleta (`#epk-main`).
+- **Frontend JS (`portal/epika.js`)**:
+  - Implementato routing in `switchAdminTab('richiami-encomi')` con `renderRichiamiEncomiDashboard()`.
+  - Aggiunto pulsante `⚠️🎖️ PROVVEDIMENTI` nelle card dinamiche degli eventi in `renderEventiAdmin()`.
+  - Implementate funzioni di filtraggio client-side `filtraRichiamiEncomi()`, salvataggio `salvaRichiamoEncomio()` e archiviazione soft-delete `archiviaRichiamoEncomio()`.
+  - Integrata la funzione `renderOnorificenzeAtleta()` per la visualizzazione protetta (escluse le note interne) nel profilo dell'atleta.
+  - Aggiunta la colonna `Condotta` nella tabella `renderAllenatoreDashboard()`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.86` tramite `npm run bump`.
+
+
 ## [2026-08-24] feature | Modifica e Cancellazione Universale Cronologia Stati Gruppi Storici (v1.04.83)
 - **Frontend UI & Logica (`portal/epika.js`)**:
   - In `caricaStoricoStatiGruppo`: resi disponibili i pulsanti `✏️` (Modifica) e `🗑️` (Elimina) su ciascun evento registrato nella cronologia (incluso lo stato iniziale di creazione).

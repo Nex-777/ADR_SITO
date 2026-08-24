@@ -146,6 +146,20 @@ Stores historical winning groups lookup per year for Gloria points computation.
 *   `anno` (INT PK)
 *   `nome_gruppo` (TEXT PK)
 
+### 13. `public.epika_richiami_encomi`
+Stores individual commendations (encomi) and infractions/warnings (richiami) per athlete across events and general conduct.
+*   `id` (BIGINT PK)
+*   `atleta_id` (UUID FK to `epika_profili.id` ON DELETE CASCADE)
+*   `autore_id` (UUID FK to `epika_profili.id` ON DELETE SET NULL)
+*   `evento_id` (UUID FK to `epika_eventi.id` ON DELETE SET NULL)
+*   `tipo` (TEXT CHECK `richiamo`, `encomio`)
+*   `categoria` (TEXT CHECK `disciplinare`, `comportamentale`, `tecnico_sicurezza`, `ritardo_assenza`, `violazione_regolamento`, `valore_in_battaglia`, `fair_play`, `spirito_gruppo`, `merito_organizzativo`, `onore_al_campo`)
+*   `gravita` (TEXT CHECK `lieve`, `medio`, `grave`, `nota_merito`, `solenne`, `onorifico`)
+*   `motivazione` (TEXT)
+*   `note_interne_direttivo` (TEXT)
+*   `data_assegnazione` (DATE)
+*   `attivo` (BOOLEAN DEFAULT TRUE)
+
 ---
 
 ## ⚡ POTENZA & Scheda Battaglie Workflow

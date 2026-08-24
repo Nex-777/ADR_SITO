@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.84">
+    <link rel="stylesheet" href="epika.css?v=1.04.86">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.84"></script>
+    <script src="config.js?v=1.04.86"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.84</span>
+                <span class="epk-version-badge">Vs. 1.04.86</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -201,6 +201,17 @@
                 </div>
             </div>
 
+            <!-- ONORIFICENZE ED ENCOMI / RICHIAMI PERSONALI -->
+            <div class="epk-card epk-hidden" id="epk-atleta-onorificenze">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    <h2 class="epk-headline" style="margin: 0; font-size: 16px;">🎖️ ONORIFICENZE & DISCIPLINARE</h2>
+                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6); text-transform: uppercase;">Storico Personale</span>
+                </div>
+                <div id="epk-atleta-onorificenze-content" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Popolato dinamicamente da JS -->
+                </div>
+            </div>
+
             <!-- Prossimi Eventi -->
             <div class="epk-card">
                 <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
@@ -240,6 +251,9 @@
                     </button>
                     <button id="epk-adm-btn-generale" class="epk-sidebar-btn" onclick="switchAdminTab('generale')">
                         LISTA GENERALE
+                    </button>
+                    <button id="epk-adm-btn-richiami-encomi" class="epk-sidebar-btn" onclick="switchAdminTab('richiami-encomi')">
+                        RICHIAMI & ENCOMI
                     </button>
                     <button id="epk-adm-btn-contabilita" class="epk-sidebar-btn epk-hidden" onclick="switchAdminTab('contabilita')">
                         CONTABILITÀ
@@ -1408,6 +1422,98 @@
                         </div>
                     </div>
 
+                    <!-- Tab: Registro Richiami ed Encomi (v3.0) -->
+                    <div id="epk-adm-tab-richiami-encomi" class="epk-admin-tab-panel epk-hidden">
+                        <div class="epk-card" style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 12px; margin-bottom: 16px;">
+                                <div>
+                                    <h2 class="epk-headline" style="margin: 0; font-size: 18px; color: var(--epk-gold);">
+                                        REGISTRO GENERALE RICHIAMI ED ENCOMI
+                                    </h2>
+                                    <p style="font-size: 11px; color: rgba(245, 230, 200, 0.6); text-transform: uppercase; margin: 4px 0 0 0;">
+                                        Tracciamento ufficiale della condotta, onorificenze e provvedimenti disciplinari degli atleti
+                                    </p>
+                                </div>
+                                <button id="re-btn-nuovo" class="epk-btn" onclick="apriModaleNuovoProvvedimento()" style="padding: 8px 16px; font-size: 11px;">
+                                    + NUOVO PROVVEDIMENTO
+                                </button>
+                            </div>
+
+                            <!-- KPI Grid -->
+                            <div class="epk-re-kpi-grid">
+                                <div class="epk-re-kpi-card kpi-encomi">
+                                    <span class="epk-re-kpi-label">🎖️ Totale Encomi</span>
+                                    <span id="re-kpi-encomi" class="epk-re-kpi-val" style="color: #4ade80;">0</span>
+                                </div>
+                                <div class="epk-re-kpi-card kpi-richiami">
+                                    <span class="epk-re-kpi-label">⚠️ Richiami Attivi</span>
+                                    <span id="re-kpi-richiami" class="epk-re-kpi-val" style="color: #f87171;">0</span>
+                                </div>
+                                <div class="epk-re-kpi-card kpi-atleti">
+                                    <span class="epk-re-kpi-label">👥 Atleti Coinvolti</span>
+                                    <span id="re-kpi-atleti" class="epk-re-kpi-val" style="color: #93c5fd;">0</span>
+                                </div>
+                                <div class="epk-re-kpi-card kpi-gruppo">
+                                    <span class="epk-re-kpi-label">🏛️ Gruppo più Riconosciuto</span>
+                                    <span id="re-kpi-gruppo" class="epk-re-kpi-val" style="font-size: 14px; color: var(--epk-gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</span>
+                                </div>
+                            </div>
+
+                            <!-- Toolbar Filtri -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; background: rgba(0, 0, 0, 0.25); padding: 12px; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.1);">
+                                <div style="flex: 2; min-width: 200px;">
+                                    <input type="text" id="re-search" class="epk-input" placeholder="🔍 Cerca per atleta (nome storico o reale)..." oninput="filtraRichiamiEncomi()">
+                                </div>
+                                <div style="flex: 1; min-width: 140px;">
+                                    <select id="re-filter-tipo" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                        <option value="">Tutti i Tipi</option>
+                                        <option value="encomio">🎖️ Solo Encomi</option>
+                                        <option value="richiamo">⚠️ Solo Richiami</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 140px;">
+                                    <select id="re-filter-gruppo" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                        <option value="">Tutti i Gruppi</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 140px;">
+                                    <select id="re-filter-evento" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                        <option value="">Tutti gli Eventi</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 110px;">
+                                    <select id="re-filter-anno" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                        <option value="">Tutti gli Anni</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Tabella Risultati -->
+                            <div class="epk-table-card" style="overflow-x: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 130px;">TIPO & GRAVITÀ</th>
+                                            <th>ATLETA</th>
+                                            <th>GRUPPO STORICO</th>
+                                            <th>EVENTO / DATA</th>
+                                            <th>CATEGORIA & MOTIVAZIONE</th>
+                                            <th>NOTE DIRETTIVO</th>
+                                            <th style="width: 80px; text-align: center;">AZIONI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="re-table-body">
+                                        <tr>
+                                            <td colspan="7" style="text-align: center; color: rgba(245, 230, 200, 0.5); padding: 24px;">
+                                                Caricamento registro in corso...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -1439,6 +1545,97 @@
                             <button class="epk-btn-secondary" onclick="chiudiModaleNomine()">ANNULLA</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Modale Inserimento/Modifica Provvedimento (Richiamo / Encomio) -->
+            <div id="re-modale" class="epk-re-modal-overlay epk-hidden" onclick="if(event.target===this) chiudiModaleRichiamoEncomio()">
+                <div class="epk-re-modal-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 12px; margin-bottom: 16px;">
+                        <h3 id="re-modale-titolo" class="epk-headline" style="margin: 0; font-size: 16px; color: var(--epk-gold);">
+                            REGISTRA PROVVEDIMENTO O ENCOMIO
+                        </h3>
+                        <button onclick="chiudiModaleRichiamoEncomio()" style="background: none; border: none; color: var(--epk-gold); font-size: 18px; cursor: pointer; padding: 0 4px;" title="Chiudi modale">✖</button>
+                    </div>
+
+                    <form id="re-form" onsubmit="event.preventDefault(); salvaRichiamoEncomio();" style="display: flex; flex-direction: column; gap: 14px;">
+                        <input type="hidden" id="re-form-id">
+                        <input type="hidden" id="re-form-evento-id">
+
+                        <!-- Selezione Tipo: Encomio o Richiamo -->
+                        <div>
+                            <label class="epk-label">Tipo Provvedimento *</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px;">
+                                <label style="display: flex; align-items: center; gap: 8px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 10px; border-radius: 4px; cursor: pointer;">
+                                    <input type="radio" name="re_tipo" id="re-tipo-encomio" value="encomio" checked onchange="aggiornaOpzioniFormRichiamo()">
+                                    <span style="font-weight: 800; font-size: 12px; color: #4ade80;">🎖️ ENCOMIO / MERITO</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 4px; cursor: pointer;">
+                                    <input type="radio" name="re_tipo" id="re-tipo-richiamo" value="richiamo" onchange="aggiornaOpzioniFormRichiamo()">
+                                    <span style="font-weight: 800; font-size: 12px; color: #f87171;">⚠️ RICHIAMO / INFRAZIONE</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Selezione Atleta ed Evento -->
+                        <div class="epk-grid-2">
+                            <div>
+                                <label class="epk-label" for="re-form-atleta">Atleta *</label>
+                                <select id="re-form-atleta" class="epk-input" required>
+                                    <option value="" disabled selected>SELEZIONA ATLETA...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="epk-label" for="re-form-evento">Evento Associato (Opzionale)</label>
+                                <select id="re-form-evento" class="epk-input">
+                                    <option value="">Nessuno (Provvedimento Generale)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Categoria, Gravità e Data -->
+                        <div class="epk-grid-2">
+                            <div>
+                                <label class="epk-label" for="re-form-categoria">Categoria *</label>
+                                <select id="re-form-categoria" class="epk-input" required>
+                                    <!-- Popolato dinamicamente da JS -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="epk-label" for="re-form-gravita">Livello / Gravità *</label>
+                                <select id="re-form-gravita" class="epk-input" required>
+                                    <!-- Popolato dinamicamente da JS -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="epk-label" for="re-form-data">Data Assegnazione *</label>
+                            <input type="date" id="re-form-data" class="epk-input" required>
+                        </div>
+
+                        <!-- Motivazione (Pubblica per l'atleta) -->
+                        <div>
+                            <label class="epk-label" for="re-form-motivazione">
+                                Motivazione Ufficiale * <span style="font-size: 9px; color: rgba(245, 230, 200, 0.6); font-weight: normal;">(Visibile nella scheda personale dell'atleta)</span>
+                            </label>
+                            <textarea id="re-form-motivazione" class="epk-input" rows="3" placeholder="Descrivi il motivo del riconoscimento o dell'infrazione..." required style="width: 100%; box-sizing: border-box;"></textarea>
+                        </div>
+
+                        <!-- Note Interne Direttivo (Riservate) -->
+                        <div>
+                            <label class="epk-label" for="re-form-note-interne">
+                                🔒 Note Interne Direttivo <span style="font-size: 9px; color: #fca5a5; font-weight: normal;">(Riservato agli Amministratori e Direttivo)</span>
+                            </label>
+                            <textarea id="re-form-note-interne" class="epk-input" rows="2" placeholder="Eventuali considerazioni o dettagli riservati al Direttivo..." style="width: 100%; box-sizing: border-box;"></textarea>
+                        </div>
+
+                        <!-- Pulsanti azione -->
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                            <button type="button" class="epk-btn-secondary" onclick="chiudiModaleRichiamoEncomio()">ANNULLA</button>
+                            <button type="submit" id="re-form-submit-btn" class="epk-btn">SALVA PROVVEDIMENTO</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -2225,6 +2422,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.84"></script>
+    <script src="epika.js?v=1.04.86"></script>
 </body>
 </html>

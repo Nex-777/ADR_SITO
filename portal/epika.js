@@ -968,6 +968,7 @@ async function renderAthleteDashboard() {
 
         await caricaStatistiche();
         await renderAbilitazioneAtleta();
+        await renderOnorificenzeAtleta();
         await caricaEventiDisponibili();
 
     } catch (err) {
@@ -1799,6 +1800,8 @@ function switchAdminTab(tab) {
         renderEventiAdmin();
     } else if (tab === 'generale') {
         renderListaGeneraleAdmin();
+    } else if (tab === 'richiami-encomi') {
+        renderRichiamiEncomiDashboard();
     } else if (tab === 'contabilita' && isEpikaAdmin) {
         renderContabilitaAdmin();
     }
@@ -3107,6 +3110,7 @@ async function renderEventiAdmin() {
             const esercitiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #581c87; border-color: #a855f7;" onclick="mostraPannelloEserciti('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">GESTIONE ESERCITI</button>`;
             const potenzaBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: rgba(180, 130, 0, 0.5); border-color: #d4af37; color: #ffd700;" onclick="mostraPannelloPotenza('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" title="Classifica Potenza Gruppi">POTENZA</button>` : '';
             const battaglieBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn-secondary" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloBattaglie('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">REGISTRO BATTAGLIE</button>` : '';
+            const richiamiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #065f46; border-color: #10b981;" onclick="apriModaleNuovoProvvedimento('${evt.id}', null)">⚠️🎖️ PROVVEDIMENTI</button>`;
 
             container.innerHTML += `
                 <div class="epk-event-card">
@@ -3122,6 +3126,7 @@ async function renderEventiAdmin() {
                             ${potenzaBtnHtml}
                             ${esercitiBtnHtml}
                             ${battaglieBtnHtml}
+                            ${richiamiBtnHtml}
                             <button class="epk-btn epk-btn-presenze" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
                             ${toggleBtnHtml || deleteBtnHtml ? `<div class="epk-event-icon-btns">${toggleBtnHtml} ${deleteBtnHtml}</div>` : ''}
                         </div>
@@ -5860,6 +5865,19 @@ async function renderAllenatoreDashboard(opzioneId) {
         const ablMap = {};
         (abl || []).forEach(a => { ablMap[a.profilo_id] = a; });
 
+        // 5. Carica provvedimenti ed encomi per questi atleti
+        const { data: reData } = await supabaseClient
+            .from('epika_richiami_encomi')
+            .select('id, atleta_id, tipo, gravita, categoria, motivazione, data_assegnazione')
+            .in('atleta_id', allProfiloIds)
+            .eq('attivo', true);
+
+        const reMap = {};
+        (reData || []).forEach(r => {
+            if (!reMap[r.atleta_id]) reMap[r.atleta_id] = [];
+            reMap[r.atleta_id].push(r);
+        });
+
         const statiLabel = {
             'in_attesa': 'IN ATTESA',
             'in_valutazione': 'IN VALUTAZIONE',
@@ -5883,6 +5901,7 @@ async function renderAllenatoreDashboard(opzioneId) {
                         <th style="padding:10px;">Gruppo Storico</th>
                         <th style="padding:10px;">Stato Abilitazione</th>
                         <th style="padding:10px;">Risposta Validatore</th>
+                        <th style="padding:10px;text-align:center;">Condotta</th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -5891,6 +5910,17 @@ async function renderAllenatoreDashboard(opzioneId) {
             const nomeVero = utentiMap[p.id] || 'N/D';
             const gruppo = p.gruppo_storico?.nome || 'N/D';
             const record = ablMap[p.id];
+            const provv = reMap[p.id] || [];
+
+            let condottaCell = '<td style="padding:10px;text-align:center;color:gray;">—</td>';
+            if (provv.length > 0) {
+                const encCount = provv.filter(x => x.tipo === 'encomio').length;
+                const richCount = provv.filter(x => x.tipo === 'richiamo').length;
+                const badges = [];
+                if (encCount > 0) badges.push(`<span style="color:#4ade80;font-weight:bold;">🎖️ ${encCount}</span>`);
+                if (richCount > 0) badges.push(`<span style="color:#f87171;font-weight:bold;">⚠️ ${richCount}</span>`);
+                condottaCell = `<td style="padding:10px;text-align:center;">${badges.join(' ')}</td>`;
+            }
 
             let statoCell, semCell;
             if (!record) {
@@ -5922,6 +5952,7 @@ async function renderAllenatoreDashboard(opzioneId) {
                     <td style="padding:10px;">${gruppo}</td>
                     ${statoCell}
                     ${semCell}
+                    ${condottaCell}
                 </tr>`;
         });
 
@@ -8966,6 +8997,512 @@ function aggiornaVisibilitaExtraGenerali(esercito) {
         btn.style.display = readOnly ? 'none' : 'inline-block';
     }
 }
+
+// ===========================================================================
+// REGISTRO RICHIAMI ED ENCOMI (v3.0)
+// ===========================================================================
+
+const CATEGORIE_ENCOMI = [
+    { value: 'valore_in_battaglia', label: '⚔️ Valore in Battaglia' },
+    { value: 'fair_play', label: '🤝 Fair Play & Correttezza' },
+    { value: 'spirito_gruppo', label: '🛡️ Spirito di Gruppo' },
+    { value: 'merito_organizzativo', label: '📜 Merito Organizzativo' },
+    { value: 'onore_al_campo', label: '👑 Onore al Campo' }
+];
+
+const CATEGORIE_RICHIAMI = [
+    { value: 'disciplinare', label: '⚠️ Disciplinare' },
+    { value: 'comportamentale', label: '🚫 Comportamentale' },
+    { value: 'tecnico_sicurezza', label: '🛡️ Tecnico / Sicurezza' },
+    { value: 'ritardo_assenza', label: '⏰ Ritardo / Assenza Non Giustificata' },
+    { value: 'violazione_regolamento', label: '📜 Violazione Regolamento' }
+];
+
+const GRAVITA_ENCOMI = [
+    { value: 'nota_merito', label: '🥉 Nota di Merito' },
+    { value: 'solenne', label: '🥈 Encomio Solenne' },
+    { value: 'onorifico', label: '🥇 Encomio Onorifico' }
+];
+
+const GRAVITA_RICHIAMI = [
+    { value: 'lieve', label: '🟡 Richiamo Lieve' },
+    { value: 'medio', label: '🟠 Richiamo Medio' },
+    { value: 'grave', label: '🔴 Richiamo Grave / Diffida' }
+];
+
+let richiamiEncomiCache = [];
+let reProfiliCache = [];
+let reGruppiCache = [];
+let reEventiCache = [];
+
+function getLabelCategoriaRE(tipo, cat) {
+    const list = tipo === 'encomio' ? CATEGORIE_ENCOMI : CATEGORIE_RICHIAMI;
+    const item = list.find(c => c.value === cat);
+    return item ? item.label : (cat || '').toUpperCase();
+}
+
+function getLabelGravitaRE(tipo, grav) {
+    const list = tipo === 'encomio' ? GRAVITA_ENCOMI : GRAVITA_RICHIAMI;
+    const item = list.find(g => g.value === grav);
+    return item ? item.label : (grav || '').toUpperCase();
+}
+
+function getBadgeRichiamoEncomioHtml(tipo, gravita, categoria) {
+    const gravLabel = getLabelGravitaRE(tipo, gravita);
+    const badgeClass = tipo === 'encomio' ? `epk-badge-encomio-${gravita}` : `epk-badge-richiamo-${gravita}`;
+    const icon = tipo === 'encomio' ? '🎖️' : '⚠️';
+    return `<span class="epk-re-badge ${badgeClass}">${icon} ${gravLabel}</span>`;
+}
+
+async function renderRichiamiEncomiDashboard() {
+    const tbody = document.getElementById('re-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:rgba(245,230,200,0.5);">Caricamento registro richiami ed encomi in corso...</td></tr>`;
+
+    try {
+        // Carica dati collegati per i filtri se non presenti
+        const [pRes, gRes, eRes, reRes] = await Promise.all([
+            supabaseClient.from('epika_profili').select('id, nome_di_battaglia, gruppo_storico_id').eq('profilo_completato', true).order('nome_di_battaglia', { ascending: true }),
+            supabaseClient.from('epika_gruppi_storici').select('id, nome').eq('attivo', true).order('nome', { ascending: true }),
+            supabaseClient.from('epika_eventi').select('id, titolo, data_inizio').order('data_inizio', { ascending: false }),
+            supabaseClient
+                .from('epika_richiami_encomi')
+                .select(`
+                    id,
+                    atleta_id,
+                    autore_id,
+                    evento_id,
+                    tipo,
+                    categoria,
+                    gravita,
+                    motivazione,
+                    note_interne_direttivo,
+                    data_assegnazione,
+                    attivo,
+                    atleta:epika_profili!atleta_id(id, nome_di_battaglia, gruppo_storico_id, gruppo:epika_gruppi_storici(id, nome)),
+                    evento:epika_eventi(id, titolo),
+                    autore:epika_profili!autore_id(id, nome_di_battaglia)
+                `)
+                .eq('attivo', true)
+                .order('data_assegnazione', { ascending: false })
+        ]);
+
+        reProfiliCache = pRes.data || [];
+        reGruppiCache = gRes.data || [];
+        reEventiCache = eRes.data || [];
+        richiamiEncomiCache = reRes.data || [];
+
+        // Popola filtri
+        popolaFiltriRichiamiEncomi();
+
+        // Calcola KPI
+        let totEncomi = 0;
+        let totRichiami = 0;
+        const atletiSet = new Set();
+        const gruppoCounter = {};
+
+        richiamiEncomiCache.forEach(r => {
+            if (r.tipo === 'encomio') totEncomi++;
+            if (r.tipo === 'richiamo') totRichiami++;
+            if (r.atleta_id) atletiSet.add(r.atleta_id);
+            const gNome = r.atleta?.gruppo?.nome;
+            if (gNome) {
+                gruppoCounter[gNome] = (gruppoCounter[gNome] || 0) + 1;
+            }
+        });
+
+        let topGruppo = '-';
+        let maxGCount = 0;
+        for (const [g, count] of Object.entries(gruppoCounter)) {
+            if (count > maxGCount) {
+                maxGCount = count;
+                topGruppo = `${g} (${count})`;
+            }
+        }
+
+        if (document.getElementById('re-kpi-encomi')) document.getElementById('re-kpi-encomi').textContent = totEncomi;
+        if (document.getElementById('re-kpi-richiami')) document.getElementById('re-kpi-richiami').textContent = totRichiami;
+        if (document.getElementById('re-kpi-atleti')) document.getElementById('re-kpi-atleti').textContent = atletiSet.size;
+        if (document.getElementById('re-kpi-gruppo')) document.getElementById('re-kpi-gruppo').textContent = topGruppo;
+
+        // Renderizza tabella con la cache completa
+        renderTabellaRichiamiEncomi(richiamiEncomiCache);
+
+        // Controllo visibilità pulsante "+ NUOVO PROVVEDIMENTO"
+        const btnNuovo = document.getElementById('re-btn-nuovo');
+        if (btnNuovo) {
+            btnNuovo.style.display = (isEpikaAdmin || isReadOnly && !isReadOnly()) ? 'inline-block' : (isEpikaAdmin ? 'inline-block' : 'none');
+        }
+
+    } catch (err) {
+        console.error("Errore caricamento Registro Richiami ed Encomi:", err);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#f87171;padding:20px;">Errore nel caricamento del registro: ${err.message || err}</td></tr>`;
+    }
+}
+
+function popolaFiltriRichiamiEncomi() {
+    const fGruppo = document.getElementById('re-filter-gruppo');
+    const fEvento = document.getElementById('re-filter-evento');
+    const fAnno = document.getElementById('re-filter-anno');
+
+    if (fGruppo) {
+        const val = fGruppo.value;
+        fGruppo.innerHTML = '<option value="">Tutti i Gruppi</option>';
+        reGruppiCache.forEach(g => {
+            fGruppo.innerHTML += `<option value="${g.id}">${g.nome}</option>`;
+        });
+        fGruppo.value = val;
+    }
+
+    if (fEvento) {
+        const val = fEvento.value;
+        fEvento.innerHTML = '<option value="">Tutti gli Eventi</option>';
+        reEventiCache.forEach(e => {
+            fEvento.innerHTML += `<option value="${e.id}">${e.titolo}</option>`;
+        });
+        fEvento.value = val;
+    }
+
+    if (fAnno) {
+        const val = fAnno.value;
+        fAnno.innerHTML = '<option value="">Tutti gli Anni</option>';
+        const anniSet = new Set();
+        richiamiEncomiCache.forEach(r => {
+            if (r.data_assegnazione) {
+                anniSet.add(r.data_assegnazione.substring(0, 4));
+            }
+        });
+        Array.from(anniSet).sort((a,b) => b - a).forEach(a => {
+            fAnno.innerHTML += `<option value="${a}">${a}</option>`;
+        });
+        fAnno.value = val;
+    }
+}
+
+function filtraRichiamiEncomi() {
+    const query = (document.getElementById('re-search')?.value || '').trim().toLowerCase();
+    const tipo = document.getElementById('re-filter-tipo')?.value || '';
+    const gruppoId = document.getElementById('re-filter-gruppo')?.value || '';
+    const eventoId = document.getElementById('re-filter-evento')?.value || '';
+    const anno = document.getElementById('re-filter-anno')?.value || '';
+
+    const filtrati = richiamiEncomiCache.filter(r => {
+        if (tipo && r.tipo !== tipo) return false;
+        if (gruppoId && String(r.atleta?.gruppo_storico_id) !== String(gruppoId)) return false;
+        if (eventoId && String(r.evento_id) !== String(eventoId)) return false;
+        if (anno && r.data_assegnazione && !r.data_assegnazione.startsWith(anno)) return false;
+
+        if (query) {
+            const batName = (r.atleta?.nome_di_battaglia || '').toLowerCase();
+            const motiv = (r.motivazione || '').toLowerCase();
+            const cat = (r.categoria || '').toLowerCase();
+            if (!batName.includes(query) && !motiv.includes(query) && !cat.includes(query)) return false;
+        }
+
+        return true;
+    });
+
+    renderTabellaRichiamiEncomi(filtrati);
+}
+
+function renderTabellaRichiamiEncomi(records) {
+    const tbody = document.getElementById('re-table-body');
+    if (!tbody) return;
+
+    if (!records || records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:rgba(245,230,200,0.5);">Nessun provvedimento o encomio trovato con i criteri selezionati.</td></tr>`;
+        return;
+    }
+
+    let rowsHtml = '';
+    records.forEach(r => {
+        const badgeHtml = getBadgeRichiamoEncomioHtml(r.tipo, r.gravita, r.categoria);
+        const atletaNome = r.atleta?.nome_di_battaglia ? r.atleta.nome_di_battaglia.toUpperCase() : 'N/D';
+        const gruppoNome = r.atleta?.gruppo?.nome ? r.atleta.gruppo.nome.toUpperCase() : 'MERCENARIO / N/D';
+        const eventoTitolo = r.evento?.titolo ? r.evento.titolo.toUpperCase() : '<span style="color:gray;">GENERALE (FUORI EVENTO)</span>';
+        const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
+        const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : 'N/D';
+        const autoreNome = r.autore?.nome_di_battaglia ? `Da: ${r.autore.nome_di_battaglia}` : 'Da: Direttivo';
+        const noteDirettivo = r.note_interne_direttivo ? `<div style="font-size:10px;color:#fca5a5;font-style:italic;margin-top:2px;">🔒 ${r.note_interne_direttivo}</div>` : '<span style="color:gray;">-</span>';
+
+        const canDelete = isEpikaAdmin || (typeof isReadOnly === 'function' && !isReadOnly());
+        const actionBtn = canDelete ? `
+            <button class="epk-btn-secondary" style="font-size:10px;padding:4px 8px;color:#f87171;border-color:rgba(239,68,68,0.4);" onclick="archiviaRichiamoEncomio('${r.id}')" title="Archivia provvedimento">
+                🗑️
+            </button>
+        ` : '-';
+
+        rowsHtml += `
+            <tr>
+                <td>${badgeHtml}</td>
+                <td><strong style="color:var(--epk-gold);">${atletaNome}</strong></td>
+                <td><span style="font-size:10px;color:rgba(245,230,200,0.8);">${gruppoNome}</span></td>
+                <td>
+                    <div style="font-weight:bold;color:#ffffff;">${eventoTitolo}</div>
+                    <div style="font-size:9px;color:rgba(245,230,200,0.5); font-family: monospace;">📅 ${dataFmt}</div>
+                </td>
+                <td>
+                    <div style="font-size:10px;font-weight:bold;color:var(--epk-gold);">${catLabel}</div>
+                    <div style="font-size:11px;color:rgba(245,230,200,0.9);margin-top:2px;">${r.motivazione || ''}</div>
+                </td>
+                <td>${noteDirettivo}</td>
+                <td style="text-align:center;">${actionBtn}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rowsHtml;
+}
+
+async function apriModaleNuovoProvvedimento(eventoId = null, atletaId = null) {
+    if (typeof isReadOnly === 'function' && isReadOnly()) return;
+
+    const modal = document.getElementById('re-modale');
+    if (!modal) return;
+
+    document.getElementById('re-form').reset();
+    document.getElementById('re-form-id').value = '';
+    document.getElementById('re-form-evento-id').value = eventoId || '';
+
+    // Data odierna di default
+    document.getElementById('re-form-data').value = new Date().toISOString().split('T')[0];
+
+    // Radio encomio di default
+    const radioEncomio = document.getElementById('re-tipo-encomio');
+    if (radioEncomio) radioEncomio.checked = true;
+
+    // Popola select atleti
+    const atletaSelect = document.getElementById('re-form-atleta');
+    atletaSelect.innerHTML = '<option value="" disabled selected>SELEZIONA ATLETA...</option>';
+    
+    // Se aperto da evento specifico, possiamo caricare gli iscritti dell'evento
+    if (eventoId) {
+        try {
+            const { data: iscritti } = await supabaseClient
+                .from('epika_iscrizioni_eventi')
+                .select('utente_id, profilo:epika_profili(id, nome_di_battaglia, gruppo_storico_id)')
+                .eq('evento_id', eventoId);
+            
+            if (iscritti && iscritti.length > 0) {
+                iscritti.forEach(i => {
+                    const p = i.profilo;
+                    if (p) {
+                        atletaSelect.innerHTML += `<option value="${p.id}">${p.nome_di_battaglia || i.utente_id}</option>`;
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn("Fallback caricamento atleti:", e);
+        }
+    }
+
+    // Se atletaSelect è vuoto o aperto in generale, popola con tutti i profili
+    if (atletaSelect.options.length <= 1) {
+        if (reProfiliCache.length === 0) {
+            const { data: profs } = await supabaseClient
+                .from('epika_profili')
+                .select('id, nome_di_battaglia')
+                .eq('profilo_completato', true)
+                .order('nome_di_battaglia', { ascending: true });
+            reProfiliCache = profs || [];
+        }
+        reProfiliCache.forEach(p => {
+            atletaSelect.innerHTML += `<option value="${p.id}">${p.nome_di_battaglia}</option>`;
+        });
+    }
+
+    if (atletaId) {
+        atletaSelect.value = atletaId;
+    }
+
+    // Popola select evento
+    const eventoSelect = document.getElementById('re-form-evento');
+    eventoSelect.innerHTML = '<option value="">Nessuno (Provvedimento Generale)</option>';
+    if (reEventiCache.length === 0) {
+        const { data: evts } = await supabaseClient.from('epika_eventi').select('id, titolo').order('data_inizio', { ascending: false });
+        reEventiCache = evts || [];
+    }
+    reEventiCache.forEach(e => {
+        eventoSelect.innerHTML += `<option value="${e.id}">${e.titolo}</option>`;
+    });
+
+    if (eventoId) {
+        eventoSelect.value = eventoId;
+    }
+
+    // Aggiorna categorie e gravità
+    aggiornaOpzioniFormRichiamo();
+
+    modal.classList.remove('epk-hidden');
+}
+
+function chiudiModaleRichiamoEncomio() {
+    const modal = document.getElementById('re-modale');
+    if (modal) modal.classList.add('epk-hidden');
+}
+
+function aggiornaOpzioniFormRichiamo() {
+    const isRichiamo = document.getElementById('re-tipo-richiamo')?.checked;
+    const catSelect = document.getElementById('re-form-categoria');
+    const gravSelect = document.getElementById('re-form-gravita');
+    if (!catSelect || !gravSelect) return;
+
+    const catList = isRichiamo ? CATEGORIE_RICHIAMI : CATEGORIE_ENCOMI;
+    const gravList = isRichiamo ? GRAVITA_RICHIAMI : GRAVITA_ENCOMI;
+
+    catSelect.innerHTML = '';
+    catList.forEach(c => {
+        catSelect.innerHTML += `<option value="${c.value}">${c.label}</option>`;
+    });
+
+    gravSelect.innerHTML = '';
+    gravList.forEach(g => {
+        gravSelect.innerHTML += `<option value="${g.value}">${g.label}</option>`;
+    });
+}
+
+async function salvaRichiamoEncomio() {
+    const submitBtn = document.getElementById('re-form-submit-btn');
+    if (submitBtn) submitBtn.disabled = true;
+
+    const atletaId = document.getElementById('re-form-atleta')?.value;
+    const eventoId = document.getElementById('re-form-evento')?.value || null;
+    const tipo = document.getElementById('re-tipo-richiamo')?.checked ? 'richiamo' : 'encomio';
+    const categoria = document.getElementById('re-form-categoria')?.value;
+    const gravita = document.getElementById('re-form-gravita')?.value;
+    const dataAss = document.getElementById('re-form-data')?.value;
+    const motivazione = (document.getElementById('re-form-motivazione')?.value || '').trim();
+    const noteInterne = (document.getElementById('re-form-note-interne')?.value || '').trim() || null;
+
+    if (!atletaId || !categoria || !gravita || !dataAss || !motivazione) {
+        alert("Compila tutti i campi obbligatori contrassegnati con *");
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+    }
+
+    const payload = {
+        atleta_id: atletaId,
+        autore_id: currentUser ? currentUser.id : null,
+        evento_id: eventoId,
+        tipo: tipo,
+        categoria: categoria,
+        gravita: gravita,
+        motivazione: motivazione,
+        note_interne_direttivo: noteInterne,
+        data_assegnazione: dataAss,
+        attivo: true
+    };
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_richiami_encomi')
+            .insert(payload);
+
+        if (error) throw error;
+
+        chiudiModaleRichiamoEncomio();
+        if (typeof showToast === 'function') {
+            showToast(tipo === 'encomio' ? "🎖️ Encomio registrato con successo!" : "⚠️ Richiamo registrato con successo!", "success");
+        } else {
+            alert(tipo === 'encomio' ? "🎖️ Encomio registrato con successo!" : "⚠️ Richiamo registrato con successo!");
+        }
+
+        // Ricarica dashboard se aperta
+        if (activeAdminTab === 'richiami-encomi') {
+            await renderRichiamiEncomiDashboard();
+        }
+
+    } catch (err) {
+        console.error("Errore salvataggio richiamo/encomio:", err);
+        alert("Errore salvataggio: " + (err.message || err));
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+async function archiviaRichiamoEncomio(id) {
+    if (typeof isReadOnly === 'function' && isReadOnly()) return;
+    if (!confirm("Sei sicuro di voler archiviare questo provvedimento dal registro attivo?")) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_richiami_encomi')
+            .update({ attivo: false, updated_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        if (typeof showToast === 'function') {
+            showToast("Provvedimento archiviato con successo", "info");
+        }
+        await renderRichiamiEncomiDashboard();
+    } catch (err) {
+        console.error("Errore archiviazione richiamo/encomio:", err);
+        alert("Errore durante l'archiviazione: " + (err.message || err));
+    }
+}
+
+async function renderOnorificenzeAtleta() {
+    const container = document.getElementById('epk-atleta-onorificenze');
+    const content = document.getElementById('epk-atleta-onorificenze-content');
+    if (!container || !content || !currentUser) return;
+
+    try {
+        const { data: records, error } = await supabaseClient
+            .from('epika_richiami_encomi')
+            .select(`
+                id,
+                tipo,
+                categoria,
+                gravita,
+                motivazione,
+                data_assegnazione,
+                evento:epika_eventi(titolo)
+            `)
+            .eq('atleta_id', currentUser.id)
+            .eq('attivo', true)
+            .order('data_assegnazione', { ascending: false });
+
+        if (error) throw error;
+
+        if (!records || records.length === 0) {
+            container.classList.add('epk-hidden');
+            return;
+        }
+
+        container.classList.remove('epk-hidden');
+
+        let html = '';
+        records.forEach(r => {
+            const badgeHtml = getBadgeRichiamoEncomioHtml(r.tipo, r.gravita, r.categoria);
+            const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
+            const evtTitolo = r.evento?.titolo ? `presso <strong>${r.evento.titolo.toUpperCase()}</strong>` : '';
+            const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : '';
+            const boxBg = r.tipo === 'encomio' ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)';
+            const boxBorder = r.tipo === 'encomio' ? 'rgba(34, 197, 94, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+
+            html += `
+                <div style="background: ${boxBg}; border: 1px solid ${boxBorder}; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div>${badgeHtml} <strong style="font-size: 11px; color: var(--epk-gold); margin-left: 6px;">${catLabel}</strong></div>
+                        <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6); font-family: monospace;">📅 ${dataFmt} ${evtTitolo}</span>
+                    </div>
+                    <div style="font-size: 11px; color: rgba(245, 230, 200, 0.9); line-height: 1.4;">
+                        ${r.motivazione}
+                    </div>
+                </div>
+            `;
+        });
+
+        content.innerHTML = html;
+
+    } catch (e) {
+        console.warn("Errore caricamento onorificenze atleta:", e);
+        container.classList.add('epk-hidden');
+    }
+}
+
 
 
 
