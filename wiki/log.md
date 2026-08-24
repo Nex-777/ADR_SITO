@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-24] feature | Modifica e Cancellazione Universale Cronologia Stati Gruppi Storici (v1.04.83)
+- **Frontend UI & Logica (`portal/epika.js`)**:
+  - In `caricaStoricoStatiGruppo`: resi disponibili i pulsanti `✏️` (Modifica) e `🗑️` (Elimina) su ciascun evento registrato nella cronologia (incluso lo stato iniziale di creazione).
+  - Implementata la funzione `abilitaModificaStatoGruppo` per la modifica inline di stato (`<select>`), data (`<input type="date">`) e note (`<input type="text">`).
+  - Implementata la funzione `salvaModificaStatoGruppo` con validazione rigida dei campi e sincronizzazione automatica dello stato del gruppo master.
+  - Implementata la funzione `eliminaVariazioneStatoGruppo` con protezione anti-orphan (impedisce l'eliminazione dell'ultimo stato rimasto per preservare l'integrità relazionale).
+  - In `sincronizzaStatoAttualeGruppo`: aggiunto fallback di sicurezza nel caso limite di storico stati vuoto.
+- **Versione**: Incrementata la versione globale a `v1.04.83`.
+
+---
+
 ## [2026-08-24] feature | Gestione Protetta e Modificabile Anno Iscrizione Epika in Lista Generale (v1.04.90)
 - **Frontend UI (`portal/epika.html`)**:
   - Rimosso dal modulo First Access l'input vulnerabile `#fa-primo-anno` per prevenire qualsiasi falsificazione di anzianità lato client.

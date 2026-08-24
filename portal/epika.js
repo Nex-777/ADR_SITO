@@ -4523,6 +4523,10 @@ async function caricaStoricoStatiGruppo(gruppoId) {
             let statoFormatted = (s.stato || '').toUpperCase().replace('_', ' ');
             if (s.stato === 'cancellato') statoFormatted = 'CANCELLATO / SCIOLTO';
             const inizioStr = s.data_inizio ? new Date(s.data_inizio).toLocaleDateString('it-IT') : 'N/D';
+            const rawData = s.data_inizio ? s.data_inizio.split('T')[0] : '';
+            const rawNote = s.note || '';
+            const escapedNote = escapeHtml(rawNote);
+            const safeNoteForParam = rawNote.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             
             let colorStato = '#ffffff';
             if (s.stato === 'ufficiale') colorStato = '#22c55e';
@@ -4532,15 +4536,21 @@ async function caricaStoricoStatiGruppo(gruppoId) {
 
             const bgStyle = isTop ? 'background: rgba(251, 191, 36, 0.08); font-weight: bold;' : 'border-bottom: 1px solid rgba(255,255,255,0.05);';
             const attualeBadge = isTop ? '<span style="font-size: 8px; background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #4ade80; padding: 2px 5px; border-radius: 3px; margin-left: 6px; font-weight: bold;">ATTUALE</span>' : '';
-            const deleteBtn = (isTop && storico.length > 1 && !isReadOnly()) ? `<button onclick="eliminaUltimaVariazioneStato(${s.id}, ${gruppoId})" class="epk-btn-secondary" style="font-size: 9px; padding: 2px 6px; color: #ef4444; border-color: #ef4444;" title="Elimina questa variazione errata">🗑️ ELIMINA</button>` : '-';
+            
+            let azioniHtml = isReadOnly() ? '-' : `
+                <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                    <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 10px;" onclick="abilitaModificaStatoGruppo(${s.id}, '${s.stato}', '${rawData}', '${safeNoteForParam}', ${gruppoId})" title="Modifica questo stato">✏️</button>
+                    <button class="epk-btn-secondary" style="padding: 2px 6px; font-size: 10px; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="eliminaVariazioneStatoGruppo(${s.id}, ${gruppoId}, ${storico.length})" title="Elimina questo stato dallo storico">🗑️</button>
+                </div>`;
 
             const tr = document.createElement('tr');
+            tr.id = `storico-stato-row-${s.id}`;
             tr.style = bgStyle;
             tr.innerHTML = `
-                <td style="padding: 6px; color: ${colorStato}; font-weight: bold;">${statoFormatted}${attualeBadge}</td>
-                <td style="padding: 6px;">${inizioStr}</td>
-                <td style="padding: 6px; color: #aaa; font-size: 9px;">${escapeHtml(s.note || '-')}</td>
-                <td style="padding: 6px; text-align: center;">${deleteBtn}</td>
+                <td style="padding: 6px; color: ${colorStato}; font-weight: bold;" id="cell-stato-stato-${s.id}">${statoFormatted}${attualeBadge}</td>
+                <td style="padding: 6px;" id="cell-stato-data-${s.id}">${inizioStr}</td>
+                <td style="padding: 6px; color: #aaa; font-size: 9px;" id="cell-stato-note-${s.id}">${escapedNote || '-'}</td>
+                <td style="padding: 6px; text-align: center;" id="cell-stato-azioni-${s.id}">${azioniHtml}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -4548,6 +4558,78 @@ async function caricaStoricoStatiGruppo(gruppoId) {
     } catch (e) {
         console.error("Errore caricamento storico stati:", e);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: red; padding: 8px;">Errore caricamento storico stati.</td></tr>';
+    }
+}
+
+function abilitaModificaStatoGruppo(id, statoAttuale, dataInizio, note, gruppoId) {
+    if (isReadOnly()) return;
+    const cellStato = document.getElementById(`cell-stato-stato-${id}`);
+    const cellData = document.getElementById(`cell-stato-data-${id}`);
+    const cellNote = document.getElementById(`cell-stato-note-${id}`);
+    const cellAzioni = document.getElementById(`cell-stato-azioni-${id}`);
+
+    if (!cellStato || !cellData || !cellNote || !cellAzioni) return;
+
+    cellStato.innerHTML = `
+        <select id="edit-stato-tipo-${id}" class="epk-input" style="font-size: 10px; padding: 2px 4px; width: 100%;">
+            <option value="in_formazione" ${statoAttuale === 'in_formazione' ? 'selected' : ''}>IN FORMAZIONE</option>
+            <option value="ufficiale" ${statoAttuale === 'ufficiale' ? 'selected' : ''}>UFFICIALE</option>
+            <option value="sospeso" ${statoAttuale === 'sospeso' ? 'selected' : ''}>SOSPESO</option>
+            <option value="cancellato" ${statoAttuale === 'cancellato' ? 'selected' : ''}>CANCELLATO / SCIOLTO</option>
+        </select>
+    `;
+
+    cellData.innerHTML = `
+        <input type="date" id="edit-stato-data-${id}" class="epk-input" style="font-size: 10px; padding: 2px 4px; width: 100%;" value="${dataInizio}">
+    `;
+
+    cellNote.innerHTML = `
+        <input type="text" id="edit-stato-note-${id}" class="epk-input" style="font-size: 10px; padding: 2px 4px; width: 100%;" value="${escapeHtml(note)}">
+    `;
+
+    cellAzioni.innerHTML = `
+        <div style="display: flex; gap: 4px; justify-content: center;">
+            <button class="epk-btn" style="padding: 2px 8px; font-size: 10px;" onclick="salvaModificaStatoGruppo(${id}, ${gruppoId})" title="Salva modifiche">✓</button>
+            <button class="epk-btn-secondary" style="padding: 2px 8px; font-size: 10px;" onclick="caricaStoricoStatiGruppo(${gruppoId})" title="Annulla">✕</button>
+        </div>
+    `;
+}
+
+async function salvaModificaStatoGruppo(id, gruppoId) {
+    if (isReadOnly()) return;
+    const nuovoStato = document.getElementById(`edit-stato-tipo-${id}`)?.value;
+    const nuovaData = document.getElementById(`edit-stato-data-${id}`)?.value;
+    const nuoveNote = (document.getElementById(`edit-stato-note-${id}`)?.value || '').trim();
+
+    if (!nuovaData || nuovaData.trim() === '') {
+        alert("La data di inizio è obbligatoria.");
+        return;
+    }
+    if (!['in_formazione', 'ufficiale', 'sospeso', 'cancellato'].includes(nuovoStato)) {
+        alert("Seleziona uno stato valido.");
+        return;
+    }
+
+    try {
+        const { error: updErr } = await supabaseClient
+            .from('epika_gruppi_storico_stati')
+            .update({
+                stato: nuovoStato,
+                data_inizio: nuovaData,
+                note: nuoveNote || `Variazione a ${nuovoStato.toUpperCase().replace('_', ' ')}`
+            })
+            .eq('id', id);
+
+        if (updErr) throw updErr;
+
+        await sincronizzaStatoAttualeGruppo(gruppoId);
+        await caricaLookupDati();
+        await apriDettaglioGruppo(gruppoId);
+        alert("Variazione di stato modificata con successo!");
+
+    } catch (e) {
+        console.error("Errore modifica variazione stato:", e);
+        alert("Errore durante la modifica della variazione di stato: " + e.message);
     }
 }
 
@@ -4591,9 +4673,13 @@ async function aggiungiVariazioneStatoGruppo() {
     }
 }
 
-async function eliminaUltimaVariazioneStato(recordId, gruppoId) {
+async function eliminaVariazioneStatoGruppo(recordId, gruppoId, totalRecords) {
     if (isReadOnly()) return;
-    if (!confirm("Sei sicuro di voler eliminare questa variazione di stato? Il gruppo ripristinerà lo stato precedente.")) {
+    if (totalRecords <= 1) {
+        alert("Impossibile eliminare l'ultimo stato. Il gruppo deve avere almeno uno stato fondativo. Utilizza la modifica.");
+        return;
+    }
+    if (!confirm("Sei sicuro di voler eliminare definitivamente questa variazione di stato?")) {
         return;
     }
 
@@ -4608,7 +4694,7 @@ async function eliminaUltimaVariazioneStato(recordId, gruppoId) {
         await sincronizzaStatoAttualeGruppo(gruppoId);
         await caricaLookupDati();
         await apriDettaglioGruppo(gruppoId);
-        alert("Variazione eliminata con successo. Stato ripristinato.");
+        alert("Variazione eliminata con successo dallo storico.");
 
     } catch (e) {
         console.error("Errore eliminazione variazione stato:", e);
@@ -4638,6 +4724,15 @@ async function sincronizzaStatoAttualeGruppo(gruppoId) {
                     stato: topState.stato,
                     data_stato: topState.data_inizio,
                     attivo: !isCancellato
+                })
+                .eq('id', gruppoId);
+        } else {
+            await supabaseClient
+                .from('epika_gruppi_storici')
+                .update({
+                    stato: 'in_formazione',
+                    data_stato: null,
+                    attivo: false
                 })
                 .eq('id', gruppoId);
         }
