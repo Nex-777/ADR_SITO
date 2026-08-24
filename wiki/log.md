@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-24] fix+feat | Fix PGRST201 Registro RE & Pannello Provvedimenti Evento (v1.04.88)
+- **Fix PostgREST Embed**: Corretta la sintassi del join su `epika_profili` in `renderRichiamiEncomiDashboard()` specificando l'hint foreign key `!gruppo_storico_id` per disambiguare le 2 FK verso `epika_gruppi_storici`. Aggiunto blocco di gestione errore esplicito `if (reRes.error) throw reRes.error;`.
+- **Frontend HTML (`portal/epika.html`)**: Inserito il pannello `#adm-richiami-evento-panel` integrato nell'architettura dei sotto-pannelli di gestione eventi (con KPI Encomi/Richiami evento, pulsante di registrazione e tabella con azioni).
+- **Frontend JS (`portal/epika.js`)**:
+  - Aggiunto `'adm-richiami-evento-panel'` all'array `PANNELLI_EVENTO` di `apriPannelloEsclusivoAdmin()`.
+  - Implementata `mostraPannelloRichiamiEvento(eventoId, eventoTitolo)` e `renderTabellaRichiamiEvento(records)` per caricare e visualizzare i provvedimenti specifici dell'evento.
+  - Implementate `apriModaleProvvedimentoEvento()` e `archiviaRichiamoEncomioEvento(id)`.
+  - Aggiornata `salvaRichiamoEncomio()` e `chiudiModaleRichiamoEncomio()` per ripristinare il form e fare refresh contestuale adattivo (sul pannello evento se aperto e/o sulla dashboard generale).
+  - Aggiornato il pulsante `⚠️🎖️ PROVVEDIMENTI` in `renderEventiAdmin()` per aprire `mostraPannelloRichiamiEvento()`.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.88` tramite `npm run bump`.
+
 ## [2026-08-24] feature | Registro Generale Richiami ed Encomi & Integrazione Dashboard Eventi (v1.04.86)
 - **Database (Supabase)**:
   - Creata la tabella `public.epika_richiami_encomi` con FK su `epika_profili` ed `epika_eventi`, CHECK constraints per `tipo`, `categoria`, `gravita`, e soft-delete `attivo = TRUE`.

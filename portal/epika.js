@@ -3110,7 +3110,7 @@ async function renderEventiAdmin() {
             const esercitiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #581c87; border-color: #a855f7;" onclick="mostraPannelloEserciti('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">GESTIONE ESERCITI</button>`;
             const potenzaBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: rgba(180, 130, 0, 0.5); border-color: #d4af37; color: #ffd700;" onclick="mostraPannelloPotenza('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" title="Classifica Potenza Gruppi">POTENZA</button>` : '';
             const battaglieBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn-secondary" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloBattaglie('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">REGISTRO BATTAGLIE</button>` : '';
-            const richiamiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #065f46; border-color: #10b981;" onclick="apriModaleNuovoProvvedimento('${evt.id}', null)">⚠️🎖️ PROVVEDIMENTI</button>`;
+            const richiamiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #065f46; border-color: #10b981;" onclick="mostraPannelloRichiamiEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">⚠️🎖️ PROVVEDIMENTI</button>`;
 
             container.innerHTML += `
                 <div class="epk-event-card">
@@ -3294,7 +3294,8 @@ function apriPannelloEsclusivoAdmin(targetPanelId) {
         'adm-dashboard-evento-panel', 
         'adm-eserciti-panel',
         'adm-potenza-panel',
-        'adm-battaglie-panel'
+        'adm-battaglie-panel',
+        'adm-richiami-evento-panel'
     ];
     PANNELLI_EVENTO.forEach(id => {
         const el = document.getElementById(id);
@@ -3306,6 +3307,143 @@ function apriPannelloEsclusivoAdmin(targetPanelId) {
             target.classList.remove('epk-hidden');
             target.scrollIntoView({ behavior: 'smooth' });
         }
+    }
+}
+
+// Stato pannello richiami evento
+let richiamiEventoAttivoId = null;
+let richiamiEventoAttivoTitolo = '';
+
+async function mostraPannelloRichiamiEvento(eventoId, eventoTitolo) {
+    apriPannelloEsclusivoAdmin('adm-richiami-evento-panel');
+    richiamiEventoAttivoId = eventoId;
+    richiamiEventoAttivoTitolo = eventoTitolo;
+
+    const titoloEl = document.getElementById('adm-richiami-evento-titolo');
+    if (titoloEl) titoloEl.textContent = `⚠️🎖️ PROVVEDIMENTI: ${eventoTitolo.toUpperCase()}`;
+
+    const sottotitoloEl = document.getElementById('adm-richiami-evento-sottotitolo');
+    if (sottotitoloEl) sottotitoloEl.textContent = 'Registro richiami ed encomi assegnati durante questo evento';
+
+    const tbody = document.getElementById('adm-richiami-evento-tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:rgba(245,230,200,0.5);">Caricamento provvedimenti in corso...</td></tr>';
+    }
+
+    try {
+        const { data: records, error } = await supabaseClient
+            .from('epika_richiami_encomi')
+            .select(`
+                id,
+                tipo,
+                categoria,
+                gravita,
+                motivazione,
+                note_interne_direttivo,
+                data_assegnazione,
+                atleta:epika_profili!atleta_id(id, nome_di_battaglia),
+                autore:epika_profili!autore_id(id, nome_di_battaglia)
+            `)
+            .eq('evento_id', eventoId)
+            .eq('attivo', true)
+            .order('data_assegnazione', { ascending: false });
+
+        if (error) {
+            console.error("Errore caricamento provvedimenti evento:", error);
+            throw error;
+        }
+
+        const items = records || [];
+        let encCount = 0;
+        let ricCount = 0;
+        items.forEach(r => {
+            if (r.tipo === 'encomio') encCount++;
+            if (r.tipo === 'richiamo') ricCount++;
+        });
+
+        const kpiEnc = document.getElementById('adm-re-evt-kpi-encomi');
+        const kpiRic = document.getElementById('adm-re-evt-kpi-richiami');
+        if (kpiEnc) kpiEnc.textContent = encCount;
+        if (kpiRic) kpiRic.textContent = ricCount;
+
+        renderTabellaRichiamiEvento(items);
+    } catch (err) {
+        console.error("Errore caricamento provvedimenti evento:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:16px;color:#f87171;">Errore durante il caricamento: ${err.message || err}</td></tr>`;
+        }
+    }
+}
+
+function renderTabellaRichiamiEvento(records) {
+    const tbody = document.getElementById('adm-richiami-evento-tbody');
+    if (!tbody) return;
+
+    if (!records || records.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:rgba(245,230,200,0.5);">Nessun provvedimento registrato per questo evento.</td></tr>';
+        return;
+    }
+
+    let rowsHtml = '';
+    records.forEach(r => {
+        const badgeHtml = getBadgeRichiamoEncomioHtml(r.tipo, r.gravita, r.categoria);
+        const atletaNome = r.atleta?.nome_di_battaglia || 'Atleta Sconosciuto';
+        const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
+        const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : '';
+        const noteDirettivo = r.note_interne_direttivo ? `<span style="font-size:10px;color:#fca5a5;">${r.note_interne_direttivo}</span>` : '<span style="color:rgba(245,230,200,0.3);">-</span>';
+        const canDelete = typeof isReadOnly === 'function' ? !isReadOnly() : true;
+        const actionBtn = canDelete ? `
+            <button class="epk-btn-secondary" style="font-size:10px;padding:4px 8px;color:#f87171;border-color:rgba(239,68,68,0.4);" onclick="archiviaRichiamoEncomioEvento('${r.id}')" title="Archivia provvedimento">
+                🗑️
+            </button>
+        ` : '-';
+
+        rowsHtml += `
+            <tr style="border-bottom: 1px solid rgba(251, 191, 36, 0.1);">
+                <td style="padding:8px 6px;">${badgeHtml}</td>
+                <td style="padding:8px 6px;"><strong style="color:var(--epk-gold);">${atletaNome}</strong></td>
+                <td style="padding:8px 6px;">
+                    <div style="font-size:10px;font-weight:bold;color:var(--epk-gold);">${catLabel} <span style="font-size:9px;color:rgba(245,230,200,0.5);font-family:monospace;font-weight:normal;">📅 ${dataFmt}</span></div>
+                    <div style="font-size:11px;color:rgba(245,230,200,0.9);margin-top:2px;">${r.motivazione || ''}</div>
+                </td>
+                <td style="padding:8px 6px;">${noteDirettivo}</td>
+                <td style="padding:8px 6px; text-align:center;">${actionBtn}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rowsHtml;
+}
+
+async function apriModaleProvvedimentoEvento() {
+    if (!richiamiEventoAttivoId) return;
+    await apriModaleNuovoProvvedimento(richiamiEventoAttivoId, null);
+    const evtSelect = document.getElementById('re-form-evento');
+    if (evtSelect) evtSelect.disabled = true;
+}
+
+async function archiviaRichiamoEncomioEvento(id) {
+    if (typeof isReadOnly === 'function' && isReadOnly()) return;
+    if (!confirm("Sei sicuro di voler archiviare questo provvedimento?")) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_richiami_encomi')
+            .update({ attivo: false, updated_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        if (typeof showToast === 'function') {
+            showToast("Provvedimento archiviato con successo", "info");
+        }
+        await mostraPannelloRichiamiEvento(richiamiEventoAttivoId, richiamiEventoAttivoTitolo);
+        if (activeAdminTab === 'richiami-encomi') {
+            await renderRichiamiEncomiDashboard();
+        }
+    } catch (err) {
+        console.error("Errore archiviazione richiamo/encomio evento:", err);
+        alert("Errore durante l'archiviazione: " + (err.message || err));
     }
 }
 
@@ -9080,13 +9218,18 @@ async function renderRichiamiEncomiDashboard() {
                     note_interne_direttivo,
                     data_assegnazione,
                     attivo,
-                    atleta:epika_profili!atleta_id(id, nome_di_battaglia, gruppo_storico_id, gruppo:epika_gruppi_storici(id, nome)),
+                    atleta:epika_profili!atleta_id(id, nome_di_battaglia, gruppo_storico_id, gruppo:epika_gruppi_storici!gruppo_storico_id(id, nome)),
                     evento:epika_eventi(id, titolo),
                     autore:epika_profili!autore_id(id, nome_di_battaglia)
                 `)
                 .eq('attivo', true)
                 .order('data_assegnazione', { ascending: false })
         ]);
+
+        if (reRes.error) {
+            console.error('Errore caricamento RE:', reRes.error);
+            throw reRes.error;
+        }
 
         reProfiliCache = pRes.data || [];
         reGruppiCache = gRes.data || [];
@@ -9340,6 +9483,8 @@ async function apriModaleNuovoProvvedimento(eventoId = null, atletaId = null) {
 function chiudiModaleRichiamoEncomio() {
     const modal = document.getElementById('re-modale');
     if (modal) modal.classList.add('epk-hidden');
+    const evtSelect = document.getElementById('re-form-evento');
+    if (evtSelect) evtSelect.disabled = false;
 }
 
 function aggiornaOpzioniFormRichiamo() {
@@ -9408,7 +9553,11 @@ async function salvaRichiamoEncomio() {
             alert(tipo === 'encomio' ? "🎖️ Encomio registrato con successo!" : "⚠️ Richiamo registrato con successo!");
         }
 
-        // Ricarica dashboard se aperta
+        // Ricarica contestuale: pannello evento o dashboard generale
+        const evtPanel = document.getElementById('adm-richiami-evento-panel');
+        if (richiamiEventoAttivoId && evtPanel && !evtPanel.classList.contains('epk-hidden')) {
+            await mostraPannelloRichiamiEvento(richiamiEventoAttivoId, richiamiEventoAttivoTitolo);
+        }
         if (activeAdminTab === 'richiami-encomi') {
             await renderRichiamiEncomiDashboard();
         }
