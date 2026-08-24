@@ -2,6 +2,29 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-24] feature | Campi Descrittivi Richiami, Encomi e Bilanciamenti Gestione Eserciti
+- **Database (`supabase/migration_epika_eserciti_annotazioni.sql`)**:
+  - Aggiunta colonna `annotazioni_schieramento JSONB` alla tabella `public.epika_eserciti_eventi` con payload strutturato (`{"esercito_a": {"richiami": "", "encomi": ""}, "esercito_b": {"richiami": "", "encomi": ""}, "bilanciamenti": ""}`).
+  - Applicata migrazione DDL su Supabase `zpategmkelqmexetpaot`.
+- **Frontend UI (`portal/epika.html`)**:
+  - Aggiunti due campi multiriga `RICHIAMI` ed `ENCOMI` posizionati sotto i generali all'interno dei box dedicati a Esercito A ed Esercito B.
+  - Aggiunto un campo multiriga a tutta larghezza `BILANCIAMENTI (ACCESSORI SIBIS)` per registrare gli adeguamenti tattici stabiliti dal Sibis.
+- **Logica Frontend (`portal/epika.js`)**:
+  - In `mostraPannelloEserciti()`: estrazione sicura e popolamento dei valori da `savedEserciti.annotazioni_schieramento`.
+  - Inclusi i 5 ID dei controlli nella whitelist `inputIds` governata dallo stato `isReadOnly()`.
+  - In `salvaSchieramentiEserciti()`: serializzazione sanitizzata (tramite `.trim()`) delle annotazioni e inclusione nel payload inviato a Supabase.
+
+## [2026-08-24] bugfix/security | Fix RBAC e Salvataggio Consensi Profilo Membri Direttivo (v1.04.78)
+- **Database (Supabase Remoto `zpategmkelqmexetpaot`)**:
+  - **Riscrittura Trigger `public.proteggi_ruolo_utente` (`trigger_proteggi_ruolo` su `public.utenti`)**:
+    - **Risoluzione Blocco Profilo**: Il trigger originale controllava indiscriminatamente la presenza di ruoli direttivi (`NEW.ruolo && ARRAY['presidente', ...]`), bloccando qualsiasi aggiornamento anagrafico e di consensi GDPR tentato da membri del direttivo (es. Presidente).
+    - **Adozione Strict Immutability**: Su operazione `UPDATE` (`NEW.id = auth.uid()`), il trigger ora verifica la stretta immutabilità del campo ruolo (`NEW.ruolo IS DISTINCT FROM OLD.ruolo`). Se il campo non viene alterato dall'utente, l'aggiornamento dei consensi privacy (`consenso_audiovisivi`, `consenso_marketing`), contatti, residenza e recapiti di emergenza ha esito positivo.
+    - **Chiusura Falle RBAC Laterali**: Bloccata qualsiasi auto-modifica e privilege escalation sia per ruoli amministrativi che operativi da client.
+  - **File Migrazione**: Creato `supabase/migration_fix_immutabilita_ruolo.sql` e applicato con successo.
+- **Global Bump**: Versionamento globale aggiornato a `v1.04.78` via `npm run bump`.
+
+---
+
 ## [2026-08-24] feature | Ordinamento Gruppi Assegnati agli Eserciti per Ordine di Scelta (Draft Order)
 - **Frontend (`portal/epika.js`)**:
   - **Tracciamento Cronologico Scelte**: Aggiunta la proprietà `ordineGruppi: []` in `esercitiCacheData` per registrare l'ordine esatto di assegnazione e spostamento dei gruppi tra gli schieramenti.

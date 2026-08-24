@@ -7587,7 +7587,8 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
 
     const inputIds = [
         'adm-esercito-a-nome', 'adm-esercito-a-grido', 'adm-esercito-a-gen-1', 'adm-esercito-a-gen-2', 'adm-esercito-a-gen-3',
-        'adm-esercito-b-nome', 'adm-esercito-b-grido', 'adm-esercito-b-gen-1', 'adm-esercito-b-gen-2', 'adm-esercito-b-gen-3'
+        'adm-esercito-b-nome', 'adm-esercito-b-grido', 'adm-esercito-b-gen-1', 'adm-esercito-b-gen-2', 'adm-esercito-b-gen-3',
+        'adm-esercito-a-richiami', 'adm-esercito-a-encomi', 'adm-esercito-b-richiami', 'adm-esercito-b-encomi', 'adm-eserciti-bilanciamenti'
     ];
     inputIds.forEach(id => {
         const el = document.getElementById(id);
@@ -7701,6 +7702,13 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             if (document.getElementById('adm-esercito-b-gen-2')) document.getElementById('adm-esercito-b-gen-2').value = genB[1] || '';
             if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = genB[2] || '';
 
+            const annotazioni = savedEserciti.annotazioni_schieramento || {};
+            if (document.getElementById('adm-esercito-a-richiami')) document.getElementById('adm-esercito-a-richiami').value = annotazioni.esercito_a?.richiami || '';
+            if (document.getElementById('adm-esercito-a-encomi')) document.getElementById('adm-esercito-a-encomi').value = annotazioni.esercito_a?.encomi || '';
+            if (document.getElementById('adm-esercito-b-richiami')) document.getElementById('adm-esercito-b-richiami').value = annotazioni.esercito_b?.richiami || '';
+            if (document.getElementById('adm-esercito-b-encomi')) document.getElementById('adm-esercito-b-encomi').value = annotazioni.esercito_b?.encomi || '';
+            if (document.getElementById('adm-eserciti-bilanciamenti')) document.getElementById('adm-eserciti-bilanciamenti').value = annotazioni.bilanciamenti || '';
+
             if (savedEserciti.coefficienti_forza) {
                 const { _ordine_gruppi, ...coeffOnly } = savedEserciti.coefficienti_forza;
                 esercitiCacheData.coeff = { ...esercitiCacheData.coeff, ...coeffOnly };
@@ -7723,6 +7731,12 @@ async function mostraPannelloEserciti(eventoId, eventoTitolo) {
             if (document.getElementById('adm-esercito-b-gen-1')) document.getElementById('adm-esercito-b-gen-1').value = '';
             if (document.getElementById('adm-esercito-b-gen-2')) document.getElementById('adm-esercito-b-gen-2').value = '';
             if (document.getElementById('adm-esercito-b-gen-3')) document.getElementById('adm-esercito-b-gen-3').value = '';
+
+            if (document.getElementById('adm-esercito-a-richiami')) document.getElementById('adm-esercito-a-richiami').value = '';
+            if (document.getElementById('adm-esercito-a-encomi')) document.getElementById('adm-esercito-a-encomi').value = '';
+            if (document.getElementById('adm-esercito-b-richiami')) document.getElementById('adm-esercito-b-richiami').value = '';
+            if (document.getElementById('adm-esercito-b-encomi')) document.getElementById('adm-esercito-b-encomi').value = '';
+            if (document.getElementById('adm-eserciti-bilanciamenti')) document.getElementById('adm-eserciti-bilanciamenti').value = '';
         }
 
         aggiornaVisibilitaExtraGenerali('a');
@@ -8672,6 +8686,18 @@ async function salvaSchieramentiEserciti() {
         document.getElementById('adm-esercito-b-gen-3')?.value.trim()
     ].filter(Boolean);
 
+    const annotazioni = {
+        esercito_a: {
+            richiami: (document.getElementById('adm-esercito-a-richiami')?.value || '').trim(),
+            encomi: (document.getElementById('adm-esercito-a-encomi')?.value || '').trim()
+        },
+        esercito_b: {
+            richiami: (document.getElementById('adm-esercito-b-richiami')?.value || '').trim(),
+            encomi: (document.getElementById('adm-esercito-b-encomi')?.value || '').trim()
+        },
+        bilanciamenti: (document.getElementById('adm-eserciti-bilanciamenti')?.value || '').trim()
+    };
+
     const payload = {
         evento_id: eventoId,
         nome_esercito_a: (document.getElementById('adm-esercito-a-nome')?.value || 'ESERCITO A').trim(),
@@ -8680,6 +8706,7 @@ async function salvaSchieramentiEserciti() {
         grido_esercito_b: (document.getElementById('adm-esercito-b-grido')?.value || '').trim(),
         generali_esercito_a: genA,
         generali_esercito_b: genB,
+        annotazioni_schieramento: annotazioni,
         coefficienti_forza: {
             ...esercitiCacheData.coeff,
             _ordine_gruppi: Array.isArray(esercitiCacheData.ordineGruppi) ? esercitiCacheData.ordineGruppi : []

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.77">
+    <link rel="stylesheet" href="epika.css?v=1.04.79">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.77"></script>
+    <script src="config.js?v=1.04.79"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.77</span>
+                <span class="epk-version-badge">Vs. 1.04.79</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -797,6 +797,18 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <!-- Richiami ed Encomi Esercito A -->
+                                        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                            <div>
+                                                <label style="font-size: 9px; color: #f87171; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 2px;">⚠️ RICHIAMI (A):</label>
+                                                <textarea id="adm-esercito-a-richiami" class="epk-input" rows="2" placeholder="Annota richiami, infrazioni..." style="font-size: 10px; width: 100%; resize: vertical; box-sizing: border-box;"></textarea>
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 9px; color: #4ade80; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 2px;">🎖️ ENCOMI (A):</label>
+                                                <textarea id="adm-esercito-a-encomi" class="epk-input" rows="2" placeholder="Annota encomi, meriti..." style="font-size: 10px; width: 100%; resize: vertical; box-sizing: border-box;"></textarea>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- Esercito B Header -->
@@ -820,8 +832,26 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <!-- Richiami ed Encomi Esercito B -->
+                                        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                            <div>
+                                                <label style="font-size: 9px; color: #f87171; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 2px;">⚠️ RICHIAMI (B):</label>
+                                                <textarea id="adm-esercito-b-richiami" class="epk-input" rows="2" placeholder="Annota richiami, infrazioni..." style="font-size: 10px; width: 100%; resize: vertical; box-sizing: border-box;"></textarea>
+                                            </div>
+                                            <div>
+                                                <label style="font-size: 9px; color: #4ade80; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 2px;">🎖️ ENCOMI (B):</label>
+                                                <textarea id="adm-esercito-b-encomi" class="epk-input" rows="2" placeholder="Annota encomi, meriti..." style="font-size: 10px; width: 100%; resize: vertical; box-sizing: border-box;"></textarea>
+                                            </div>
+                                        </div>
                                     </div>
 
+                                </div>
+
+                                <!-- Bilanciamenti Accessori Sibis -->
+                                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(251, 191, 36, 0.3);">
+                                    <label style="font-size: 9px; color: var(--epk-gold); font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 2px;">⚖️ BILANCIAMENTI (ACCESSORI SIBIS):</label>
+                                    <textarea id="adm-eserciti-bilanciamenti" class="epk-input" rows="2" placeholder="Note sui bilanciamenti accessori stabiliti dal SIBIS per pareggiare gli eserciti..." style="font-size: 10px; width: 100%; resize: vertical; box-sizing: border-box;"></textarea>
                                 </div>
                             </div>
 
@@ -2171,6 +2201,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.77"></script>
+    <script src="epika.js?v=1.04.79"></script>
 </body>
 </html>
