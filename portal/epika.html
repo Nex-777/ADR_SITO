@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.79">
+    <link rel="stylesheet" href="epika.css?v=1.04.80">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.79"></script>
+    <script src="config.js?v=1.04.80"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.79</span>
+                <span class="epk-version-badge">Vs. 1.04.80</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -981,16 +981,45 @@
 
                             </div>
 
-                            <!-- Sezione Mercenari Singoli -->
+                            <!-- Sezione Mercenari Singoli (3 Colonne) -->
                             <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(251, 191, 36, 0.15); padding: 16px; border-radius: 4px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(251, 191, 36, 0.15); padding-bottom: 8px; margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(251, 191, 36, 0.15); padding-bottom: 8px; margin-bottom: 16px;">
                                     <h3 style="font-size: 13px; color: var(--epk-gold); font-family: 'Cinzel', serif; margin: 0;">
                                         🗡️ MERCENARI (ASSEGNAZIONE INDIVIDUALE)
                                     </h3>
                                     <span style="font-size: 10px; color: gray;">Assegna i singoli mercenari per bilanciare la forza esatta</span>
                                 </div>
-                                <div id="adm-eserciti-mercenari-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">
-                                    <!-- Popolato via JS -->
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                                    <!-- Colonna Mercenari Esercito A -->
+                                    <div style="background: rgba(30, 58, 138, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 4px;">
+                                        <h3 id="adm-esercito-a-merc-col-titolo" style="font-size: 12px; color: #93c5fd; font-family: 'Cinzel', serif; margin: 0 0 10px 0; border-bottom: 1px solid rgba(59, 130, 246, 0.3); padding-bottom: 6px;">
+                                            ESERCITO A (MERCENARI)
+                                        </h3>
+                                        <div id="adm-esercito-a-mercenari-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 80px;">
+                                            <!-- Popolato via JS -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Colonna Mercenari Pool (Non Assegnati) -->
+                                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px; border-radius: 4px;">
+                                        <h3 style="font-size: 12px; color: rgba(245, 230, 200, 0.7); font-family: 'Cinzel', serif; margin: 0 0 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px;">
+                                            MERCENARI NON ASSEGNATI
+                                        </h3>
+                                        <div id="adm-eserciti-pool-mercenari-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 80px;">
+                                            <!-- Popolato via JS -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Colonna Mercenari Esercito B -->
+                                    <div style="background: rgba(136, 36, 43, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 12px; border-radius: 4px;">
+                                        <h3 id="adm-esercito-b-merc-col-titolo" style="font-size: 12px; color: #fca5a5; font-family: 'Cinzel', serif; margin: 0 0 10px 0; border-bottom: 1px solid rgba(239, 68, 68, 0.3); padding-bottom: 6px;">
+                                            ESERCITO B (MERCENARI)
+                                        </h3>
+                                        <div id="adm-esercito-b-mercenari-list" style="display: flex; flex-direction: column; gap: 8px; min-height: 80px;">
+                                            <!-- Popolato via JS -->
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2201,6 +2230,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.79"></script>
+    <script src="epika.js?v=1.04.80"></script>
 </body>
 </html>

@@ -7911,14 +7911,18 @@ function renderTatticaEserciti() {
     const colA = document.getElementById('adm-esercito-a-gruppi-list');
     const colB = document.getElementById('adm-esercito-b-gruppi-list');
     const colPool = document.getElementById('adm-eserciti-pool-gruppi-list');
-    const mercList = document.getElementById('adm-eserciti-mercenari-list');
+    const colMercA = document.getElementById('adm-esercito-a-mercenari-list');
+    const colMercPool = document.getElementById('adm-eserciti-pool-mercenari-list');
+    const colMercB = document.getElementById('adm-esercito-b-mercenari-list');
 
-    if (!colA || !colB || !colPool || !mercList) return;
+    if (!colA || !colB || !colPool || !colMercA || !colMercPool || !colMercB) return;
 
     colA.innerHTML = '';
     colB.innerHTML = '';
     colPool.innerHTML = '';
-    mercList.innerHTML = '';
+    colMercA.innerHTML = '';
+    colMercPool.innerHTML = '';
+    colMercB.innerHTML = '';
 
     const tuttiGruppiNomi = Object.keys(esercitiCacheData.gruppi);
     
@@ -8048,6 +8052,87 @@ function renderTatticaEserciti() {
         `;
     }
 
+    // Funzione helper sicura per renderizzare la card di un singolo mercenario
+    function renderCardMercenario(m, schieramento) {
+        const forzaM = calcolaForzaSingoloAtleta(m, esercitiCacheData.coeff);
+        const safeNome = typeof escapeHtml === 'function' ? escapeHtml((m.nome_battaglia || 'Senza Nome').toUpperCase()) : (m.nome_battaglia || 'Senza Nome').toUpperCase();
+        const safeArmatura = typeof escapeHtml === 'function' ? escapeHtml((m.armatura || 'nessuna').toUpperCase()) : (m.armatura || 'nessuna').toUpperCase();
+        const safeId = m.utente_id;
+
+        let cardBorder = 'border: 1px solid rgba(251, 191, 36, 0.2);';
+        let cardBg = 'background: rgba(0,0,0,0.4);';
+
+        if (schieramento === 'A') {
+            cardBorder = 'border: 1px solid rgba(59, 130, 246, 0.5);';
+            cardBg = 'background: rgba(30, 58, 138, 0.15);';
+        } else if (schieramento === 'B') {
+            cardBorder = 'border: 1px solid rgba(239, 68, 68, 0.5);';
+            cardBg = 'background: rgba(136, 36, 43, 0.15);';
+        }
+
+        // Layout per Mercenari Non Assegnati (Pool)
+        if (!schieramento) {
+            return `
+                <div style="${cardBg} ${cardBorder} padding: 8px 10px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    ${!readOnlyState ? `
+                        <button class="epk-btn" onclick="impostaMercenarioSchieramento('${safeId}', 'A')" title="Schiera in Esercito A" style="font-size: 13px; font-weight: bold; padding: 5px 10px; background: #1e3a8a; border-color: #3b82f6; border-radius: 3px; cursor: pointer; line-height: 1;">←</button>
+                    ` : ''}
+                    <div style="flex: 1; text-align: center; min-width: 0;">
+                        <div style="font-size: 12px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeNome}">${safeNome}</div>
+                        <div style="font-size: 9px; color: rgba(245, 230, 200, 0.65); margin-top: 2px;">
+                            COMBATTENTE (${safeArmatura}) | <span style="color: #60a5fa; font-family: monospace; font-weight: bold;">+${forzaM} pts</span>
+                        </div>
+                    </div>
+                    ${!readOnlyState ? `
+                        <button class="epk-btn" onclick="impostaMercenarioSchieramento('${safeId}', 'B')" title="Schiera in Esercito B" style="font-size: 13px; font-weight: bold; padding: 5px 10px; background: #88242b; border-color: #ef4444; border-radius: 3px; cursor: pointer; line-height: 1;">→</button>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Layout per Mercenari in Esercito A
+        if (schieramento === 'A') {
+            return `
+                <div style="${cardBg} ${cardBorder} padding: 8px 10px; border-radius: 4px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 12px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeNome}">${safeNome}</div>
+                            <div style="font-size: 9px; color: rgba(245, 230, 200, 0.65); margin-top: 2px;">
+                                COMBATTENTE (${safeArmatura}) | <span style="color: #60a5fa; font-family: monospace; font-weight: bold;">+${forzaM} pts</span>
+                            </div>
+                        </div>
+                        ${!readOnlyState ? `
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <button class="epk-btn-secondary" onclick="impostaMercenarioSchieramento('${safeId}', null)" title="Rimuovi da Esercito A" style="font-size: 11px; padding: 4px 7px; color: #fca5a5; border-color: rgba(239,68,68,0.4); border-radius: 3px; cursor: pointer; line-height: 1;">✕</button>
+                                <button class="epk-btn" onclick="impostaMercenarioSchieramento('${safeId}', 'B')" title="Sposta in Esercito B" style="font-size: 12px; font-weight: bold; padding: 4px 8px; background: #88242b; border-color: #ef4444; border-radius: 3px; cursor: pointer; line-height: 1;">→</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Layout per Mercenari in Esercito B
+        return `
+            <div style="${cardBg} ${cardBorder} padding: 8px 10px; border-radius: 4px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    ${!readOnlyState ? `
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button class="epk-btn" onclick="impostaMercenarioSchieramento('${safeId}', 'A')" title="Sposta in Esercito A" style="font-size: 12px; font-weight: bold; padding: 4px 8px; background: #1e3a8a; border-color: #3b82f6; border-radius: 3px; cursor: pointer; line-height: 1;">←</button>
+                            <button class="epk-btn-secondary" onclick="impostaMercenarioSchieramento('${safeId}', null)" title="Rimuovi da Esercito B" style="font-size: 11px; padding: 4px 7px; color: #fca5a5; border-color: rgba(239,68,68,0.4); border-radius: 3px; cursor: pointer; line-height: 1;">✕</button>
+                        </div>
+                    ` : ''}
+                    <div style="flex: 1; text-align: right; min-width: 0;">
+                        <div style="font-size: 12px; font-weight: bold; color: var(--epk-gold); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${safeNome}">${safeNome}</div>
+                        <div style="font-size: 9px; color: rgba(245, 230, 200, 0.65); margin-top: 2px;">
+                            <span style="color: #60a5fa; font-family: monospace; font-weight: bold;">+${forzaM} pts</span> | COMBATTENTE (${safeArmatura})
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     gruppiAOrdinati.forEach(gNome => {
         colA.innerHTML += renderCardGruppo(gNome, 'A');
     });
@@ -8060,41 +8145,21 @@ function renderTatticaEserciti() {
         colPool.innerHTML += renderCardGruppo(gNome, null);
     });
 
-    // Render Mercenari Singoli
+    // Render Mercenari Singoli (Layout a 3 Colonne)
     if (esercitiCacheData.mercenari.length === 0) {
-        mercList.innerHTML = '<p style="font-size: 10px; color: gray; text-align: center; grid-column: 1 / -1;">Nessun mercenario combattente iscritto a questo evento.</p>';
+        colMercPool.innerHTML = '<p style="font-size: 10px; color: gray; text-align: center;">Nessun mercenario combattente iscritto.</p>';
+    } else {
+        esercitiCacheData.mercenari.forEach(m => {
+            const schieramentoM = esercitiCacheData.assegnazioniMercenari[m.utente_id] || '';
+            if (schieramentoM === 'A') {
+                colMercA.innerHTML += renderCardMercenario(m, 'A');
+            } else if (schieramentoM === 'B') {
+                colMercB.innerHTML += renderCardMercenario(m, 'B');
+            } else {
+                colMercPool.innerHTML += renderCardMercenario(m, null);
+            }
+        });
     }
-
-    esercitiCacheData.mercenari.forEach(m => {
-        const forzaM = calcolaForzaSingoloAtleta(m, esercitiCacheData.coeff);
-        const schieramentoM = esercitiCacheData.assegnazioniMercenari[m.utente_id] || '';
-
-        const badgeRuolo = m.ruolo === 'combattente' ? 
-            `<span style="color: var(--epk-gold); font-size: 9px;">COMBATTENTE (${m.armatura.toUpperCase()})</span>` : 
-            `<span style="color: gray; font-size: 9px;">NON COMBATTENTE</span>`;
-
-        const bottoniAzioneMercenarioHtml = readOnlyState ? 
-            `<div style="margin-top: 4px; font-size: 9px;">${schieramentoM ? '<span style="color: var(--epk-gold); font-weight: bold;">ESERCITO ' + schieramentoM + '</span>' : '<span style="color: gray;">NON ASSEGNATO</span>'}</div>` : `
-            <div style="display: flex; gap: 4px;">
-                <button class="epk-btn" onclick="impostaMercenarioSchieramento('${m.utente_id}', 'A')" style="font-size: 9px; padding: 4px 6px; flex: 1; ${schieramentoM === 'A' ? 'background: #1e3a8a; border-color: #3b82f6;' : 'background: transparent; opacity: 0.5;'}">ESERCITO A</button>
-                <button class="epk-btn-secondary" onclick="impostaMercenarioSchieramento('${m.utente_id}', '')" style="font-size: 9px; padding: 4px 6px; ${schieramentoM === '' ? 'border-color: var(--epk-gold); color: var(--epk-gold);' : 'opacity: 0.5;'}">FREE</button>
-                <button class="epk-btn" onclick="impostaMercenarioSchieramento('${m.utente_id}', 'B')" style="font-size: 9px; padding: 4px 6px; flex: 1; ${schieramentoM === 'B' ? 'background: #88242b; border-color: #ef4444;' : 'background: transparent; opacity: 0.5;'}">ESERCITO B</button>
-            </div>
-        `;
-
-        mercList.innerHTML += `
-            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div style="margin-bottom: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 11px; font-weight: bold; color: var(--epk-gold);">${m.nome_battaglia.toUpperCase()}</span>
-                        <span style="font-size: 10px; font-family: monospace; color: #60a5fa;">+${forzaM} pts</span>
-                    </div>
-                    <div style="margin-top: 2px;">${badgeRuolo}</div>
-                </div>
-                ${bottoniAzioneMercenarioHtml}
-            </div>
-        `;
-    });
 
     aggiornaCalcoliEserciti();
 }
@@ -8150,6 +8215,16 @@ function aggiornaCalcoliEserciti() {
     const titleB = document.getElementById('adm-esercito-b-col-titolo');
     if (titleB) {
         titleB.innerHTML = `${nomeB} (GRUPPI)<br><span style="font-size:9px; color:rgba(252,165,165,0.8); font-family:sans-serif; text-transform:none;">👑 GENERALI: ${genB.length ? genB.join(' | ') : 'Nessuno'}</span>`;
+    }
+
+    const titleAMerc = document.getElementById('adm-esercito-a-merc-col-titolo');
+    if (titleAMerc) {
+        titleAMerc.innerHTML = `${nomeA} (MERCENARI)`;
+    }
+
+    const titleBMerc = document.getElementById('adm-esercito-b-merc-col-titolo');
+    if (titleBMerc) {
+        titleBMerc.innerHTML = `${nomeB} (MERCENARI)`;
     }
 
     const statsA = { forza: 0, comb: 0, nonComb: 0, armLeggera: 0, armPesante: 0, arcPuro: 0, arcIbrido: 0 };

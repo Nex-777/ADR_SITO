@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-24] feature | Riprogettazione Assegnazione Mercenari a 3 Colonne in Gestione Eserciti
+- **Frontend UI (`portal/epika.html`)**:
+  - Ristrutturata la sezione dei mercenari singoli in un layout a 3 colonne (`#adm-esercito-a-mercenari-list`, `#adm-eserciti-pool-mercenari-list`, `#adm-esercito-b-mercenari-list`) speculare a quello dei gruppi storici.
+- **Logica Frontend & Sicurezza (`portal/epika.js`)**:
+  - In `renderTatticaEserciti()`: implementata la funzione sicura `renderCardMercenario()` con sanificazione XSS preventiva tramite `escapeHtml()` e omisssione completa dei bottoni di azione in modalità `isReadOnly()`.
+  - In `aggiornaCalcoliEserciti()`: aggiunta sincronizzazione dinamica dei titoli delle colonne mercenari (`${nomeA} (MERCENARI)` e `${nomeB} (MERCENARI)`).
+
 ## [2026-08-24] feature | Campi Descrittivi Richiami, Encomi e Bilanciamenti Gestione Eserciti
 - **Database (`supabase/migration_epika_eserciti_annotazioni.sql`)**:
   - Aggiunta colonna `annotazioni_schieramento JSONB` alla tabella `public.epika_eserciti_eventi` con payload strutturato (`{"esercito_a": {"richiami": "", "encomi": ""}, "esercito_b": {"richiami": "", "encomi": ""}, "bilanciamenti": ""}`).
