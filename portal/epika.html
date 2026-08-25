@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.88">
+    <link rel="stylesheet" href="epika.css?v=1.04.89">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.88"></script>
+    <script src="config.js?v=1.04.89"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.88</span>
+                <span class="epk-version-badge">Vs. 1.04.89</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -170,15 +170,20 @@
                     <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
                         MEDAGLIERE E RANGO
                     </h2>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 16px; text-align: center;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 12px; text-align: center; border-radius: 4px;">
                             <span style="font-size: 9px; color: rgba(245, 230, 200, 0.5); display: block; text-transform: uppercase;">CAMPI MARZIO</span>
-                            <span id="epk-stat-campi" class="epk-headline" style="font-size: 32px; font-weight: 900; display: block; margin: 8px 0;">0</span>
-                            <span style="font-size: 9px; color: rgba(245, 230, 200, 0.4); display: block; text-transform: uppercase;">COMPLETATI</span>
+                            <span id="epk-stat-campi" class="epk-headline" style="font-size: 28px; font-weight: 900; display: block; margin: 6px 0;">0</span>
+                            <span style="font-size: 9px; color: rgba(245, 230, 200, 0.4); display: block; text-transform: uppercase;">PARTECIPAZIONI</span>
                         </div>
-                        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 16px; text-align: center;">
+                        <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 12px; text-align: center; border-radius: 4px;">
+                            <span style="font-size: 9px; color: #86efac; display: block; text-transform: uppercase;">CAMPI MARZIO</span>
+                            <span id="epk-stat-cm-vinti" class="epk-headline" style="font-size: 28px; font-weight: 900; display: block; margin: 6px 0; color: #4ade80;">0</span>
+                            <span style="font-size: 9px; color: #86efac; display: block; text-transform: uppercase;">🏆 VITTORIE</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--epk-gold-dim); padding: 12px; text-align: center; border-radius: 4px;">
                             <span style="font-size: 9px; color: rgba(245, 230, 200, 0.5); display: block; text-transform: uppercase;">TORNEI SVOLTI</span>
-                            <span id="epk-stat-tornei" class="epk-headline" style="font-size: 32px; font-weight: 900; display: block; margin: 8px 0;">0</span>
+                            <span id="epk-stat-tornei" class="epk-headline" style="font-size: 28px; font-weight: 900; display: block; margin: 6px 0;">0</span>
                             <span style="font-size: 9px; color: rgba(245, 230, 200, 0.4); display: block; text-transform: uppercase;">PARTECIPAZIONI</span>
                         </div>
                     </div>
@@ -188,6 +193,17 @@
                     </div>
                 </div>
 
+            </div>
+
+            <!-- PALMARÈS & STORICO BATTAGLIE CAMPO MARZIO ATLETA -->
+            <div class="epk-card epk-hidden" id="epk-atleta-palmares-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    <h2 class="epk-headline" style="margin: 0; font-size: 16px;">🏆 PALMARÈS & STORICO CAMPI MARZIO</h2>
+                    <span style="font-size: 10px; color: rgba(245, 230, 200, 0.6); text-transform: uppercase;">Registro Battaglie Ufficiali</span>
+                </div>
+                <div id="epk-atleta-palmares-content">
+                    <!-- Popolato dinamicamente da JS -->
+                </div>
             </div>
 
             <!-- ABILITAZIONE AL COMBATTIMENTO SCAB -->
@@ -221,6 +237,16 @@
                     <p style="font-size: 12px; color: rgba(245, 230, 200, 0.5); text-transform: uppercase; text-align: center; padding: 20px 0;">
                         Ricerca eventi del tempio in corso...
                     </p>
+                </div>
+            </div>
+
+            <!-- Eventi Conclusi / Storico Eventi -->
+            <div class="epk-card" id="epk-eventi-passati-card">
+                <h2 class="epk-headline" style="margin-top: 0; font-size: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px; margin-bottom: 16px;">
+                    ⚔️ CAMPI MARZIO CONCLUSI
+                </h2>
+                <div id="epk-eventi-passati-lista" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Popolato dinamicamente da JS -->
                 </div>
             </div>
 
@@ -607,13 +633,15 @@
                                         </div>
                                     </div>
 
-                                    <!-- Statistiche Placeholder -->
+                                    <!-- Statistiche Campo Marzio -->
                                     <div style="border-top: 1px solid var(--epk-gold-dim); padding-top: 12px;">
                                         <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 8px;">STATISTICHE CAMPO MARZIO</h3>
-                                        <p style="font-size: 11px; margin: 4px 0;"><strong>Campi Marzi Partecipati:</strong> <span id="det-stat-partecipati">0</span></p>
-                                        <p style="font-size: 11px; margin: 4px 0;"><strong>Campi Marzi Vinti:</strong> <span id="det-stat-vinti">0</span></p>
-                                        <div style="font-size: 9px; color: gray; font-style: italic; margin-top: 8px;">
-                                            (In futuro qui comparirà la lista dinamica degli eventi storici)
+                                        <div style="display: flex; gap: 16px; margin-bottom: 8px;">
+                                            <p style="font-size: 11px; margin: 0;"><strong>Campi Marzi Partecipati:</strong> <span id="det-stat-partecipati">0</span></p>
+                                            <p style="font-size: 11px; margin: 0;"><strong>Campi Marzi Vinti:</strong> <span id="det-stat-vinti" style="color: #4ade80; font-weight: bold;">0</span></p>
+                                        </div>
+                                        <div id="det-cm-storico-lista" style="font-size: 10px; margin-top: 8px;">
+                                            <!-- Popolato dinamicamente via JS -->
                                         </div>
                                     </div>
                                 </div>
@@ -1770,8 +1798,13 @@
                                     <!-- Statistiche -->
                                     <div style="border-top: 1px solid var(--epk-gold-dim); padding-top: 12px;">
                                         <h3 class="epk-headline" style="margin-top: 0; font-size: 13px; margin-bottom: 8px;">STATISTICHE CAMPO MARZIO</h3>
-                                        <p style="font-size: 11px; margin: 4px 0;"><strong>Campi Marzi Partecipati:</strong> <span id="capo-stat-partecipati">0</span></p>
-                                        <p style="font-size: 11px; margin: 4px 0;"><strong>Campi Marzi Vinti:</strong> <span id="capo-stat-vinti">0</span></p>
+                                        <div style="display: flex; gap: 16px; margin-bottom: 8px;">
+                                            <p style="font-size: 11px; margin: 0;"><strong>Campi Marzi Partecipati:</strong> <span id="capo-stat-partecipati">0</span></p>
+                                            <p style="font-size: 11px; margin: 0;"><strong>Campi Marzi Vinti:</strong> <span id="capo-stat-vinti" style="color: #4ade80; font-weight: bold;">0</span></p>
+                                        </div>
+                                        <div id="capo-cm-storico-lista" style="font-size: 10px; margin-top: 8px;">
+                                            <!-- Popolato dinamicamente via JS -->
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2470,6 +2503,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.88"></script>
+    <script src="epika.js?v=1.04.89"></script>
 </body>
 </html>

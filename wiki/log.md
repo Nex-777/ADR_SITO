@@ -2,7 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
-## [2026-08-24] fix+feat | Fix PGRST201 Registro RE & Pannello Provvedimenti Evento (v1.04.88)
+## [2026-08-25] feature | Propagazione Esiti, Partecipazioni e Palmarès Campo Marzio
+- **Frontend UI (`portal/epika.html`)**:
+  - Nel box "MEDAGLIERE E RANGO", estesa la griglia a 3 colonne inserendo il contatore `🏆 CAMPI MARZIO VINTI` (`#epk-stat-cm-vinti`).
+  - Aggiunta la card `#epk-atleta-palmares-card` ("🏆 PALMARÈS & STORICO CAMPI MARZIO") nella Scheda Personaggio dell'atleta.
+  - Aggiunta la sezione `#epk-eventi-passati-card` ("⚔️ CAMPI MARZIO CONCLUSI") nella lista eventi con badge dei trionfatori.
+  - Riconvertito il segnaposto nei modali Dettaglio Gruppo Admin e Area Capogruppo con `#det-cm-storico-lista` e `#capo-cm-storico-lista`.
+- **Logica Frontend & Sicurezza (`portal/epika.js`)**:
+  - Implementata la funzione centralizzata `caricaStoricoCampoMarzio(filtroTipo, filtroId)` per aggregare e calcolare reattivamente partecipazioni, vittorie, sconfitte e pareggi per gruppi storici e per atleti (gestendo sia membri di gruppo congelati in `epika_iscrizioni_eventi.gruppo_storico_id` che mercenari in `assegnazione_mercenari`).
+  - Implementata `renderTabellaStoricoCampoMarzio(lista, tipo)` con sanificazione XSS sicura preventiva.
+  - Integrato il rendering dinamico dello storico in `apriDettaglioGruppoAdmin()`, `caricaDettagliCapogruppo()`, `caricaStatistiche()` e `caricaEventiDisponibili()` (tramite `caricaEventiPassatiConclusi()`).
 - **Fix PostgREST Embed**: Corretta la sintassi del join su `epika_profili` in `renderRichiamiEncomiDashboard()` specificando l'hint foreign key `!gruppo_storico_id` per disambiguare le 2 FK verso `epika_gruppi_storici`. Aggiunto blocco di gestione errore esplicito `if (reRes.error) throw reRes.error;`.
 - **Frontend HTML (`portal/epika.html`)**: Inserito il pannello `#adm-richiami-evento-panel` integrato nell'architettura dei sotto-pannelli di gestione eventi (con KPI Encomi/Richiami evento, pulsante di registrazione e tabella con azioni).
 - **Frontend JS (`portal/epika.js`)**:

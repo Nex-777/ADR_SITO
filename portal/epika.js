@@ -1170,16 +1170,13 @@ async function inviaRichiestaAbilitazione(anno) {
 
 async function caricaStatistiche() {
     try {
-        const { count: campiCount, error: campiError } = await supabaseClient
-            .from('epika_presenze_eventi')
-            .select('id, evento:epika_eventi(tipo_evento)', { count: 'exact', head: true })
-            .eq('utente_id', currentUser.id)
-            .eq('presente', true)
-            .eq('epika_eventi.tipo_evento', 'campo_marzio');
+        const storico = await caricaStoricoCampoMarzio('utente', currentUser.id);
 
-        if (!campiError) {
-            document.getElementById('epk-stat-campi').textContent = campiCount || 0;
-        }
+        const elCampi = document.getElementById('epk-stat-campi');
+        if (elCampi) elCampi.textContent = storico.partecipati || 0;
+
+        const elVinti = document.getElementById('epk-stat-cm-vinti');
+        if (elVinti) elVinti.textContent = storico.vinti || 0;
 
         const { count: torneiCount, error: torneiError } = await supabaseClient
             .from('epika_presenze_eventi')
@@ -1189,7 +1186,20 @@ async function caricaStatistiche() {
             .eq('epika_eventi.tipo_evento', 'torneo');
 
         if (!torneiError) {
-            document.getElementById('epk-stat-tornei').textContent = torneiCount || 0;
+            const elTornei = document.getElementById('epk-stat-tornei');
+            if (elTornei) elTornei.textContent = torneiCount || 0;
+        }
+
+        // Sezione Palmarès / Storico Battaglie dell'Atleta
+        const palmaresCard = document.getElementById('epk-atleta-palmares-card');
+        const palmaresContent = document.getElementById('epk-atleta-palmares-content');
+        if (palmaresCard && palmaresContent) {
+            if (storico.partecipati > 0) {
+                palmaresCard.classList.remove('epk-hidden');
+                palmaresContent.innerHTML = renderTabellaStoricoCampoMarzio(storico.lista, 'utente');
+            } else {
+                palmaresCard.classList.add('epk-hidden');
+            }
         }
 
     } catch (e) {
@@ -1304,6 +1314,8 @@ async function caricaEventiDisponibili() {
                     </div>
                 </div>`;
         });
+
+        await caricaEventiPassatiConclusi();
 
     } catch (err) {
         console.error("Errore caricamento eventi:", err);
@@ -4615,6 +4627,15 @@ async function apriDettaglioGruppo(gruppoId) {
         await caricaStoricoStatiGruppo(gruppoId);
         await caricaStoricoRuoliGruppo(gruppoId);
         
+        // Statistiche Campo Marzio del gruppo
+        const storicoCM = await caricaStoricoCampoMarzio('gruppo', g.nome);
+        const elDetPart = document.getElementById('det-stat-partecipati');
+        if (elDetPart) elDetPart.textContent = storicoCM.partecipati || 0;
+        const elDetVinti = document.getElementById('det-stat-vinti');
+        if (elDetVinti) elDetVinti.textContent = storicoCM.vinti || 0;
+        const elDetLista = document.getElementById('det-cm-storico-lista');
+        if (elDetLista) elDetLista.innerHTML = renderTabellaStoricoCampoMarzio(storicoCM.lista, 'gruppo');
+        
     } catch (e) {
         console.error("Errore caricamento dettaglio gruppo:", e);
         alert("Errore durante il caricamento del dettaglio gruppo.");
@@ -5268,9 +5289,14 @@ async function renderCapoDatiGruppo() {
         const elUffDal = document.getElementById('capo-val-ufficiale-dal');
         if (elUffDal) elUffDal.textContent = formatDate(gruppi.data_inizio_ufficiale);
         
-        // Statistiche
-        document.getElementById('capo-stat-partecipati').textContent = "0";
-        document.getElementById('capo-stat-vinti').textContent = "0";
+        // Statistiche Campo Marzio
+        const storicoCM = await caricaStoricoCampoMarzio('gruppo', gruppi.nome);
+        const elCapoPart = document.getElementById('capo-stat-partecipati');
+        if (elCapoPart) elCapoPart.textContent = storicoCM.partecipati || 0;
+        const elCapoVinti = document.getElementById('capo-stat-vinti');
+        if (elCapoVinti) elCapoVinti.textContent = storicoCM.vinti || 0;
+        const elCapoLista = document.getElementById('capo-cm-storico-lista');
+        if (elCapoLista) elCapoLista.innerHTML = renderTabellaStoricoCampoMarzio(storicoCM.lista, 'gruppo');
         
         // Carica storico ruoli
         await renderCapoStoricoRuoli(groupId);
@@ -9649,6 +9675,316 @@ async function renderOnorificenzeAtleta() {
     } catch (e) {
         console.warn("Errore caricamento onorificenze atleta:", e);
         container.classList.add('epk-hidden');
+    }
+}
+
+// ─── PROPAGAZIONE ESITI E STORICO CAMPO MARZIO ─────────────────────────────
+async function caricaStoricoCampoMarzio(filtroTipo, filtroId) {
+    const res = { partecipati: 0, vinti: 0, persi: 0, pareggi: 0, lista: [] };
+    if (!filtroId) return res;
+
+    try {
+        // 1. Recupera tutti gli eventi di tipo campo_marzio
+        const { data: eventi, error: errEvt } = await supabaseClient
+            .from('epika_eventi')
+            .select('id, titolo, data_inizio, data_fine, tipo_evento, attivo')
+            .eq('tipo_evento', 'campo_marzio')
+            .order('data_inizio', { ascending: false });
+
+        if (errEvt || !eventi || eventi.length === 0) return res;
+
+        const eventiIds = eventi.map(e => e.id);
+
+        // 2. Recupera gli eserciti associati agli eventi
+        const { data: esercitiList, error: errEse } = await supabaseClient
+            .from('epika_eserciti_eventi')
+            .select('evento_id, nome_esercito_a, nome_esercito_b, assegnazione_gruppi, assegnazione_mercenari, esercito_vincente')
+            .in('evento_id', eventiIds);
+
+        if (errEse) throw errEse;
+
+        const esercitiMap = {};
+        (esercitiList || []).forEach(ese => {
+            esercitiMap[ese.evento_id] = ese;
+        });
+
+        if (filtroTipo === 'gruppo') {
+            const targetNomeGruppo = String(filtroId).trim().toUpperCase();
+
+            eventi.forEach(ev => {
+                const ese = esercitiMap[ev.id];
+                if (!ese || !ese.assegnazione_gruppi) return;
+
+                let schieramento = null;
+                for (const [gNome, side] of Object.entries(ese.assegnazione_gruppi)) {
+                    if (gNome.trim().toUpperCase() === targetNomeGruppo) {
+                        schieramento = side;
+                        break;
+                    }
+                }
+
+                if (!schieramento) return;
+
+                const nomeA = ese.nome_esercito_a || 'ESERCITO A';
+                const nomeB = ese.nome_esercito_b || 'ESERCITO B';
+                const nomeEsercito = schieramento === 'A' ? nomeA : (schieramento === 'B' ? nomeB : 'N/D');
+                const vincente = ese.esercito_vincente;
+
+                let esito = 'in_corso';
+                let badge = '<span style="color: #f59e0b; font-weight: bold;">⏳ IN CORSO</span>';
+
+                if (vincente === 'PAREGGIO') {
+                    esito = 'pareggio';
+                    badge = '<span style="color: #fde047; font-weight: bold;">⚖️ PAREGGIO</span>';
+                } else if (vincente === schieramento) {
+                    esito = 'vinto';
+                    badge = '<span style="color: #4ade80; font-weight: bold;">🏆 VITTORIA</span>';
+                } else if (vincente && vincente !== schieramento) {
+                    esito = 'perso';
+                    badge = '<span style="color: #ef4444; font-weight: bold;">❌ SCONFITTA</span>';
+                }
+
+                res.lista.push({
+                    evento_id: ev.id,
+                    titolo: ev.titolo,
+                    anno: new Date(ev.data_inizio).getFullYear(),
+                    data_inizio: ev.data_inizio,
+                    schieramento: schieramento,
+                    nomeEsercito: nomeEsercito,
+                    vincente: vincente,
+                    esito: esito,
+                    badge: badge
+                });
+            });
+
+        } else if (filtroTipo === 'utente') {
+            const utenteId = filtroId;
+
+            // Recupera presenze confermate dell'utente
+            const { data: presenze, error: errPres } = await supabaseClient
+                .from('epika_presenze_eventi')
+                .select('evento_id, presente')
+                .eq('utente_id', utenteId)
+                .eq('presente', true)
+                .in('evento_id', eventiIds);
+
+            if (errPres) throw errPres;
+
+            const eventiPresentiIds = new Set((presenze || []).map(p => p.evento_id));
+            if (eventiPresentiIds.size === 0) return res;
+
+            // Recupera iscrizioni dell'utente per questi eventi per conoscere il gruppo_storico_id al momento dell'evento
+            const { data: iscrizioni, error: errIsc } = await supabaseClient
+                .from('epika_iscrizioni_eventi')
+                .select('evento_id, gruppo_storico_id')
+                .eq('utente_id', utenteId)
+                .in('evento_id', Array.from(eventiPresentiIds));
+
+            if (errIsc) throw errIsc;
+
+            const iscrizioniMap = {};
+            (iscrizioni || []).forEach(i => {
+                iscrizioniMap[i.evento_id] = i.gruppo_storico_id;
+            });
+
+            // Mappa gruppi id -> nome
+            const { data: rawGruppi } = await supabaseClient
+                .from('epika_gruppi_storici')
+                .select('id, nome');
+            const gruppiMap = {};
+            (rawGruppi || []).forEach(g => { gruppiMap[g.id] = g.nome; });
+
+            eventi.forEach(ev => {
+                if (!eventiPresentiIds.has(ev.id)) return;
+
+                const ese = esercitiMap[ev.id];
+                const gruppoId = iscrizioniMap[ev.id];
+                const gruppoNome = gruppoId ? (gruppiMap[gruppoId] || 'MERCENARI') : 'MERCENARI';
+
+                let schieramento = null;
+                if (ese) {
+                    if (gruppoNome.toUpperCase() !== 'MERCENARI' && ese.assegnazione_gruppi) {
+                        for (const [gNome, side] of Object.entries(ese.assegnazione_gruppi)) {
+                            if (gNome.trim().toUpperCase() === gruppoNome.trim().toUpperCase()) {
+                                schieramento = side;
+                                break;
+                            }
+                        }
+                    }
+                    if (!schieramento && ese.assegnazione_mercenari && ese.assegnazione_mercenari[utenteId]) {
+                        schieramento = ese.assegnazione_mercenari[utenteId];
+                    }
+                }
+
+                const nomeA = ese?.nome_esercito_a || 'ESERCITO A';
+                const nomeB = ese?.nome_esercito_b || 'ESERCITO B';
+                const nomeEsercito = schieramento === 'A' ? nomeA : (schieramento === 'B' ? nomeB : 'NON ASSEGNATO');
+                const vincente = ese?.esercito_vincente;
+
+                let esito = 'partecipato';
+                let badge = '<span style="color: #60a5fa; font-weight: bold;">⚔️ PARTECIPATO</span>';
+
+                if (schieramento && vincente) {
+                    if (vincente === 'PAREGGIO') {
+                        esito = 'pareggio';
+                        badge = '<span style="color: #fde047; font-weight: bold;">⚖️ PAREGGIO</span>';
+                    } else if (vincente === schieramento) {
+                        esito = 'vinto';
+                        badge = '<span style="color: #4ade80; font-weight: bold;">🏆 VITTORIA</span>';
+                    } else {
+                        esito = 'perso';
+                        badge = '<span style="color: #ef4444; font-weight: bold;">❌ SCONFITTA</span>';
+                    }
+                } else if (schieramento && !vincente) {
+                    esito = 'in_corso';
+                    badge = '<span style="color: #f59e0b; font-weight: bold;">⏳ IN CORSO</span>';
+                }
+
+                res.lista.push({
+                    evento_id: ev.id,
+                    titolo: ev.titolo,
+                    anno: new Date(ev.data_inizio).getFullYear(),
+                    data_inizio: ev.data_inizio,
+                    gruppo: gruppoNome,
+                    schieramento: schieramento,
+                    nomeEsercito: nomeEsercito,
+                    vincente: vincente,
+                    esito: esito,
+                    badge: badge
+                });
+            });
+        }
+
+        res.partecipati = res.lista.length;
+        res.vinti = res.lista.filter(x => x.esito === 'vinto').length;
+        res.persi = res.lista.filter(x => x.esito === 'perso').length;
+        res.pareggi = res.lista.filter(x => x.esito === 'pareggio').length;
+
+    } catch (err) {
+        console.error("Errore calcolo storico Campo Marzio:", err);
+    }
+
+    return res;
+}
+
+function renderTabellaStoricoCampoMarzio(lista, tipo = 'gruppo') {
+    if (!lista || lista.length === 0) {
+        return '<p style="color: gray; font-style: italic; margin: 4px 0; font-size: 11px;">Nessuna partecipazione a Campo Marzio registrata.</p>';
+    }
+
+    let rowsHtml = '';
+    lista.forEach(item => {
+        const annoEvt = item.anno || (item.data_inizio ? new Date(item.data_inizio).getFullYear() : '-');
+        const tit = escapeHtml(String(item.titolo || 'Campo Martio').toUpperCase());
+        const armyName = escapeHtml(String(item.nomeEsercito || '-').toUpperCase());
+        const sideLetter = item.schieramento ? `[${item.schieramento}] ` : '';
+        const groupCol = (tipo === 'utente') ? `<td style="padding: 6px 8px; color: var(--epk-gold);">${escapeHtml(String(item.gruppo || 'MERCENARI').toUpperCase())}</td>` : '';
+
+        rowsHtml += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="padding: 6px 8px; font-family: monospace; font-weight: bold; color: var(--epk-gold);">${annoEvt}</td>
+                <td style="padding: 6px 8px; font-weight: bold; color: white;">${tit}</td>
+                ${groupCol}
+                <td style="padding: 6px 8px; color: #93c5fd;">${sideLetter}${armyName}</td>
+                <td style="padding: 6px 8px; text-align: center;">${item.badge}</td>
+            </tr>
+        `;
+    });
+
+    const thGroup = (tipo === 'utente') ? '<th style="padding: 6px 8px;">GRUPPO / RUOLO</th>' : '';
+
+    return `
+        <div style="overflow-x: auto; max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; background: rgba(0,0,0,0.25);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 10px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--epk-gold-dim); color: var(--epk-gold); font-family: 'Cinzel', serif; background: rgba(0,0,0,0.4);">
+                        <th style="padding: 6px 8px;">ANNO</th>
+                        <th style="padding: 6px 8px;">EVENTO</th>
+                        ${thGroup}
+                        <th style="padding: 6px 8px;">SCHIERAMENTO</th>
+                        <th style="padding: 6px 8px; text-align: center;">ESITO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function caricaEventiPassatiConclusi() {
+    const listContainer = document.getElementById('epk-eventi-passati-lista');
+    const cardWrapper = document.getElementById('epk-eventi-passati-card');
+    if (!listContainer) return;
+
+    try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const { data: eventi, error: eError } = await supabaseClient
+            .from('epika_eventi')
+            .select('id, titolo, descrizione, data_inizio, data_fine, luogo, costo')
+            .eq('tipo_evento', 'campo_marzio')
+            .lt('data_fine', todayStr)
+            .order('data_inizio', { ascending: false });
+
+        if (eError) throw eError;
+
+        if (!eventi || eventi.length === 0) {
+            if (cardWrapper) cardWrapper.classList.add('epk-hidden');
+            return;
+        }
+
+        if (cardWrapper) cardWrapper.classList.remove('epk-hidden');
+
+        const eventiIds = eventi.map(e => e.id);
+
+        const { data: eserciti } = await supabaseClient
+            .from('epika_eserciti_eventi')
+            .select('evento_id, nome_esercito_a, nome_esercito_b, esercito_vincente')
+            .in('evento_id', eventiIds);
+
+        const eseMap = {};
+        (eserciti || []).forEach(ese => {
+            eseMap[ese.evento_id] = ese;
+        });
+
+        let html = '';
+        eventi.forEach(evt => {
+            const dataInizioF = formattaData(evt.data_inizio);
+            const dataFineF = formattaData(evt.data_fine);
+            const dataFormattata = dataInizioF === dataFineF ? dataInizioF : `DAL ${dataInizioF} AL ${dataFineF}`;
+            const ese = eseMap[evt.id];
+
+            let vincitoreBadge = '<span style="font-size: 10px; color: gray; border: 1px solid gray; padding: 2px 6px; border-radius: 3px;">ESITO: IN DEFINIZIONE</span>';
+            if (ese?.esercito_vincente === 'A') {
+                const nomeA = escapeHtml(ese.nome_esercito_a || 'ESERCITO A').toUpperCase();
+                vincitoreBadge = `<span style="font-size: 10px; color: #93c5fd; background: rgba(30, 58, 138, 0.4); border: 1px solid #3b82f6; padding: 3px 8px; border-radius: 4px; font-weight: bold;">🏆 TRIONFATORE: ${nomeA} (ESERCITO A)</span>`;
+            } else if (ese?.esercito_vincente === 'B') {
+                const nomeB = escapeHtml(ese.nome_esercito_b || 'ESERCITO B').toUpperCase();
+                vincitoreBadge = `<span style="font-size: 10px; color: #fca5a5; background: rgba(136, 36, 43, 0.4); border: 1px solid #ef4444; padding: 3px 8px; border-radius: 4px; font-weight: bold;">🏆 TRIONFATORE: ${nomeB} (ESERCITO B)</span>`;
+            } else if (ese?.esercito_vincente === 'PAREGGIO') {
+                vincitoreBadge = '<span style="font-size: 10px; color: #fde047; background: rgba(245, 158, 11, 0.3); border: 1px solid #f59e0b; padding: 3px 8px; border-radius: 4px; font-weight: bold;">⚖️ PAREGGIO</span>';
+            }
+
+            html += `
+                <div class="epk-card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255, 255, 255, 0.08); padding: 14px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 16px; margin: 0;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span class="epk-headline" style="font-size: 13px; color: var(--epk-gold);">${escapeHtml(evt.titolo).toUpperCase()}</span>
+                        <span style="font-size: 10px; font-family: monospace; color: rgba(245, 230, 200, 0.6);">
+                            📅 ${dataFormattata} | 📍 ${evt.luogo ? escapeHtml(evt.luogo).toUpperCase() : 'NON SPECIFICATO'}
+                        </span>
+                    </div>
+                    <div>
+                        ${vincitoreBadge}
+                    </div>
+                </div>
+            `;
+        });
+
+        listContainer.innerHTML = html;
+
+    } catch (err) {
+        console.error("Errore caricamento eventi passati:", err);
     }
 }
 
