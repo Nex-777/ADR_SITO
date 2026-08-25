@@ -1170,40 +1170,181 @@ async function inviaRichiestaAbilitazione(anno) {
 
 async function caricaStatistiche() {
     try {
-        const storico = await caricaStoricoCampoMarzio('utente', currentUser.id);
+        await caricaMedagliereTimeline(currentUser?.id);
+    } catch (e) {
+        console.error("Errore calcolo statistiche:", e);
+    }
+}
 
-        const elCampi = document.getElementById('epk-stat-campi');
-        if (elCampi) elCampi.textContent = storico.partecipati || 0;
+async function caricaMedagliereTimeline(atletaId) {
+    const listContainer = document.getElementById('epk-medagliere-timeline-list');
+    if (!listContainer) return;
+    if (!atletaId) {
+        listContainer.innerHTML = '<div style="text-align: center; color: gray; font-size: 11px; padding: 12px 0;">Nessun dato disponibile.</div>';
+        return;
+    }
 
-        const elVinti = document.getElementById('epk-stat-cm-vinti');
-        if (elVinti) elVinti.textContent = storico.vinti || 0;
+    try {
+        // 1. Fetch parallelo: Profilo, Campioni SCAB, Storico Campo Marzio, Palmarès Tornei
+        const [profRes, campioniRes, storicoCM, palmaresRes] = await Promise.all([
+            supabaseClient
+                .from('epika_profili')
+                .select('id, nome_di_battaglia, primo_anno_partecipazione')
+                .eq('id', atletaId)
+                .maybeSingle(),
+            supabaseClient
+                .from('epika_campioni_scab')
+                .select('anno, nome_campione, profilo_id, note'),
+            caricaStoricoCampoMarzio('utente', atletaId),
+            supabaseClient
+                .from('epika_palmares_atleti')
+                .select('*')
+                .eq('atleta_id', atletaId)
+                .eq('attivo', true)
+                .order('anno', { ascending: true })
+        ]);
 
-        const { count: torneiCount, error: torneiError } = await supabaseClient
-            .from('epika_presenze_eventi')
-            .select('id, evento:epika_eventi(tipo_evento)', { count: 'exact', head: true })
-            .eq('utente_id', currentUser.id)
-            .eq('presente', true)
-            .eq('epika_eventi.tipo_evento', 'torneo');
+        const prof = profRes.data;
+        const campioni = campioniRes.data || [];
+        const palmares = palmaresRes.data || [];
 
-        if (!torneiError) {
-            const elTornei = document.getElementById('epk-stat-tornei');
-            if (elTornei) elTornei.textContent = torneiCount || 0;
+        const timelineItems = [];
+
+        // A. Origine / Primo Anno in Epika
+        if (prof && prof.primo_anno_partecipazione) {
+            timelineItems.push({
+                anno: prof.primo_anno_partecipazione,
+                priorita: 1,
+                icona: '🏛️',
+                testo: 'PRIMO ANNO IN EPIKA',
+                badge: '<span style="font-size: 9px; color: var(--epk-gold); border: 1px solid rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.1); padding: 2px 6px; border-radius: 3px; font-weight: bold;">ORIGINE</span>'
+            });
         }
 
-        // Sezione Palmarès / Storico Battaglie dell'Atleta
+        // B. Palmarès Tornei e Riconoscimenti Storici
+        palmares.forEach(p => {
+            let icona = '⚔️';
+            let badgePodio = '';
+
+            if (p.posizione === 1) {
+                icona = '🥇';
+                badgePodio = '<span style="font-size: 9px; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.15); padding: 2px 6px; border-radius: 3px; font-weight: bold;">1° CLASSIFICATO 🥇</span>';
+            } else if (p.posizione === 2) {
+                icona = '🥈';
+                badgePodio = '<span style="font-size: 9px; color: #cbd5e1; border: 1px solid rgba(203, 213, 225, 0.4); background: rgba(203, 213, 225, 0.15); padding: 2px 6px; border-radius: 3px; font-weight: bold;">2° POSTO 🥈</span>';
+            } else if (p.posizione === 3) {
+                icona = '🥉';
+                badgePodio = '<span style="font-size: 9px; color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.15); padding: 2px 6px; border-radius: 3px; font-weight: bold;">3° POSTO 🥉</span>';
+            } else if (p.tipo === 'onorificenza') {
+                icona = '🎖️';
+                badgePodio = '<span style="font-size: 9px; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.15); padding: 2px 6px; border-radius: 3px; font-weight: bold;">ONORIFICENZA</span>';
+            } else if (p.tipo === 'titolo') {
+                icona = '👑';
+                badgePodio = '<span style="font-size: 9px; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.15); padding: 2px 6px; border-radius: 3px; font-weight: bold;">TITOLO</span>';
+            }
+
+            const posStr = p.posizione ? `( POS ${p.posizione} )` : '';
+            const dettagliStr = p.dettagli ? p.dettagli.trim() : '';
+            const pezzi = [p.titolo_evento, dettagliStr, posStr].filter(Boolean);
+            const testo = pezzi.join(' ');
+
+            timelineItems.push({
+                anno: p.anno,
+                priorita: 2,
+                icona: icona,
+                testo: testo.toUpperCase(),
+                badge: badgePodio
+            });
+        });
+
+        // C. Campione SCAB (Albo d'Oro)
+        const nomeBattaglia = (prof?.nome_di_battaglia || '').trim().toUpperCase();
+        campioni.forEach(c => {
+            const isMatch = (c.profilo_id && c.profilo_id === atletaId) || 
+                            (nomeBattaglia && c.nome_campione && c.nome_campione.trim().toUpperCase() === nomeBattaglia);
+            if (isMatch) {
+                timelineItems.push({
+                    anno: c.anno,
+                    priorita: 3,
+                    icona: '👑',
+                    testo: `CAMPIONE SCAB${c.note ? ' — ' + c.note : ''}`.toUpperCase(),
+                    badge: '<span style="font-size: 9px; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.2); padding: 2px 6px; border-radius: 3px; font-weight: bold;">👑 ALBO D\'ORO</span>'
+                });
+            }
+        });
+
+        // D. Partecipazioni Campo Marzio
+        (storicoCM?.lista || []).forEach(cm => {
+            const annoEvt = cm.anno || (cm.data_inizio ? new Date(cm.data_inizio).getFullYear() : 2026);
+            const tit = cm.titolo || 'CAMPO MARTIO';
+            const grp = cm.gruppo || 'MERCENARI';
+            const ese = cm.nomeEsercito || 'ESERCITO';
+            const esitoStr = (cm.esito || 'partecipato').toUpperCase();
+
+            let badgeCM = '';
+            if (cm.esito === 'vinto') {
+                badgeCM = '<span style="font-size: 9px; color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.1); padding: 2px 6px; border-radius: 3px; font-weight: bold;">🏆 VITTORIA</span>';
+            } else if (cm.esito === 'perso') {
+                badgeCM = '<span style="font-size: 9px; color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 3px; font-weight: bold;">❌ SCONFITTA</span>';
+            } else if (cm.esito === 'pareggio') {
+                badgeCM = '<span style="font-size: 9px; color: #fde047; border: 1px solid rgba(253, 224, 71, 0.3); background: rgba(253, 224, 71, 0.1); padding: 2px 6px; border-radius: 3px; font-weight: bold;">⚖️ PAREGGIO</span>';
+            } else {
+                badgeCM = '<span style="font-size: 9px; color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3); background: rgba(96, 165, 250, 0.1); padding: 2px 6px; border-radius: 3px; font-weight: bold;">⚔️ PARTECIPATO</span>';
+            }
+
+            const testoCM = `${tit} — ${grp} — ${ese} — ${esitoStr}`;
+
+            timelineItems.push({
+                anno: annoEvt,
+                priorita: 4,
+                icona: '⚔️',
+                testo: testoCM.toUpperCase(),
+                badge: badgeCM
+            });
+        });
+
+        // 2. Ordinamento Cronologico Crescente (dal passato al presente)
+        timelineItems.sort((a, b) => {
+            if (a.anno !== b.anno) return a.anno - b.anno;
+            return (a.priorita || 0) - (b.priorita || 0);
+        });
+
+        // 3. Rendering con HTML escaping di sicurezza (SECURITY.md)
+        if (timelineItems.length === 0) {
+            listContainer.innerHTML = '<div style="text-align: center; color: gray; font-size: 11px; padding: 20px 0;">Nessun record presente nel medagliere storico.</div>';
+            return;
+        }
+
+        listContainer.innerHTML = timelineItems.map(item => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(251, 191, 36, 0.15); border-radius: 4px; gap: 12px; transition: all 0.2s ease;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0;">
+                    <span style="font-family: 'Cinzel', serif; font-size: 12px; font-weight: bold; color: var(--epk-gold); background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.25); padding: 2px 8px; border-radius: 3px; min-width: 44px; text-align: center;">
+                        ${escapeHtml(String(item.anno))}
+                    </span>
+                    <span style="font-size: 14px;">${item.icona}</span>
+                    <span style="font-size: 11px; font-weight: bold; color: var(--epk-parchment); letter-spacing: 0.5px; text-transform: uppercase; word-break: break-word;">
+                        ${escapeHtml(item.testo)}
+                    </span>
+                </div>
+                ${item.badge ? `<div style="flex-shrink: 0;">${item.badge}</div>` : ''}
+            </div>
+        `).join('');
+
+        // Sezione Palmarès / Storico Battaglie dell'Atleta (card separata)
         const palmaresCard = document.getElementById('epk-atleta-palmares-card');
         const palmaresContent = document.getElementById('epk-atleta-palmares-content');
         if (palmaresCard && palmaresContent) {
-            if (storico.partecipati > 0) {
+            if (storicoCM?.partecipati > 0) {
                 palmaresCard.classList.remove('epk-hidden');
-                palmaresContent.innerHTML = renderTabellaStoricoCampoMarzio(storico.lista, 'utente');
+                palmaresContent.innerHTML = renderTabellaStoricoCampoMarzio(storicoCM.lista, 'utente');
             } else {
                 palmaresCard.classList.add('epk-hidden');
             }
         }
 
-    } catch (e) {
-        console.error("Errore calcolo statistiche:", e);
+    } catch (err) {
+        console.error("Errore caricamento medagliere timeline:", err);
+        listContainer.innerHTML = `<div style="color: #ef4444; font-size: 11px; padding: 10px 0;">Errore caricamento storico: ${escapeHtml(err.message)}</div>`;
     }
 }
 
@@ -2644,6 +2785,8 @@ function switchScabSubTab(subTab) {
     document.getElementById('scab-panel-allenatori').classList.add('epk-hidden');
     const panelCampioni = document.getElementById('scab-panel-campioni');
     if (panelCampioni) panelCampioni.classList.add('epk-hidden');
+    const panelPalmares = document.getElementById('scab-panel-palmares');
+    if (panelPalmares) panelPalmares.classList.add('epk-hidden');
     
     document.getElementById('scab-tab-btn-abbinamenti').style.borderColor = 'transparent';
     document.getElementById('scab-tab-btn-abbinamenti').style.color = 'var(--epk-parchment)';
@@ -2656,11 +2799,17 @@ function switchScabSubTab(subTab) {
         btnCampioni.style.borderColor = 'transparent';
         btnCampioni.style.color = 'var(--epk-parchment)';
     }
+    const btnPalmares = document.getElementById('scab-tab-btn-palmares');
+    if (btnPalmares) {
+        btnPalmares.style.borderColor = 'transparent';
+        btnPalmares.style.color = 'var(--epk-parchment)';
+    }
 
     let btnId = 'scab-tab-btn-abbinamenti';
     if (subTab === 'anagrafica') btnId = 'scab-tab-btn-palestre-centri';
     else if (subTab === 'allenatori') btnId = 'scab-tab-btn-ruoli';
     else if (subTab === 'campioni') btnId = 'scab-tab-btn-campioni';
+    else if (subTab === 'palmares') btnId = 'scab-tab-btn-palmares';
 
     const btn = document.getElementById(btnId);
     if (btn) {
@@ -2674,6 +2823,8 @@ function switchScabSubTab(subTab) {
     }
     if (subTab === 'campioni') {
         caricaCampioniScab();
+    } else if (subTab === 'palmares') {
+        caricaPalmaresAdmin();
     }
 }
 
@@ -2786,6 +2937,209 @@ async function rimuoviCampioneScab(anno) {
         if (error) throw error;
         caricaCampioniScab();
     } catch (err) {
+        alert('Errore: ' + err.message);
+    }
+}
+
+// ─── PALMARÈS & TORNEI STORICI ATLETI (ADMIN) ───────────────────
+let cachedPalmaresAdmin = [];
+
+async function caricaPalmaresAdmin() {
+    const lista = document.getElementById('scab-palmares-lista');
+    const datalist = document.getElementById('scab-palmares-atleti-datalist');
+    if (!lista) return;
+
+    lista.innerHTML = '<div style="text-align:center; color:gray; font-size:11px; padding:12px 0;">Caricamento palmarès...</div>';
+
+    try {
+        // Popola datalist atleti se non già popolato
+        if (datalist && datalist.children.length === 0) {
+            const { data: profili } = await supabaseClient
+                .from('epika_profili')
+                .select('id, nome_di_battaglia')
+                .order('nome_di_battaglia');
+
+            (profili || []).forEach(p => {
+                if (p.nome_di_battaglia) {
+                    const opt = document.createElement('option');
+                    opt.value = p.nome_di_battaglia.trim().toUpperCase();
+                    datalist.appendChild(opt);
+                }
+            });
+        }
+
+        // Carica dati palmarès attivi
+        const { data: rows, error } = await supabaseClient
+            .from('epika_palmares_atleti')
+            .select(`
+                id,
+                atleta_id,
+                anno,
+                tipo,
+                titolo_evento,
+                posizione,
+                dettagli,
+                attivo,
+                created_at,
+                atleta:epika_profili(nome_di_battaglia)
+            `)
+            .eq('attivo', true)
+            .order('anno', { ascending: false });
+
+        if (error) throw error;
+
+        cachedPalmaresAdmin = rows || [];
+        renderListaPalmaresAdmin(cachedPalmaresAdmin);
+
+    } catch (err) {
+        console.error("Errore caricamento palmares admin:", err);
+        lista.innerHTML = `<div style="color:#ef4444; font-size:11px; padding:10px 0;">Errore: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderListaPalmaresAdmin(items) {
+    const lista = document.getElementById('scab-palmares-lista');
+    if (!lista) return;
+
+    if (!items || items.length === 0) {
+        lista.innerHTML = '<div style="text-align:center; color:gray; font-size:11px; padding:16px 0;">Nessun evento o risultato registrato nel palmarès.</div>';
+        return;
+    }
+
+    lista.innerHTML = items.map(item => {
+        const nomeAtleta = item.atleta?.nome_di_battaglia || 'ATLETA';
+        let posBadge = '';
+        if (item.posizione === 1) posBadge = '<span style="color:#fbbf24; font-weight:bold; font-size:10px; margin-left:6px;">🥇 1° POSTO</span>';
+        else if (item.posizione === 2) posBadge = '<span style="color:#cbd5e1; font-weight:bold; font-size:10px; margin-left:6px;">🥈 2° POSTO</span>';
+        else if (item.posizione === 3) posBadge = '<span style="color:#f59e0b; font-weight:bold; font-size:10px; margin-left:6px;">🥉 3° POSTO</span>';
+        else if (item.posizione) posBadge = `<span style="color:var(--epk-gold); font-size:10px; margin-left:6px;">POS ${escapeHtml(String(item.posizione))}</span>`;
+
+        const tipoBadge = `<span style="font-size:9px; text-transform:uppercase; color:rgba(245,230,200,0.5); border:1px solid rgba(255,255,255,0.1); padding:1px 4px; border-radius:2px; margin-left:6px;">${escapeHtml(item.tipo)}</span>`;
+
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(0,0,0,0.2); border:1px solid rgba(251,191,36,0.15); border-radius:4px; gap:8px;">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-width:0;">
+                    <span style="font-family:'Cinzel',serif; font-size:12px; color:var(--epk-gold); font-weight:bold; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.25); padding:1px 6px; border-radius:3px;">
+                        ${escapeHtml(String(item.anno))}
+                    </span>
+                    <span style="font-size:12px; color:var(--epk-gold); font-weight:bold;">
+                        ${escapeHtml(nomeAtleta.toUpperCase())}
+                    </span>
+                    <span style="font-size:11px; color:var(--epk-parchment); font-weight:bold;">
+                        ${escapeHtml(item.titolo_evento)}
+                    </span>
+                    ${item.dettagli ? `<span style="font-size:10px; color:rgba(245,230,200,0.7);">(${escapeHtml(item.dettagli)})</span>` : ''}
+                    ${posBadge}
+                    ${tipoBadge}
+                </div>
+                <div>
+                    ${!isReadOnly() ? `
+                        <button class="epk-btn-secondary" style="padding:4px 8px; font-size:9px; color:#ef4444; border-color:#ef4444;" title="Disattiva / Rimuovi" onclick="rimuoviPalmaresAtleta('${item.id}', '${escapeHtml(item.titolo_evento)}')">✕</button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function filtraPalmaresAdmin(query) {
+    const q = (query || '').trim().toLowerCase();
+    if (!q) {
+        renderListaPalmaresAdmin(cachedPalmaresAdmin);
+        return;
+    }
+    const filtered = cachedPalmaresAdmin.filter(item => {
+        const nome = (item.atleta?.nome_di_battaglia || '').toLowerCase();
+        const tit = (item.titolo_evento || '').toLowerCase();
+        const det = (item.dettagli || '').toLowerCase();
+        const anno = String(item.anno || '');
+        return nome.includes(q) || tit.includes(q) || det.includes(q) || anno.includes(q);
+    });
+    renderListaPalmaresAdmin(filtered);
+}
+
+async function salvaPalmaresAtleta() {
+    if (isReadOnly()) return;
+
+    const nomeInput = document.getElementById('scab-palmares-atleta');
+    const annoInput = document.getElementById('scab-palmares-anno');
+    const tipoInput = document.getElementById('scab-palmares-tipo');
+    const titInput = document.getElementById('scab-palmares-titolo');
+    const posInput = document.getElementById('scab-palmares-pos');
+    const detInput = document.getElementById('scab-palmares-dettagli');
+
+    const nomeBattaglia = (nomeInput?.value || '').trim();
+    const anno = parseInt(annoInput?.value);
+    const tipo = tipoInput?.value || 'torneo';
+    const titolo = (titInput?.value || '').trim();
+    const posVal = posInput?.value ? parseInt(posInput.value) : null;
+    const dettagli = (detInput?.value || '').trim();
+
+    if (!nomeBattaglia || !anno || !titolo) {
+        alert('Compilare i campi obbligatori: Atleta, Anno e Titolo Evento/Torneo.');
+        return;
+    }
+
+    try {
+        // Cerca profilo atleta per nome di battaglia
+        const { data: prof, error: profErr } = await supabaseClient
+            .from('epika_profili')
+            .select('id, nome_di_battaglia')
+            .ilike('nome_di_battaglia', nomeBattaglia)
+            .limit(1)
+            .maybeSingle();
+
+        if (profErr) throw profErr;
+        if (!prof) {
+            alert(`Nessun profilo atleta trovato con il nome di battaglia "${nomeBattaglia}".`);
+            return;
+        }
+
+        const payload = {
+            atleta_id: prof.id,
+            anno: anno,
+            tipo: tipo,
+            titolo_evento: titolo,
+            posizione: posVal,
+            dettagli: dettagli,
+            attivo: true
+        };
+
+        const { error: insErr } = await supabaseClient
+            .from('epika_palmares_atleti')
+            .insert(payload);
+
+        if (insErr) throw insErr;
+
+        // Reset campi form
+        if (titInput) titInput.value = '';
+        if (posInput) posInput.value = '';
+        if (detInput) detInput.value = '';
+
+        await caricaPalmaresAdmin();
+        alert('Risultato storico registrato con successo nel Palmarès!');
+
+    } catch (err) {
+        console.error("Errore salvataggio palmares:", err);
+        alert('Errore salvataggio: ' + err.message);
+    }
+}
+
+async function rimuoviPalmaresAtleta(id, titolo) {
+    if (isReadOnly()) return;
+    if (!confirm(`Rimuovere la voce "${titolo}" dal palmarès?`)) return;
+
+    try {
+        // Regola EPIKA: soft delete (attivo = false)
+        const { error } = await supabaseClient
+            .from('epika_palmares_atleti')
+            .update({ attivo: false, updated_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) throw error;
+        await caricaPalmaresAdmin();
+    } catch (err) {
+        console.error("Errore rimozione palmares:", err);
         alert('Errore: ' + err.message);
     }
 }
@@ -9771,21 +10125,35 @@ async function caricaStoricoCampoMarzio(filtroTipo, filtroId) {
             if (errPres) throw errPres;
 
             const eventiPresentiIds = new Set((presenze || []).map(p => p.evento_id));
-            if (eventiPresentiIds.size === 0) return res;
 
             // Recupera iscrizioni dell'utente per questi eventi per conoscere il gruppo_storico_id al momento dell'evento
             const { data: iscrizioni, error: errIsc } = await supabaseClient
                 .from('epika_iscrizioni_eventi')
                 .select('evento_id, gruppo_storico_id')
                 .eq('utente_id', utenteId)
-                .in('evento_id', Array.from(eventiPresentiIds));
+                .in('evento_id', eventiIds);
 
             if (errIsc) throw errIsc;
+
+            // Se non ci sono presenze registrate formalmente per l'evento, le iscrizioni confermano la partecipazione
+            (iscrizioni || []).forEach(i => {
+                eventiPresentiIds.add(i.evento_id);
+            });
+
+            if (eventiPresentiIds.size === 0) return res;
 
             const iscrizioniMap = {};
             (iscrizioni || []).forEach(i => {
                 iscrizioniMap[i.evento_id] = i.gruppo_storico_id;
             });
+
+            // Recupera gruppo storico del profilo come fallback se non specificato nell'iscrizione
+            const { data: profUser } = await supabaseClient
+                .from('epika_profili')
+                .select('gruppo_storico_id')
+                .eq('id', utenteId)
+                .maybeSingle();
+            const fallbackGruppoId = profUser?.gruppo_storico_id;
 
             // Mappa gruppi id -> nome
             const { data: rawGruppi } = await supabaseClient
@@ -9798,7 +10166,7 @@ async function caricaStoricoCampoMarzio(filtroTipo, filtroId) {
                 if (!eventiPresentiIds.has(ev.id)) return;
 
                 const ese = esercitiMap[ev.id];
-                const gruppoId = iscrizioniMap[ev.id];
+                const gruppoId = iscrizioniMap[ev.id] || fallbackGruppoId;
                 const gruppoNome = gruppoId ? (gruppiMap[gruppoId] || 'MERCENARI') : 'MERCENARI';
 
                 let schieramento = null;

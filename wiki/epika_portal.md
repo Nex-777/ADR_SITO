@@ -160,6 +160,19 @@ Stores individual commendations (encomi) and infractions/warnings (richiami) per
 *   `data_assegnazione` (DATE)
 *   `attivo` (BOOLEAN DEFAULT TRUE)
 
+### 14. `public.epika_palmares_atleti`
+Stores historical tournament results, podiums, titles, and special recognitions per athlete.
+*   `id` (UUID PK)
+*   `atleta_id` (UUID FK to `epika_profili.id` ON DELETE CASCADE)
+*   `anno` (INT)
+*   `tipo` (TEXT CHECK `torneo`, `titolo`, `onorificenza`, `speciale`)
+*   `titolo_evento` (TEXT)
+*   `posizione` (INT NULLABLE, e.g. 1, 2, 3)
+*   `dettagli` (TEXT)
+*   `attivo` (BOOLEAN DEFAULT TRUE)
+*   `created_at` (TIMESTAMPTZ DEFAULT NOW())
+*   `updated_at` (TIMESTAMPTZ DEFAULT NOW())
+
 ---
 
 ## ⚡ POTENZA & Scheda Battaglie Workflow

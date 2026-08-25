@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-25] feature | Medagliere e Rango a Elenco Cronologico & Gestione Palmarès Storico Atleti
+- **Database (Supabase)**:
+  - Creata la tabella `public.epika_palmares_atleti` (id, atleta_id, anno, tipo, titolo_evento, posizione, dettagli, attivo, timestamps) con indici dedicati e policy RLS (SELECT pubblica ad authenticated, INSERT/UPDATE/DELETE protette con USING e WITH CHECK per Admin Epika / Presidente).
+  - Inserito seed iniziale per i tornei storici SCAB di Valerio Mannocchi (MINOR).
+- **Frontend UI (`portal/epika.html`)**:
+  - Nel box "MEDAGLIERE E RANGO", sostituite le 3 card numeriche con l'elenco cronologico a scorrimento `#epk-medagliere-timeline-list`.
+  - Aggiunto il sotto-tab "Palmarès & Tornei Storici" nel Tab SCAB dell'Admin (`#scab-panel-palmares` e pulsante `#scab-tab-btn-palmares`) con form fast-entry per l'inserimento e la gestione dei tornei passati e riconoscimenti di qualsiasi atleta.
+- **Logica Frontend (`portal/epika.js`)**:
+  - Implementata la funzione centralizzata `caricaMedagliereTimeline(atletaId)` che aggrega in parallelo le 4 fonti storiche (Primo Anno in Epika, Palmarès Tornei passati, Albo d'Oro Campioni SCAB, Storico Partecipazioni/Esiti Campo Marzio), ordinandole in sequenza cronologica crescente con icone e badge tematici.
+  - Implementate le funzioni di amministrazione rapida: `caricaPalmaresAdmin()`, `renderListaPalmaresAdmin()`, `filtraPalmaresAdmin()`, `salvaPalmaresAtleta()`, `rimuoviPalmaresAtleta()`.
+  - Applicato HTML escaping rigoroso (`escapeHtml`) a tutela da attacchi XSS (SECURITY.md).
+- **Test e Validazione**: Eseguito test automatizzato in sandbox `scratch/test_palmares_timeline.js` con riscontro perfetto dell'ordine e della formattazione.
+
 ## [2026-08-25] feature | Propagazione Esiti, Partecipazioni e Palmarès Campo Marzio
 - **Frontend UI (`portal/epika.html`)**:
   - Nel box "MEDAGLIERE E RANGO", estesa la griglia a 3 colonne inserendo il contatore `🏆 CAMPI MARZIO VINTI` (`#epk-stat-cm-vinti`).
