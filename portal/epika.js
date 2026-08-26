@@ -3827,6 +3827,23 @@ let contabIscrittiCountCache = 0;
 
 async function mostraPannelloContabilita(eventoId, eventoTitolo, eventoCosto) {
     if (typeof isReadOnly === 'function' && isReadOnly()) return;
+
+    // Sposta il pannello nel tab correntemente attivo per garantire visibilità contestuale
+    const panel = document.getElementById('adm-contabilita-evento-panel');
+    if (panel) {
+        if (typeof activeAdminTab !== 'undefined' && activeAdminTab === 'contabilita') {
+            const targetContainer = document.getElementById('epk-adm-tab-contabilita');
+            if (targetContainer && panel.parentElement !== targetContainer) {
+                targetContainer.appendChild(panel);
+            }
+        } else {
+            const targetContainer = document.getElementById('epk-adm-tab-eventi');
+            if (targetContainer && panel.parentElement !== targetContainer) {
+                targetContainer.appendChild(panel);
+            }
+        }
+    }
+
     apriPannelloEsclusivoAdmin('adm-contabilita-evento-panel');
 
     contabEventoAttivoId = eventoId;
@@ -4100,6 +4117,9 @@ async function salvaMovimentoContabile() {
         document.getElementById('contab-form-note').value = '';
 
         await caricaDatiContabilita();
+        if (typeof activeAdminTab !== 'undefined' && activeAdminTab === 'contabilita') {
+            renderContabilitaAdmin();
+        }
     } catch (err) {
         console.error("Errore salvataggio movimento contabile:", err);
         alert("Impossibile salvare il movimento: " + (err.message || err));
@@ -4123,6 +4143,9 @@ async function eliminaMovimentoContabile(id) {
         }
 
         await caricaDatiContabilita();
+        if (typeof activeAdminTab !== 'undefined' && activeAdminTab === 'contabilita') {
+            renderContabilitaAdmin();
+        }
     } catch (err) {
         console.error("Errore eliminazione movimento contabile:", err);
         alert("Impossibile eliminare il movimento: " + (err.message || err));
