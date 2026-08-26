@@ -8124,7 +8124,7 @@ async function renderContabilitaAdmin() {
     try {
         const [resEventi, resIscrizioni, resMovimenti, resProfili] = await Promise.all([
             supabaseClient.from('epika_eventi').select('*').order('data_inizio', { ascending: false }),
-            supabaseClient.from('epika_iscrizioni_eventi').select('id, evento_id, utente_id, created_at'),
+            supabaseClient.from('epika_iscrizioni_eventi').select('id, evento_id, utente_id'),
             supabaseClient.from('epika_contabilita_eventi').select('*').eq('attivo', true).order('data_movimento', { ascending: true }),
             supabaseClient.from('epika_profili').select('id, nome_di_battaglia')
         ]);
