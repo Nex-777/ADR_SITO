@@ -174,18 +174,18 @@ Stores historical tournament results, podiums, titles, and special recognitions 
 *   `updated_at` (TIMESTAMPTZ DEFAULT NOW())
 
 ### 15. `public.epika_contabilita_eventi`
-Stores manual accounting movements (expenses and manual revenues) per event, combining with auto registration fees.
+Stores manual accounting movements (expenses and manual revenues) both for specific events and general EPIKA treasury prima nota (when `evento_id IS NULL`), combining with automatic registration fees from `epika_iscrizioni_eventi`.
 *   `id` (UUID PK)
-*   `evento_id` (UUID FK to `epika_eventi.id` ON DELETE CASCADE)
+*   `evento_id` (UUID NULLABLE, FK to `epika_eventi.id` ON DELETE CASCADE) - `NULL` for General EPIKA entries.
 *   `tipo_movimento` (TEXT CHECK `entrata`, `uscita`)
-*   `voce` (TEXT)
+*   `voce` (TEXT) - Description of transaction
 *   `quantita` (INT DEFAULT 1)
 *   `importo_unitario` (NUMERIC(10,2))
 *   `metodo_pagamento` (TEXT CHECK `cassa`, `banca`)
 *   `data_movimento` (DATE)
 *   `note` (TEXT)
 *   `creato_da` (UUID FK to `epika_profili.id` ON DELETE SET NULL)
-*   `attivo` (BOOLEAN DEFAULT TRUE)
+*   `attivo` (BOOLEAN DEFAULT TRUE) - Soft delete
 *   `created_at` (TIMESTAMPTZ DEFAULT NOW())
 *   `updated_at` (TIMESTAMPTZ DEFAULT NOW())
 

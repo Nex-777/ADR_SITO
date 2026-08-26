@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-26] feature | Allineamento Contabilità Generale & Prima Nota Unificata
+- **Database (Supabase)**:
+  - Applicata migrazione `supabase/migration_epika_contabilita_generale.sql` che rende `evento_id` NULLABLE nella tabella `public.epika_contabilita_eventi`.
+  - In questo modo la tabella supporta sia i movimenti legati a singoli eventi, sia i movimenti di cassa/banca generali dell'associazione EPIKA (`evento_id IS NULL`).
+- **Frontend UI (`portal/epika.html`)**:
+  - Rimosso il vecchio modale legacy `#cnt-modal-dettaglio`.
+  - Aggiornati i modali di inserimento fast-entry `#cnt-modal-incasso` e `#cnt-modal-spesa` per supportare sia la registrazione su eventi specifici che entrate/uscite Generali EPIKA.
+  - Canali di pagamento standardizzati su `cassa` e `banca`.
+- **Logica Frontend (`portal/epika.js`)**:
+  - Refactoring completo di `renderContabilitaAdmin()`, `applicaFiltriContabilita()`, `salvaIncassoManuale()`, `salvaNuovaSpesa()` ed `esportaCSVContabilita()`.
+  - Aggregazione diretta da `epika_contabilita_eventi` ed `epika_iscrizioni_eventi`, eliminando le query a tabelle legacy.
+  - Il pulsante `DETTAGLIO` della tabella generale apre direttamente il nuovo pannello a drawer `mostraPannelloContabilita(eventoId, ...)` garantendo perfetta coerenza.
+  - Aggiunta riga di riepilogo `SPESE & INCASSI GENERALI EPIKA` nella tabella e inclusione nei KPI globali.
+- **Validazione**: Eseguito `node --check portal/epika.js` con 0 errori.
+
 ## [2026-08-26] feature | Modulo Contabilità Eventi & Prima Nota Finanziaria
 - **Database (Supabase)**:
   - Creata la tabella `public.epika_contabilita_eventi` (`id`, `evento_id`, `tipo_movimento`, `voce`, `quantita`, `importo_unitario`, `metodo_pagamento`, `data_movimento`, `note`, `creato_da`, `attivo`, timestamps).
