@@ -1,0 +1,2 @@
+# WORKFLOW FASE 4 - Consolidamento Wiki
+Aggiorna i file pertinenti della LLM Wiki riflettendo le modifiche architetturali, i nuovi pattern o le logiche implementate con successo in questa sessione. Rispetta la direttiva di storicizzazione dei dati: aggiungi le nuove informazioni senza sovrascrivere distruttivamente lo storico precedente.

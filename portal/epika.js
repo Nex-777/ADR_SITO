@@ -3477,6 +3477,7 @@ async function renderEventiAdmin() {
             const potenzaBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: rgba(180, 130, 0, 0.5); border-color: #d4af37; color: #ffd700;" onclick="mostraPannelloPotenza('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" title="Classifica Potenza Gruppi">POTENZA</button>` : '';
             const battaglieBtnHtml = evt.tipo_evento === 'campo_marzio' ? `<button class="epk-btn-secondary" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloBattaglie('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">REGISTRO BATTAGLIE</button>` : '';
             const richiamiBtnHtml = `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #065f46; border-color: #10b981;" onclick="mostraPannelloRichiamiEvento('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">⚠️🎖️ PROVVEDIMENTI</button>`;
+            const contabilitaBtnHtml = isReadOnly() ? '' : `<button class="epk-btn" style="padding: 6px 12px; font-size: 9px; background: #92400e; border-color: #d97706; color: #fef3c7;" onclick="mostraPannelloContabilita('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', ${parseFloat(evt.costo || 0)})">💰 CONTABILITÀ</button>`;
 
             container.innerHTML += `
                 <div class="epk-event-card">
@@ -3494,6 +3495,7 @@ async function renderEventiAdmin() {
                             ${battaglieBtnHtml}
                             ${richiamiBtnHtml}
                             <button class="epk-btn epk-btn-presenze" style="padding: 6px 12px; font-size: 9px;" onclick="mostraPannelloPresenze('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')">${presenzeBtnText}</button>
+                            ${contabilitaBtnHtml}
                             ${toggleBtnHtml || deleteBtnHtml ? `<div class="epk-event-icon-btns">${toggleBtnHtml} ${deleteBtnHtml}</div>` : ''}
                         </div>
                     </div>
@@ -3661,7 +3663,8 @@ function apriPannelloEsclusivoAdmin(targetPanelId) {
         'adm-eserciti-panel',
         'adm-potenza-panel',
         'adm-battaglie-panel',
-        'adm-richiami-evento-panel'
+        'adm-richiami-evento-panel',
+        'adm-contabilita-evento-panel'
     ];
     PANNELLI_EVENTO.forEach(id => {
         const el = document.getElementById(id);
@@ -3811,6 +3814,385 @@ async function archiviaRichiamoEncomioEvento(id) {
         console.error("Errore archiviazione richiamo/encomio evento:", err);
         alert("Errore durante l'archiviazione: " + (err.message || err));
     }
+}
+
+// ===========================================================================
+// CONTABILITÀ & PRIMA NOTA EVENTO
+// ===========================================================================
+let contabEventoAttivoId = null;
+let contabEventoAttivoTitolo = '';
+let contabEventoAttivoCosto = 0;
+let contabMovimentiCache = [];
+let contabIscrittiCountCache = 0;
+
+async function mostraPannelloContabilita(eventoId, eventoTitolo, eventoCosto) {
+    if (typeof isReadOnly === 'function' && isReadOnly()) return;
+    apriPannelloEsclusivoAdmin('adm-contabilita-evento-panel');
+
+    contabEventoAttivoId = eventoId;
+    contabEventoAttivoTitolo = eventoTitolo;
+    contabEventoAttivoCosto = parseFloat(eventoCosto || 0);
+
+    const titoloEl = document.getElementById('adm-contab-evento-titolo');
+    if (titoloEl) titoloEl.textContent = `💰 CONTABILITÀ & PRIMA NOTA: ${eventoTitolo.toUpperCase()}`;
+
+    const sottotitoloEl = document.getElementById('adm-contab-evento-sottotitolo');
+    if (sottotitoloEl) {
+        sottotitoloEl.textContent = `Quota Iscrizione Base: €${contabEventoAttivoCosto.toFixed(2)} | Gestione incassi iscrizioni e prima nota spese`;
+    }
+
+    // Reset Form Inserimento
+    const dataInput = document.getElementById('contab-form-data');
+    if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
+    
+    const tipoSelect = document.getElementById('contab-form-tipo');
+    if (tipoSelect) tipoSelect.value = 'uscita';
+
+    const voceInput = document.getElementById('contab-form-voce');
+    if (voceInput) voceInput.value = '';
+
+    const qtaInput = document.getElementById('contab-form-quantita');
+    if (qtaInput) qtaInput.value = 1;
+
+    const impInput = document.getElementById('contab-form-importo');
+    if (impInput) impInput.value = '';
+
+    const metodoSelect = document.getElementById('contab-form-metodo');
+    if (metodoSelect) metodoSelect.value = 'cassa';
+
+    const noteInput = document.getElementById('contab-form-note');
+    if (noteInput) noteInput.value = '';
+
+    await caricaDatiContabilita();
+}
+
+async function caricaDatiContabilita() {
+    if (!contabEventoAttivoId) return;
+
+    const tbody = document.getElementById('adm-contab-tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:16px;color:rgba(245,230,200,0.5);">Caricamento dati contabili in corso...</td></tr>';
+    }
+
+    try {
+        // Query parallela: 1. Conteggio iscritti evento; 2. Movimenti manuali da epika_contabilita_eventi
+        const [iscrittiRes, movimentiRes] = await Promise.all([
+            supabaseClient
+                .from('epika_iscrizioni_eventi')
+                .select('id', { count: 'exact', head: true })
+                .eq('evento_id', contabEventoAttivoId),
+            supabaseClient
+                .from('epika_contabilita_eventi')
+                .select('*')
+                .eq('evento_id', contabEventoAttivoId)
+                .eq('attivo', true)
+                .order('data_movimento', { ascending: true })
+                .order('created_at', { ascending: true })
+        ]);
+
+        if (iscrittiRes.error) throw iscrittiRes.error;
+        if (movimentiRes.error) throw movimentiRes.error;
+
+        contabIscrittiCountCache = iscrittiRes.count || 0;
+        contabMovimentiCache = movimentiRes.data || [];
+
+        // Calcoli Finanziari
+        const incassoIscritti = contabIscrittiCountCache * contabEventoAttivoCosto;
+
+        let entrateExtra = 0;
+        let entrateCassa = 0;
+        let entrateBanca = 0;
+
+        let totaleSpese = 0;
+        let speseCassa = 0;
+        let speseBanca = 0;
+
+        contabMovimentiCache.forEach(m => {
+            const tot = (parseInt(m.quantita, 10) || 1) * (parseFloat(m.importo_unitario) || 0);
+            if (m.tipo_movimento === 'entrata') {
+                entrateExtra += tot;
+                if (m.metodo_pagamento === 'cassa') entrateCassa += tot;
+                else entrateBanca += tot;
+            } else {
+                totaleSpese += tot;
+                if (m.metodo_pagamento === 'cassa') speseCassa += tot;
+                else speseBanca += tot;
+            }
+        });
+
+        const totaleIncassato = incassoIscritti + entrateExtra;
+        const utileNetto = totaleIncassato - totaleSpese;
+        const saldoBanca = incassoIscritti + entrateBanca - speseBanca;
+        const saldoCassa = entrateCassa - speseCassa;
+
+        // Aggiornamento KPI
+        const elIncassato = document.getElementById('adm-contab-kpi-incassato');
+        if (elIncassato) elIncassato.textContent = `€${totaleIncassato.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const elIncassatoSub = document.getElementById('adm-contab-kpi-incassato-sub');
+        if (elIncassatoSub) {
+            elIncassatoSub.textContent = `${contabIscrittiCountCache} Iscritti (€${incassoIscritti.toLocaleString('it-IT', { minimumFractionDigits: 2 })}) + Extra (€${entrateExtra.toLocaleString('it-IT', { minimumFractionDigits: 2 })})`;
+        }
+
+        const elSpese = document.getElementById('adm-contab-kpi-spese');
+        if (elSpese) elSpese.textContent = `€${totaleSpese.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const elUtile = document.getElementById('adm-contab-kpi-utile');
+        if (elUtile) {
+            elUtile.textContent = `€${utileNetto.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            elUtile.style.color = utileNetto >= 0 ? '#4ade80' : '#f87171';
+        }
+
+        const elBanca = document.getElementById('adm-contab-kpi-banca');
+        if (elBanca) {
+            elBanca.textContent = `€${saldoBanca.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            elBanca.style.color = saldoBanca >= 0 ? '#93c5fd' : '#f87171';
+        }
+
+        const elCassa = document.getElementById('adm-contab-kpi-cassa');
+        if (elCassa) {
+            elCassa.textContent = `€${saldoCassa.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            elCassa.style.color = saldoCassa >= 0 ? '#86efac' : '#f87171';
+        }
+
+        // Render Tabella
+        renderTabellaContabilita(incassoIscritti);
+
+    } catch (err) {
+        console.error("Errore caricamento dati contabilità:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:16px;color:#f87171;">Errore nel caricamento: ${escapeHtml(err.message || String(err))}</td></tr>`;
+        }
+    }
+}
+
+function renderTabellaContabilita(incassoIscritti) {
+    const tbody = document.getElementById('adm-contab-tbody');
+    if (!tbody) return;
+
+    let rowsHtml = '';
+
+    // 1. Riga Fissa Automatica Iscrizioni
+    rowsHtml += `
+        <tr style="background: rgba(34, 197, 94, 0.07); border-bottom: 1px solid rgba(34, 197, 94, 0.25);">
+            <td style="padding: 8px 6px; font-size: 10px; font-family: monospace; color: #4ade80; font-weight: bold;">⚡ AUTOMATICO</td>
+            <td style="padding: 8px 6px;">
+                <span class="epk-badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); font-size: 9px; padding: 2px 6px;">🟢 ENTRATA</span>
+            </td>
+            <td style="padding: 8px 6px; font-size: 11px; color: #fff;">
+                <strong style="color: var(--epk-gold);">QUOTE ISCRIZIONI PARTECIPANTI</strong>
+                <div style="font-size: 9px; color: rgba(245, 230, 200, 0.5);">Calcolo automatico tesserati iscritti all'evento</div>
+            </td>
+            <td style="padding: 8px 6px; text-align: center; font-size: 11px; font-weight: bold; color: #4ade80;">${contabIscrittiCountCache}</td>
+            <td style="padding: 8px 6px; text-align: right; font-size: 11px; font-family: monospace;">€${contabEventoAttivoCosto.toFixed(2)}</td>
+            <td style="padding: 8px 6px; text-align: right; font-size: 12px; font-weight: 900; color: #4ade80; font-family: monospace;">+€${incassoIscritti.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td style="padding: 8px 6px; text-align: center; font-size: 10px; color: #93c5fd; font-weight: bold;">🏦 BANCA</td>
+            <td style="padding: 8px 6px; font-size: 10px; color: rgba(245, 230, 200, 0.6); font-style: italic;">Incasso digitale iscritti</td>
+            <td style="padding: 8px 6px; text-align: center; font-size: 9px; color: rgba(245, 230, 200, 0.3);">SISTEMA</td>
+        </tr>
+    `;
+
+    // 2. Movimenti Manuali
+    if (contabMovimentiCache.length === 0) {
+        rowsHtml += `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 20px; color: rgba(245, 230, 200, 0.4); font-size: 11px;">
+                    Nessuna spesa o incasso extra registrato manualmente per questo evento.
+                </td>
+            </tr>
+        `;
+    } else {
+        contabMovimentiCache.forEach(m => {
+            const isEntrata = m.tipo_movimento === 'entrata';
+            const tipoBadge = isEntrata
+                ? `<span class="epk-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 9px; padding: 2px 6px;">🟢 ENTRATA</span>`
+                : `<span class="epk-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 9px; padding: 2px 6px;">🔴 SPESA</span>`;
+            
+            const canaleBadge = m.metodo_pagamento === 'cassa'
+                ? `<span style="color: #86efac; font-size: 10px; font-weight: 500;">💵 CASSA</span>`
+                : `<span style="color: #93c5fd; font-size: 10px; font-weight: 500;">🏦 BANCA</span>`;
+
+            const qty = parseInt(m.quantita, 10) || 1;
+            const unitPrice = parseFloat(m.importo_unitario) || 0;
+            const tot = qty * unitPrice;
+            const totColor = isEntrata ? '#4ade80' : '#f87171';
+            const totSign = isEntrata ? '+' : '-';
+            const dataF = formattaData(m.data_movimento);
+
+            rowsHtml += `
+                <tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">
+                    <td style="padding: 8px 6px; font-size: 10px; font-family: monospace; color: rgba(245, 230, 200, 0.8);">${dataF}</td>
+                    <td style="padding: 8px 6px;">${tipoBadge}</td>
+                    <td style="padding: 8px 6px; font-size: 11px; color: #fff; font-weight: 500;">${escapeHtml(m.voce)}</td>
+                    <td style="padding: 8px 6px; text-align: center; font-size: 11px; color: rgba(245, 230, 200, 0.8);">${qty}</td>
+                    <td style="padding: 8px 6px; text-align: right; font-size: 11px; font-family: monospace; color: rgba(245, 230, 200, 0.8);">€${unitPrice.toFixed(2)}</td>
+                    <td style="padding: 8px 6px; text-align: right; font-size: 11px; font-weight: bold; color: ${totColor}; font-family: monospace;">${totSign}€${tot.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style="padding: 8px 6px; text-align: center;">${canaleBadge}</td>
+                    <td style="padding: 8px 6px; font-size: 10px; color: rgba(245, 230, 200, 0.6);">${escapeHtml(m.note || '-')}</td>
+                    <td style="padding: 8px 6px; text-align: center;">
+                        <button class="epk-btn-secondary" style="padding: 3px 8px; font-size: 10px; color: #ff4d4d; border-color: rgba(255, 77, 77, 0.4);" onclick="eliminaMovimentoContabile('${m.id}')" title="Elimina movimento">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    tbody.innerHTML = rowsHtml;
+}
+
+async function salvaMovimentoContabile() {
+    if (typeof isReadOnly === 'function' && isReadOnly()) return;
+    if (!contabEventoAttivoId) return;
+
+    const dataMov = document.getElementById('contab-form-data').value;
+    const tipo = document.getElementById('contab-form-tipo').value;
+    const voce = document.getElementById('contab-form-voce').value.trim();
+    const quantita = parseInt(document.getElementById('contab-form-quantita').value, 10) || 1;
+    const importo = parseFloat(document.getElementById('contab-form-importo').value);
+    const metodo = document.getElementById('contab-form-metodo').value;
+    const note = document.getElementById('contab-form-note').value.trim();
+
+    if (!dataMov) {
+        alert("Inserisci una data valida per il movimento.");
+        return;
+    }
+    if (!voce) {
+        alert("Inserisci una descrizione / voce valida per il movimento.");
+        return;
+    }
+    if (isNaN(importo) || importo < 0) {
+        alert("Inserisci un importo valido (uguale o maggiore a 0).");
+        return;
+    }
+    if (quantita <= 0) {
+        alert("La quantità deve essere almeno pari a 1.");
+        return;
+    }
+
+    try {
+        const payload = {
+            evento_id: contabEventoAttivoId,
+            tipo_movimento: tipo,
+            voce: voce,
+            quantita: quantita,
+            importo_unitario: importo,
+            metodo_pagamento: metodo,
+            data_movimento: dataMov,
+            note: note,
+            attivo: true
+        };
+
+        const { error } = await supabaseClient
+            .from('epika_contabilita_eventi')
+            .insert(payload);
+
+        if (error) throw error;
+
+        if (typeof showToast === 'function') {
+            showToast("Movimento registrato con successo", "success");
+        }
+
+        // Reset form campi variabili
+        document.getElementById('contab-form-voce').value = '';
+        document.getElementById('contab-form-quantita').value = 1;
+        document.getElementById('contab-form-importo').value = '';
+        document.getElementById('contab-form-note').value = '';
+
+        await caricaDatiContabilita();
+    } catch (err) {
+        console.error("Errore salvataggio movimento contabile:", err);
+        alert("Impossibile salvare il movimento: " + (err.message || err));
+    }
+}
+
+async function eliminaMovimentoContabile(id) {
+    if (typeof isReadOnly === 'function' && isReadOnly()) return;
+    if (!confirm("Sei sicuro di voler eliminare questo movimento contabile?")) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('epika_contabilita_eventi')
+            .update({ attivo: false, updated_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        if (typeof showToast === 'function') {
+            showToast("Movimento eliminato con successo", "info");
+        }
+
+        await caricaDatiContabilita();
+    } catch (err) {
+        console.error("Errore eliminazione movimento contabile:", err);
+        alert("Impossibile eliminare il movimento: " + (err.message || err));
+    }
+}
+
+function esportaContabilitaCSV() {
+    if (!contabEventoAttivoId) return;
+
+    const incassoIscritti = contabIscrittiCountCache * contabEventoAttivoCosto;
+    
+    // Intestazione CSV
+    const rows = [
+        ["Data", "Tipo", "Voce", "Quantita", "Importo Unitario (€)", "Totale (€)", "Canale", "Note"]
+    ];
+
+    // Riga automatica iscrizioni
+    rows.push([
+        "AUTOMATICO",
+        "ENTRATA",
+        `QUOTE ISCRIZIONI PARTECIPANTI (${contabIscrittiCountCache} Iscritti)`,
+        contabIscrittiCountCache,
+        contabEventoAttivoCosto.toFixed(2),
+        incassoIscritti.toFixed(2),
+        "BANCA",
+        "Incasso automatico iscritti"
+    ]);
+
+    // Righe manuali
+    contabMovimentiCache.forEach(m => {
+        const qty = parseInt(m.quantita, 10) || 1;
+        const unitPrice = parseFloat(m.importo_unitario) || 0;
+        const tot = (qty * unitPrice).toFixed(2);
+        rows.push([
+            m.data_movimento,
+            m.tipo_movimento.toUpperCase(),
+            `"${(m.voce || '').replace(/"/g, '""')}"`,
+            qty,
+            unitPrice.toFixed(2),
+            m.tipo_movimento === 'entrata' ? `+${tot}` : `-${tot}`,
+            m.metodo_pagamento.toUpperCase(),
+            `"${(m.note || '').replace(/"/g, '""')}"`
+        ]);
+    });
+
+    // Calcolo totali per riga finale
+    let totaleSpese = 0;
+    let entrateExtra = 0;
+    contabMovimentiCache.forEach(m => {
+        const tot = (parseInt(m.quantita, 10) || 1) * (parseFloat(m.importo_unitario) || 0);
+        if (m.tipo_movimento === 'entrata') entrateExtra += tot;
+        else totaleSpese += tot;
+    });
+    const totaleIncassato = incassoIscritti + entrateExtra;
+    const utileNetto = totaleIncassato - totaleSpese;
+
+    rows.push([]);
+    rows.push(["--- RIEPILOGO FINANZIARIO ---", "", "", "", "", "", "", ""]);
+    rows.push(["TOTALE INCASSATO", "", "", "", "", totaleIncassato.toFixed(2), "", ""]);
+    rows.push(["TOTALE SPESE", "", "", "", "", totaleSpese.toFixed(2), "", ""]);
+    rows.push(["UTILE NETTO", "", "", "", "", utileNetto.toFixed(2), "", ""]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(";")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const safeTitle = (contabEventoAttivoTitolo || 'evento').toLowerCase().replace(/[^a-z0-9]/gi, '_');
+    link.setAttribute("download", `contabilita_${safeTitle}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 // D — Conferma Presenze Evento

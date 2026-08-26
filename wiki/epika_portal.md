@@ -173,6 +173,22 @@ Stores historical tournament results, podiums, titles, and special recognitions 
 *   `created_at` (TIMESTAMPTZ DEFAULT NOW())
 *   `updated_at` (TIMESTAMPTZ DEFAULT NOW())
 
+### 15. `public.epika_contabilita_eventi`
+Stores manual accounting movements (expenses and manual revenues) per event, combining with auto registration fees.
+*   `id` (UUID PK)
+*   `evento_id` (UUID FK to `epika_eventi.id` ON DELETE CASCADE)
+*   `tipo_movimento` (TEXT CHECK `entrata`, `uscita`)
+*   `voce` (TEXT)
+*   `quantita` (INT DEFAULT 1)
+*   `importo_unitario` (NUMERIC(10,2))
+*   `metodo_pagamento` (TEXT CHECK `cassa`, `banca`)
+*   `data_movimento` (DATE)
+*   `note` (TEXT)
+*   `creato_da` (UUID FK to `epika_profili.id` ON DELETE SET NULL)
+*   `attivo` (BOOLEAN DEFAULT TRUE)
+*   `created_at` (TIMESTAMPTZ DEFAULT NOW())
+*   `updated_at` (TIMESTAMPTZ DEFAULT NOW())
+
 ---
 
 ## ⚡ POTENZA & Scheda Battaglie Workflow

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.90">
+    <link rel="stylesheet" href="epika.css?v=1.04.91">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.90"></script>
+    <script src="config.js?v=1.04.91"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.90</span>
+                <span class="epk-version-badge">Vs. 1.04.91</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -1264,6 +1264,123 @@
                                     </thead>
                                     <tbody id="adm-richiami-evento-tbody">
                                         <!-- Popolato via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Pannello CONTABILITÀ & PRIMA NOTA EVENTO -->
+                        <div id="adm-contabilita-evento-panel" class="epk-card epk-hidden" style="margin-top: 24px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--epk-gold-dim); padding-bottom:12px; margin-bottom:16px;">
+                                <div>
+                                    <h2 class="epk-headline" id="adm-contab-evento-titolo" style="margin:0; font-size:16px; color:var(--epk-gold);">
+                                        💰 CONTABILITÀ & PRIMA NOTA EVENTO
+                                    </h2>
+                                    <span id="adm-contab-evento-sottotitolo" style="font-size:10px; color:rgba(245,230,200,0.6);">
+                                        Riepilogo finanziario, incassi iscrizioni e gestione prima nota contabile
+                                    </span>
+                                </div>
+                                <div style="display:flex; gap:8px;">
+                                    <button class="epk-btn" onclick="esportaContabilitaCSV()" style="font-size:10px; padding:6px 14px; background:#1e3a8a; border-color:#3b82f6;">
+                                        📥 ESPORTA CSV
+                                    </button>
+                                    <button class="epk-btn-secondary" onclick="apriPannelloEsclusivoAdmin(null)" style="padding:8px 12px; font-size:10px;">CHIUDI</button>
+                                </div>
+                            </div>
+
+                            <!-- KPI Finanziari Evento -->
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:20px;">
+                                <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:6px; padding:12px; text-align:center;">
+                                    <div style="font-size:10px; color:rgba(245,230,200,0.6); text-transform:uppercase; font-family:'Cinzel',serif;">🟢 Totale Incassato</div>
+                                    <div id="adm-contab-kpi-incassato" style="font-size:20px; font-weight:900; color:#4ade80; margin:4px 0;">€0.00</div>
+                                    <div style="font-size:9px; color:rgba(245,230,200,0.4);" id="adm-contab-kpi-incassato-sub">Iscrizioni + Extra</div>
+                                </div>
+                                <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.3); border-radius:6px; padding:12px; text-align:center;">
+                                    <div style="font-size:10px; color:rgba(245,230,200,0.6); text-transform:uppercase; font-family:'Cinzel',serif;">🔴 Totale Spese</div>
+                                    <div id="adm-contab-kpi-spese" style="font-size:20px; font-weight:900; color:#f87171; margin:4px 0;">€0.00</div>
+                                    <div style="font-size:9px; color:rgba(245,230,200,0.4);" id="adm-contab-kpi-spese-sub">Uscite Registrate</div>
+                                </div>
+                                <div style="background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.3); border-radius:6px; padding:12px; text-align:center;">
+                                    <div style="font-size:10px; color:rgba(245,230,200,0.6); text-transform:uppercase; font-family:'Cinzel',serif;">💶 Utile Netto (Bilancio)</div>
+                                    <div id="adm-contab-kpi-utile" style="font-size:20px; font-weight:900; color:#fbbf24; margin:4px 0;">€0.00</div>
+                                    <div style="font-size:9px; color:rgba(245,230,200,0.4);">Incassato − Speso</div>
+                                </div>
+                                <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.3); border-radius:6px; padding:12px; text-align:center;">
+                                    <div style="font-size:10px; color:rgba(245,230,200,0.6); text-transform:uppercase; font-family:'Cinzel',serif;">🏦 Saldi Cassa / Banca</div>
+                                    <div style="font-size:12px; font-weight:bold; color:#93c5fd; margin:4px 0; display:flex; justify-content:space-around;">
+                                        <span>🏦 <span id="adm-contab-kpi-banca">€0.00</span></span>
+                                        <span>💵 <span id="adm-contab-kpi-cassa">€0.00</span></span>
+                                    </div>
+                                    <div style="font-size:9px; color:rgba(245,230,200,0.4);">Disponibilità per Canale</div>
+                                </div>
+                            </div>
+
+                            <!-- Box Registrazione Nuovo Movimento -->
+                            <div style="background:rgba(0,0,0,0.4); border:1px solid var(--epk-gold-dim); border-radius:6px; padding:14px; margin-bottom:20px;">
+                                <div style="font-family:'Cinzel',serif; font-size:11px; color:var(--epk-gold); text-transform:uppercase; margin-bottom:10px; font-weight:bold;">
+                                    ✍️ Inserisci Nuovo Movimento (Entrata / Spesa)
+                                </div>
+                                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; align-items:end;">
+                                    <div>
+                                        <label style="font-size:9px; color:rgba(245,230,200,0.7); display:block; margin-bottom:3px;">Data Movimento</label>
+                                        <input type="date" id="contab-form-data" class="epk-input" style="width:100%; font-size:10px; padding:6px 8px;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:9px; color:rgba(245,230,200,0.7); display:block; margin-bottom:3px;">Tipo</label>
+                                        <select id="contab-form-tipo" class="epk-input" style="width:100%; font-size:10px; padding:6px 8px;">
+                                            <option value="uscita">🔴 Spesa (Uscita)</option>
+                                            <option value="entrata">🟢 Incasso (Entrata Extra)</option>
+                                        </select>
+                                    </div>
+                                    <div style="grid-column: span 2;">
+                                        <label style="font-size:9px; color:rgba(245,230,200,0.7); display:block; margin-bottom:3px;">Voce / Descrizione Spesa o Incasso</label>
+                                        <input type="text" id="contab-form-voce" class="epk-input" placeholder="es. Affitto location, Noleggio furgone, Spesa vitto..." style="width:100%; font-size:10px; padding:6px 8px;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:9px; color:rgba(245,230,200,0.7); display:block; margin-bottom:3px;">Q.tà</label>
+                                        <input type="number" id="contab-form-quantita" class="epk-input" value="1" min="1" step="1" style="width:100%; font-size:10px; padding:6px 8px; text-align:right;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:9px; color:rgba(245,230,200,0.7); display:block; margin-bottom:3px;">Imp. Unitario (€)</label>
+                                        <input type="number" id="contab-form-importo" class="epk-input" placeholder="0.00" step="0.01" min="0" style="width:100%; font-size:10px; padding:6px 8px; text-align:right;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:9px; color:rgba(245,230,200,0.7); display:block; margin-bottom:3px;">Canale / Conto</label>
+                                        <select id="contab-form-metodo" class="epk-input" style="width:100%; font-size:10px; padding:6px 8px;">
+                                            <option value="cassa">💵 Cassa (Contanti)</option>
+                                            <option value="banca">🏦 Banca (Bonifico/POS/Carta)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:9px; color:rgba(245,230,200,0.7); display:block; margin-bottom:3px;">Note (Opzionali)</label>
+                                        <input type="text" id="contab-form-note" class="epk-input" placeholder="Dettagli aggiuntivi..." style="width:100%; font-size:10px; padding:6px 8px;">
+                                    </div>
+                                    <div>
+                                        <button class="epk-btn" onclick="salvaMovimentoContabile()" style="width:100%; font-size:10px; padding:7px 10px; background:#15803d; border-color:#22c55e;">
+                                            + SALVA MOVIMENTO
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tabella Prima Nota -->
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%; border-collapse:collapse; text-align:left;">
+                                    <thead>
+                                        <tr style="border-bottom:2px solid var(--epk-gold); color:var(--epk-gold); font-family:'Cinzel',serif; font-size:10px; text-transform:uppercase;">
+                                            <th style="padding:8px 6px;">Data</th>
+                                            <th style="padding:8px 6px;">Tipo</th>
+                                            <th style="padding:8px 6px;">Voce / Descrizione</th>
+                                            <th style="padding:8px 6px; text-align:center;">Q.tà</th>
+                                            <th style="padding:8px 6px; text-align:right;">Imp. Unitario</th>
+                                            <th style="padding:8px 6px; text-align:right;">Totale (€)</th>
+                                            <th style="padding:8px 6px; text-align:center;">Canale</th>
+                                            <th style="padding:8px 6px;">Note</th>
+                                            <th style="padding:8px 6px; text-align:center;">Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adm-contab-tbody">
+                                        <!-- Popolato dinamicamente via JS -->
                                     </tbody>
                                 </table>
                             </div>
@@ -2556,6 +2673,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.90"></script>
+    <script src="epika.js?v=1.04.91"></script>
 </body>
 </html>

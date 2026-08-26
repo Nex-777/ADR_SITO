@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-26] feature | Modulo Contabilità Eventi & Prima Nota Finanziaria
+- **Database (Supabase)**:
+  - Creata la tabella `public.epika_contabilita_eventi` (`id`, `evento_id`, `tipo_movimento`, `voce`, `quantita`, `importo_unitario`, `metodo_pagamento`, `data_movimento`, `note`, `creato_da`, `attivo`, timestamps).
+  - Configurate policy RLS blindate e protette sia con `USING` che con `WITH CHECK`, riservate esclusivamente ad Admin Epika o Presidente (nessun accesso pubblico o in sola lettura).
+- **Frontend UI (`portal/epika.html`)**:
+  - Inserito il pannello `#adm-contabilita-evento-panel` con 4 card KPI (Totale Incassato, Totale Spese, Utile Netto, Saldi Cassa/Banca).
+  - Aggiunto form fast-entry per registrare spese ed entrate extra (Data, Tipo, Voce, Q.tà, Importo, Canale Cassa/Banca, Note).
+  - Tabella della prima nota con riga fissa automatica per l'incasso aggregato degli iscritti e righe per i movimenti manuali con soft-delete.
+- **Logica Frontend (`portal/epika.js`)**:
+  - Aggiunto pulsante `💰 CONTABILITÀ` nella card evento per gli amministratori (`!isReadOnly()`).
+  - Implementate le funzioni `mostraPannelloContabilita()`, `caricaDatiContabilita()`, `salvaMovimentoContabile()`, `eliminaMovimentoContabile()` ed `esportaContabilitaCSV()`.
+  - Calcolo automatico della quota iscritti (`iscritti_count * costo_evento` su canale Banca) e riconciliazione automatica con saldi Cassa e Banca.
+- **Test e Validazione**:
+  - Eseguito `node -c portal/epika.js` con esito positivo (0 errori).
+  - Validati i calcoli e le formule di bilancio tramite script di test sandbox `scratch/test_contabilita_aggregazione.js`.
+
 ## [2026-08-25] feature | Medagliere e Rango a Elenco Cronologico & Gestione Palmarès Storico Atleti
 - **Database (Supabase)**:
   - Creata la tabella `public.epika_palmares_atleti` (id, atleta_id, anno, tipo, titolo_evento, posizione, dettagli, attivo, timestamps) con indici dedicati e policy RLS (SELECT pubblica ad authenticated, INSERT/UPDATE/DELETE protette con USING e WITH CHECK per Admin Epika / Presidente).

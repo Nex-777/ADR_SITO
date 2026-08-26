@@ -1,0 +1,2 @@
+# WORKFLOW FASE 2 - Verifica e Pianificazione
+Analizza l'output di stato della Fase 1. Esegui una Verifica di Conformità: l'approccio tecnico è compatibile con le dipendenze (incluso Stitch) e l'architettura esposte? Se individui inefficienze strutturali o vulnerabilità, proponi l'alternativa tecnica superiore. Una volta confermata la fattibilità, redigi il piano di implementazione definitivo, strutturato in step logici, atomici e strettamente sequenziali. Non generare codice applicativo in questa fase.
