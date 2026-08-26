@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.95">
+    <link rel="stylesheet" href="epika.css?v=1.04.96">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.95"></script>
+    <script src="config.js?v=1.04.96"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.95</span>
+                <span class="epk-version-badge">Vs. 1.04.96</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -1705,57 +1705,132 @@
                                 </div>
                             </div>
 
-                            <!-- Toolbar Filtri -->
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; background: rgba(0, 0, 0, 0.25); padding: 12px; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.1);">
-                                <div style="flex: 2; min-width: 200px;">
-                                    <input type="text" id="re-search" class="epk-input" placeholder="🔍 Cerca per atleta (nome storico o reale)..." oninput="filtraRichiamiEncomi()">
+                            <!-- Navigation Menu Sub-Tabs -->
+                            <div style="display: flex; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--epk-gold-dim); padding-bottom: 8px;">
+                                <button id="re-tab-btn-generale" class="epk-btn-secondary" style="border-color: var(--epk-gold); color: var(--epk-gold);" onclick="switchReTab('generale')">📋 Registro Generale</button>
+                                <button id="re-tab-btn-gruppi" class="epk-btn-secondary" onclick="switchReTab('gruppi')">🏛️ Riepilogo per Gruppo</button>
+                                <button id="re-tab-btn-scab" class="epk-btn-secondary" onclick="switchReTab('scab')">🥋 Staff Tecnico SCAB</button>
+                            </div>
+
+                            <!-- Sub-Tab 1: Registro Generale -->
+                            <div id="re-subtab-generale">
+                                <!-- Toolbar Filtri -->
+                                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; background: rgba(0, 0, 0, 0.25); padding: 12px; border-radius: 6px; border: 1px solid rgba(251, 191, 36, 0.1);">
+                                    <div style="flex: 2; min-width: 200px;">
+                                        <input type="text" id="re-search" class="epk-input" placeholder="🔍 Cerca per atleta (nome storico o reale)..." oninput="filtraRichiamiEncomi()">
+                                    </div>
+                                    <div style="flex: 1; min-width: 140px;">
+                                        <select id="re-filter-tipo" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                            <option value="">Tutti i Tipi</option>
+                                            <option value="encomio">🎖️ Solo Encomi</option>
+                                            <option value="richiamo">⚠️ Solo Richiami</option>
+                                        </select>
+                                    </div>
+                                    <div style="flex: 1; min-width: 140px;">
+                                        <select id="re-filter-gruppo" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                            <option value="">Tutti i Gruppi</option>
+                                        </select>
+                                    </div>
+                                    <div style="flex: 1; min-width: 140px;">
+                                        <select id="re-filter-evento" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                            <option value="">Tutti gli Eventi</option>
+                                        </select>
+                                    </div>
+                                    <div style="flex: 1; min-width: 110px;">
+                                        <select id="re-filter-anno" class="epk-input" onchange="filtraRichiamiEncomi()">
+                                            <option value="">Tutti gli Anni</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div style="flex: 1; min-width: 140px;">
-                                    <select id="re-filter-tipo" class="epk-input" onchange="filtraRichiamiEncomi()">
-                                        <option value="">Tutti i Tipi</option>
-                                        <option value="encomio">🎖️ Solo Encomi</option>
-                                        <option value="richiamo">⚠️ Solo Richiami</option>
-                                    </select>
-                                </div>
-                                <div style="flex: 1; min-width: 140px;">
-                                    <select id="re-filter-gruppo" class="epk-input" onchange="filtraRichiamiEncomi()">
-                                        <option value="">Tutti i Gruppi</option>
-                                    </select>
-                                </div>
-                                <div style="flex: 1; min-width: 140px;">
-                                    <select id="re-filter-evento" class="epk-input" onchange="filtraRichiamiEncomi()">
-                                        <option value="">Tutti gli Eventi</option>
-                                    </select>
-                                </div>
-                                <div style="flex: 1; min-width: 110px;">
-                                    <select id="re-filter-anno" class="epk-input" onchange="filtraRichiamiEncomi()">
-                                        <option value="">Tutti gli Anni</option>
-                                    </select>
+
+                                <!-- Tabella Risultati -->
+                                <div class="epk-table-card" style="overflow-x: auto;">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 130px;">TIPO & GRAVITÀ</th>
+                                                <th>ATLETA</th>
+                                                <th>GRUPPO STORICO</th>
+                                                <th>EVENTO / DATA</th>
+                                                <th>CATEGORIA & MOTIVAZIONE</th>
+                                                <th>NOTE DIRETTIVO</th>
+                                                <th style="width: 80px; text-align: center;">AZIONI</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="re-table-body">
+                                            <tr>
+                                                <td colspan="7" style="text-align: center; color: rgba(245, 230, 200, 0.5); padding: 24px;">
+                                                    Caricamento registro in corso...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
-                            <!-- Tabella Risultati -->
-                            <div class="epk-table-card" style="overflow-x: auto;">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 130px;">TIPO & GRAVITÀ</th>
-                                            <th>ATLETA</th>
-                                            <th>GRUPPO STORICO</th>
-                                            <th>EVENTO / DATA</th>
-                                            <th>CATEGORIA & MOTIVAZIONE</th>
-                                            <th>NOTE DIRETTIVO</th>
-                                            <th style="width: 80px; text-align: center;">AZIONI</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="re-table-body">
-                                        <tr>
-                                            <td colspan="7" style="text-align: center; color: rgba(245, 230, 200, 0.5); padding: 24px;">
-                                                Caricamento registro in corso...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <!-- Sub-Tab 2: Riepilogo per Gruppo -->
+                            <div id="re-subtab-gruppi" class="epk-hidden">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 class="epk-headline" style="margin: 0; font-size: 14px; color: var(--epk-gold);">
+                                        QUADRO DISCIPLINARE PER GRUPPO STORICO
+                                    </h3>
+                                    <span style="font-size: 11px; color: rgba(245, 230, 200, 0.6);">
+                                        Espandi ciascun gruppo per consultare l'elenco atleti e i relativi provvedimenti
+                                    </span>
+                                </div>
+                                <div class="epk-table-card" style="overflow-x: auto;">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>GRUPPO STORICO</th>
+                                                <th style="text-align: center; width: 120px;">ATLETI ISCRITTI</th>
+                                                <th style="text-align: center; width: 140px;">⚠️ TOTALE RICHIAMI</th>
+                                                <th style="text-align: center; width: 140px;">🎖️ TOTALE ENCOMI</th>
+                                                <th style="width: 120px; text-align: center;">DETTAGLI</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="re-gruppi-tbody">
+                                            <tr>
+                                                <td colspan="5" style="text-align: center; color: rgba(245, 230, 200, 0.5); padding: 24px;">
+                                                    Caricamento riepilogo gruppi...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Sub-Tab 3: Staff Tecnico SCAB -->
+                            <div id="re-subtab-scab" class="epk-hidden">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 class="epk-headline" style="margin: 0; font-size: 14px; color: var(--epk-gold);">
+                                        PROVVEDIMENTI ATLETI PER STAFF TECNICO SCAB
+                                    </h3>
+                                    <span style="font-size: 11px; color: rgba(245, 230, 200, 0.6);">
+                                        Visualizza i richiami e gli encomi accumulati dagli atleti supervisionati da ciascun Allenatore o Validatore
+                                    </span>
+                                </div>
+                                <div class="epk-table-card" style="overflow-x: auto;">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>MEMBRO STAFF</th>
+                                                <th>RUOLO SCAB</th>
+                                                <th style="text-align: center; width: 120px;">ATLETI ASSEGNATI</th>
+                                                <th style="text-align: center; width: 140px;">⚠️ RICHIAMI ATLETI</th>
+                                                <th style="text-align: center; width: 140px;">🎖️ ENCOMI ATLETI</th>
+                                                <th style="width: 120px; text-align: center;">DETTAGLI</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="re-scab-tbody">
+                                            <tr>
+                                                <td colspan="6" style="text-align: center; color: rgba(245, 230, 200, 0.5); padding: 24px;">
+                                                    Caricamento riepilogo staff SCAB...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1813,11 +1888,11 @@
                             <label class="epk-label">Tipo Provvedimento *</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px;">
                                 <label style="display: flex; align-items: center; gap: 8px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); padding: 10px; border-radius: 4px; cursor: pointer;">
-                                    <input type="radio" name="re_tipo" id="re-tipo-encomio" value="encomio" checked onchange="aggiornaOpzioniFormRichiamo()">
+                                    <input type="radio" name="re_tipo" id="re-tipo-encomio" value="encomio" onchange="aggiornaOpzioniFormRichiamo()">
                                     <span style="font-weight: 800; font-size: 12px; color: #4ade80;">🎖️ ENCOMIO / MERITO</span>
                                 </label>
                                 <label style="display: flex; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px; border-radius: 4px; cursor: pointer;">
-                                    <input type="radio" name="re_tipo" id="re-tipo-richiamo" value="richiamo" onchange="aggiornaOpzioniFormRichiamo()">
+                                    <input type="radio" name="re_tipo" id="re-tipo-richiamo" value="richiamo" checked onchange="aggiornaOpzioniFormRichiamo()">
                                     <span style="font-weight: 800; font-size: 12px; color: #f87171;">⚠️ RICHIAMO / INFRAZIONE</span>
                                 </label>
                             </div>
@@ -2614,6 +2689,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.95"></script>
+    <script src="epika.js?v=1.04.96"></script>
 </body>
 </html>

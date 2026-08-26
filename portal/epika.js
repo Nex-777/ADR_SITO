@@ -9922,7 +9922,7 @@ async function renderRichiamiEncomiDashboard() {
     try {
         // Carica dati collegati per i filtri se non presenti
         const [pRes, gRes, eRes, reRes] = await Promise.all([
-            supabaseClient.from('epika_profili').select('id, nome_di_battaglia, gruppo_storico_id').eq('profilo_completato', true).order('nome_di_battaglia', { ascending: true }),
+            supabaseClient.from('epika_profili').select('id, nome_di_battaglia, gruppo_storico_id, allenatore_id').eq('profilo_completato', true).order('nome_di_battaglia', { ascending: true }),
             supabaseClient.from('epika_gruppi_storici').select('id, nome').eq('attivo', true).order('nome', { ascending: true }),
             supabaseClient.from('epika_eventi').select('id, titolo, data_inizio').order('data_inizio', { ascending: false }),
             supabaseClient
@@ -9992,6 +9992,13 @@ async function renderRichiamiEncomiDashboard() {
 
         // Renderizza tabella con la cache completa
         renderTabellaRichiamiEncomi(richiamiEncomiCache);
+
+        // Se un sub-tab diverso da 'generale' è attivo, aggiornalo
+        if (activeReSubTab === 'gruppi') {
+            renderReRiepilogoGruppi();
+        } else if (activeReSubTab === 'scab') {
+            renderReRiepilogoScab();
+        }
 
         // Controllo visibilità pulsante "+ NUOVO PROVVEDIMENTO"
         const btnNuovo = document.getElementById('re-btn-nuovo');
@@ -10119,6 +10126,403 @@ function renderTabellaRichiamiEncomi(records) {
     tbody.innerHTML = rowsHtml;
 }
 
+let activeReSubTab = 'generale';
+
+function switchReTab(subTab) {
+    activeReSubTab = subTab;
+    
+    // Bottoni
+    const btnGen = document.getElementById('re-tab-btn-generale');
+    const btnGrp = document.getElementById('re-tab-btn-gruppi');
+    const btnScab = document.getElementById('re-tab-btn-scab');
+
+    const subGen = document.getElementById('re-subtab-generale');
+    const subGrp = document.getElementById('re-subtab-gruppi');
+    const subScab = document.getElementById('re-subtab-scab');
+
+    if (btnGen) {
+        btnGen.style.borderColor = subTab === 'generale' ? 'var(--epk-gold)' : '';
+        btnGen.style.color = subTab === 'generale' ? 'var(--epk-gold)' : '';
+    }
+    if (btnGrp) {
+        btnGrp.style.borderColor = subTab === 'gruppi' ? 'var(--epk-gold)' : '';
+        btnGrp.style.color = subTab === 'gruppi' ? 'var(--epk-gold)' : '';
+    }
+    if (btnScab) {
+        btnScab.style.borderColor = subTab === 'scab' ? 'var(--epk-gold)' : '';
+        btnScab.style.color = subTab === 'scab' ? 'var(--epk-gold)' : '';
+    }
+
+    // Contenitori
+    if (subGen) subGen.classList.toggle('epk-hidden', subTab !== 'generale');
+    if (subGrp) subGrp.classList.toggle('epk-hidden', subTab !== 'gruppi');
+    if (subScab) subScab.classList.toggle('epk-hidden', subTab !== 'scab');
+
+    if (subTab === 'gruppi') {
+        renderReRiepilogoGruppi();
+    } else if (subTab === 'scab') {
+        renderReRiepilogoScab();
+    }
+}
+
+function toggleReAccordion(rowId, btn) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const isHidden = row.classList.contains('epk-hidden');
+    row.classList.toggle('epk-hidden');
+    if (btn) {
+        btn.innerHTML = isHidden ? '📁 CHIUDI' : '📂 DETTAGLI';
+    }
+}
+
+function renderReRiepilogoGruppi() {
+    const tbody = document.getElementById('re-gruppi-tbody');
+    if (!tbody) return;
+
+    if (!reGruppiCache || reGruppiCache.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:rgba(245,230,200,0.5);">Nessun gruppo storico registrato.</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    reGruppiCache.forEach(g => {
+        const atletiGruppo = reProfiliCache.filter(p => String(p.gruppo_storico_id) === String(g.id));
+        const atletiIdsSet = new Set(atletiGruppo.map(p => p.id));
+        const provvGruppo = richiamiEncomiCache.filter(r => atletiIdsSet.has(r.atleta_id));
+        const totRichiami = provvGruppo.filter(r => r.tipo === 'richiamo').length;
+        const totEncomi = provvGruppo.filter(r => r.tipo === 'encomio').length;
+
+        const hasProvisions = provvGruppo.length > 0;
+        const actionBtn = hasProvisions
+            ? `<button class="epk-btn-secondary" style="font-size:10px;padding:4px 10px;border-color:var(--epk-gold);color:var(--epk-gold);" onclick="toggleReAccordion('re-grp-acc-${g.id}', this)">📂 DETTAGLI</button>`
+            : `<span style="color:gray;font-size:10px;">Nessun provv.</span>`;
+
+        // Genera sotto-tabella dettagli provvedimenti
+        let detailTableHtml = '';
+        if (hasProvisions) {
+            let provvRows = '';
+            provvGruppo.forEach(r => {
+                const badge = getBadgeRichiamoEncomioHtml(r.tipo, r.gravita, r.categoria);
+                const atletaNome = r.atleta?.nome_di_battaglia ? r.atleta.nome_di_battaglia.toUpperCase() : 'N/D';
+                const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
+                const eventoTitolo = r.evento?.titolo ? r.evento.titolo.toUpperCase() : 'GENERALE';
+                const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : 'N/D';
+                const noteDirettivo = r.note_interne_direttivo ? `<span style="color:#fca5a5;font-size:10px;margin-left:6px;">🔒 ${r.note_interne_direttivo}</span>` : '';
+
+                provvRows += `
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <td style="padding:6px 8px;font-weight:bold;color:var(--epk-gold);">${atletaNome}</td>
+                        <td style="padding:6px 8px;">${badge}</td>
+                        <td style="padding:6px 8px;font-size:11px;">
+                            <span style="font-weight:bold;color:#fde68a;">${catLabel}:</span> ${r.motivazione || ''}
+                            ${noteDirettivo}
+                        </td>
+                        <td style="padding:6px 8px;font-size:10px;color:rgba(245,230,200,0.6);">${eventoTitolo} (${dataFmt})</td>
+                    </tr>
+                `;
+            });
+
+            detailTableHtml = `
+                <div style="background:rgba(0,0,0,0.3);padding:10px;border-radius:6px;border:1px solid rgba(251,191,36,0.15);margin:4px 0;">
+                    <div style="font-size:11px;font-weight:bold;color:var(--epk-gold);margin-bottom:8px;font-family:'Cinzel',serif;">
+                        📜 PROVVEDIMENTI REGISTRATI PER ${g.nome.toUpperCase()} (${provvGruppo.length})
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;text-align:left;">
+                        <thead>
+                            <tr style="font-size:9px;color:rgba(245,230,200,0.6);text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.1);">
+                                <th style="padding:4px 8px;">Atleta</th>
+                                <th style="padding:4px 8px;">Tipo / Gravità</th>
+                                <th style="padding:4px 8px;">Motivazione</th>
+                                <th style="padding:4px 8px;">Evento / Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>${provvRows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        html += `
+            <tr style="border-bottom:1px solid rgba(251,191,36,0.1);">
+                <td style="padding:10px 8px;">
+                    <strong style="color:var(--epk-gold);font-size:13px;">${g.nome.toUpperCase()}</strong>
+                </td>
+                <td style="text-align:center;padding:10px 8px;">
+                    <span style="font-weight:bold;color:#93c5fd;font-size:12px;">👥 ${atletiGruppo.length}</span>
+                </td>
+                <td style="text-align:center;padding:10px 8px;">
+                    <span style="font-weight:bold;font-size:13px;color:${totRichiami > 0 ? '#f87171' : 'gray'};">⚠️ ${totRichiami}</span>
+                </td>
+                <td style="text-align:center;padding:10px 8px;">
+                    <span style="font-weight:bold;font-size:13px;color:${totEncomi > 0 ? '#4ade80' : 'gray'};">🎖️ ${totEncomi}</span>
+                </td>
+                <td style="text-align:center;padding:10px 8px;">
+                    ${actionBtn}
+                </td>
+            </tr>
+            <tr id="re-grp-acc-${g.id}" class="epk-hidden" style="background:rgba(0,0,0,0.25);">
+                <td colspan="5" style="padding:8px 16px;">
+                    ${detailTableHtml}
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+async function renderReRiepilogoScab() {
+    const tbody = document.getElementById('re-scab-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:rgba(245,230,200,0.5);">Caricamento dati Staff Tecnico SCAB...</td></tr>`;
+
+    try {
+        const [opzRes, abbRes] = await Promise.all([
+            supabaseClient
+                .from('epika_opzioni')
+                .select('id, tipo, valore, utente_id, attivo')
+                .in('tipo', ['scab_validatore', 'allenatore', 'scab_allievo_allenatore'])
+                .eq('attivo', true)
+                .order('valore', { ascending: true }),
+            supabaseClient
+                .from('epika_scab_abbinamenti')
+                .select('*')
+        ]);
+
+        if (opzRes.error) throw opzRes.error;
+        if (abbRes.error) throw abbRes.error;
+
+        const allStaff = opzRes.data || [];
+        const allAbbinamenti = abbRes.data || [];
+
+        if (allStaff.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:rgba(245,230,200,0.5);">Nessun membro dello Staff Tecnico SCAB registrato.</td></tr>`;
+            return;
+        }
+
+        // 1. Mappa relazioni SCAB
+        const coachToAllieviMap = {};
+        const allievoToCoachesMap = {};
+        const valToCoachesMap = {};
+
+        allAbbinamenti.forEach(a => {
+            const coachId = a.allenatore_ref_id ? Number(a.allenatore_ref_id) : null;
+            const valId = a.validatore_id ? Number(a.validatore_id) : null;
+
+            const allieviIds = [];
+            if (a.allievo_ref_id) allieviIds.push(Number(a.allievo_ref_id));
+            if (Array.isArray(a.allievi_ids)) {
+                a.allievi_ids.map(Number).forEach(id => allieviIds.push(id));
+            }
+
+            const coCoachIds = [];
+            if (coachId) coCoachIds.push(coachId);
+            if (Array.isArray(a.allenatori_co_ids)) {
+                a.allenatori_co_ids.map(Number).forEach(id => coCoachIds.push(id));
+            }
+
+            if (valId) {
+                if (!valToCoachesMap[valId]) valToCoachesMap[valId] = new Set();
+                coCoachIds.forEach(cid => valToCoachesMap[valId].add(cid));
+            }
+
+            coCoachIds.forEach(cid => {
+                if (!coachToAllieviMap[cid]) coachToAllieviMap[cid] = new Set();
+                allieviIds.forEach(aid => coachToAllieviMap[cid].add(aid));
+            });
+
+            allieviIds.forEach(aid => {
+                if (!allievoToCoachesMap[aid]) allievoToCoachesMap[aid] = new Set();
+                coCoachIds.forEach(cid => allievoToCoachesMap[aid].add(cid));
+            });
+        });
+
+        // 2. Mappa Opzione ID -> utente_id
+        const opzioneUtenteMap = {};
+        allStaff.forEach(s => {
+            if (s.utente_id) opzioneUtenteMap[s.id] = s.utente_id;
+        });
+
+        // 3. Mappa Coach -> Atleti diretti in reProfiliCache
+        const coachDirectAthletes = {};
+        reProfiliCache.forEach(p => {
+            if (p.allenatore_id) {
+                const aid = Number(p.allenatore_id);
+                if (!coachDirectAthletes[aid]) coachDirectAthletes[aid] = new Set();
+                coachDirectAthletes[aid].add(p.id);
+            }
+        });
+
+        // Helper per ottenere tutti gli atleti associati al pod di un coach
+        function getAtletiForCoach(coachId) {
+            const atleti = new Set();
+            if (coachDirectAthletes[coachId]) {
+                coachDirectAthletes[coachId].forEach(id => atleti.add(id));
+            }
+            const allieviSet = coachToAllieviMap[coachId] || new Set();
+            allieviSet.forEach(allievoId => {
+                if (opzioneUtenteMap[allievoId]) atleti.add(opzioneUtenteMap[allievoId]);
+                if (coachDirectAthletes[allievoId]) {
+                    coachDirectAthletes[allievoId].forEach(id => atleti.add(id));
+                }
+            });
+            return atleti;
+        }
+
+        // 4. Risolvi atleti e provvedimenti per ogni membro dello staff
+        const staffData = allStaff.map(staff => {
+            const sid = Number(staff.id);
+            const atletiIds = new Set();
+
+            if (staff.tipo === 'scab_validatore') {
+                const coaches = valToCoachesMap[sid] || new Set();
+                coaches.forEach(cid => {
+                    const cAtleti = getAtletiForCoach(cid);
+                    cAtleti.forEach(id => atletiIds.add(id));
+                });
+            } else if (staff.tipo === 'allenatore') {
+                const cAtleti = getAtletiForCoach(sid);
+                cAtleti.forEach(id => atletiIds.add(id));
+            } else if (staff.tipo === 'scab_allievo_allenatore') {
+                const coaches = allievoToCoachesMap[sid] || new Set();
+                if (coaches.size > 0) {
+                    coaches.forEach(cid => {
+                        const cAtleti = getAtletiForCoach(cid);
+                        cAtleti.forEach(id => atletiIds.add(id));
+                    });
+                } else {
+                    if (coachDirectAthletes[sid]) {
+                        coachDirectAthletes[sid].forEach(id => atletiIds.add(id));
+                    }
+                }
+            }
+
+            const provvAtleti = richiamiEncomiCache.filter(r => atletiIds.has(r.atleta_id));
+            const totRichiami = provvAtleti.filter(r => r.tipo === 'richiamo').length;
+            const totEncomi = provvAtleti.filter(r => r.tipo === 'encomio').length;
+
+            return {
+                staff,
+                atletiCount: atletiIds.size,
+                atletiIds,
+                provvAtleti,
+                totRichiami,
+                totEncomi
+            };
+        });
+
+        // Ordinamento per ruolo (Validatore -> Allenatore -> Allievo) e poi nome
+        const orderPriority = { 'scab_validatore': 1, 'allenatore': 2, 'scab_allievo_allenatore': 3 };
+        staffData.sort((a, b) => {
+            const pA = orderPriority[a.staff.tipo] || 99;
+            const pB = orderPriority[b.staff.tipo] || 99;
+            if (pA !== pB) return pA - pB;
+            return (a.staff.valore || '').localeCompare(b.staff.valore || '');
+        });
+
+        let html = '';
+        staffData.forEach(item => {
+            const s = item.staff;
+            let roleBadge = '';
+            if (s.tipo === 'scab_validatore') {
+                roleBadge = `<span class="epk-badge" style="background:rgba(234,179,8,0.15);color:#facc15;border:1px solid rgba(234,179,8,0.4);font-size:10px;padding:2px 6px;border-radius:4px;">🛡️ VALIDATORE</span>`;
+            } else if (s.tipo === 'allenatore') {
+                roleBadge = `<span class="epk-badge" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.4);font-size:10px;padding:2px 6px;border-radius:4px;">🥋 ALLENATORE</span>`;
+            } else if (s.tipo === 'scab_allievo_allenatore') {
+                roleBadge = `<span class="epk-badge" style="background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(168,85,247,0.4);font-size:10px;padding:2px 6px;border-radius:4px;">🥋 ALLIEVO ALL.</span>`;
+            }
+
+            const hasProvisions = item.provvAtleti.length > 0;
+            const actionBtn = hasProvisions
+                ? `<button class="epk-btn-secondary" style="font-size:10px;padding:4px 10px;border-color:var(--epk-gold);color:var(--epk-gold);" onclick="toggleReAccordion('re-scab-acc-${s.id}', this)">📂 DETTAGLI</button>`
+                : `<span style="color:gray;font-size:10px;">Nessun provv.</span>`;
+
+            // Dettagli accordion per staff
+            let detailTableHtml = '';
+            if (hasProvisions) {
+                let provvRows = '';
+                item.provvAtleti.forEach(r => {
+                    const badge = getBadgeRichiamoEncomioHtml(r.tipo, r.gravita, r.categoria);
+                    const atletaNome = r.atleta?.nome_di_battaglia ? r.atleta.nome_di_battaglia.toUpperCase() : 'N/D';
+                    const gruppoNome = r.atleta?.gruppo?.nome ? r.atleta.gruppo.nome.toUpperCase() : 'N/D';
+                    const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
+                    const eventoTitolo = r.evento?.titolo ? r.evento.titolo.toUpperCase() : 'GENERALE';
+                    const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : 'N/D';
+                    const noteDirettivo = r.note_interne_direttivo ? `<span style="color:#fca5a5;font-size:10px;margin-left:6px;">🔒 ${r.note_interne_direttivo}</span>` : '';
+
+                    provvRows += `
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <td style="padding:6px 8px;font-weight:bold;color:var(--epk-gold);">${atletaNome}</td>
+                            <td style="padding:6px 8px;font-size:10px;color:rgba(245,230,200,0.8);">${gruppoNome}</td>
+                            <td style="padding:6px 8px;">${badge}</td>
+                            <td style="padding:6px 8px;font-size:11px;">
+                                <span style="font-weight:bold;color:#fde68a;">${catLabel}:</span> ${r.motivazione || ''}
+                                ${noteDirettivo}
+                            </td>
+                            <td style="padding:6px 8px;font-size:10px;color:rgba(245,230,200,0.6);">${eventoTitolo} (${dataFmt})</td>
+                        </tr>
+                    `;
+                });
+
+                detailTableHtml = `
+                    <div style="background:rgba(0,0,0,0.3);padding:10px;border-radius:6px;border:1px solid rgba(251,191,36,0.15);margin:4px 0;">
+                        <div style="font-size:11px;font-weight:bold;color:var(--epk-gold);margin-bottom:8px;font-family:'Cinzel',serif;">
+                            🥋 PROVVEDIMENTI ATLETI SUPERVISIONATI DA ${s.valore.toUpperCase()} (${item.provvAtleti.length})
+                        </div>
+                        <table style="width:100%;border-collapse:collapse;text-align:left;">
+                            <thead>
+                                <tr style="font-size:9px;color:rgba(245,230,200,0.6);text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.1);">
+                                    <th style="padding:4px 8px;">Atleta</th>
+                                    <th style="padding:4px 8px;">Gruppo</th>
+                                    <th style="padding:4px 8px;">Tipo / Gravità</th>
+                                    <th style="padding:4px 8px;">Motivazione</th>
+                                    <th style="padding:4px 8px;">Evento / Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>${provvRows}</tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            html += `
+                <tr style="border-bottom:1px solid rgba(251,191,36,0.1);">
+                    <td style="padding:10px 8px;">
+                        <strong style="color:var(--epk-gold);font-size:13px;">${s.valore.toUpperCase()}</strong>
+                    </td>
+                    <td style="padding:10px 8px;">
+                        ${roleBadge}
+                    </td>
+                    <td style="text-align:center;padding:10px 8px;">
+                        <span style="font-weight:bold;color:#93c5fd;font-size:12px;">👥 ${item.atletiCount}</span>
+                    </td>
+                    <td style="text-align:center;padding:10px 8px;">
+                        <span style="font-weight:bold;font-size:13px;color:${item.totRichiami > 0 ? '#f87171' : 'gray'};">⚠️ ${item.totRichiami}</span>
+                    </td>
+                    <td style="text-align:center;padding:10px 8px;">
+                        <span style="font-weight:bold;font-size:13px;color:${item.totEncomi > 0 ? '#4ade80' : 'gray'};">🎖️ ${item.totEncomi}</span>
+                    </td>
+                    <td style="text-align:center;padding:10px 8px;">
+                        ${actionBtn}
+                    </td>
+                </tr>
+                <tr id="re-scab-acc-${s.id}" class="epk-hidden" style="background:rgba(0,0,0,0.25);">
+                    <td colspan="6" style="padding:8px 16px;">
+                        ${detailTableHtml}
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+
+    } catch (err) {
+        console.error("Errore caricamento riepilogo SCAB:", err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#f87171;padding:20px;">Errore nel caricamento dei dati SCAB: ${err.message || err}</td></tr>`;
+    }
+}
+
 async function apriModaleNuovoProvvedimento(eventoId = null, atletaId = null) {
     if (typeof isReadOnly === 'function' && isReadOnly()) return;
 
@@ -10132,9 +10536,9 @@ async function apriModaleNuovoProvvedimento(eventoId = null, atletaId = null) {
     // Data odierna di default
     document.getElementById('re-form-data').value = new Date().toISOString().split('T')[0];
 
-    // Radio encomio di default
-    const radioEncomio = document.getElementById('re-tipo-encomio');
-    if (radioEncomio) radioEncomio.checked = true;
+    // Radio richiamo di default
+    const radioRichiamo = document.getElementById('re-tipo-richiamo');
+    if (radioRichiamo) radioRichiamo.checked = true;
 
     // Popola select atleti
     const atletaSelect = document.getElementById('re-form-atleta');

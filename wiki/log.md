@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-26] feature | Viste Sub-Tabs Registro Richiami/Encomi e Risoluzione Gerarchie SCAB
+- **Frontend UI (`portal/epika.html`)**:
+  - Impostato il tipo di provvedimento default su `Richiamo` nel modale `#re-modale` (inversione da Encomio a Richiamo).
+  - Aggiunti 3 Sub-Tabs dedicati nella dashboard del Registro Richiami ed Encomi (`#epk-adm-tab-richiami-encomi`):
+    1. `📋 Registro Generale`: Elenco tabellare filtrabile per tipo, gruppo, evento e anno con badge di gravità e soft-delete.
+    2. `🏛️ Riepilogo per Gruppo`: Tabella aggregata per gruppo storico con conteggio atleti, totale richiami e totale encomi, dotata di accordion espandibile con i dettagli dei provvedimenti.
+    3. `🥋 Staff Tecnico SCAB`: Tabella aggregata per Validatori, Allenatori e Allievi Allenatori con conteggio atleti assegnati e relativi provvedimenti disciplinari/onorifici, dotata di accordion espandibile.
+- **Logica Frontend (`portal/epika.js`)**:
+  - Aggiornata la funzione `renderRichiamiEncomiDashboard()` per includere `allenatore_id` nella cache dei profili atleta.
+  - Implementate le funzioni `switchReTab(subTab)`, `toggleReAccordion(rowId, btn)`, `renderReRiepilogoGruppi()` e `renderReRiepilogoScab()`.
+  - Risoluzione gerarchica SCAB ad alte prestazioni in memoria (senza chiamate asincrone N+1 al DB) combinando `epika_opzioni`, `epika_scab_abbinamenti` e `epika_profili`.
+- **Validazione**: Validata la sintassi tramite `node -c portal/epika.js` con esito positivo.
+
 ## [2026-08-26] feature | Allineamento Contabilità Generale & Prima Nota Unificata
 - **Database (Supabase)**:
   - Applicata migrazione `supabase/migration_epika_contabilita_generale.sql` che rende `evento_id` NULLABLE nella tabella `public.epika_contabilita_eventi`.
