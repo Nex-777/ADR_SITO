@@ -1,0 +1,1 @@
+Esegui npm run bump, git commit e git push su GitHub.
