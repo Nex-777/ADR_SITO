@@ -2090,7 +2090,7 @@ function switchAdminTab(tab) {
     
     // Caricamento dei dati on-demand per ottimizzare le query
     if (tab === 'dash') {
-        renderOrganigrammaMermaid();
+        renderOrganigrammaNetwork();
     } else if (tab === 'direttivi') {
         renderTesseratiNomineInverso();
     } else if (tab === 'scab') {
@@ -2476,7 +2476,7 @@ async function salvaNominaLavoroInverso(utenteId, gruppoId) {
         
         chiudiModaleNomine();
         await renderTesseratiNomineInverso();
-        await renderOrganigrammaMermaid();
+        await renderOrganigrammaNetwork();
     } catch (e) {
         console.error("Errore salvataggio nomina inverso:", e);
         alert("Impossibile salvare la nomina. Riprova.");
@@ -2505,7 +2505,7 @@ async function rimuoviNominaLavoroInverso(utenteId, gruppoId) {
         }
         
         await renderTesseratiNomineInverso();
-        await renderOrganigrammaMermaid();
+        await renderOrganigrammaNetwork();
     } catch (e) {
         console.error("Errore rimozione nomina inverso:", e);
         alert("Impossibile rimuovere il componente. Riprova.");
@@ -4914,103 +4914,953 @@ function filtraPartecipantiDashboard() {
     });
 }
 
-// Funzione di supporto per sanificare stringhe iniettate nei grafi Mermaid
-function sanitizeMermaidText(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/["\\]/g, "'")
-        .replace(/[\[\]{}]/g, '')
-        .replace(/[<>]/g, '');
+// ============================================================================
+// E — GRAFO RELAZIONALE DINAMICO & RETE STRUTTURALE EPIKA (Force-Graph Canvas)
+// ============================================================================
+
+let epikaGraphInstance = null;
+let epikaGraphFullData = { nodes: [], links: [] };
+let epikaGraphFilteredData = { nodes: [], links: [] };
+let epikaGraphCurrentFilter = 'all';
+let epikaGraphHoverNode = null;
+let epikaGraphHighlightNodes = new Set();
+let epikaGraphHighlightLinks = new Set();
+let epikaGraphSelectedNode = null;
+let epikaGraphPhysicsActive = true;
+let epikaGraphNeighborsMap = new Map();
+
+// Alias di compatibilità per chiamate legacy
+async function renderOrganigrammaMermaid() {
+    await renderOrganigrammaNetwork();
 }
 
-// E — Organigramma Dinamico (Mermaid.js)
-async function renderOrganigrammaMermaid() {
-    const container = document.getElementById('epk-mermaid-container');
+async function renderOrganigrammaNetwork() {
+    const container = document.getElementById('epk-network-container');
     if (!container) return;
-    container.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: gray;">Generazione organigramma...</p>';
-    
-    try {
-        if (window.mermaid) {
-            try {
-                mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
-            } catch (eInit) {
-                // Già inizializzato o gestito
-            }
+
+    // Se l'istanza esiste già e ha dati, ridimensioniamo e ripristiniamo se necessario
+    if (epikaGraphInstance && epikaGraphFullData.nodes.length > 0) {
+        try {
+            const width = container.clientWidth || 800;
+            const height = container.clientHeight || 720;
+            epikaGraphInstance.width(width).height(height);
+        } catch (e) {
+            console.warn("Riposizionamento canvas grafo:", e);
         }
+        return;
+    }
 
-        // Carica tutti i gruppi di lavoro attivi
-        const { data: gruppiL, error: glError } = await supabaseClient
-            .from('epika_gruppi_lavoro')
-            .select('*')
-            .eq('attivo', true)
-            .order('ordine', { ascending: true });
+    container.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--epk-gold); font-family: Cinzel, serif;">
+            <div class="epk-spinner" style="margin-bottom: 16px;"></div>
+            <p style="font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;">Caricamento costellazione relazionale...</p>
+        </div>`;
 
-        if (glError) throw glError;
+    try {
+        // 1. Caricamento parallelo di tutti i dati relazionali
+        const [
+            { data: gruppiL, error: glErr },
+            { data: gruppiS, error: gsErr },
+            { data: profili, error: pErr },
+            { data: opzioni, error: optErr },
+            { data: strutture, error: strErr },
+            { data: abbinamenti, error: abbErr },
+            { data: abilitazioni, error: ablErr },
+            { data: campioni, error: cmpErr }
+        ] = await Promise.all([
+            supabaseClient.from('epika_gruppi_lavoro').select('id, nome, ordine, attivo').eq('attivo', true).order('ordine', { ascending: true }),
+            supabaseClient.from('epika_gruppi_storici').select('id, nome, popolo, capogruppo_id, vice_capogruppo_id, attivo'),
+            supabaseClient.from('epika_profili').select('id, nome_di_battaglia, ruolo_combattimento, popolo, gruppo_storico_id, allenatore_id, gruppo_lavoro_ids, is_admin_epika, profilo_completato, rappresentante_gruppo_storico_id'),
+            supabaseClient.from('epika_opzioni').select('id, tipo, valore, attivo'),
+            supabaseClient.from('epika_scab_strutture').select('id, nome, tipo, citta, attivo'),
+            supabaseClient.from('epika_scab_abbinamenti').select('*'),
+            supabaseClient.from('epika_scab_abilitazioni').select('id, profilo_id, anno_abilitativo, allenatore_opzione_id, allievo_opzione_id, validatore_opzione_id, stato_allenatore, stato_validatore'),
+            supabaseClient.from('epika_campioni_scab').select('id, anno, profilo_id, nome_campione')
+        ]);
 
-        // Carica tutti i profili EPIKA nominati a un gruppo di lavoro
-        const { data: profili, error: pError } = await supabaseClient
-            .from('epika_profili')
-            .select('nome_di_battaglia, gruppo_lavoro_ids')
-            .eq('profilo_completato', true);
+        if (glErr) throw glErr;
+        if (gsErr) throw gsErr;
+        if (pErr) throw pErr;
 
-        if (pError) throw pError;
+        const nodesMap = new Map();
+        const links = [];
+        const neighborsMap = new Map();
 
-        // Raggruppa i profili per gruppo di lavoro ID
-        const membriMappa = {};
-        (profili || []).forEach(p => {
-            const gids = p.gruppo_lavoro_ids || [];
-            gids.forEach(gid => {
-                if (!membriMappa[gid]) {
-                    membriMappa[gid] = [];
+        const addLinkHelper = (sourceId, targetId, linkData) => {
+            if (!sourceId || !targetId || sourceId === targetId) return;
+            if (!nodesMap.has(sourceId) || !nodesMap.has(targetId)) return;
+            
+            const linkObj = {
+                source: sourceId,
+                target: targetId,
+                ...linkData
+            };
+            links.push(linkObj);
+
+            // Popola mappa vicini
+            if (!neighborsMap.has(sourceId)) neighborsMap.set(sourceId, new Set());
+            if (!neighborsMap.has(targetId)) neighborsMap.set(targetId, new Set());
+            neighborsMap.get(sourceId).add(targetId);
+            neighborsMap.get(targetId).add(sourceId);
+        };
+
+        // 2. Costruzione Nodi Macro: GRUPPI DI LAVORO & DIRETTIVI
+        (gruppiL || []).forEach((g, idx) => {
+            const isDirettivoEpika = g.id === 1;
+            const isDirettivo = g.id <= 4 || g.id === 10;
+            const nodeId = `GL_${g.id}`;
+            
+            nodesMap.set(nodeId, {
+                id: nodeId,
+                rawId: g.id,
+                entityType: 'gruppo_lavoro',
+                name: g.nome,
+                label: g.nome.toUpperCase(),
+                category: 'direttivi',
+                val: isDirettivoEpika ? 24 : (isDirettivo ? 17 : 13),
+                color: isDirettivoEpika ? '#9B2C2C' : (isDirettivo ? '#D69E2E' : '#B7791F'),
+                borderColor: isDirettivoEpika ? '#F6E05E' : '#ECC94B',
+                shape: 'hexagon',
+                details: {
+                    titolo: g.nome,
+                    ruolo: isDirettivoEpika ? 'DIRETTIVO SUPREMO' : (isDirettivo ? 'DIRETTIVO DI SETTORE' : 'GRUPPO DI LAVORO'),
+                    desc: `Organo direttivo/operativo EPIKA (Ordine: ${g.ordine})`
                 }
-                membriMappa[gid].push(p.nome_di_battaglia);
+            });
+
+            // Collega il Direttivo EPIKA supremo agli altri direttivi
+            if (idx > 0 && isDirettivo && gruppiL[0]) {
+                addLinkHelper(`GL_${gruppiL[0].id}`, nodeId, {
+                    type: 'coordinamento',
+                    color: 'rgba(214, 158, 46, 0.4)',
+                    width: 2,
+                    label: 'Coordinamento'
+                });
+            }
+        });
+
+        // 3. Costruzione Nodi Macro: GRUPPI STORICI & POPOLI
+        (gruppiS || []).forEach(gs => {
+            const nodeId = `GS_${gs.id}`;
+            nodesMap.set(nodeId, {
+                id: nodeId,
+                rawId: gs.id,
+                entityType: 'gruppo_storico',
+                name: gs.nome,
+                label: gs.nome.toUpperCase(),
+                category: 'storici',
+                popolo: gs.popolo || 'Mercenari',
+                val: 16,
+                color: '#2F855A',
+                borderColor: '#68D391',
+                shape: 'shield',
+                capogruppoId: gs.capogruppo_id,
+                viceCapogruppoId: gs.vice_capogruppo_id,
+                details: {
+                    titolo: gs.nome,
+                    ruolo: `GRUPPO STORICO (${(gs.popolo || 'Mercenari').toUpperCase()})`,
+                    desc: `Cultura/Popolo di riferimento: ${gs.popolo || 'Mercenari'}`
+                }
             });
         });
 
-        // Genera la definizione del grafo Mermaid
-        let mermaidCode = "graph TD\n";
-        mermaidCode += "    classDef default fill:#150904,stroke:#C9A84C,stroke-width:2px,color:#F5E6C8;\n";
-        mermaidCode += "    classDef leader fill:#6B1E2B,stroke:#C9A84C,stroke-width:2px,color:#F5E6C8;\n\n";
+        // 4. Costruzione Nodi Macro: PALESTRE & CENTRI PRATICA SCAB
+        (strutture || []).forEach(st => {
+            if (!st.attivo) return;
+            const nodeId = `STR_${st.id}`;
+            const isPalestra = st.tipo === 'palestra';
+            nodesMap.set(nodeId, {
+                id: nodeId,
+                rawId: st.id,
+                entityType: 'struttura_scab',
+                name: st.nome,
+                label: (isPalestra ? 'PAL: ' : 'CP: ') + st.nome.toUpperCase(),
+                category: 'scab',
+                val: 12,
+                color: '#319795',
+                borderColor: '#81E6D9',
+                shape: 'square',
+                details: {
+                    titolo: st.nome,
+                    ruolo: isPalestra ? 'PALESTRA SCAB UFFICIALE' : 'CENTRO PRATICA SCAB',
+                    desc: `Sede: ${st.citta || 'Non specificata'}`
+                }
+            });
 
-        // Crea i nodi per ciascun gruppo di lavoro e associa i relativi tesserati
-        (gruppiL || []).forEach((g, index) => {
-            const listMembri = membriMappa[g.id] || [];
-            const gNomeClean = sanitizeMermaidText(g.nome).toUpperCase();
-            let label = `<b>${gNomeClean}</b>`;
-            if (listMembri.length > 0) {
-                const listClean = listMembri.map(m => sanitizeMermaidText(m)).filter(Boolean);
-                label += `<br/>(${listClean.join(' - ')})`;
-            } else {
-                label += `<br/><i style='font-size:9px;'>NESSUNA NOMINA</i>`;
-            }
-            
-            const nodeId = `G${g.id}`;
-            mermaidCode += `    ${nodeId}["${label}"]\n`;
-            
-            // Assegna una classe differenziata per evidenziare graficamente il Direttivo supremo
-            if (index === 0) {
-                mermaidCode += `    class ${nodeId} leader;\n`;
-            }
-
-            // Disegna i legami: collega il Direttivo EPIKA (indice 0) a tutti gli altri gruppi subordinati
-            if (index > 0 && gruppiL[0]) {
-                mermaidCode += `    G${gruppiL[0].id} --> ${nodeId}\n`;
+            // Collega la struttura al Direttivo SCAB (GL_2) se presente
+            if (nodesMap.has('GL_2')) {
+                addLinkHelper('GL_2', nodeId, {
+                    type: 'struttura_scab',
+                    color: 'rgba(49, 151, 149, 0.4)',
+                    width: 1.5,
+                    label: 'Struttura Affiliata'
+                });
             }
         });
 
-        container.removeAttribute('data-processed'); // Rimuove eventuali metadati di parsing precedenti
-        container.innerHTML = `<pre class="mermaid">${mermaidCode}</pre>`;
+        // Mappa opzioni per nome (case-insensitive) per abbinamenti intelligenti
+        const opzioniMapById = {};
+        const opzioniMapByName = {};
+        (opzioni || []).forEach(opt => {
+            opzioniMapById[opt.id] = opt;
+            const cleanVal = (opt.valore || '').trim().toLowerCase();
+            if (cleanVal) {
+                opzioniMapByName[cleanVal] = opt;
+            }
+        });
 
-        // Renderizza il diagramma Mermaid DOPO che il DOM è visibile
-        if (window.mermaid) {
-            await mermaid.run({ nodes: [container] });
+        // Mappa campioni per profilo ID
+        const campioniMapByProfilo = {};
+        (campioni || []).forEach(c => {
+            if (c.profilo_id) campioniMapByProfilo[c.profilo_id] = c;
+        });
+
+        // 5. Costruzione Nodi: TESSERATI / PROFILI
+        (profili || []).forEach(p => {
+            const nodeId = `P_${p.id}`;
+            const nomeBat = p.nome_di_battaglia || 'Tesserato Anonimo';
+            const cleanNomeBat = nomeBat.trim().toLowerCase();
+            const gids = Array.isArray(p.gruppo_lavoro_ids) ? p.gruppo_lavoro_ids.map(Number) : [];
+            const isCombattente = p.ruolo_combattimento === 'combattente';
+            
+            // Verifica ruoli speciali
+            let isCapogruppo = false;
+            let isViceCapogruppo = false;
+            (gruppiS || []).forEach(gs => {
+                if (gs.capogruppo_id === p.id) isCapogruppo = true;
+                if (gs.vice_capogruppo_id === p.id) isViceCapogruppo = true;
+            });
+
+            const inDirettivo = gids.some(gid => gid <= 4 || gid === 10);
+            const inGruppoLavoro = gids.length > 0;
+            const optMatch = opzioniMapByName[cleanNomeBat];
+            const isScabStaff = !!(optMatch && ['allenatore', 'scab_validatore', 'scab_allievo_allenatore'].includes(optMatch.tipo));
+            const isCampione = !!campioniMapByProfilo[p.id];
+
+            // Determinazione Colore & Grandezza Gerarchica
+            let nodeColor = isCombattente ? '#CBD5E0' : '#4A5568';
+            let borderColor = isCombattente ? '#E2E8F0' : '#718096';
+            let nodeVal = isCombattente ? 6 : 4.5;
+            let nodeShape = 'circle';
+
+            if (p.is_admin_epika) {
+                nodeColor = '#9B2C2C';
+                borderColor = '#F6E05E';
+                nodeVal = 10;
+            } else if (isCapogruppo || isViceCapogruppo) {
+                nodeColor = '#ECC94B';
+                borderColor = '#FFFFFF';
+                nodeVal = 9.5;
+            } else if (inDirettivo) {
+                nodeColor = '#D69E2E';
+                borderColor = '#F6E05E';
+                nodeVal = 8.5;
+            } else if (isScabStaff) {
+                nodeColor = optMatch.tipo === 'scab_validatore' ? '#3182CE' : '#4299E1';
+                borderColor = '#90CDF4';
+                nodeVal = 8;
+            } else if (isCampione) {
+                nodeColor = '#ED8936';
+                borderColor = '#FEEBC8';
+                nodeVal = 8;
+            }
+
+            // Assegnazione Categoria Filtro Primaria
+            let primaryCat = isCombattente ? 'combattenti' : 'non_combattenti';
+            if (inDirettivo || inGruppoLavoro || p.is_admin_epika) primaryCat = 'direttivi';
+            else if (isScabStaff) primaryCat = 'scab';
+
+            nodesMap.set(nodeId, {
+                id: nodeId,
+                rawId: p.id,
+                entityType: 'profilo',
+                name: nomeBat,
+                label: nomeBat,
+                category: primaryCat,
+                isCombattente,
+                isCapogruppo,
+                isViceCapogruppo,
+                isAdminEpika: p.is_admin_epika,
+                inDirettivo,
+                inGruppoLavoro,
+                gids,
+                isScabStaff,
+                scabStaffTipo: optMatch ? optMatch.tipo : null,
+                isCampione,
+                val: nodeVal,
+                color: nodeColor,
+                borderColor: borderColor,
+                shape: nodeShape,
+                details: {
+                    titolo: nomeBat,
+                    ruolo: p.is_admin_epika ? 'AMMINISTRATORE EPIKA' : (isCapogruppo ? '👑 CAPOGRUPPO' : (isViceCapogruppo ? '👑 VICE CAPOGRUPPO' : (isCombattente ? '⚔️ GUERRIERO COMBATTENTE' : '📜 NON COMBATTENTE'))),
+                    popolo: p.popolo || 'Non specificato',
+                    campione: isCampione ? `🏆 Campione SCAB (${campioniMapByProfilo[p.id].anno})` : null,
+                    staffScab: optMatch ? `Staff SCAB: ${optMatch.tipo.replace('scab_', '').toUpperCase()}` : null
+                }
+            });
+
+            // 6. Archi: Membro $\rightarrow$ Gruppi di Lavoro / Direttivi
+            gids.forEach(gid => {
+                const targetG = `GL_${gid}`;
+                if (nodesMap.has(targetG)) {
+                    addLinkHelper(nodeId, targetG, {
+                        type: 'membro_direttivo',
+                        color: gid <= 4 ? 'rgba(236, 201, 75, 0.7)' : 'rgba(183, 121, 31, 0.5)',
+                        width: gid <= 4 ? 2 : 1.2,
+                        label: 'Componente'
+                    });
+                }
+            });
+
+            // 7. Archi: Membro $\rightarrow$ Gruppo Storico
+            if (p.gruppo_storico_id) {
+                const targetGs = `GS_${p.gruppo_storico_id}`;
+                if (nodesMap.has(targetGs)) {
+                    const isLeader = isCapogruppo || isViceCapogruppo;
+                    addLinkHelper(nodeId, targetGs, {
+                        type: isLeader ? 'leadership_storico' : 'membro_storico',
+                        color: isLeader ? 'rgba(236, 201, 75, 0.9)' : (isCombattente ? 'rgba(72, 187, 120, 0.5)' : 'rgba(113, 128, 150, 0.35)'),
+                        width: isLeader ? 2.5 : 1,
+                        label: isLeader ? (isViceCapogruppo ? 'Vice Capogruppo' : 'Capogruppo') : (isCombattente ? 'Combattente' : 'Membro')
+                    });
+                }
+            }
+
+            // 8. Archi: Rappresentante Gruppo Storico (Gruppi 5 e 6)
+            if (p.rappresentante_gruppo_storico_id) {
+                const targetGsRep = `GS_${p.rappresentante_gruppo_storico_id}`;
+                if (nodesMap.has(targetGsRep)) {
+                    addLinkHelper(nodeId, targetGsRep, {
+                        type: 'rappresentante_storico',
+                        color: 'rgba(237, 137, 54, 0.8)',
+                        width: 2.2,
+                        label: 'Rappresentante Ufficiale'
+                    });
+                }
+            }
+        });
+
+        // 9. Costruzione Nodi Opzioni SCAB orfane e Archi Struttura $\rightarrow$ Staff SCAB
+        (abbinamenti || []).forEach(abb => {
+            const strId = `STR_${abb.struttura_id}`;
+            if (!nodesMap.has(strId)) return;
+
+            // Validatore
+            if (abb.validatore_id) {
+                const optVal = opzioniMapById[abb.validatore_id];
+                if (optVal) {
+                    const clean = (optVal.valore || '').trim().toLowerCase();
+                    let targetValId = null;
+                    for (const [nid, node] of nodesMap.entries()) {
+                        if (node.entityType === 'profilo' && (node.name || '').trim().toLowerCase() === clean) {
+                            targetValId = nid;
+                            break;
+                        }
+                    }
+                    if (!targetValId) {
+                        targetValId = `OPT_${optVal.id}`;
+                        if (!nodesMap.has(targetValId)) {
+                            nodesMap.set(targetValId, {
+                                id: targetValId,
+                                rawId: optVal.id,
+                                entityType: 'opzione_scab',
+                                name: optVal.valore,
+                                label: `VAL: ${optVal.valore.toUpperCase()}`,
+                                category: 'scab',
+                                val: 9,
+                                color: '#3182CE',
+                                borderColor: '#63B3ED',
+                                shape: 'circle',
+                                details: { titolo: optVal.valore, ruolo: 'VALIDATORE SCAB UFFICIALE', desc: 'Validatore tecnico delle prove SCAB' }
+                            });
+                        }
+                    }
+                    addLinkHelper(strId, targetValId, {
+                        type: 'staff_validatore',
+                        color: 'rgba(49, 130, 206, 0.7)',
+                        width: 2,
+                        label: 'Validatore Referente'
+                    });
+                }
+            }
+
+            // Allenatore Responsabile & Co-Allenatori
+            const allAllenatori = [abb.allenatore_ref_id, ...(abb.allenatori_co_ids || [])].filter(Boolean);
+            allAllenatori.forEach(allId => {
+                const optAll = opzioniMapById[allId];
+                if (optAll) {
+                    const clean = (optAll.valore || '').trim().toLowerCase();
+                    let targetAllId = null;
+                    for (const [nid, node] of nodesMap.entries()) {
+                        if (node.entityType === 'profilo' && (node.name || '').trim().toLowerCase() === clean) {
+                            targetAllId = nid;
+                            break;
+                        }
+                    }
+                    if (!targetAllId) {
+                        targetAllId = `OPT_${optAll.id}`;
+                        if (!nodesMap.has(targetAllId)) {
+                            nodesMap.set(targetAllId, {
+                                id: targetAllId,
+                                rawId: optAll.id,
+                                entityType: 'opzione_scab',
+                                name: optAll.valore,
+                                label: `ALL: ${optAll.valore.toUpperCase()}`,
+                                category: 'scab',
+                                val: 8,
+                                color: '#4299E1',
+                                borderColor: '#90CDF4',
+                                shape: 'circle',
+                                details: { titolo: optAll.valore, ruolo: 'ALLENATORE SCAB', desc: 'Allenatore tecnico accreditato' }
+                            });
+                        }
+                    }
+                    addLinkHelper(strId, targetAllId, {
+                        type: 'staff_allenatore',
+                        color: 'rgba(66, 153, 225, 0.65)',
+                        width: 1.8,
+                        label: 'Allenatore'
+                    });
+                }
+            });
+
+            // Allievi Allenatori
+            const allAllievi = [abb.allievo_ref_id, ...(abb.allievi_ids || [])].filter(Boolean);
+            allAllievi.forEach(allievoId => {
+                const optAllievo = opzioniMapById[allievoId];
+                if (optAllievo) {
+                    const clean = (optAllievo.valore || '').trim().toLowerCase();
+                    let targetAllievoId = null;
+                    for (const [nid, node] of nodesMap.entries()) {
+                        if (node.entityType === 'profilo' && (node.name || '').trim().toLowerCase() === clean) {
+                            targetAllievoId = nid;
+                            break;
+                        }
+                    }
+                    if (!targetAllievoId) {
+                        targetAllievoId = `OPT_${optAllievo.id}`;
+                        if (!nodesMap.has(targetAllievoId)) {
+                            nodesMap.set(targetAllievoId, {
+                                id: targetAllievoId,
+                                rawId: optAllievo.id,
+                                entityType: 'opzione_scab',
+                                name: optAllievo.valore,
+                                label: `ALLIEVO ALL: ${optAllievo.valore.toUpperCase()}`,
+                                category: 'scab',
+                                val: 7,
+                                color: '#81E6D9',
+                                borderColor: '#319795',
+                                shape: 'circle',
+                                details: { titolo: optAllievo.valore, ruolo: 'ALLIEVO ALLENATORE SCAB', desc: 'Assistente allenatore in formazione' }
+                            });
+                        }
+                    }
+                    addLinkHelper(strId, targetAllievoId, {
+                        type: 'staff_allievo',
+                        color: 'rgba(129, 230, 217, 0.6)',
+                        width: 1.5,
+                        label: 'Allievo Allenatore'
+                    });
+                }
+            });
+        });
+
+        // 10. Archi: Allievo / Atleta $\rightarrow$ Allenatore / Validatore SCAB
+        (abilitazioni || []).forEach(abl => {
+            const pNodeId = `P_${abl.profilo_id}`;
+            if (!nodesMap.has(pNodeId)) return;
+
+            const optCoach = opzioniMapById[abl.allenatore_opzione_id] || opzioniMapById[abl.allievo_opzione_id];
+            if (optCoach) {
+                const clean = (optCoach.valore || '').trim().toLowerCase();
+                let coachNodeId = null;
+                for (const [nid, node] of nodesMap.entries()) {
+                    if (nid !== pNodeId && (node.name || '').trim().toLowerCase() === clean) {
+                        coachNodeId = nid;
+                        break;
+                    }
+                }
+                if (!coachNodeId && nodesMap.has(`OPT_${optCoach.id}`)) {
+                    coachNodeId = `OPT_${optCoach.id}`;
+                }
+
+                if (coachNodeId) {
+                    addLinkHelper(pNodeId, coachNodeId, {
+                        type: 'addestramento_scab',
+                        color: 'rgba(99, 179, 237, 0.45)',
+                        width: 1.2,
+                        label: 'Allievo Addestrato'
+                    });
+                }
+            }
+        });
+
+        // Memorizza i dati completi
+        const nodes = Array.from(nodesMap.values());
+        epikaGraphFullData = { nodes, links };
+        epikaGraphNeighborsMap = neighborsMap;
+
+        // Pulisci container
+        container.innerHTML = '';
+
+        // 11. Inizializzazione Motore Force-Graph
+        const width = container.clientWidth || 800;
+        const height = container.clientHeight || 720;
+
+        if (typeof ForceGraph === 'undefined') {
+            throw new Error("Libreria ForceGraph non ancora caricata dal CDN.");
         }
 
+        const Graph = ForceGraph()(container)
+            .width(width)
+            .height(height)
+            .backgroundColor('transparent')
+            .nodeId('id')
+            .nodeVal(node => node.val)
+            .nodeCanvasObject((node, ctx, globalScale) => {
+                const isHovered = epikaGraphHoverNode === node;
+                const isSelected = epikaGraphSelectedNode === node;
+                const isHighlighted = epikaGraphHighlightNodes.has(node);
+                const hasFocus = epikaGraphHoverNode || epikaGraphSelectedNode;
+
+                // Dimming degli elementi non correlati durante hover/selezione
+                let alpha = 1.0;
+                if (hasFocus && !isHovered && !isSelected && !isHighlighted) {
+                    alpha = 0.12;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+
+                const r = node.val || 5;
+
+                // Effetto Glow/Aura su nodi attivi
+                if (isHovered || isSelected) {
+                    ctx.shadowColor = node.borderColor || '#F6E05E';
+                    ctx.shadowBlur = 18;
+                } else if (node.val >= 14) {
+                    ctx.shadowColor = node.color;
+                    ctx.shadowBlur = 8;
+                }
+
+                ctx.fillStyle = node.color || '#CBD5E0';
+                ctx.strokeStyle = node.borderColor || '#FFFFFF';
+                ctx.lineWidth = (isHovered || isSelected) ? 3.5 : (node.val >= 14 ? 2.5 : 1.5);
+
+                // Disegno delle Forme in base all'entità
+                if (node.shape === 'hexagon') {
+                    // Esagono Direttivo
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (Math.PI / 3) * i;
+                        const x = node.x + r * Math.cos(angle);
+                        const y = node.y + r * Math.sin(angle);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (node.shape === 'shield') {
+                    // Scudo / Rombo Gruppo Storico
+                    ctx.beginPath();
+                    ctx.moveTo(node.x, node.y - r * 1.2);
+                    ctx.lineTo(node.x + r * 1.1, node.y - r * 0.2);
+                    ctx.lineTo(node.x, node.y + r * 1.3);
+                    ctx.lineTo(node.x - r * 1.1, node.y - r * 0.2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (node.shape === 'square') {
+                    // Quadrato Sede SCAB
+                    ctx.beginPath();
+                    ctx.rect(node.x - r, node.y - r, r * 2, r * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    // Cerchio Persona / Tesserato
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+
+                // Disegno Etichette Testuali
+                const showLabel = (node.val >= 12) || (globalScale >= 1.2) || isHovered || isSelected || isHighlighted;
+                if (showLabel) {
+                    const fontSize = Math.max(10 / globalScale, node.val >= 14 ? 13 / globalScale : 9 / globalScale);
+                    ctx.font = `${node.val >= 14 ? 'bold ' : ''}${fontSize}px Cinzel, serif, sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    const labelText = node.label || node.name || '';
+                    const yOffset = node.shape === 'shield' ? r * 1.6 : r + (fontSize * 0.8);
+
+                    // Contorno nero per massima leggibilità
+                    ctx.shadowBlur = 0;
+                    ctx.lineWidth = 3.5;
+                    ctx.strokeStyle = '#050201';
+                    ctx.strokeText(labelText, node.x, node.y + yOffset);
+
+                    // Testo Dorato / Chiaro
+                    ctx.fillStyle = node.val >= 14 ? '#F5E6C8' : (isHovered ? '#FFFFFF' : '#D1D5DB');
+                    ctx.fillText(labelText, node.x, node.y + yOffset);
+                }
+
+                ctx.restore();
+            })
+            .nodePointerAreaPaint((node, color, ctx) => {
+                ctx.fillStyle = color;
+                const r = (node.val || 5) + 3;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                ctx.fill();
+            })
+            .linkColor(link => {
+                const hasFocus = epikaGraphHoverNode || epikaGraphSelectedNode;
+                if (hasFocus) {
+                    if (epikaGraphHighlightLinks.has(link)) {
+                        return link.color ? link.color.replace(/[\d\.]+\)$/, '1)') : '#F6E05E';
+                    }
+                    return 'rgba(255, 255, 255, 0.03)';
+                }
+                return link.color || 'rgba(201, 168, 76, 0.35)';
+            })
+            .linkWidth(link => {
+                if (epikaGraphHighlightLinks.has(link)) return (link.width || 1) * 2.2;
+                return link.width || 1;
+            })
+            .linkDirectionalParticles(link => epikaGraphHighlightLinks.has(link) ? 3 : 0)
+            .linkDirectionalParticleWidth(3)
+            .linkDirectionalParticleSpeed(0.008)
+            .onNodeHover(handleNodeHover)
+            .onNodeClick(handleNodeClick)
+            .onBackgroundClick(handleBackgroundClick);
+
+        // Configurazione delle forze fisiche (senza dipendenza da window.d3 globale)
+        try {
+            const chargeForce = Graph.d3Force('charge');
+            if (chargeForce && typeof chargeForce.strength === 'function') {
+                chargeForce.strength(node => (node.val >= 14 ? -260 : -90));
+            }
+
+            const linkForce = Graph.d3Force('link');
+            if (linkForce && typeof linkForce.distance === 'function') {
+                linkForce.distance(link => (link.type === 'coordinamento' ? 120 : (link.type === 'membro_direttivo' ? 70 : 50)));
+            }
+        } catch (fErr) {
+            console.warn("Personalizzazione forze D3 non critica:", fErr);
+        }
+
+        epikaGraphInstance = Graph;
+
+        // Imposta i dati iniziali
+        filtraGrafoNetwork('all');
+
+        // Adatta zoom iniziale con ritardo morbido
+        setTimeout(() => {
+            if (epikaGraphInstance) {
+                epikaGraphInstance.zoomToFit(800, 35);
+            }
+        }, 350);
+
     } catch (e) {
-        console.error("Errore durante il rendering del diagramma Mermaid:", e);
-        container.innerHTML = '<p style="font-size: 11px; text-transform: uppercase; color: red;">Errore di rendering dell\'organigramma strutturale.</p>';
+        console.error("Errore durante il rendering del grafo relazionale Force-Graph:", e);
+        container.innerHTML = `
+            <div style="padding: 24px; text-align: center; color: #ef4444;">
+                <p style="font-size: 13px; font-weight: bold; text-transform: uppercase;">Errore generazione rete relazionale</p>
+                <p style="font-size: 11px; color: #a1a1aa; margin-top: 6px;">${escapeHtml(e.message || e)}</p>
+                <button class="epk-btn" style="margin-top: 12px; font-size: 10px; padding: 6px 14px;" onclick="renderOrganigrammaNetwork()">Riprova Caricamento</button>
+            </div>`;
     }
 }
+
+// Gestione Hover sui Nodi
+function handleNodeHover(node) {
+    const tooltip = document.getElementById('epk-network-tooltip');
+    
+    epikaGraphHighlightNodes.clear();
+    epikaGraphHighlightLinks.clear();
+    epikaGraphHoverNode = node || null;
+
+    if (node) {
+        epikaGraphHighlightNodes.add(node);
+        const neighbors = epikaGraphNeighborsMap.get(node.id) || new Set();
+        
+        // Trova tutti i nodi e link collegati
+        if (epikaGraphInstance) {
+            const currentLinks = epikaGraphInstance.graphData().links || [];
+            currentLinks.forEach(link => {
+                const sId = typeof link.source === 'object' ? link.source.id : link.source;
+                const tId = typeof link.target === 'object' ? link.target.id : link.target;
+                if (sId === node.id || tId === node.id) {
+                    epikaGraphHighlightLinks.add(link);
+                    epikaGraphHighlightNodes.add(typeof link.source === 'object' ? link.source : { id: sId });
+                    epikaGraphHighlightNodes.add(typeof link.target === 'object' ? link.target : { id: tId });
+                }
+            });
+        }
+
+        // Mostra Tooltip
+        if (tooltip) {
+            const container = document.getElementById('epk-network-container');
+            if (epikaGraphInstance && typeof epikaGraphInstance.graph2ScreenCoords === 'function' && container && node.x !== undefined && node.y !== undefined) {
+                try {
+                    const coords = epikaGraphInstance.graph2ScreenCoords(node.x, node.y);
+                    if (coords) {
+                        const maxLeft = Math.max(10, (container.clientWidth || 700) - 340);
+                        const maxTop = Math.max(10, (container.clientHeight || 600) - 180);
+                        const left = Math.min(Math.max(coords.x + 18, 12), maxLeft);
+                        const top = Math.min(Math.max(coords.y - 20, 12), maxTop);
+                        tooltip.style.left = `${left}px`;
+                        tooltip.style.top = `${top}px`;
+                    }
+                } catch (posErr) {
+                    // Fallback se coords non disponibili
+                }
+            }
+
+            const d = node.details || {};
+            tooltip.innerHTML = `
+                <div style="font-size: 10px; color: var(--epk-gold); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-weight: bold;">
+                    ${escapeHtml(d.ruolo || node.category || 'ENTITÀ')}
+                </div>
+                <div style="font-size: 14px; font-weight: bold; color: #FFFFFF; margin-bottom: 6px;">
+                    ${escapeHtml(node.name || node.label)}
+                </div>
+                ${d.popolo ? `<div style="font-size: 11px; color: #A0AEC0; margin-bottom: 2px;">🏛️ Popolo: <strong style="color: #F5E6C8;">${escapeHtml(d.popolo)}</strong></div>` : ''}
+                ${d.staffScab ? `<div style="font-size: 11px; color: #63B3ED; margin-bottom: 2px;">⚔️ ${escapeHtml(d.staffScab)}</div>` : ''}
+                ${d.campione ? `<div style="font-size: 11px; color: #ED8936; margin-bottom: 2px;">${escapeHtml(d.campione)}</div>` : ''}
+                ${d.desc ? `<div style="font-size: 10px; color: #718096; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px;">${escapeHtml(d.desc)}</div>` : ''}
+                <div style="font-size: 9px; color: #a1a1aa; margin-top: 6px; font-style: italic;">
+                    🔗 ${neighbors.size} collegamenti diretti • Clicca per bloccare dettagli
+                </div>`;
+            tooltip.classList.remove('epk-hidden');
+        }
+    } else {
+        if (tooltip) tooltip.classList.add('epk-hidden');
+    }
+
+    // Richiede ridisegno del canvas
+    if (epikaGraphInstance) {
+        epikaGraphInstance.refresh();
+    }
+}
+
+// Gestione Click sul Nodo (Apertura Scheda Dettagli & Zoom)
+function handleNodeClick(node) {
+    if (!node) return;
+    epikaGraphSelectedNode = node;
+
+    // Centra e zooma leggermente sul nodo selezionato
+    if (epikaGraphInstance) {
+        epikaGraphInstance.centerAt(node.x, node.y, 600);
+        epikaGraphInstance.zoom(2.0, 600);
+    }
+
+    // Mostra Pannello Laterale Fisso
+    const detailPanel = document.getElementById('epk-network-node-detail');
+    const badge = document.getElementById('epk-net-detail-badge');
+    const title = document.getElementById('epk-net-detail-title');
+    const body = document.getElementById('epk-net-detail-body');
+
+    if (detailPanel && badge && title && body) {
+        const d = node.details || {};
+        badge.textContent = d.ruolo || node.category || 'ENTITÀ';
+        badge.style.background = node.color || 'var(--epk-gold)';
+        badge.style.color = '#FFFFFF';
+        
+        title.textContent = node.name || node.label;
+        
+        let bodyHtml = '';
+        if (d.desc) bodyHtml += `<p style="margin: 0 0 8px 0; color: #a1a1aa;">${escapeHtml(d.desc)}</p>`;
+        if (d.popolo) bodyHtml += `<div style="margin-bottom: 4px;"><strong>Popolo/Cultura:</strong> ${escapeHtml(d.popolo)}</div>`;
+        if (d.staffScab) bodyHtml += `<div style="margin-bottom: 4px; color: #63B3ED;"><strong>${escapeHtml(d.staffScab)}</strong></div>`;
+        if (d.campione) bodyHtml += `<div style="margin-bottom: 4px; color: #ED8936;"><strong>${escapeHtml(d.campione)}</strong></div>`;
+
+        // Elenco Connessioni Dirette
+        const currentLinks = epikaGraphInstance ? epikaGraphInstance.graphData().links : [];
+        const connectedNodes = [];
+        currentLinks.forEach(link => {
+            const s = typeof link.source === 'object' ? link.source : { id: link.source };
+            const t = typeof link.target === 'object' ? link.target : { id: link.target };
+            if (s.id === node.id) {
+                connectedNodes.push({ name: t.name || t.label || t.id, rel: link.label || link.type });
+            } else if (t.id === node.id) {
+                connectedNodes.push({ name: s.name || s.label || s.id, rel: link.label || link.type });
+            }
+        });
+
+        if (connectedNodes.length > 0) {
+            bodyHtml += `
+                <div style="margin-top: 10px; border-top: 1px solid var(--epk-gold-dim); padding-top: 8px;">
+                    <div style="font-weight: bold; color: var(--epk-gold); margin-bottom: 6px;">Collegamenti Diretti (${connectedNodes.length}):</div>
+                    <div style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+                        ${connectedNodes.map(c => `
+                            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 2px; display: flex; justify-content: space-between; font-size: 10px;">
+                                <span style="font-weight: bold; color: #F5E6C8;">${escapeHtml(c.name)}</span>
+                                <span style="color: #718096; font-style: italic;">${escapeHtml(c.rel || '')}</span>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+        }
+
+        body.innerHTML = bodyHtml;
+        detailPanel.classList.remove('epk-hidden');
+    }
+}
+
+// Click sullo sfondo del Canvas
+function handleBackgroundClick() {
+    epikaGraphSelectedNode = null;
+    chiudiDettaglioGrafo();
+    if (epikaGraphInstance) epikaGraphInstance.refresh();
+}
+
+function chiudiDettaglioGrafo() {
+    const detailPanel = document.getElementById('epk-network-node-detail');
+    if (detailPanel) detailPanel.classList.add('epk-hidden');
+}
+
+// 12. Filtri Dinamici del Grafo
+function filtraGrafoNetwork(filtro) {
+    epikaGraphCurrentFilter = filtro;
+    if (!epikaGraphInstance || !epikaGraphFullData.nodes) return;
+
+    let filteredNodes = [];
+    
+    if (filtro === 'all') {
+        filteredNodes = [...epikaGraphFullData.nodes];
+    } else if (filtro === 'direttivi') {
+        // Nodi Direttivo + Componenti Direttivo
+        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+            n.entityType === 'gruppo_lavoro' || 
+            (n.entityType === 'profilo' && (n.inDirettivo || n.inGruppoLavoro || n.isAdminEpika))
+        );
+    } else if (filtro === 'scab') {
+        // Rete SCAB: Direttivo SCAB, Strutture SCAB, Staff SCAB, Combattenti addestrati
+        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+            n.id === 'GL_2' || 
+            n.entityType === 'struttura_scab' || 
+            n.entityType === 'opzione_scab' || 
+            (n.entityType === 'profilo' && (n.isScabStaff || n.isCombattente))
+        );
+    } else if (filtro === 'storici') {
+        // Gruppi Storici e loro Tesserati
+        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+            n.entityType === 'gruppo_storico' || 
+            (n.entityType === 'profilo' && n.popolo)
+        );
+    } else if (filtro === 'combattenti') {
+        // Solo Combattenti, Staff SCAB e Gruppi Storici
+        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+            n.entityType === 'gruppo_storico' || 
+            (n.entityType === 'profilo' && n.isCombattente)
+        );
+    } else if (filtro === 'non_combattenti') {
+        // Solo Non Combattenti e Gruppi Storici
+        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+            n.entityType === 'gruppo_storico' || 
+            (n.entityType === 'profilo' && !n.isCombattente)
+        );
+    }
+
+    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+
+    // Filtra gli archi che collegano solo i nodi visibili
+    const filteredLinks = epikaGraphFullData.links.filter(l => {
+        const sId = typeof l.source === 'object' ? l.source.id : l.source;
+        const tId = typeof l.target === 'object' ? l.target.id : l.target;
+        return filteredNodeIds.has(sId) && filteredNodeIds.has(tId);
+    });
+
+    epikaGraphFilteredData = { nodes: filteredNodes, links: filteredLinks };
+    epikaGraphInstance.graphData(epikaGraphFilteredData);
+
+    setTimeout(() => {
+        if (epikaGraphInstance) epikaGraphInstance.zoomToFit(600, 35);
+    }, 150);
+}
+
+// 13. Ricerca Dinamica nel Grafo
+function cercaNelGrafoNetwork(query) {
+    const clearBtn = document.getElementById('epk-network-search-clear');
+    if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+    if (!epikaGraphInstance || !epikaGraphFilteredData.nodes) return;
+    const cleanQ = (query || '').trim().toLowerCase();
+
+    if (!cleanQ) {
+        epikaGraphHighlightNodes.clear();
+        epikaGraphHighlightLinks.clear();
+        epikaGraphInstance.refresh();
+        return;
+    }
+
+    const matchingNodes = epikaGraphFilteredData.nodes.filter(n => 
+        (n.name && n.name.toLowerCase().includes(cleanQ)) ||
+        (n.label && n.label.toLowerCase().includes(cleanQ)) ||
+        (n.details && n.details.ruolo && n.details.ruolo.toLowerCase().includes(cleanQ)) ||
+        (n.details && n.details.popolo && n.details.popolo.toLowerCase().includes(cleanQ))
+    );
+
+    epikaGraphHighlightNodes.clear();
+    matchingNodes.forEach(m => epikaGraphHighlightNodes.add(m));
+    epikaGraphInstance.refresh();
+
+    // Centra sul primo nodo trovato
+    if (matchingNodes.length > 0) {
+        const target = matchingNodes[0];
+        if (target.x !== undefined && target.y !== undefined) {
+            epikaGraphInstance.centerAt(target.x, target.y, 600);
+            epikaGraphInstance.zoom(2.2, 600);
+        }
+    }
+}
+
+function pulisciRicercaNetwork() {
+    const searchInput = document.getElementById('epk-network-search');
+    if (searchInput) {
+        searchInput.value = '';
+        cercaNelGrafoNetwork('');
+    }
+}
+
+// 14. Reset Zoom e Centratura
+function resetGrafoNetworkZoom() {
+    if (epikaGraphInstance) {
+        epikaGraphSelectedNode = null;
+        chiudiDettaglioGrafo();
+        epikaGraphHighlightNodes.clear();
+        epikaGraphHighlightLinks.clear();
+        epikaGraphInstance.zoomToFit(700, 35);
+    }
+}
+
+// 15. Toggle Animazione Fisica (Pausa / Riprendi)
+function toggleFisicaNetwork() {
+    const btn = document.getElementById('epk-net-toggle-physics-btn');
+    if (!epikaGraphInstance) return;
+
+    if (epikaGraphPhysicsActive) {
+        epikaGraphInstance.pauseAnimation();
+        epikaGraphPhysicsActive = false;
+        if (btn) btn.innerHTML = '▶️ Riprendi';
+    } else {
+        epikaGraphInstance.resumeAnimation();
+        epikaGraphPhysicsActive = true;
+        if (btn) btn.innerHTML = '⏸️ Pausa';
+    }
+}
+
+// Ridimensionamento dinamico del grafo al resize della finestra
+window.addEventListener('resize', () => {
+    const container = document.getElementById('epk-network-container');
+    if (epikaGraphInstance && container && container.clientWidth > 0 && container.clientHeight > 0) {
+        epikaGraphInstance.width(container.clientWidth).height(container.clientHeight);
+    }
+});
 
 // --- GESTIONE GRUPPI STORICI ---
 async function renderGruppiStoriciAdmin() {

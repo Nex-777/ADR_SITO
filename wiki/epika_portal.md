@@ -275,6 +275,34 @@ Ogni modifica salvata sul profilo viene intercettata a livello database dal trig
 
 L'atleta e il Direttivo possono consultare l'intero storico cronologico cliccando sul pulsante **STORICO MODIFICHE** (`apriModaleRegistroModifiche()`).
 
+---
+
+## 🌐 Rete Relazionale Strutturale & Gerarchia EPIKA (Force-Graph Network)
+
+### 1. Architettura del Grafo Dinamico
+In sostituzione dell'organigramma statico Mermaid.js nella sezione **Dash Generale** (`epk-adm-tab-dash`), è integrato un motore di rendering dinamico basato su **Force-Graph (HTML5 Canvas)** ad alte prestazioni (`renderOrganigrammaNetwork()`), visibile esclusivamente ad Amministratori e Direttivi autorizzati:
+- **Nodi Macro-Strutturali**:
+  - `Direttivo EPIKA` (Crimson/Oro, forma esagonale, raggio max e ancoraggio supremo).
+  - `Direttivi di Settore & Gruppi di Lavoro` (Oro/Ambra, forma esagonale).
+  - `Gruppi Storici & Popoli` (Verde Smeraldo, forma a scudo con indicazione della cultura/popolo).
+  - `Palestre & Centri Pratica SCAB` (Teal/Ciano, forma quadrata).
+- **Nodi Personaggio & Tesserati**:
+  - `Tesserati / Guerrieri`: Cerchi dimensionati e colorati in base a ruoli e onorificenze (Oro con corona per Capi/Vice Gruppo, Blu Reale per Staff SCAB, Rubino per Membri Direttivo, Ambra per Campioni SCAB, Argento per Combattenti, Ardesia scura per Non Combattenti).
+- **Archi Relazionali (Links)**:
+  - *Coordinamento Direttivo*: collega il Direttivo Supremo a tutti i sotto-direttivi.
+  - *Nomina Operativa*: collega i tesserati ai rispettivi gruppi di lavoro/direttivi (`gruppo_lavoro_ids`).
+  - *Appartenenza Storica & Leadership*: collega i tesserati e i capigruppo/vice al proprio Gruppo Storico (`gruppo_storico_id`, `rappresentante_gruppo_storico_id`).
+  - *Staff Tecnico SCAB & Strutture*: collega palestre/centri pratica ai validatori, allenatori e allievi allenatori accreditati.
+  - *Addestramento & Certificazioni*: collega atleti e allievi ai rispettivi maestri/allenatori.
+
+### 2. Interattività & Filtri
+- **Hover Dinamico & Tooltip**: passando con il mouse sopra un nodo, si accende un'aura luminosa, si evidenziano gli archi collegati con particelle direzionali e si oscurano gli elementi estranei (dimming). Un tooltip contestuale mostra nome, ruolo, popolo, staff e numero di collegamenti diretti.
+- **Inspector Laterale al Click**: cliccando su un nodo, la visuale si centra con zoom fluido e si apre una card laterale con tutti i dettagli e l'elenco dei collegamenti diretti.
+- **Filtri di Visualizzazione**: barra superiore con selezione immediata (`🌐 Vista Globale`, `🏛️ Solo Direttivi`, `⚔️ Solo Rete SCAB`, `🛡️ Solo Gruppi Storici`, `⚔️ Solo Combattenti`, `📜 Solo Non Combattenti`).
+- **Ricerca in Tempo Reale**: campo di ricerca con auto-focus e zoom sul nodo individuato.
+- **Controlli Motore Fisico**: pulsanti per reset zoom e pausa/ripresa della simulazione fisica D3.
+
+
 
 
 

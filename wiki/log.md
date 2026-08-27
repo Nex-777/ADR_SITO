@@ -2,6 +2,23 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-27] feature | Sostituzione Organigramma Mermaid con Grafo Relazionale Dinamico Force-Graph (Dash Generale)
+- **Frontend UI (`portal/epika.html`)**:
+  - Sostituito lo script Mermaid.js con `force-graph` via CDN.
+  - Ridisegnata la tab **Dash Generale** con la nuova interfaccia per il grafo dinamico relazionale:
+    - Selettore filtri dinamici rapido (`🌐 Vista Globale`, `🏛️ Solo Direttivi`, `⚔️ Solo Rete SCAB`, `🛡️ Solo Gruppi Storici`, `⚔️ Solo Combattenti`, `📜 Solo Non Combattenti`).
+    - Campo di ricerca rapida con auto-focus e zoom sul nodo.
+    - Pulsanti `🎯 Centra` e `⏸️ Pausa/Riprendi` simulazione fisica.
+    - Barra legenda cromatica per il riconoscimento immediato delle tipologie di nodo.
+    - Container Canvas ad alta risoluzione con tooltip flottante contestuale e inspector laterale a comparsa al click del nodo.
+- **Frontend JS (`portal/epika.js`)**:
+  - Implementata la funzione `renderOrganigrammaNetwork()` con caricamento parallelo (`Promise.all`) da Supabase di: `epika_gruppi_lavoro`, `epika_gruppi_storici`, `epika_profili`, `epika_opzioni`, `epika_scab_strutture`, `epika_scab_abbinamenti`, `epika_scab_abilitazioni`, `epika_campioni_scab`.
+  - Mappatura completa e multidirezionale di tutte le relazioni (Direttivo Supremo $\rightarrow$ Sottodirettivi $\rightarrow$ Membri; Strutture SCAB $\rightarrow$ Staff Tecnico $\rightarrow$ Allievi $\rightarrow$ Atleti; Gruppi Storici $\rightarrow$ Capi/Vice $\rightarrow$ Guerrieri e Non Combattenti).
+  - Rendering custom su Canvas con forme differenziate (esagoni, scudi, quadrati, cerchi), scale gerarchiche, etichette anti-aliasing con contorno e gestione hover con effetto glow e dimming dei nodi non correlati.
+  - Gestione interattività avanzata: `filtraGrafoNetwork`, `cercaNelGrafoNetwork`, `resetGrafoNetworkZoom`, `toggleFisicaNetwork`, `handleNodeHover`, `handleNodeClick`.
+  - Aggiunto listener di resize per adattare dinamicamente il canvas alle dimensioni del viewport.
+- **Wiki**: Aggiornata la documentazione architetturale in `wiki/epika_portal.md`.
+
 ## [2026-08-27] feature | Modifica Nome Storico in Scheda Personaggio con Unicità, Suggerimenti Tematici e Storicizzazione Audit (v1.05.00)
 - **Frontend UI (`portal/epika.html`)**:
   - Inserito il campo di input `Nome Storico *` (`#edit-nome-storico`) come primo elemento nel modale `MODIFICA SCHEDA PERSONAGGIO` con vincolo `maxlength="40"`, uppercase automatico e box feedback live (`#edit-nome-storico-feedback`).
