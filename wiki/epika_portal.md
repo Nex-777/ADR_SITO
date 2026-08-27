@@ -160,6 +160,17 @@ Stores individual commendations (encomi) and infractions/warnings (richiami) per
 *   `data_assegnazione` (DATE)
 *   `attivo` (BOOLEAN DEFAULT TRUE)
 
+#### 🥋 Risoluzione Gerarchica Staff Tecnico SCAB (Registro Richiami ed Encomi)
+Nel calcolo degli atleti e dei relativi provvedimenti supervisionati da ciascun membro dello Staff Tecnico SCAB (`renderTabellaRichiamiScab`):
+1. **Validatore (`scab_validatore`)**: supervisiona tutti gli atleti appartenenti ai pod/strutture a lui abbinati in `epika_scab_abbinamenti`.
+2. **Allenatore Responsabile (`allenatore`)**: supervisiona i propri atleti diretti (`epika_profili.allenatore_id = coach_id`) + tutti gli atleti seguiti dai propri Allievi Allenatori abbinati (`epika_scab_abilitazioni.allievo_opzione_id`) + l'Allievo Allenatore stesso come proprio atleta.
+3. **Allievo Allenatore (`scab_allievo_allenatore`)**: supervisiona **esclusivamente** gli atleti che hanno scelto direttamente quell'Allievo Allenatore nella richiesta di abilitazione (`epika_scab_abilitazioni.allievo_opzione_id = sid`). **NON** risponde degli atleti diretti del proprio Maestro né di colleghi.
+
+#### 🏷️ Gestione Nome Storico (Scheda Personaggio)
+- **Unicità**: Vincolo di unicità case-insensitive a livello DB (`CREATE UNIQUE INDEX epika_profili_nome_battaglia_unique ON public.epika_profili (UPPER(nome_di_battaglia))`) e lunghezza massima di 40 caratteri.
+- **Verifica Live & Suggerimenti**: In fase di modifica profilo, un debounce a 350ms verifica la disponibilità in tempo reale. In caso di collisione, il sistema propone epiteti tematici disponibili (es. `IL FORTE`, `IL MAGNO`, `L'INVITTO`, `MINOR`, `IL LUPO`, ecc.) cliccabili per l'autocompilazione.
+- **Audit Immutabile**: Ogni variazione del nome storico viene automaticamente storicizzata nel registro audit `epika_registro_modifiche_profilo` con `campo = 'Nome Storico'`.
+
 ### 14. `public.epika_palmares_atleti`
 Stores historical tournament results, podiums, titles, and special recognitions per athlete.
 *   `id` (UUID PK)

@@ -362,3 +362,21 @@ Introdotta con `migration_epika_scab_abilitazioni.sql` per la gestione del ciclo
    - Invocata dal validatore per aggiornare il semaforo (giallo/rosso/verde).
    - Valida che il chiamante (`auth.uid()`) corrisponda al validatore di riferimento.
 
+---
+
+## 🛡️ Vincoli & Storicizzazione Scheda Personaggio EPIKA
+
+Introdotta con `migration_epika_nome_battaglia_unique.sql` e `migration_epika_registro_modifiche.sql`:
+
+### 1. `public.epika_profili` (Vincoli Nome Storico)
+- **Unicità Case-Insensitive**: `CREATE UNIQUE INDEX epika_profili_nome_battaglia_unique ON public.epika_profili (UPPER(nome_di_battaglia)) WHERE nome_di_battaglia IS NOT NULL;`
+- **Lunghezza Massima**: `CHECK (nome_di_battaglia IS NULL OR char_length(nome_di_battaglia) <= 40)`
+
+### 2. `public.epika_registro_modifiche_profilo` (Trigger Audit Immutabile)
+Trigger automatico `trg_epika_log_profilo_modifiche()` per la storicizzazione append-only di ogni modifica ai campi del profilo:
+- `Nome Storico` (traccia variazioni del nome di battaglia)
+- `Gruppo Storico` (traccia trasferimenti di gruppo)
+- `Popolo/Cultura`
+- `Ruolo Combattimento`
+- `Allenatore` (traccia cambi di maestro/struttura)
+
