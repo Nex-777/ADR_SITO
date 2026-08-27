@@ -235,5 +235,35 @@ Nella **Lista Generale**, ciascun tesserato espone lo stato del consenso al trat
 - 🔴 `🚫 RIPRESE A/V: NO` (se `consenso_audiovisivi = FALSE` o `NULL`)
 È inoltre disponibile il filtro dedicato `#gen-filter-consenso` per filtrare la tabella per consenso accordato o negato.
 
+---
+
+## 🛡️ Scheda Personaggio & Storicizzazione Modifiche Profilo
+
+### 1. Modifica Scheda Personaggio Atleta
+L'atleta può visualizzare e modificare la propria Scheda Personaggio in Epika (`portal/epika.html`):
+- **Nome Storico / Nome di Battaglia** (`nome_di_battaglia`): vincolo di unicità case-insensitive assoluto su `UPPER(nome_di_battaglia)` e limite massimo di 40 caratteri.
+- **Gruppo Storico** (`gruppo_storico_id`): binding dinamico con i popoli e culture associati.
+- **Popolo / Cultura** (`popolo`): vincolato dal gruppo scelto o libero per i Mercenari.
+- **Ruolo Combattimento** (`ruolo_combattimento`): `combattente` (riservato ai titolari di tessera Integrativa A o B) o `non_combattente`.
+
+### 2. Motore di Unicità Live e Suggerimenti Tematici
+- **Live Debounce (350ms)**: durante la digitazione in `onEditNomeBattagliaInput`, il frontend interroga `public.epika_profili` escludendo l'atleta corrente (`neq('id', currentUser.id)`).
+- **Generatore di Epiteti Storici (`generaSuggerimentiNome`)**: se il nome è occupato, il sistema propone varianti libere basate su epiteti storici antichi (es. `IL FORTE`, `L'INVITTO`, `IL MAGNO`, `IL LUPO`, `MINOR`, `IL ROMANO`, ecc.) cliccabili per auto-compilazione istantanea.
+- **Difesa in Profondità**:
+  1. *Live Check Client-side* mentre l'utente digita.
+  2. *Pre-save Validation* prima della chiamata `UPDATE`.
+  3. *Unique Index Database* (`epika_profili_nome_battaglia_unique`) con gestione graceful dell'errore PostgreSQL `23505`.
+
+### 3. Storicizzazione Immutabile nel Registro Audit
+Ogni modifica salvata sul profilo viene intercettata a livello database dal trigger `trg_epika_log_profilo_modifiche()` (`AFTER UPDATE ON public.epika_profili`), che popola in modo atomico `public.epika_registro_modifiche_profilo` per i seguenti campi:
+- `Nome Storico` (`OLD.nome_di_battaglia` ➡️ `NEW.nome_di_battaglia`)
+- `Gruppo Storico` (`OLD.gruppo_storico_id` ➡️ `NEW.gruppo_storico_id`)
+- `Popolo/Cultura` (`OLD.popolo` ➡️ `NEW.popolo`)
+- `Ruolo Combattimento` (`OLD.ruolo_combattimento` ➡️ `NEW.ruolo_combattimento`)
+- `Allenatore` (`OLD.allenatore_id` ➡️ `NEW.allenatore_id`)
+
+L'atleta e il Direttivo possono consultare l'intero storico cronologico cliccando sul pulsante **STORICO MODIFICHE** (`apriModaleRegistroModifiche()`).
+
+
 
 
