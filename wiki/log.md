@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-27] fix | Gerarchia Attribuzione Atleti Allievo Allenatore in Registro Richiami SCAB (v1.04.98)
+- **Frontend JS (`portal/epika.js`)**:
+  - Corretta la funzione `renderTabellaRichiamiScab`: per i membri dello staff con tipo `scab_allievo_allenatore` (es. Bran), la lista degli atleti supervisionati considera ora esclusivamente gli atleti che hanno scelto direttamente quell'Allievo Allenatore nel proprio profilo (`coachDirectAthletes[sid]`).
+  - Eliminata la risalita errata al Maestro (`getAtletiForCoach(cid)`) per gli allievi allenatori, che attribuiva erroneamente all'allievo tutti gli atleti del proprio allenatore referente (es. Umbertone a Bran).
+  - Confermato che l'Allievo Allenatore (in quanto atleta) e tutti i suoi atleti continuano ad essere supervisionati e conteggiati sotto l'Allenatore Responsabile (Minor).
+- **Versionamento**: Eseguito `npm run bump` (➡️ `v1.04.98`).
+
 ## [2026-08-27] feature | Ottimizzazioni UI/UX Registro Richiami/Encomi (Filtri Riepiloghi & Text Clamping)
 - **Frontend UI (`portal/epika.html`)**:
   - Rimossa la card KPI `🏛️ Gruppo più Riconosciuto` per pulizia visiva e riallineamento ottimale della griglia a 3 indicatori (Totale Encomi, Richiami Attivi, Atleti Coinvolti).

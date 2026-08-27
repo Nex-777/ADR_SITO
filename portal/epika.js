@@ -10410,16 +10410,10 @@ async function renderReRiepilogoScab() {
                 const cAtleti = getAtletiForCoach(sid);
                 cAtleti.forEach(id => atletiIds.add(id));
             } else if (staff.tipo === 'scab_allievo_allenatore') {
-                const coaches = allievoToCoachesMap[sid] || new Set();
-                if (coaches.size > 0) {
-                    coaches.forEach(cid => {
-                        const cAtleti = getAtletiForCoach(cid);
-                        cAtleti.forEach(id => atletiIds.add(id));
-                    });
-                } else {
-                    if (coachDirectAthletes[sid]) {
-                        coachDirectAthletes[sid].forEach(id => atletiIds.add(id));
-                    }
+                // L'Allievo Allenatore risponde SOLO degli atleti diretti (profilo.allenatore_id = sid).
+                // NON del roster del suo Maestro.
+                if (coachDirectAthletes[sid]) {
+                    coachDirectAthletes[sid].forEach(id => atletiIds.add(id));
                 }
             }
 
