@@ -4980,13 +4980,13 @@ async function renderOrganigrammaNetwork() {
             { data: campioni, error: errCamp }
         ] = await Promise.all([
             supabaseClient.from('epika_gruppi_lavoro').select('id, nome, ordine, attivo').eq('attivo', true).order('ordine', { ascending: true }),
-            supabaseClient.from('epika_gruppi_storici').select('id, nome, popolo, capogruppo_id, vice_capogruppo_id, attivo').eq('attivo', true),
-            supabaseClient.from('epika_profili').select('id, nome_di_battaglia, ruolo_combattimento, gruppo_storico_id, gruppo_lavoro_ids, popolo, is_admin_epika, rappresentante_gruppo_storico_id, attivo').eq('attivo', true),
-            supabaseClient.from('epika_opzioni').select('id, tipo, valore, ordine, attivo').eq('attivo', true),
-            supabaseClient.from('epika_scab_strutture').select('id, nome, tipo, attivo').eq('attivo', true),
-            supabaseClient.from('epika_scab_abbinamenti').select('id, struttura_id, validatore_id, allenatore_ref_id, allenatori_co_ids, allievo_ref_id, allievi_ids, attivo').eq('attivo', true),
-            supabaseClient.from('epika_scab_abilitazioni').select('id, profilo_id, stato_abilitazione, allenatore_opzione_id, allievo_opzione_id, struttura_id, attivo').eq('attivo', true),
-            supabaseClient.from('epika_campioni_scab').select('id, anno, profilo_id, attivo').eq('attivo', true)
+            supabaseClient.from('epika_gruppi_storici').select('id, nome, popolo, capogruppo_id, vice_capogruppo_id, attivo'),
+            supabaseClient.from('epika_profili').select('id, nome_di_battaglia, ruolo_combattimento, popolo, gruppo_storico_id, allenatore_id, gruppo_lavoro_ids, is_admin_epika, profilo_completato, rappresentante_gruppo_storico_id'),
+            supabaseClient.from('epika_opzioni').select('id, tipo, valore, attivo'),
+            supabaseClient.from('epika_scab_strutture').select('id, nome, tipo, attivo'),
+            supabaseClient.from('epika_scab_abbinamenti').select('*'),
+            supabaseClient.from('epika_scab_abilitazioni').select('id, profilo_id, anno_abilitativo, allenatore_opzione_id, allievo_opzione_id, validatore_opzione_id, stato_allenatore, stato_validatore'),
+            supabaseClient.from('epika_campioni_scab').select('id, anno, profilo_id, nome_campione')
         ]);
 
         if (errGL || errGS || errProf) {

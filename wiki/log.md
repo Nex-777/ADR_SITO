@@ -2907,3 +2907,6 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - Allows admins to override AI validation during manual supervision and reject blurry, incomplete, or invalid documents directly from pending activation tables.
 - Bumped application version to v1.04.20.
 
+
+## [2026-08-27] patch | epika.js
+- Fix: Rimosso prefisso window. da supabaseClient che causava TypeError e bloccava il caricamento del grafo (v1.05.05).
