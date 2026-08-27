@@ -4928,6 +4928,17 @@ let epikaGraphHighlightLinks = new Set();
 let epikaGraphSelectedNode = null;
 let epikaGraphPhysicsActive = true;
 let epikaGraphNeighborsMap = new Map();
+let epikaGraphLegendaAttiva = new Set([
+    'direttivo_epika',
+    'altri_direttivi',
+    'gruppi_storici',
+    'palestre_scab',
+    'staff_scab',
+    'capogruppo',
+    'combattenti',
+    'non_combattenti'
+]);
+let epikaGraphSpacingValue = 80;
 
 // Alias di compatibilità per chiamate legacy
 async function renderOrganigrammaMermaid() {
@@ -4959,43 +4970,49 @@ async function renderOrganigrammaNetwork() {
     try {
         // 1. Caricamento parallelo di tutti i dati relazionali
         const [
-            { data: gruppiL, error: glErr },
-            { data: gruppiS, error: gsErr },
-            { data: profili, error: pErr },
-            { data: opzioni, error: optErr },
-            { data: strutture, error: strErr },
-            { data: abbinamenti, error: abbErr },
-            { data: abilitazioni, error: ablErr },
-            { data: campioni, error: cmpErr }
+            { data: gruppiL, error: errGL },
+            { data: gruppiS, error: errGS },
+            { data: profili, error: errProf },
+            { data: opzioni, error: errOpt },
+            { data: strutture, error: errStr },
+            { data: abbinamenti, error: errAbb },
+            { data: abilitazioni, error: errAbl },
+            { data: campioni, error: errCamp }
         ] = await Promise.all([
-            supabaseClient.from('epika_gruppi_lavoro').select('id, nome, ordine, attivo').eq('attivo', true).order('ordine', { ascending: true }),
-            supabaseClient.from('epika_gruppi_storici').select('id, nome, popolo, capogruppo_id, vice_capogruppo_id, attivo'),
-            supabaseClient.from('epika_profili').select('id, nome_di_battaglia, ruolo_combattimento, popolo, gruppo_storico_id, allenatore_id, gruppo_lavoro_ids, is_admin_epika, profilo_completato, rappresentante_gruppo_storico_id'),
-            supabaseClient.from('epika_opzioni').select('id, tipo, valore, attivo'),
-            supabaseClient.from('epika_scab_strutture').select('id, nome, tipo, attivo'),
-            supabaseClient.from('epika_scab_abbinamenti').select('*'),
-            supabaseClient.from('epika_scab_abilitazioni').select('id, profilo_id, anno_abilitativo, allenatore_opzione_id, allievo_opzione_id, validatore_opzione_id, stato_allenatore, stato_validatore'),
-            supabaseClient.from('epika_campioni_scab').select('id, anno, profilo_id, nome_campione')
+            window.supabaseClient.from('epika_gruppi_lavoro').select('id, nome, ordine, attivo').eq('attivo', true).order('ordine', { ascending: true }),
+            window.supabaseClient.from('epika_gruppi_storici').select('id, nome, popolo, capogruppo_id, vice_capogruppo_id, attivo').eq('attivo', true),
+            window.supabaseClient.from('epika_profili').select('id, nome_di_battaglia, ruolo_combattimento, gruppo_storico_id, gruppo_lavoro_ids, popolo, is_admin_epika, rappresentante_gruppo_storico_id, attivo').eq('attivo', true),
+            window.supabaseClient.from('epika_opzioni').select('id, tipo, valore, ordine, attivo').eq('attivo', true),
+            window.supabaseClient.from('epika_scab_strutture').select('id, nome, tipo, attivo').eq('attivo', true),
+            window.supabaseClient.from('epika_scab_abbinamenti').select('id, struttura_id, validatore_id, allenatore_ref_id, allenatori_co_ids, allievo_ref_id, allievi_ids, attivo').eq('attivo', true),
+            window.supabaseClient.from('epika_scab_abilitazioni').select('id, profilo_id, stato_abilitazione, allenatore_opzione_id, allievo_opzione_id, struttura_id, attivo').eq('attivo', true),
+            window.supabaseClient.from('epika_campioni_scab').select('id, anno, profilo_id, attivo').eq('attivo', true)
         ]);
 
-        if (glErr) throw glErr;
-        if (gsErr) throw gsErr;
-        if (pErr) throw pErr;
+        if (errGL || errGS || errProf) {
+            console.error("Errore recupero nodi organigramma:", errGL || errGS || errProf);
+            throw new Error("Impossibile scaricare i dati della gerarchia.");
+        }
 
         const nodesMap = new Map();
         const links = [];
         const neighborsMap = new Map();
 
-        const addLinkHelper = (sourceId, targetId, linkData) => {
+        // Helper per aggiungere nodi e archi in modo sicuro e deduplicato
+        const addLinkHelper = (sourceId, targetId, linkProps = {}) => {
             if (!sourceId || !targetId || sourceId === targetId) return;
-            if (!nodesMap.has(sourceId) || !nodesMap.has(targetId)) return;
-            
-            const linkObj = {
+            // Evita archi duplicati
+            const exists = links.some(l => 
+                (l.source === sourceId && l.target === targetId) || 
+                (l.source === targetId && l.target === sourceId && l.type === linkProps.type)
+            );
+            if (exists) return;
+
+            links.push({
                 source: sourceId,
                 target: targetId,
-                ...linkData
-            };
-            links.push(linkObj);
+                ...linkProps
+            });
 
             // Popola mappa vicini
             if (!neighborsMap.has(sourceId)) neighborsMap.set(sourceId, new Set());
@@ -5009,6 +5026,7 @@ async function renderOrganigrammaNetwork() {
             const isDirettivoEpika = g.id === 1;
             const isDirettivo = g.id <= 4 || g.id === 10;
             const nodeId = `GL_${g.id}`;
+            const legendCat = isDirettivoEpika ? 'direttivo_epika' : 'altri_direttivi';
             
             nodesMap.set(nodeId, {
                 id: nodeId,
@@ -5017,6 +5035,7 @@ async function renderOrganigrammaNetwork() {
                 name: g.nome,
                 label: g.nome.toUpperCase(),
                 category: 'direttivi',
+                legendCategory: legendCat,
                 val: isDirettivoEpika ? 24 : (isDirettivo ? 17 : 13),
                 color: isDirettivoEpika ? '#9B2C2C' : (isDirettivo ? '#D69E2E' : '#B7791F'),
                 borderColor: isDirettivoEpika ? '#F6E05E' : '#ECC94B',
@@ -5049,6 +5068,7 @@ async function renderOrganigrammaNetwork() {
                 name: gs.nome,
                 label: gs.nome.toUpperCase(),
                 category: 'storici',
+                legendCategory: 'gruppi_storici',
                 popolo: gs.popolo || 'Mercenari',
                 val: 16,
                 color: '#2F855A',
@@ -5076,6 +5096,7 @@ async function renderOrganigrammaNetwork() {
                 name: st.nome,
                 label: (isPalestra ? 'PAL: ' : 'CP: ') + st.nome.toUpperCase(),
                 category: 'scab',
+                legendCategory: 'palestre_scab',
                 val: 12,
                 color: '#319795',
                 borderColor: '#81E6D9',
@@ -5083,7 +5104,7 @@ async function renderOrganigrammaNetwork() {
                 details: {
                     titolo: st.nome,
                     ruolo: isPalestra ? 'PALESTRA SCAB UFFICIALE' : 'CENTRO PRATICA SCAB',
-                    desc: `Sede: ${st.citta || 'Non specificata'}`
+                    desc: `Sede SCAB accreditata`
                 }
             });
 
@@ -5170,6 +5191,18 @@ async function renderOrganigrammaNetwork() {
             if (inDirettivo || inGruppoLavoro || p.is_admin_epika) primaryCat = 'direttivi';
             else if (isScabStaff) primaryCat = 'scab';
 
+            // Assegnazione Categoria Legenda Specifica
+            let legCat = isCombattente ? 'combattenti' : 'non_combattenti';
+            if (p.is_admin_epika) {
+                legCat = 'direttivo_epika';
+            } else if (isCapogruppo || isViceCapogruppo) {
+                legCat = 'capogruppo';
+            } else if (isScabStaff) {
+                legCat = 'staff_scab';
+            } else if (inDirettivo || inGruppoLavoro) {
+                legCat = 'altri_direttivi';
+            }
+
             nodesMap.set(nodeId, {
                 id: nodeId,
                 rawId: p.id,
@@ -5177,6 +5210,7 @@ async function renderOrganigrammaNetwork() {
                 name: nomeBat,
                 label: nomeBat,
                 category: primaryCat,
+                legendCategory: legCat,
                 isCombattente,
                 isCapogruppo,
                 isViceCapogruppo,
@@ -5268,6 +5302,7 @@ async function renderOrganigrammaNetwork() {
                                 name: optVal.valore,
                                 label: `VAL: ${optVal.valore.toUpperCase()}`,
                                 category: 'scab',
+                                legendCategory: 'staff_scab',
                                 val: 9,
                                 color: '#3182CE',
                                 borderColor: '#63B3ED',
@@ -5308,6 +5343,7 @@ async function renderOrganigrammaNetwork() {
                                 name: optAll.valore,
                                 label: `ALL: ${optAll.valore.toUpperCase()}`,
                                 category: 'scab',
+                                legendCategory: 'staff_scab',
                                 val: 8,
                                 color: '#4299E1',
                                 borderColor: '#90CDF4',
@@ -5348,6 +5384,7 @@ async function renderOrganigrammaNetwork() {
                                 name: optAllievo.valore,
                                 label: `ALLIEVO ALL: ${optAllievo.valore.toUpperCase()}`,
                                 category: 'scab',
+                                legendCategory: 'staff_scab',
                                 val: 7,
                                 color: '#81E6D9',
                                 borderColor: '#319795',
@@ -5543,14 +5580,19 @@ async function renderOrganigrammaNetwork() {
 
         // Configurazione delle forze fisiche (senza dipendenza da window.d3 globale)
         try {
+            const spacing = epikaGraphSpacingValue || 80;
             const chargeForce = Graph.d3Force('charge');
             if (chargeForce && typeof chargeForce.strength === 'function') {
-                chargeForce.strength(node => (node.val >= 14 ? -260 : -90));
+                chargeForce.strength(node => (node.val >= 14 ? -spacing * 3.2 : -spacing * 1.2));
             }
 
             const linkForce = Graph.d3Force('link');
             if (linkForce && typeof linkForce.distance === 'function') {
-                linkForce.distance(link => (link.type === 'coordinamento' ? 120 : (link.type === 'membro_direttivo' ? 70 : 50)));
+                linkForce.distance(link => {
+                    if (link.type === 'coordinamento') return spacing * 1.5;
+                    if (link.type === 'membro_direttivo') return spacing * 0.9;
+                    return spacing * 0.65;
+                });
             }
         } catch (fErr) {
             console.warn("Personalizzazione forze D3 non critica:", fErr);
@@ -5719,48 +5761,56 @@ function chiudiDettaglioGrafo() {
     if (detailPanel) detailPanel.classList.add('epk-hidden');
 }
 
-// 12. Filtri Dinamici del Grafo
+// 12. Filtri Dinamici del Grafo (Combina Tendina e Filtro Legenda)
 function filtraGrafoNetwork(filtro) {
-    epikaGraphCurrentFilter = filtro;
+    if (filtro) epikaGraphCurrentFilter = filtro;
+    const currentFiltro = epikaGraphCurrentFilter || 'all';
     if (!epikaGraphInstance || !epikaGraphFullData.nodes) return;
 
-    let filteredNodes = [];
+    let baseNodes = [];
     
-    if (filtro === 'all') {
-        filteredNodes = [...epikaGraphFullData.nodes];
-    } else if (filtro === 'direttivi') {
+    if (currentFiltro === 'all') {
+        baseNodes = epikaGraphFullData.nodes;
+    } else if (currentFiltro === 'direttivi') {
         // Nodi Direttivo + Componenti Direttivo
-        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+        baseNodes = epikaGraphFullData.nodes.filter(n => 
             n.entityType === 'gruppo_lavoro' || 
             (n.entityType === 'profilo' && (n.inDirettivo || n.inGruppoLavoro || n.isAdminEpika))
         );
-    } else if (filtro === 'scab') {
+    } else if (currentFiltro === 'scab') {
         // Rete SCAB: Direttivo SCAB, Strutture SCAB, Staff SCAB, Combattenti addestrati
-        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+        baseNodes = epikaGraphFullData.nodes.filter(n => 
             n.id === 'GL_2' || 
             n.entityType === 'struttura_scab' || 
             n.entityType === 'opzione_scab' || 
             (n.entityType === 'profilo' && (n.isScabStaff || n.isCombattente))
         );
-    } else if (filtro === 'storici') {
+    } else if (currentFiltro === 'storici') {
         // Gruppi Storici e loro Tesserati
-        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+        baseNodes = epikaGraphFullData.nodes.filter(n => 
             n.entityType === 'gruppo_storico' || 
             (n.entityType === 'profilo' && n.popolo)
         );
-    } else if (filtro === 'combattenti') {
+    } else if (currentFiltro === 'combattenti') {
         // Solo Combattenti, Staff SCAB e Gruppi Storici
-        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+        baseNodes = epikaGraphFullData.nodes.filter(n => 
             n.entityType === 'gruppo_storico' || 
             (n.entityType === 'profilo' && n.isCombattente)
         );
-    } else if (filtro === 'non_combattenti') {
+    } else if (currentFiltro === 'non_combattenti') {
         // Solo Non Combattenti e Gruppi Storici
-        filteredNodes = epikaGraphFullData.nodes.filter(n => 
+        baseNodes = epikaGraphFullData.nodes.filter(n => 
             n.entityType === 'gruppo_storico' || 
             (n.entityType === 'profilo' && !n.isCombattente)
         );
     }
+
+    // Filtra per categorie della Legenda attive
+    const activeCats = epikaGraphLegendaAttiva || new Set();
+    const filteredNodes = baseNodes.filter(n => {
+        const cat = n.legendCategory || 'combattenti';
+        return activeCats.has(cat);
+    });
 
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
 
@@ -5781,6 +5831,60 @@ function filtraGrafoNetwork(filtro) {
     setTimeout(() => {
         if (epikaGraphInstance) epikaGraphInstance.zoomToFit(600, 35);
     }, 150);
+}
+
+// 12b. Toggle Categoria Legenda Nodi
+function toggleLegendaCategoria(btn, cat) {
+    if (!epikaGraphLegendaAttiva) {
+        epikaGraphLegendaAttiva = new Set(['direttivo_epika', 'altri_direttivi', 'gruppi_storici', 'palestre_scab', 'staff_scab', 'capogruppo', 'combattenti', 'non_combattenti']);
+    }
+
+    if (epikaGraphLegendaAttiva.has(cat)) {
+        epikaGraphLegendaAttiva.delete(cat);
+        if (btn) {
+            btn.classList.remove('active');
+            btn.style.opacity = '0.35';
+            btn.style.filter = 'grayscale(80%)';
+            btn.style.borderStyle = 'dashed';
+        }
+    } else {
+        epikaGraphLegendaAttiva.add(cat);
+        if (btn) {
+            btn.classList.add('active');
+            btn.style.opacity = '1';
+            btn.style.filter = 'none';
+            btn.style.borderStyle = 'solid';
+        }
+    }
+
+    filtraGrafoNetwork(epikaGraphCurrentFilter || 'all');
+}
+
+// 12c. Modifica Dinamica Spaziatura Forze D3
+function cambiaSpaziaturaNodi(val) {
+    const spacing = parseInt(val, 10) || 80;
+    epikaGraphSpacingValue = spacing;
+    if (!epikaGraphInstance) return;
+
+    try {
+        const chargeForce = epikaGraphInstance.d3Force('charge');
+        if (chargeForce && typeof chargeForce.strength === 'function') {
+            chargeForce.strength(node => (node.val >= 14 ? -spacing * 3.2 : -spacing * 1.2));
+        }
+
+        const linkForce = epikaGraphInstance.d3Force('link');
+        if (linkForce && typeof linkForce.distance === 'function') {
+            linkForce.distance(link => {
+                if (link.type === 'coordinamento') return spacing * 1.5;
+                if (link.type === 'membro_direttivo') return spacing * 0.9;
+                return spacing * 0.65;
+            });
+        }
+
+        epikaGraphInstance.d3ReheatSimulation?.();
+    } catch (e) {
+        console.warn("Errore aggiornamento spaziatura forze:", e);
+    }
 }
 
 // 13. Ricerca Dinamica nel Grafo

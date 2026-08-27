@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-27] feature | Legenda Nodi Interattiva e Selettore Spaziatura Grafo Relazionale (v1.05.04)
+- **Frontend UI (`portal/epika.html`)**:
+  - Inserito lo slider `📏 Spazio` (`#epk-network-spacing`, range 30-220, default 80) nella barra comandi del grafo per regolare la distanza e la repulsione tra i nodi in tempo reale.
+  - Trasformate le 8 voci della legenda cromatica in pulsanti-pillola interattivi con feedback visivo di stato (opacità 100% / 35% con bordo tratteggiato) e click handler `toggleLegendaCategoria()`.
+- **Frontend JS (`portal/epika.js`)**:
+  - Implementata la funzione `cambiaSpaziaturaNodi(val)` che modifica dinamicamente le forze fisiche native D3 (`d3Force('charge')` e `d3Force('link')`) e riscalda la simulazione con `d3ReheatSimulation()`.
+  - Implementato il `Set` globale `epikaGraphLegendaAttiva` con tutte le 8 categorie attive di default.
+  - Integrata la funzione `toggleLegendaCategoria(btn, cat)` e aggiornata la logica di `filtraGrafoNetwork()` per combinare dinamicamente il filtro a tendina con il set di categorie attive della legenda, filtrando contestualmente gli archi orfani per la massima robustezza.
+
 ## [2026-08-27] fix | Risoluzione Crash Grafo Relazionale Force-Graph (v1.05.03)
 - **Frontend JS (`portal/epika.js`)**:
   - Rimossa la colonna inesistente `citta` dalla query `select('id, nome, tipo, attivo')` su `epika_scab_strutture`, eliminando l'errore PostgREST `400 Bad Request`.

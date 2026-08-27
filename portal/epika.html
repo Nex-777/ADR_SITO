@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.05.03">
+    <link rel="stylesheet" href="epika.css?v=1.05.04">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/force-graph"></script>
-    <script src="config.js?v=1.05.03"></script>
+    <script src="config.js?v=1.05.04"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.05.03</span>
+                <span class="epk-version-badge">Vs. 1.05.04</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -306,8 +306,12 @@
                                         <option value="non_combattenti">📜 Solo Non Combattenti</option>
                                     </select>
                                     <div style="position: relative;">
-                                        <input type="text" id="epk-network-search" class="epk-input" style="padding: 6px 10px; font-size: 11px; width: 190px;" placeholder="🔍 Cerca nodo/atleta..." oninput="cercaNelGrafoNetwork(this.value)">
+                                        <input type="text" id="epk-network-search" class="epk-input" style="padding: 6px 10px; font-size: 11px; width: 170px;" placeholder="🔍 Cerca nodo/atleta..." oninput="cercaNelGrafoNetwork(this.value)">
                                         <button id="epk-network-search-clear" onclick="pulisciRicercaNetwork()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #a1a1aa; cursor: pointer; display: none; font-size: 11px;">✕</button>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.15); padding: 4px 8px; border-radius: 4px;">
+                                        <span style="font-size: 10px; color: #F5E6C8; white-space: nowrap;" title="Regola la distanza e la repulsione tra i nodi">📏 Spazio</span>
+                                        <input type="range" id="epk-network-spacing" min="30" max="220" value="80" step="5" style="width: 70px; height: 14px; accent-color: var(--epk-gold); cursor: pointer;" title="Regola spaziatura nodi" oninput="cambiaSpaziaturaNodi(this.value)">
                                     </div>
                                     <button class="epk-btn-secondary" style="padding: 6px 10px; font-size: 11px;" title="Ripristina visualizzazione e centra il grafo" onclick="resetGrafoNetworkZoom()">
                                         🎯 Centra
@@ -318,17 +322,33 @@
                                 </div>
                             </div>
 
-                            <!-- Legenda Cromatica Rapida -->
-                            <div style="display: flex; flex-wrap: wrap; gap: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.15); padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; align-items: center;">
-                                <span style="font-weight: bold; color: var(--epk-gold); text-transform: uppercase;">Legenda Nodi:</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #F5E6C8;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#9B2C2C; border:1px solid #C9A84C;"></span> Direttivo EPIKA</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #F5E6C8;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#D69E2E; border:1px solid #F6E05E;"></span> Altri Direttivi/Lavoro</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #F5E6C8;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2F855A; border:1px solid #68D391;"></span> Gruppi Storici</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #F5E6C8;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#319795; border:1px solid #81E6D9;"></span> Palestre/Centri SCAB</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #F5E6C8;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#3182CE; border:1px solid #63B3ED;"></span> Staff SCAB (Val/All)</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #F5E6C8;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#ECC94B; border:1px solid #FFF;"></span> 👑 Capogruppo/Vice</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #F5E6C8;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#CBD5E0;"></span> ⚔️ Combattente</span>
-                                <span style="display: inline-flex; align-items: center; gap: 4px; color: #A0AEC0;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#4A5568;"></span> 📜 Non Combattente</span>
+                            <!-- Legenda Cromatica Rapida & Filtri Nodi Interattivi -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(251, 191, 36, 0.15); padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 11px; align-items: center;">
+                                <span style="font-weight: bold; color: var(--epk-gold); text-transform: uppercase; margin-right: 2px;" title="Clicca per mostrare o nascondere categorie di nodi">Filtro Nodi:</span>
+                                <button type="button" class="epk-legend-pill" data-cat="direttivo_epika" onclick="toggleLegendaCategoria(this, 'direttivo_epika')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(155, 44, 44, 0.2); border: 1px solid #9B2C2C; padding: 3px 8px; border-radius: 3px; color: #F5E6C8; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#9B2C2C; border:1px solid #C9A84C;"></span> Direttivo EPIKA
+                                </button>
+                                <button type="button" class="epk-legend-pill" data-cat="altri_direttivi" onclick="toggleLegendaCategoria(this, 'altri_direttivi')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(214, 158, 46, 0.2); border: 1px solid #D69E2E; padding: 3px 8px; border-radius: 3px; color: #F5E6C8; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#D69E2E; border:1px solid #F6E05E;"></span> Altri Direttivi
+                                </button>
+                                <button type="button" class="epk-legend-pill" data-cat="gruppi_storici" onclick="toggleLegendaCategoria(this, 'gruppi_storici')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(47, 133, 90, 0.2); border: 1px solid #2F855A; padding: 3px 8px; border-radius: 3px; color: #F5E6C8; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#2F855A; border:1px solid #68D391;"></span> Gruppi Storici
+                                </button>
+                                <button type="button" class="epk-legend-pill" data-cat="palestre_scab" onclick="toggleLegendaCategoria(this, 'palestre_scab')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(49, 151, 149, 0.2); border: 1px solid #319795; padding: 3px 8px; border-radius: 3px; color: #F5E6C8; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#319795; border:1px solid #81E6D9;"></span> Palestre SCAB
+                                </button>
+                                <button type="button" class="epk-legend-pill" data-cat="staff_scab" onclick="toggleLegendaCategoria(this, 'staff_scab')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(49, 130, 206, 0.2); border: 1px solid #3182CE; padding: 3px 8px; border-radius: 3px; color: #F5E6C8; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#3182CE; border:1px solid #63B3ED;"></span> Staff SCAB
+                                </button>
+                                <button type="button" class="epk-legend-pill" data-cat="capogruppo" onclick="toggleLegendaCategoria(this, 'capogruppo')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(236, 201, 75, 0.2); border: 1px solid #ECC94B; padding: 3px 8px; border-radius: 3px; color: #F5E6C8; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#ECC94B; border:1px solid #FFF;"></span> 👑 Capigruppo/Vice
+                                </button>
+                                <button type="button" class="epk-legend-pill" data-cat="combattenti" onclick="toggleLegendaCategoria(this, 'combattenti')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(203, 213, 224, 0.15); border: 1px solid #CBD5E0; padding: 3px 8px; border-radius: 3px; color: #F5E6C8; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#CBD5E0; border:1px solid #FFF;"></span> ⚔️ Combattenti
+                                </button>
+                                <button type="button" class="epk-legend-pill" data-cat="non_combattenti" onclick="toggleLegendaCategoria(this, 'non_combattenti')" style="display: inline-flex; align-items: center; gap: 5px; background: rgba(74, 85, 104, 0.2); border: 1px solid #4A5568; padding: 3px 8px; border-radius: 3px; color: #A0AEC0; cursor: pointer; font-size: 11px; transition: all 0.2s ease;" title="Clicca per attivare/disattivare">
+                                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#4A5568; border:1px solid #718096;"></span> 📜 Non Combattenti
+                                </button>
                             </div>
 
                             <!-- Canvas Container Relazionale -->
@@ -2781,6 +2801,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.05.03"></script>
+    <script src="epika.js?v=1.05.04"></script>
 </body>
 </html>
