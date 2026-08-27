@@ -1,30 +1,26 @@
 -- ===========================================================================
--- MIGRAZIONE EPIKA: Registro Modifiche Profilo Atleta (Audit Log)
+-- MIGRAZIONE EPIKA: Vincolo di Unicità, Lunghezza e Audit Nome di Battaglia
 -- ===========================================================================
 
--- 1. Creazione Tabella di Audit Registro Modifiche
-CREATE TABLE IF NOT EXISTS public.epika_registro_modifiche_profilo (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    profilo_id UUID NOT NULL REFERENCES public.epika_profili(id) ON DELETE CASCADE,
-    campo TEXT NOT NULL,
-    valore_precedente TEXT,
-    valore_nuovo TEXT,
-    data_modifica TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- 1. Sanifica i dati esistenti: porta tutti i nomi_di_battaglia in UPPERCASE
+UPDATE public.epika_profili
+SET nome_di_battaglia = UPPER(TRIM(nome_di_battaglia))
+WHERE nome_di_battaglia IS NOT NULL;
 
--- 2. Abilitazione Row Level Security (RLS)
-ALTER TABLE public.epika_registro_modifiche_profilo ENABLE ROW LEVEL SECURITY;
+-- 2. Aggiunge vincolo di lunghezza massima (40 caratteri)
+ALTER TABLE public.epika_profili
+DROP CONSTRAINT IF EXISTS epika_profili_nome_battaglia_length;
 
--- 3. Policy di SELECT: proprietario del profilo, admin Epika e Presidente
-DROP POLICY IF EXISTS select_epika_registro_modifiche ON public.epika_registro_modifiche_profilo;
-CREATE POLICY select_epika_registro_modifiche ON public.epika_registro_modifiche_profilo
-    FOR SELECT USING (
-        profilo_id = auth.uid()
-        OR EXISTS (SELECT 1 FROM public.epika_profili WHERE id = auth.uid() AND is_admin_epika = TRUE)
-        OR 'presidente' = ANY(public.get_user_role(auth.uid()))
-    );
+ALTER TABLE public.epika_profili
+ADD CONSTRAINT epika_profili_nome_battaglia_length
+CHECK (nome_di_battaglia IS NULL OR char_length(nome_di_battaglia) <= 40);
 
--- 4. Funzione Trigger per loggare automaticamente le modifiche (SECURITY DEFINER per superare restrizioni)
+-- 3. Aggiunge indice UNIQUE case-insensitive come sicurezza definitiva
+CREATE UNIQUE INDEX IF NOT EXISTS epika_profili_nome_battaglia_unique
+ON public.epika_profili (UPPER(nome_di_battaglia))
+WHERE nome_di_battaglia IS NOT NULL;
+
+-- 4. Aggiorna la funzione trigger di audit per includere le variazioni del Nome Storico
 CREATE OR REPLACE FUNCTION public.trg_epika_log_profilo_modifiche()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -71,10 +67,3 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- 5. Bind del trigger AFTER UPDATE alla tabella epika_profili
-DROP TRIGGER IF EXISTS trg_log_epika_profilo_updates ON public.epika_profili;
-CREATE TRIGGER trg_log_epika_profilo_updates
-AFTER UPDATE ON public.epika_profili
-FOR EACH ROW
-EXECUTE FUNCTION public.trg_epika_log_profilo_modifiche();

@@ -56,7 +56,7 @@ Lookup table for dynamic system options, such as coaches.
 ### 4. `public.epika_profili`
 Stores historical profile data for members.
 *   `id` (UUID PK, FK to `public.utenti.id` with `ON DELETE CASCADE`)
-*   `nome_di_battaglia` (TEXT)
+*   `nome_di_battaglia` (TEXT UNIQUE case-insensitive, CHECK length <= 40)
 *   `ruolo_combattimento` (TEXT CHECK `combattente`, `non_combattente`)
 *   `popolo` (TEXT)
 *   `gruppo_storico_id` (BIGINT FK to `epika_gruppi_storici.id`)
@@ -94,10 +94,10 @@ Stores confirmed event attendance (used to calculate member statistics on the fl
 *   Unique index on `(evento_id, utente_id)`
 
 ### 8. `public.epika_registro_modifiche_profilo`
-Stores audit logs for athlete profile modifications (such as historical group, people/culture, combat role, and reference coach).
+Stores audit logs for athlete profile modifications (such as battle name/historical name, historical group, people/culture, combat role, and reference coach).
 *   `id` (BIGINT PK)
 *   `profilo_id` (UUID FK to `epika_profili.id` ON DELETE CASCADE)
-*   `campo` (TEXT) - Name of the modified field
+*   `campo` (TEXT) - Name of the modified field (`Nome Storico`, `Gruppo Storico`, `Popolo/Cultura`, `Ruolo Combattimento`, `Allenatore`)
 *   `valore_precedente` (TEXT)
 *   `valore_nuovo` (TEXT)
 *   `data_modifica` (TIMESTAMPTZ DEFAULT NOW())

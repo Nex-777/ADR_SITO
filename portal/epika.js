@@ -700,6 +700,104 @@ async function handleFirstAccessSubmit(e) {
 // ===========================================================================
 
 let originalProfileData = {};
+let _nomeBattagliaDebounce = null;
+
+function selezionaSuggerimentoNome(nome) {
+    const inputEl = document.getElementById('edit-nome-storico');
+    if (!inputEl) return;
+    inputEl.value = nome;
+    onEditNomeBattagliaInput(inputEl);
+}
+
+async function onEditNomeBattagliaInput(inputEl) {
+    const raw = inputEl.value.toUpperCase();
+    inputEl.value = raw;
+    const clean = raw.trim();
+    const feedbackEl = document.getElementById('edit-nome-storico-feedback');
+    if (!feedbackEl) return;
+
+    feedbackEl.innerHTML = '';
+    feedbackEl.style.color = '';
+
+    if (clean.length === 0) {
+        feedbackEl.innerHTML = '<span style="color: #e74c3c;">Il Nome Storico è obbligatorio.</span>';
+        return;
+    }
+
+    if (clean.length > 40) {
+        feedbackEl.innerHTML = '<span style="color: #e74c3c;">Massimo 40 caratteri consentiti.</span>';
+        return;
+    }
+
+    if (clean === (originalProfileData.nome_di_battaglia || '').toUpperCase()) {
+        feedbackEl.innerHTML = '<span style="color: var(--epk-gold);">✓ Nome attuale confermato.</span>';
+        return;
+    }
+
+    clearTimeout(_nomeBattagliaDebounce);
+    feedbackEl.innerHTML = '<span style="color: rgba(245, 230, 200, 0.5);">Verifica disponibilità in corso...</span>';
+
+    _nomeBattagliaDebounce = setTimeout(async () => {
+        await verificaDisponibilitaNome(clean, feedbackEl);
+    }, 350);
+}
+
+async function verificaDisponibilitaNome(nome, feedbackEl) {
+    try {
+        const { data: esatto, error } = await supabaseClient
+            .from('epika_profili')
+            .select('id, nome_di_battaglia')
+            .ilike('nome_di_battaglia', nome)
+            .neq('id', currentUser.id)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (esatto) {
+            const suggerimenti = await generaSuggerimentiNome(nome);
+            let msg = `<span style="color: #e74c3c;">✗ "${nome}" è già in uso.</span>`;
+            if (suggerimenti.length > 0) {
+                const sugLinks = suggerimenti.map(s => `<a href="javascript:void(0)" onclick="selezionaSuggerimentoNome('${s}')" style="color: var(--epk-gold); text-decoration: underline; font-weight: bold; margin: 0 3px;">${s}</a>`).join(',');
+                msg += `<div style="margin-top: 4px; color: rgba(245, 230, 200, 0.8);">💡 Suggeriti liberi:${sugLinks}</div>`;
+            }
+            feedbackEl.innerHTML = msg;
+        } else {
+            feedbackEl.innerHTML = `<span style="color: #2ecc71;">✓ "${nome}" è disponibile!</span>`;
+        }
+    } catch (err) {
+        console.error("Errore verifica disponibilità nome:", err);
+        feedbackEl.innerHTML = '<span style="color: #e67e22;">Impossibile verificare la disponibilità al momento.</span>';
+    }
+}
+
+async function generaSuggerimentiNome(nomeBase) {
+    try {
+        const { data: profiliOccupati } = await supabaseClient
+            .from('epika_profili')
+            .select('nome_di_battaglia')
+            .not('nome_di_battaglia', 'is', null);
+
+        const nomiSet = new Set((profiliOccupati || []).map(p => (p.nome_di_battaglia || '').toUpperCase().trim()));
+        const candidati = [];
+        const epiteti = [
+            'IL FORTE', 'IL MAGNO', 'IL ROSSO', 'IL VECCHIO', 'L\'INVITTO',
+            'MINOR', 'JUNIOR', 'IL LUPO', 'IL CONDOTTIERO', 'IL CELTICO',
+            'IL ROMANO', 'IL GUERRIERO', 'IL FIERO', 'IL GIUSTO'
+        ];
+
+        for (const ep of epiteti) {
+            const candidato = `${nomeBase} ${ep}`.substring(0, 40).trim();
+            if (!nomiSet.has(candidato) && candidato !== nomeBase) {
+                candidati.push(candidato);
+                if (candidati.length >= 3) break;
+            }
+        }
+        return candidati;
+    } catch (err) {
+        console.error("Errore generazione suggerimenti:", err);
+        return [];
+    }
+}
 
 async function apriModaleModificaProfilo() {
     try {
@@ -720,10 +818,21 @@ async function apriModaleModificaProfilo() {
         }
 
         originalProfileData = {
+            nome_di_battaglia: prof.nome_di_battaglia || '',
             gruppo_storico_id: prof.gruppo_storico_id,
             popolo: prof.popolo,
             ruolo_combattimento: prof.ruolo_combattimento
         };
+
+        const inputNome = document.getElementById('edit-nome-storico');
+        if (inputNome) {
+            inputNome.value = (prof.nome_di_battaglia || '').toUpperCase();
+        }
+        const feedbackEl = document.getElementById('edit-nome-storico-feedback');
+        if (feedbackEl) {
+            feedbackEl.innerHTML = '';
+            feedbackEl.style.color = '';
+        }
 
         const selectGruppo = document.getElementById('edit-gruppo-storico');
         selectGruppo.innerHTML = '<option value="" disabled>-- SELEZIONA GRUPPO --</option>';
@@ -774,11 +883,25 @@ function onEditGruppoStoricoChange() {
 }
 
 async function salvaModificheProfilo() {
+    const inputNome = document.getElementById('edit-nome-storico');
+    const nomeBattagliaRaw = inputNome ? inputNome.value.toUpperCase().trim() : '';
     const gruppoStoricoVal = document.getElementById('edit-gruppo-storico').value;
     const gruppoStoricoId = gruppoStoricoVal ? parseInt(gruppoStoricoVal) : null;
     const selectPopolo = document.getElementById('edit-popolo');
     const popolo = selectPopolo.value;
     const ruoloCombattimento = document.getElementById('edit-ruolo-combattimento').value;
+
+    if (!nomeBattagliaRaw) {
+        alert("Il Nome Storico è obbligatorio.");
+        if (inputNome) inputNome.focus();
+        return;
+    }
+
+    if (nomeBattagliaRaw.length > 40) {
+        alert("Il Nome Storico non può superare i 40 caratteri.");
+        if (inputNome) inputNome.focus();
+        return;
+    }
 
     if (isNaN(gruppoStoricoId) || !gruppoStoricoId) {
         alert("Seleziona un Gruppo Storico valido.");
@@ -790,7 +913,9 @@ async function salvaModificheProfilo() {
         return;
     }
 
+    // Controllo no-op: nessuna modifica apportata
     if (
+        nomeBattagliaRaw === (originalProfileData.nome_di_battaglia || '').toUpperCase() &&
         gruppoStoricoId === originalProfileData.gruppo_storico_id &&
         popolo === originalProfileData.popolo &&
         ruoloCombattimento === originalProfileData.ruolo_combattimento
@@ -804,9 +929,30 @@ async function salvaModificheProfilo() {
     saveBtn.textContent = 'SALVATAGGIO...';
 
     try {
+        // Pre-save check: verifica unicità nome se è stato modificato
+        if (nomeBattagliaRaw !== (originalProfileData.nome_di_battaglia || '').toUpperCase()) {
+            const { data: esiste, error: checkErr } = await supabaseClient
+                .from('epika_profili')
+                .select('id')
+                .ilike('nome_di_battaglia', nomeBattagliaRaw)
+                .neq('id', currentUser.id)
+                .maybeSingle();
+
+            if (checkErr) throw checkErr;
+
+            if (esiste) {
+                alert(`Il Nome Storico "${nomeBattagliaRaw}" è già registrato da un altro atleta. Scegli un nome diverso.`);
+                if (inputNome) inputNome.focus();
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'SALVA MODIFICHE';
+                return;
+            }
+        }
+
         const { error } = await supabaseClient
             .from('epika_profili')
             .update({
+                nome_di_battaglia: nomeBattagliaRaw,
                 gruppo_storico_id: gruppoStoricoId,
                 popolo: popolo,
                 ruolo_combattimento: ruoloCombattimento
@@ -820,7 +966,11 @@ async function salvaModificheProfilo() {
         await renderAthleteDashboard();
     } catch (err) {
         console.error("Errore durante il salvataggio del profilo:", err);
-        alert("Errore durante il salvataggio. Riprova più tardi.");
+        if (err && (err.code === '23505' || (err.message && err.message.includes('epika_profili_nome_battaglia_unique')))) {
+            alert(`Il Nome Storico "${nomeBattagliaRaw}" è già registrato da un altro atleta. Scegli un nome diverso.`);
+        } else {
+            alert("Errore durante il salvataggio. Riprova più tardi.");
+        }
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = 'SALVA MODIFICHE';

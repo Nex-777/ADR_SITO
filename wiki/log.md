@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-27] feature | Modifica Nome Storico in Scheda Personaggio con Unicità, Suggerimenti Tematici e Storicizzazione Audit (v1.05.00)
+- **Frontend UI (`portal/epika.html`)**:
+  - Inserito il campo di input `Nome Storico *` (`#edit-nome-storico`) come primo elemento nel modale `MODIFICA SCHEDA PERSONAGGIO` con vincolo `maxlength="40"`, uppercase automatico e box feedback live (`#edit-nome-storico-feedback`).
+- **Frontend JS (`portal/epika.js`)**:
+  - Implementata la funzione `onEditNomeBattagliaInput` con debounce a 350ms per verifica live di disponibilità del nome inserito.
+  - Implementata `generaSuggerimentiNome` con varianti libere ed epiteti storici tematici (es. `IL FORTE`, `L'INVITTO`, `IL MAGNO`, `IL LUPO`, `MINOR`, ecc.) cliccabili per auto-compilazione istantanea.
+  - Aggiornata `salvaModificheProfilo`: validazione pre-salvataggio di unicità e lunghezza (max 40 caratteri), no-op check integrato e inclusione di `nome_di_battaglia` nel payload di update su `epika_profili`.
+  - Gestione graceful dell'errore PostgreSQL `23505` (unique violation) in caso di race condition.
+- **Database (`Supabase`)**:
+  - Creata ed eseguita la migrazione `supabase/migration_epika_nome_battaglia_unique.sql`:
+    - Aggiunto vincolo `CHECK (nome_di_battaglia IS NULL OR char_length(nome_di_battaglia) <= 40)`.
+    - Creato indice `CREATE UNIQUE INDEX epika_profili_nome_battaglia_unique ON public.epika_profili (UPPER(nome_di_battaglia)) WHERE nome_di_battaglia IS NOT NULL`.
+    - Aggiornata la funzione trigger `trg_epika_log_profilo_modifiche()` per intercettare e registrare automaticamente nel registro audit `epika_registro_modifiche_profilo` ogni variazione del `Nome Storico` (`campo = 'Nome Storico'`).
+    - Aggiornata `check_epika_tessera_ruolo()` per validare la tessera atleta solo in caso di cambio a ruolo `combattente`.
+- **Wiki**: Aggiornata la documentazione di `epika_profili` e `epika_registro_modifiche_profilo` in `wiki/epika_portal.md`.
+
 ## [2026-08-27] fix | Fonte di Verità Atleti Allievo Allenatore tramite epika_scab_abilitazioni (v1.04.99)
 - **Frontend JS (`portal/epika.js`)**:
   - In `renderTabellaRichiamiScab`: integrata la fetch di `public.epika_scab_abilitazioni` (`profilo_id, allievo_opzione_id`) nel `Promise.all` iniziale.
