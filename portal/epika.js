@@ -10303,7 +10303,7 @@ async function renderReRiepilogoScab() {
             return true;
         });
 
-        const [opzRes, abbRes] = await Promise.all([
+        const [opzRes, abbRes, ablRes] = await Promise.all([
             supabaseClient
                 .from('epika_opzioni')
                 .select('id, tipo, valore, utente_id, attivo')
@@ -10312,11 +10312,16 @@ async function renderReRiepilogoScab() {
                 .order('valore', { ascending: true }),
             supabaseClient
                 .from('epika_scab_abbinamenti')
-                .select('*')
+                .select('*'),
+            supabaseClient
+                .from('epika_scab_abilitazioni')
+                .select('profilo_id, allievo_opzione_id')
+                .not('allievo_opzione_id', 'is', null)
         ]);
 
         if (opzRes.error) throw opzRes.error;
         if (abbRes.error) throw abbRes.error;
+        if (ablRes.error) throw ablRes.error;
 
         const allStaff = opzRes.data || [];
         const allAbbinamenti = abbRes.data || [];
@@ -10379,6 +10384,16 @@ async function renderReRiepilogoScab() {
             }
         });
 
+        // 3b. Mappa Allievo Allenatore -> Atleti (da epika_scab_abilitazioni.allievo_opzione_id)
+        const allievoAtletiMap = {};
+        (ablRes.data || []).forEach(abl => {
+            if (abl.allievo_opzione_id && abl.profilo_id) {
+                const alv = Number(abl.allievo_opzione_id);
+                if (!allievoAtletiMap[alv]) allievoAtletiMap[alv] = new Set();
+                allievoAtletiMap[alv].add(abl.profilo_id);
+            }
+        });
+
         // Helper per ottenere tutti gli atleti associati al pod di un coach
         function getAtletiForCoach(coachId) {
             const atleti = new Set();
@@ -10410,11 +10425,10 @@ async function renderReRiepilogoScab() {
                 const cAtleti = getAtletiForCoach(sid);
                 cAtleti.forEach(id => atletiIds.add(id));
             } else if (staff.tipo === 'scab_allievo_allenatore') {
-                // L'Allievo Allenatore risponde SOLO degli atleti diretti (profilo.allenatore_id = sid).
-                // NON del roster del suo Maestro.
-                if (coachDirectAthletes[sid]) {
-                    coachDirectAthletes[sid].forEach(id => atletiIds.add(id));
-                }
+                // Fonte di verità: epika_scab_abilitazioni.allievo_opzione_id
+                // Identifica esattamente gli atleti che hanno scelto questo Allievo Allenatore.
+                const atleti = allievoAtletiMap[sid] || new Set();
+                atleti.forEach(id => atletiIds.add(id));
             }
 
             const provvAtleti = provvFiltrati.filter(r => atletiIds.has(r.atleta_id));

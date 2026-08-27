@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-27] fix | Fonte di Verità Atleti Allievo Allenatore tramite epika_scab_abilitazioni (v1.04.99)
+- **Frontend JS (`portal/epika.js`)**:
+  - In `renderTabellaRichiamiScab`: integrata la fetch di `public.epika_scab_abilitazioni` (`profilo_id, allievo_opzione_id`) nel `Promise.all` iniziale.
+  - Costruita la mappa `allievoAtletiMap` basata su `epika_scab_abilitazioni.allievo_opzione_id`, unica fonte di verità attendibile per gli atleti seguiti dagli Allievi Allenatori (dato che `epika_profili.allenatore_id` punta al Maestro responsabile).
+  - Collegato correttamente **Samuele** (`allievo_opzione_id = 30`) a **Bran**, ripristinando la visibilità del suo richiamo sotto Bran, ed escludendo gli allievi diretti di Minor (**Umbertone**, **Robert**).
+  - Confermato che **Minor** continua a supervisionare tutti gli atleti della palestra (Umbertone, Robert, Samuele e Bran stesso).
+- **Versionamento**: Eseguito `npm run bump` (➡️ `v1.04.99`).
+
 ## [2026-08-27] fix | Gerarchia Attribuzione Atleti Allievo Allenatore in Registro Richiami SCAB (v1.04.98)
 - **Frontend JS (`portal/epika.js`)**:
   - Corretta la funzione `renderTabellaRichiamiScab`: per i membri dello staff con tipo `scab_allievo_allenatore` (es. Bran), la lista degli atleti supervisionati considera ora esclusivamente gli atleti che hanno scelto direttamente quell'Allievo Allenatore nel proprio profilo (`coachDirectAthletes[sid]`).
