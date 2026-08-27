@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-27] feature | Ottimizzazioni UI/UX Registro Richiami/Encomi (Filtri Riepiloghi & Text Clamping)
+- **Frontend UI (`portal/epika.html`)**:
+  - Rimossa la card KPI `🏛️ Gruppo più Riconosciuto` per pulizia visiva e riallineamento ottimale della griglia a 3 indicatori (Totale Encomi, Richiami Attivi, Atleti Coinvolti).
+  - Aggiunti selettori a discesa indipendenti per `Evento` e `Anno` sia nella sezione `🏛️ Riepilogo per Gruppo` che in `🥋 Staff Tecnico SCAB`.
+- **CSS Styling (`portal/epika.css`)**:
+  - Introdotta la classe `.epk-re-text-clamp` con `-webkit-line-clamp: 3` e cursore pointer per troncare motivazioni e note direttivo su massimo 3 righe con effetto hover soft.
+  - Introdotta la classe `.epk-re-text-clamp.epk-re-text-expanded` per espandere/collassare l'intero testo tramite click.
+- **Logica Frontend (`portal/epika.js`)**:
+  - Applicato il text clamping interattivo alle colonne Motivazione e Note Direttivo sia nella tabella principale del Registro Generale sia nelle sotto-tabelle accordion di Gruppi e SCAB.
+  - Aggiornata la funzione `popolaFiltriRichiamiEncomi()` per alimentare dinamicamente i filtri Evento e Anno dei sub-tab.
+  - Implementata la logica di pre-filtraggio in memoria in `renderReRiepilogoGruppi()` e `renderReRiepilogoScab()` in modo che i conteggi e le righe espanse riflettano accuratamente l'evento e l'anno selezionati.
+- **Validazione**: Validata la sintassi con `node -c portal/epika.js` con esito positivo (0 errori).
+
 ## [2026-08-26] feature | Viste Sub-Tabs Registro Richiami/Encomi e Risoluzione Gerarchie SCAB
 - **Frontend UI (`portal/epika.html`)**:
   - Impostato il tipo di provvedimento default su `Richiamo` nel modale `#re-modale` (inversione da Encomio a Richiamo).

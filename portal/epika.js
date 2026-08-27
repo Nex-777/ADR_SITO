@@ -9964,31 +9964,16 @@ async function renderRichiamiEncomiDashboard() {
         let totEncomi = 0;
         let totRichiami = 0;
         const atletiSet = new Set();
-        const gruppoCounter = {};
 
         richiamiEncomiCache.forEach(r => {
             if (r.tipo === 'encomio') totEncomi++;
             if (r.tipo === 'richiamo') totRichiami++;
             if (r.atleta_id) atletiSet.add(r.atleta_id);
-            const gNome = r.atleta?.gruppo?.nome;
-            if (gNome) {
-                gruppoCounter[gNome] = (gruppoCounter[gNome] || 0) + 1;
-            }
         });
-
-        let topGruppo = '-';
-        let maxGCount = 0;
-        for (const [g, count] of Object.entries(gruppoCounter)) {
-            if (count > maxGCount) {
-                maxGCount = count;
-                topGruppo = `${g} (${count})`;
-            }
-        }
 
         if (document.getElementById('re-kpi-encomi')) document.getElementById('re-kpi-encomi').textContent = totEncomi;
         if (document.getElementById('re-kpi-richiami')) document.getElementById('re-kpi-richiami').textContent = totRichiami;
         if (document.getElementById('re-kpi-atleti')) document.getElementById('re-kpi-atleti').textContent = atletiSet.size;
-        if (document.getElementById('re-kpi-gruppo')) document.getElementById('re-kpi-gruppo').textContent = topGruppo;
 
         // Renderizza tabella con la cache completa
         renderTabellaRichiamiEncomi(richiamiEncomiCache);
@@ -10017,6 +10002,11 @@ function popolaFiltriRichiamiEncomi() {
     const fEvento = document.getElementById('re-filter-evento');
     const fAnno = document.getElementById('re-filter-anno');
 
+    const fGrpEvento = document.getElementById('re-gruppi-filtro-evento');
+    const fGrpAnno = document.getElementById('re-gruppi-filtro-anno');
+    const fScabEvento = document.getElementById('re-scab-filtro-evento');
+    const fScabAnno = document.getElementById('re-scab-filtro-anno');
+
     if (fGruppo) {
         const val = fGruppo.value;
         fGruppo.innerHTML = '<option value="">Tutti i Gruppi</option>';
@@ -10026,29 +10016,41 @@ function popolaFiltriRichiamiEncomi() {
         fGruppo.value = val;
     }
 
-    if (fEvento) {
-        const val = fEvento.value;
-        fEvento.innerHTML = '<option value="">Tutti gli Eventi</option>';
+    const popolaEventiSelect = (sel) => {
+        if (!sel) return;
+        const val = sel.value;
+        sel.innerHTML = '<option value="">Tutti gli Eventi</option>';
         reEventiCache.forEach(e => {
-            fEvento.innerHTML += `<option value="${e.id}">${e.titolo}</option>`;
+            sel.innerHTML += `<option value="${e.id}">${e.titolo}</option>`;
         });
-        fEvento.value = val;
-    }
+        sel.value = val;
+    };
 
-    if (fAnno) {
-        const val = fAnno.value;
-        fAnno.innerHTML = '<option value="">Tutti gli Anni</option>';
-        const anniSet = new Set();
-        richiamiEncomiCache.forEach(r => {
-            if (r.data_assegnazione) {
-                anniSet.add(r.data_assegnazione.substring(0, 4));
-            }
+    popolaEventiSelect(fEvento);
+    popolaEventiSelect(fGrpEvento);
+    popolaEventiSelect(fScabEvento);
+
+    const anniSet = new Set();
+    richiamiEncomiCache.forEach(r => {
+        if (r.data_assegnazione) {
+            anniSet.add(r.data_assegnazione.substring(0, 4));
+        }
+    });
+    const anniOrdinati = Array.from(anniSet).sort((a, b) => b - a);
+
+    const popolaAnniSelect = (sel) => {
+        if (!sel) return;
+        const val = sel.value;
+        sel.innerHTML = '<option value="">Tutti gli Anni</option>';
+        anniOrdinati.forEach(a => {
+            sel.innerHTML += `<option value="${a}">${a}</option>`;
         });
-        Array.from(anniSet).sort((a,b) => b - a).forEach(a => {
-            fAnno.innerHTML += `<option value="${a}">${a}</option>`;
-        });
-        fAnno.value = val;
-    }
+        sel.value = val;
+    };
+
+    popolaAnniSelect(fAnno);
+    popolaAnniSelect(fGrpAnno);
+    popolaAnniSelect(fScabAnno);
 }
 
 function filtraRichiamiEncomi() {
@@ -10095,7 +10097,9 @@ function renderTabellaRichiamiEncomi(records) {
         const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
         const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : 'N/D';
         const autoreNome = r.autore?.nome_di_battaglia ? `Da: ${r.autore.nome_di_battaglia}` : 'Da: Direttivo';
-        const noteDirettivo = r.note_interne_direttivo ? `<div style="font-size:10px;color:#fca5a5;font-style:italic;margin-top:2px;">🔒 ${r.note_interne_direttivo}</div>` : '<span style="color:gray;">-</span>';
+        const noteDirettivo = r.note_interne_direttivo 
+            ? `<div class="epk-re-text-clamp" onclick="this.classList.toggle('epk-re-text-expanded')" title="Clicca per espandere/comprimere" style="font-size:10px;color:#fca5a5;font-style:italic;margin-top:2px;">🔒 ${r.note_interne_direttivo}</div>` 
+            : '<span style="color:gray;">-</span>';
 
         const canDelete = isEpikaAdmin || (typeof isReadOnly === 'function' && !isReadOnly());
         const actionBtn = canDelete ? `
@@ -10115,7 +10119,7 @@ function renderTabellaRichiamiEncomi(records) {
                 </td>
                 <td>
                     <div style="font-size:10px;font-weight:bold;color:var(--epk-gold);">${catLabel}</div>
-                    <div style="font-size:11px;color:rgba(245,230,200,0.9);margin-top:2px;">${r.motivazione || ''}</div>
+                    <div class="epk-re-text-clamp" onclick="this.classList.toggle('epk-re-text-expanded')" title="Clicca per espandere/comprimere" style="font-size:11px;color:rgba(245,230,200,0.9);margin-top:2px;">${r.motivazione || ''}</div>
                 </td>
                 <td>${noteDirettivo}</td>
                 <td style="text-align:center;">${actionBtn}</td>
@@ -10184,11 +10188,20 @@ function renderReRiepilogoGruppi() {
         return;
     }
 
+    const filtroEvento = document.getElementById('re-gruppi-filtro-evento')?.value || '';
+    const filtroAnno = document.getElementById('re-gruppi-filtro-anno')?.value || '';
+
+    const provvFiltrati = richiamiEncomiCache.filter(r => {
+        if (filtroEvento && String(r.evento_id) !== String(filtroEvento)) return false;
+        if (filtroAnno && r.data_assegnazione && !r.data_assegnazione.startsWith(filtroAnno)) return false;
+        return true;
+    });
+
     let html = '';
     reGruppiCache.forEach(g => {
         const atletiGruppo = reProfiliCache.filter(p => String(p.gruppo_storico_id) === String(g.id));
         const atletiIdsSet = new Set(atletiGruppo.map(p => p.id));
-        const provvGruppo = richiamiEncomiCache.filter(r => atletiIdsSet.has(r.atleta_id));
+        const provvGruppo = provvFiltrati.filter(r => atletiIdsSet.has(r.atleta_id));
         const totRichiami = provvGruppo.filter(r => r.tipo === 'richiamo').length;
         const totEncomi = provvGruppo.filter(r => r.tipo === 'encomio').length;
 
@@ -10207,14 +10220,17 @@ function renderReRiepilogoGruppi() {
                 const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
                 const eventoTitolo = r.evento?.titolo ? r.evento.titolo.toUpperCase() : 'GENERALE';
                 const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : 'N/D';
-                const noteDirettivo = r.note_interne_direttivo ? `<span style="color:#fca5a5;font-size:10px;margin-left:6px;">🔒 ${r.note_interne_direttivo}</span>` : '';
+                const noteDirettivo = r.note_interne_direttivo 
+                    ? `<div class="epk-re-text-clamp" onclick="this.classList.toggle('epk-re-text-expanded')" title="Clicca per espandere/comprimere" style="color:#fca5a5;font-size:10px;margin-top:2px;">🔒 ${r.note_interne_direttivo}</div>` 
+                    : '';
 
                 provvRows += `
                     <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
                         <td style="padding:6px 8px;font-weight:bold;color:var(--epk-gold);">${atletaNome}</td>
                         <td style="padding:6px 8px;">${badge}</td>
                         <td style="padding:6px 8px;font-size:11px;">
-                            <span style="font-weight:bold;color:#fde68a;">${catLabel}:</span> ${r.motivazione || ''}
+                            <div style="font-weight:bold;color:#fde68a;">${catLabel}</div>
+                            <div class="epk-re-text-clamp" onclick="this.classList.toggle('epk-re-text-expanded')" title="Clicca per espandere/comprimere" style="color:rgba(245,230,200,0.9);margin-top:2px;">${r.motivazione || ''}</div>
                             ${noteDirettivo}
                         </td>
                         <td style="padding:6px 8px;font-size:10px;color:rgba(245,230,200,0.6);">${eventoTitolo} (${dataFmt})</td>
@@ -10278,6 +10294,15 @@ async function renderReRiepilogoScab() {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:rgba(245,230,200,0.5);">Caricamento dati Staff Tecnico SCAB...</td></tr>`;
 
     try {
+        const filtroEvento = document.getElementById('re-scab-filtro-evento')?.value || '';
+        const filtroAnno = document.getElementById('re-scab-filtro-anno')?.value || '';
+
+        const provvFiltrati = richiamiEncomiCache.filter(r => {
+            if (filtroEvento && String(r.evento_id) !== String(filtroEvento)) return false;
+            if (filtroAnno && r.data_assegnazione && !r.data_assegnazione.startsWith(filtroAnno)) return false;
+            return true;
+        });
+
         const [opzRes, abbRes] = await Promise.all([
             supabaseClient
                 .from('epika_opzioni')
@@ -10398,7 +10423,7 @@ async function renderReRiepilogoScab() {
                 }
             }
 
-            const provvAtleti = richiamiEncomiCache.filter(r => atletiIds.has(r.atleta_id));
+            const provvAtleti = provvFiltrati.filter(r => atletiIds.has(r.atleta_id));
             const totRichiami = provvAtleti.filter(r => r.tipo === 'richiamo').length;
             const totEncomi = provvAtleti.filter(r => r.tipo === 'encomio').length;
 
@@ -10449,7 +10474,9 @@ async function renderReRiepilogoScab() {
                     const catLabel = getLabelCategoriaRE(r.tipo, r.categoria);
                     const eventoTitolo = r.evento?.titolo ? r.evento.titolo.toUpperCase() : 'GENERALE';
                     const dataFmt = r.data_assegnazione ? r.data_assegnazione.split('-').reverse().join('/') : 'N/D';
-                    const noteDirettivo = r.note_interne_direttivo ? `<span style="color:#fca5a5;font-size:10px;margin-left:6px;">🔒 ${r.note_interne_direttivo}</span>` : '';
+                    const noteDirettivo = r.note_interne_direttivo 
+                        ? `<div class="epk-re-text-clamp" onclick="this.classList.toggle('epk-re-text-expanded')" title="Clicca per espandere/comprimere" style="color:#fca5a5;font-size:10px;margin-top:2px;">🔒 ${r.note_interne_direttivo}</div>` 
+                        : '';
 
                     provvRows += `
                         <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
@@ -10457,7 +10484,8 @@ async function renderReRiepilogoScab() {
                             <td style="padding:6px 8px;font-size:10px;color:rgba(245,230,200,0.8);">${gruppoNome}</td>
                             <td style="padding:6px 8px;">${badge}</td>
                             <td style="padding:6px 8px;font-size:11px;">
-                                <span style="font-weight:bold;color:#fde68a;">${catLabel}:</span> ${r.motivazione || ''}
+                                <div style="font-weight:bold;color:#fde68a;">${catLabel}</div>
+                                <div class="epk-re-text-clamp" onclick="this.classList.toggle('epk-re-text-expanded')" title="Clicca per espandere/comprimere" style="color:rgba(245,230,200,0.9);margin-top:2px;">${r.motivazione || ''}</div>
                                 ${noteDirettivo}
                             </td>
                             <td style="padding:6px 8px;font-size:10px;color:rgba(245,230,200,0.6);">${eventoTitolo} (${dataFmt})</td>

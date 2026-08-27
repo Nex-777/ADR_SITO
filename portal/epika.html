@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPIKA - Portale Rievocazione Storica</title>
     <link rel="icon" type="image/png" href="/assets/logo_icon.png">
-    <link rel="stylesheet" href="epika.css?v=1.04.96">
+    <link rel="stylesheet" href="epika.css?v=1.04.97">
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script src="config.js?v=1.04.96"></script>
+    <script src="config.js?v=1.04.97"></script>
 </head>
 <body class="epk-body">
 
@@ -23,7 +23,7 @@
                 <!-- 2. Nome EPIKA -->
                 <h1 class="epk-headline" style="font-size: 16px; margin: 0; display: flex; align-items: center;">EPIKA</h1>
                 <!-- 3. Versione -->
-                <span class="epk-version-badge">Vs. 1.04.96</span>
+                <span class="epk-version-badge">Vs. 1.04.97</span>
             </div>
             <!-- 6. Chiudi -->
             <button class="epk-btn-secondary" onclick="tornaAdAdrenalina()" style="padding: 6px 14px; font-size: 11px;">CHIUDI</button>
@@ -1699,10 +1699,6 @@
                                     <span class="epk-re-kpi-label">👥 Atleti Coinvolti</span>
                                     <span id="re-kpi-atleti" class="epk-re-kpi-val" style="color: #93c5fd;">0</span>
                                 </div>
-                                <div class="epk-re-kpi-card kpi-gruppo">
-                                    <span class="epk-re-kpi-label">🏛️ Gruppo più Riconosciuto</span>
-                                    <span id="re-kpi-gruppo" class="epk-re-kpi-val" style="font-size: 14px; color: var(--epk-gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</span>
-                                </div>
                             </div>
 
                             <!-- Navigation Menu Sub-Tabs -->
@@ -1770,13 +1766,23 @@
 
                             <!-- Sub-Tab 2: Riepilogo per Gruppo -->
                             <div id="re-subtab-gruppi" class="epk-hidden">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 class="epk-headline" style="margin: 0; font-size: 14px; color: var(--epk-gold);">
-                                        QUADRO DISCIPLINARE PER GRUPPO STORICO
-                                    </h3>
-                                    <span style="font-size: 11px; color: rgba(245, 230, 200, 0.6);">
-                                        Espandi ciascun gruppo per consultare l'elenco atleti e i relativi provvedimenti
-                                    </span>
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                                    <div>
+                                        <h3 class="epk-headline" style="margin: 0; font-size: 14px; color: var(--epk-gold);">
+                                            QUADRO DISCIPLINARE PER GRUPPO STORICO
+                                        </h3>
+                                        <div style="font-size: 11px; color: rgba(245, 230, 200, 0.6); margin-top: 2px;">
+                                            Espandi ciascun gruppo per consultare l'elenco atleti e i relativi provvedimenti
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <select id="re-gruppi-filtro-evento" class="epk-input" style="padding: 4px 8px; font-size: 11px; max-width: 180px;" onchange="renderReRiepilogoGruppi()">
+                                            <option value="">Tutti gli Eventi</option>
+                                        </select>
+                                        <select id="re-gruppi-filtro-anno" class="epk-input" style="padding: 4px 8px; font-size: 11px; max-width: 110px;" onchange="renderReRiepilogoGruppi()">
+                                            <option value="">Tutti gli Anni</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="epk-table-card" style="overflow-x: auto;">
                                     <table>
@@ -1802,13 +1808,23 @@
 
                             <!-- Sub-Tab 3: Staff Tecnico SCAB -->
                             <div id="re-subtab-scab" class="epk-hidden">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 class="epk-headline" style="margin: 0; font-size: 14px; color: var(--epk-gold);">
-                                        PROVVEDIMENTI ATLETI PER STAFF TECNICO SCAB
-                                    </h3>
-                                    <span style="font-size: 11px; color: rgba(245, 230, 200, 0.6);">
-                                        Visualizza i richiami e gli encomi accumulati dagli atleti supervisionati da ciascun Allenatore o Validatore
-                                    </span>
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+                                    <div>
+                                        <h3 class="epk-headline" style="margin: 0; font-size: 14px; color: var(--epk-gold);">
+                                            PROVVEDIMENTI ATLETI PER STAFF TECNICO SCAB
+                                        </h3>
+                                        <div style="font-size: 11px; color: rgba(245, 230, 200, 0.6); margin-top: 2px;">
+                                            Visualizza i richiami e gli encomi accumulati dagli atleti supervisionati da ciascun Allenatore o Validatore
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <select id="re-scab-filtro-evento" class="epk-input" style="padding: 4px 8px; font-size: 11px; max-width: 180px;" onchange="renderReRiepilogoScab()">
+                                            <option value="">Tutti gli Eventi</option>
+                                        </select>
+                                        <select id="re-scab-filtro-anno" class="epk-input" style="padding: 4px 8px; font-size: 11px; max-width: 110px;" onchange="renderReRiepilogoScab()">
+                                            <option value="">Tutti gli Anni</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="epk-table-card" style="overflow-x: auto;">
                                     <table>
@@ -2689,6 +2705,6 @@
         </div>
     </div>
 
-    <script src="epika.js?v=1.04.96"></script>
+    <script src="epika.js?v=1.04.97"></script>
 </body>
 </html>
