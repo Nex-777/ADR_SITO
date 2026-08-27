@@ -4972,7 +4972,7 @@ async function renderOrganigrammaNetwork() {
             supabaseClient.from('epika_gruppi_storici').select('id, nome, popolo, capogruppo_id, vice_capogruppo_id, attivo'),
             supabaseClient.from('epika_profili').select('id, nome_di_battaglia, ruolo_combattimento, popolo, gruppo_storico_id, allenatore_id, gruppo_lavoro_ids, is_admin_epika, profilo_completato, rappresentante_gruppo_storico_id'),
             supabaseClient.from('epika_opzioni').select('id, tipo, valore, attivo'),
-            supabaseClient.from('epika_scab_strutture').select('id, nome, tipo, citta, attivo'),
+            supabaseClient.from('epika_scab_strutture').select('id, nome, tipo, attivo'),
             supabaseClient.from('epika_scab_abbinamenti').select('*'),
             supabaseClient.from('epika_scab_abilitazioni').select('id, profilo_id, anno_abilitativo, allenatore_opzione_id, allievo_opzione_id, validatore_opzione_id, stato_allenatore, stato_validatore'),
             supabaseClient.from('epika_campioni_scab').select('id, anno, profilo_id, nome_campione')
@@ -5419,15 +5419,15 @@ async function renderOrganigrammaNetwork() {
             .nodeId('id')
             .nodeVal(node => node.val)
             .nodeCanvasObject((node, ctx, globalScale) => {
-                const isHovered = epikaGraphHoverNode === node;
-                const isSelected = epikaGraphSelectedNode === node;
-                const isHighlighted = epikaGraphHighlightNodes.has(node);
-                const hasFocus = epikaGraphHoverNode || epikaGraphSelectedNode;
+                const isHovered = epikaGraphHoverNode && epikaGraphHoverNode.id === node.id;
+                const isSelected = epikaGraphSelectedNode && epikaGraphSelectedNode.id === node.id;
+                const isHighlighted = epikaGraphHighlightNodes.has(node.id);
+                const hasFocus = !!(epikaGraphHoverNode || epikaGraphSelectedNode);
 
                 // Dimming degli elementi non correlati durante hover/selezione
                 let alpha = 1.0;
                 if (hasFocus && !isHovered && !isSelected && !isHighlighted) {
-                    alpha = 0.12;
+                    alpha = 0.15;
                 }
 
                 ctx.save();
@@ -5439,14 +5439,17 @@ async function renderOrganigrammaNetwork() {
                 if (isHovered || isSelected) {
                     ctx.shadowColor = node.borderColor || '#F6E05E';
                     ctx.shadowBlur = 18;
+                } else if (isHighlighted) {
+                    ctx.shadowColor = '#F6E05E';
+                    ctx.shadowBlur = 10;
                 } else if (node.val >= 14) {
                     ctx.shadowColor = node.color;
                     ctx.shadowBlur = 8;
                 }
 
                 ctx.fillStyle = node.color || '#CBD5E0';
-                ctx.strokeStyle = node.borderColor || '#FFFFFF';
-                ctx.lineWidth = (isHovered || isSelected) ? 3.5 : (node.val >= 14 ? 2.5 : 1.5);
+                ctx.strokeStyle = (isHovered || isSelected || isHighlighted) ? '#F6E05E' : (node.borderColor || '#FFFFFF');
+                ctx.lineWidth = (isHovered || isSelected) ? 3.5 : (isHighlighted ? 2.5 : (node.val >= 14 ? 2.5 : 1.5));
 
                 // Disegno delle Forme in base all'entità
                 if (node.shape === 'hexagon') {
@@ -5504,7 +5507,7 @@ async function renderOrganigrammaNetwork() {
                     ctx.strokeText(labelText, node.x, node.y + yOffset);
 
                     // Testo Dorato / Chiaro
-                    ctx.fillStyle = node.val >= 14 ? '#F5E6C8' : (isHovered ? '#FFFFFF' : '#D1D5DB');
+                    ctx.fillStyle = (isHovered || isSelected || isHighlighted) ? '#FFFFFF' : (node.val >= 14 ? '#F5E6C8' : '#D1D5DB');
                     ctx.fillText(labelText, node.x, node.y + yOffset);
                 }
 
@@ -5518,7 +5521,7 @@ async function renderOrganigrammaNetwork() {
                 ctx.fill();
             })
             .linkColor(link => {
-                const hasFocus = epikaGraphHoverNode || epikaGraphSelectedNode;
+                const hasFocus = !!(epikaGraphHoverNode || epikaGraphSelectedNode);
                 if (hasFocus) {
                     if (epikaGraphHighlightLinks.has(link)) {
                         return link.color ? link.color.replace(/[\d\.]+\)$/, '1)') : '#F6E05E';
@@ -5585,10 +5588,11 @@ function handleNodeHover(node) {
     epikaGraphHoverNode = node || null;
 
     if (node) {
-        epikaGraphHighlightNodes.add(node);
+        epikaGraphHighlightNodes.add(node.id);
         const neighbors = epikaGraphNeighborsMap.get(node.id) || new Set();
+        neighbors.forEach(nId => epikaGraphHighlightNodes.add(nId));
         
-        // Trova tutti i nodi e link collegati
+        // Trova tutti i link collegati
         if (epikaGraphInstance) {
             const currentLinks = epikaGraphInstance.graphData().links || [];
             currentLinks.forEach(link => {
@@ -5596,8 +5600,6 @@ function handleNodeHover(node) {
                 const tId = typeof link.target === 'object' ? link.target.id : link.target;
                 if (sId === node.id || tId === node.id) {
                     epikaGraphHighlightLinks.add(link);
-                    epikaGraphHighlightNodes.add(typeof link.source === 'object' ? link.source : { id: sId });
-                    epikaGraphHighlightNodes.add(typeof link.target === 'object' ? link.target : { id: tId });
                 }
             });
         }
@@ -5640,11 +5642,6 @@ function handleNodeHover(node) {
         }
     } else {
         if (tooltip) tooltip.classList.add('epk-hidden');
-    }
-
-    // Richiede ridisegno del canvas
-    if (epikaGraphInstance) {
-        epikaGraphInstance.refresh();
     }
 }
 
@@ -5715,7 +5712,6 @@ function handleNodeClick(node) {
 function handleBackgroundClick() {
     epikaGraphSelectedNode = null;
     chiudiDettaglioGrafo();
-    if (epikaGraphInstance) epikaGraphInstance.refresh();
 }
 
 function chiudiDettaglioGrafo() {
@@ -5778,6 +5774,10 @@ function filtraGrafoNetwork(filtro) {
     epikaGraphFilteredData = { nodes: filteredNodes, links: filteredLinks };
     epikaGraphInstance.graphData(epikaGraphFilteredData);
 
+    try {
+        epikaGraphInstance.d3ReheatSimulation?.();
+    } catch (e) {}
+
     setTimeout(() => {
         if (epikaGraphInstance) epikaGraphInstance.zoomToFit(600, 35);
     }, 150);
@@ -5794,7 +5794,6 @@ function cercaNelGrafoNetwork(query) {
     if (!cleanQ) {
         epikaGraphHighlightNodes.clear();
         epikaGraphHighlightLinks.clear();
-        epikaGraphInstance.refresh();
         return;
     }
 
@@ -5807,7 +5806,6 @@ function cercaNelGrafoNetwork(query) {
 
     epikaGraphHighlightNodes.clear();
     matchingNodes.forEach(m => epikaGraphHighlightNodes.add(m));
-    epikaGraphInstance.refresh();
 
     // Centra sul primo nodo trovato
     if (matchingNodes.length > 0) {

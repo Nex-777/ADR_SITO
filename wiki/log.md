@@ -2,6 +2,12 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-27] fix | Risoluzione Crash Grafo Relazionale Force-Graph (v1.05.03)
+- **Frontend JS (`portal/epika.js`)**:
+  - Rimossa la colonna inesistente `citta` dalla query `select('id, nome, tipo, attivo')` su `epika_scab_strutture`, eliminando l'errore PostgREST `400 Bad Request`.
+  - Rimossi i richiami non supportati a `epikaGraphInstance.refresh()` che provocavano `TypeError: epikaGraphInstance.refresh is not a function` mandando in blocco il loop di eventi del canvas su hover e click.
+  - Corretta la gestione del Set di highlighting (`epikaGraphHighlightNodes`) per utilizzare gli ID stringa (`node.id`), assicurando l'illuminazione istantanea del nodo selezionato e di tutti i suoi vicini diretti (allievi, maestri, gruppi) con opacità 100% ed effetto glow.
+
 ## [2026-08-27] feature | Sostituzione Organigramma Mermaid con Grafo Relazionale Dinamico Force-Graph (Dash Generale)
 - **Frontend UI (`portal/epika.html`)**:
   - Sostituito lo script Mermaid.js con `force-graph` via CDN.
