@@ -171,6 +171,12 @@ Nel calcolo degli atleti e dei relativi provvedimenti supervisionati da ciascun 
 - **Verifica Live & Suggerimenti**: In fase di modifica profilo, un debounce a 350ms verifica la disponibilità in tempo reale. In caso di collisione, il sistema propone epiteti tematici disponibili (es. `IL FORTE`, `IL MAGNO`, `L'INVITTO`, `MINOR`, `IL LUPO`, ecc.) cliccabili per l'autocompilazione.
 - **Audit Immutabile**: Ogni variazione del nome storico viene automaticamente storicizzata nel registro audit `epika_registro_modifiche_profilo` con `campo = 'Nome Storico'`.
 
+#### ⏳ Sincronizzazione Scadenze Abilitazioni & Rollover Stagionale
+- **Trigger Automatico Presenze (`trg_sync_abilitazioni_scadenza`)**: Agganciato a `epika_presenze_eventi` (AFTER INSERT, UPDATE OF `presente`, DELETE). Se l'evento è di tipo `campo_marzio`, ricalcola in tempo reale la presenza a Campo Marzio per l'anno dell'evento e aggiorna `epika_scab_abilitazioni.ha_partecipato_cm` e `epika_scab_abilitazioni.data_scadenza` (`31/12/YYYY` per chi ha partecipato, `31/08/YYYY` per chi non ha partecipato).
+- **Rappresentazione Anno a Cavallo**: L'anno abilitativo memorizzato a database come intero $Y$ viene renderizzato nel frontend nel formato a cavallo `(Y-1)/Y` (es. $2026 \rightarrow 2025/2026$, $2027 \rightarrow 2026/2027$).
+- **Dicitura Scadenza Esatta**: L'atleta visualizza la data puntuale di scadenza dell'abilitazione (`Validazione attiva fino al 31/12/YYYY (Partecipante a Campo Marzio YYYY)` oppure `Validazione attiva fino al 31/08/YYYY`).
+- **Rollover di Settembre**: Alla scadenza del 31/08 (o 31/12), il sistema dichiara scaduta l'abilitazione e riapre il form di selezione/conferma dell'allenatore per la stagione successiva, indipendentemente dallo stato intermedio della vecchia pratica.
+
 ### 14. `public.epika_palmares_atleti`
 Stores historical tournament results, podiums, titles, and special recognitions per athlete.
 *   `id` (UUID PK)

@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-31] feature | Sincronizzazione Realtime Scadenze Abilitazioni SCAB & Rollover Anno (v1.05.11)
+- **Database & Trigger (`supabase/migration_epika_sync_abilitazioni_cm.sql`)**:
+  - Implementata la trigger function `epika_trg_sync_scadenza_abilitazioni()` su `public.epika_presenze_eventi` (AFTER INSERT, UPDATE OF `presente`, DELETE).
+  - All'aggiornamento di una presenza ad un evento `campo_marzio`, il sistema ricalcola in tempo reale la scadenza dell'abilitazione per l'atleta (`31/12/YYYY` se presente, `31/08/YYYY` se assente) aggiornando `epika_scab_abilitazioni`.
+  - Eseguito backfill retroattivo per allineare tutte le scadenze e presenze pregresse a Campo Marzio 2026.
+- **Frontend UI & Visualizzazione (`portal/epika.js`)**:
+  - Aggiornato `renderAbilitazioneAtleta()` per mostrare la data puntuale di scadenza dell'abilitazione (`Validazione attiva fino al 31/12/YYYY (Partecipante a Campo Marzio YYYY)` o `Validazione attiva fino al 31/08/YYYY`).
+  - Formattato l'anno abilitativo nel formato a cavallo `(Y-1)/Y` sia nel badge principale che nei messaggi di rinnovo e nelle dashboard Allenatore, Allievo e Validatore.
+- **Global Bump**: Versionamento globale incrementato a `v1.05.11` tramite `npm run bump`.
+
+---
+
 ## [2026-08-31] feature | Dashboard Contabilità per Corso (v1.05.10)
 - **Backend Webhook (`api/stripe-webhook.js`)**:
   - Garantito il popolamento esplicito della colonna `evento_id: eventId || null` nella tabella `public.ricevute_pagamenti` ad ogni checkout completato (`checkout.session.completed`).

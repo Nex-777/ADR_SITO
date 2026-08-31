@@ -1191,7 +1191,8 @@ async function renderAbilitazioneAtleta() {
             }
         }
 
-        if (annoBadge) annoBadge.textContent = `ANNO ABILITATIVO ${targetAnnoAbilitativo}`;
+        const annoDisplay = `${targetAnnoAbilitativo - 1}/${targetAnnoAbilitativo}`;
+        if (annoBadge) annoBadge.textContent = `ANNO ABILITATIVO ${annoDisplay}`;
 
         if (isPrimaPraticaAssoluta || isScaduto) {
             // AUTO-HEALING TRASPARENTE: Si attiva SOLO per la prima pratica assoluta (nuovi utenti o orfani)
@@ -1228,7 +1229,7 @@ async function renderAbilitazioneAtleta() {
                     <span style="background:#7f1d1d;color:#fca5a5;padding:4px 12px;font-size:10px;font-weight:bold;letter-spacing:0.1em;">⚔ NON ABILITATO${isScaduto ? ' — SCADUTO' : ''}</span>
                 </div>
                 <p style="font-size:11px;text-transform:uppercase;color:rgba(245,230,200,0.6);margin-bottom:16px;">
-                    ${isScaduto ? `La tua abilitazione precedente è scaduta. Invia la richiesta per l'anno ${targetAnnoAbilitativo}.` : `Devi richiedere l'abilitazione per poter combattere per l'anno ${targetAnnoAbilitativo}.`}
+                    ${isScaduto ? `La tua abilitazione precedente è scaduta. Invia la richiesta per l'anno ${annoDisplay}.` : `Devi richiedere l'abilitazione per poter combattere per l'anno ${annoDisplay}.`}
                 </p>
                 <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
                     <label class="epk-label">INDICA IL TUO ALLENATORE O ALLIEVO ALLENATORE *</label>
@@ -1274,12 +1275,14 @@ async function renderAbilitazioneAtleta() {
             const nomeAllievo = abl.allievo?.valore ? ` (via ${abl.allievo.valore.toUpperCase()})` : '';
             const nomeValidatore = abl.validatore?.valore?.toUpperCase() || 'N/D';
 
-            const anno2Cifre = String(targetAnnoAbilitativo).slice(-2);
+            const testoScadenza = abl.ha_partecipato_cm
+                ? `Validazione attiva fino al 31/12/${targetAnnoAbilitativo} (Partecipante a Campo Marzio ${targetAnnoAbilitativo})`
+                : `Validazione attiva fino al 31/08/${targetAnnoAbilitativo}`;
 
             container.innerHTML = `
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">
                     <span style="background:#78350f;color:#fbbf24;padding:4px 12px;font-size:10px;font-weight:bold;letter-spacing:0.1em;">🛡 ${statiLabel[idxCorrente] || abl.stato_allenatore.toUpperCase()}</span>
-                    <span style="font-size:10px;color:rgba(245,230,200,0.6);">abilitazione valida fino al 31/08/${anno2Cifre} . per i partecipanti a CM ${targetAnnoAbilitativo} l'abilitazione è valida fino al 31/12/${anno2Cifre}</span>
+                    <span style="font-size:10px;color:rgba(245,230,200,0.6);">${testoScadenza}</span>
                 </div>
                 <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--epk-gold-dim);overflow:hidden;">${stepsHtml}</div>
                 <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.2);border:1px solid var(--epk-gold-dim);padding:12px 16px;">
@@ -7915,7 +7918,7 @@ async function renderAllenatoreDashboard(opzioneId) {
 
         let html = `
             <p style="font-size:10px;color:rgba(245,230,200,0.5);text-transform:uppercase;margin-bottom:12px;">
-                Anno Abilitativo: <strong style="color:var(--epk-gold);">${annoCorrente}</strong> — 
+                Anno Abilitativo: <strong style="color:var(--epk-gold);">${annoCorrente - 1}/${annoCorrente}</strong> — 
                 Include atleti diretti e atleti seguiti dai tuoi Allievi Allenatori.
             </p>
             <div style="overflow-x:auto;">
@@ -8081,7 +8084,7 @@ async function renderAllievoAllenatoreDashboard(opzioneId) {
             let atlHtml = `
                 <div class="epk-card" style="margin-top:16px;">
                     <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--epk-gold-dim);padding-bottom:8px;margin-bottom:16px;">
-                        <h2 class="epk-headline" style="margin:0;font-size:16px;">ATLETI SEGUITI — ANNO ABILITATIVO ${annoCorrente}</h2>
+                        <h2 class="epk-headline" style="margin:0;font-size:16px;">ATLETI SEGUITI — ANNO ABILITATIVO ${annoCorrente - 1}/${annoCorrente}</h2>
                         <span style="background:#1c3a2f;color:#86efac;font-size:9px;padding:3px 8px;font-weight:bold;letter-spacing:0.1em;">👁 SOLA LETTURA</span>
                     </div>
                     <div style="overflow-x:auto;">
@@ -8239,7 +8242,7 @@ async function renderValidatoreDashboard(opzioneId) {
             let atlHtml = `
                 <div class="epk-card" style="margin-top:16px;">
                     <h2 class="epk-headline" style="margin-top:0;font-size:16px;border-bottom:1px solid var(--epk-gold-dim);padding-bottom:8px;margin-bottom:16px;">
-                        ATLETI DA VALIDARE — ANNO ABILITATIVO ${annoCorrente}
+                        ATLETI DA VALIDARE — ANNO ABILITATIVO ${annoCorrente - 1}/${annoCorrente}
                     </h2>
                     <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;text-align:left;font-size:11px;text-transform:uppercase;">
