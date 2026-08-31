@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-31] fix | Risoluzione Vincolo data_evento Nullable per Corsi H24 e Gestione Orari (v1.05.07)
+- **Database (Supabase `zpategmkelqmexetpaot`)**:
+  - Applicato `ALTER TABLE public.eventi ALTER COLUMN data_evento DROP NOT NULL;` per consentire ai corsi a fruizione continuativa/H24 (es. *Ibrido*) o con programmazione settimanale di avere `data_evento = NULL`, risolvendo l'errore PostgREST `400 Bad Request` in salvataggio/modifica.
+- **Frontend (`portal/dashboard.js`)**:
+  - Aggiunto helper protetto `formatDate()` per formattare le date in formato `it-IT` evitando il parsing errato di `null` (che produceva 01/01/1970).
+  - In `loadGestioneCorsi()`: visualizzazione dinamica del badge `ACCESSO H24 / CONTINUATIVO` nella colonna orari/giornate per i corsi privi di orario fisso (anziché il trattino vuoto `-`).
+  - In `loadUserEventi()` (Catalogo e Iscrizioni attive): gestione intelligente delle date/orari, mostrando orari settimanali o badge `ACCESSO H24 / CONTINUATIVO` per i corsi e formattando in sicurezza le date degli eventi singoli/multigiornata.
+- **Documentazione (`wiki/database_schema.md`)**:
+  - Aggiornata la documentazione della tabella `public.eventi` riflettendo la natura `nullable` di `data_evento`.
+- **Global Bump**: Versionamento globale incrementato a `v1.05.07` tramite `npm run bump`.
+
+---
+
 ## [2026-08-27] feature | Legenda Nodi Interattiva e Selettore Spaziatura Grafo Relazionale (v1.05.04)
 - **Frontend UI (`portal/epika.html`)**:
   - Inserito lo slider `📏 Spazio` (`#epk-network-spacing`, range 30-220, default 80) nella barra comandi del grafo per regolare la distanza e la repulsione tra i nodi in tempo reale.
@@ -2910,3 +2923,6 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ## [2026-08-27] patch | epika.js
 - Fix: Rimosso prefisso window. da supabaseClient che causava TypeError e bloccava il caricamento del grafo (v1.05.05).
+
+## [2026-08-27] patch | epika.js
+- Fix: Rimosse colonne inesistenti (es. attivo, ordine) e filtri errati (.eq('attivo', true)) dalle query Supabase del grafo, introdotte per errore precedentemente, ripristinando il caricamento corretto (v1.05.06).

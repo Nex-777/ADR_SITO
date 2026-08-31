@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.06"
+                VERSION: "1.05.07"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -35,6 +35,18 @@
                 return `${day}/${month}/${year}`;
             } catch (e) {
                 return dateStr;
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/D';
+            try {
+                const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+                const d = new Date(cleanDate);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString('it-IT');
+            } catch (e) {
+                return String(dateStr);
             }
         }
 
@@ -4764,29 +4776,41 @@
 
                     // Formatta orari o date
                     let orariStr = '-';
-                    if (evt.tipo === 'corso' && evt.orari_settimanali) {
-                        try {
-                            const orari = typeof evt.orari_settimanali === 'string' ? JSON.parse(evt.orari_settimanali) : evt.orari_settimanali;
-                            if (Array.isArray(orari)) {
-                                orariStr = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(', ');
+                    if (evt.tipo === 'corso') {
+                        if (evt.orari_settimanali) {
+                            try {
+                                const orari = typeof evt.orari_settimanali === 'string' ? JSON.parse(evt.orari_settimanali) : evt.orari_settimanali;
+                                if (Array.isArray(orari) && orari.length > 0) {
+                                    orariStr = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(', ');
+                                } else {
+                                    orariStr = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
+                                }
+                            } catch (e) {
+                                console.error("Errore parse orari:", e);
+                                orariStr = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
                             }
-                        } catch (e) {
-                            console.error("Errore parse orari:", e);
+                        } else {
+                            orariStr = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
                         }
                     } else if (evt.tipo === 'evento') {
                         try {
                             if (evt.giornate && evt.giornate.length > 0) {
                                 const giornate = typeof evt.giornate === 'string' ? JSON.parse(evt.giornate) : evt.giornate;
-                                if (giornate.length === 1) {
-                                    orariStr = `${formatDate(giornate[0].data)} ${giornate[0].ora_inizio || ''}`;
-                                } else {
-                                    orariStr = `${formatDate(giornate[0].data)} (+${giornate.length - 1} date)`;
+                                if (Array.isArray(giornate) && giornate.length > 0) {
+                                    if (giornate.length === 1) {
+                                        orariStr = `${formatDate(giornate[0].data)} ${giornate[0].ora_inizio || ''}`;
+                                    } else {
+                                        orariStr = `${formatDate(giornate[0].data)} (+${giornate.length - 1} date)`;
+                                    }
                                 }
                             } else if (evt.data_evento) {
                                 orariStr = `${formatDate(evt.data_evento)} ${evt.ora_evento || ''}`;
+                            } else {
+                                orariStr = 'DATA DA DEFINIRE';
                             }
                         } catch(e) {
                             console.error("Errore parse giornate:", e);
+                            orariStr = 'DATA DA DEFINIRE';
                         }
                     }
 
@@ -6917,7 +6941,39 @@
                 const eventiInProg = filteredEventiList.filter(e => e.tipo === 'evento');
 
                 const renderCard = (ev) => {
-                    const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                    let scheduleStr = '';
+                    if (ev.tipo === 'corso') {
+                        if (ev.orari_settimanali) {
+                            try {
+                                const orari = typeof ev.orari_settimanali === 'string' ? JSON.parse(ev.orari_settimanali) : ev.orari_settimanali;
+                                if (Array.isArray(orari) && orari.length > 0) {
+                                    scheduleStr = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(', ');
+                                } else {
+                                    scheduleStr = 'ACCESSO H24 / CONTINUATIVO';
+                                }
+                            } catch (e) {
+                                scheduleStr = 'ACCESSO H24 / CONTINUATIVO';
+                            }
+                        } else {
+                            scheduleStr = 'ACCESSO H24 / CONTINUATIVO';
+                        }
+                    } else if (ev.tipo === 'evento') {
+                        if (ev.giornate && ev.giornate.length > 0) {
+                            try {
+                                const giornate = typeof ev.giornate === 'string' ? JSON.parse(ev.giornate) : ev.giornate;
+                                if (Array.isArray(giornate) && giornate.length > 0) {
+                                    scheduleStr = giornate.map(g => `${formatDate(g.data)} ${g.ora_inizio || ''}`).join(' | ');
+                                }
+                            } catch (e) { }
+                        }
+                        if (!scheduleStr && ev.data_evento) {
+                            scheduleStr = `${formatDate(ev.data_evento)} ${ev.ora_evento ? ev.ora_evento.substring(0, 5) : ''}`;
+                        }
+                        if (!scheduleStr) {
+                            scheduleStr = 'DATA DA DEFINIRE';
+                        }
+                    }
+
                     const isIscritto = activeIscr.some(i => i.evento_id === ev.id);
                     
                     let prezzo = parseFloat(ev.prezzo) || 0;
@@ -6959,7 +7015,7 @@
                         <div class="border border-white/10 p-5 bg-black/40 flex flex-col justify-between space-y-4">
                             <div class="space-y-2">
                                 <div class="flex justify-between items-start">
-                                    <span class="text-[9px] text-gray-500 font-mono">${dataFormat} ${ev.ora_evento ? ev.ora_evento.substring(0, 5) : ''}</span>
+                                    <span class="text-[9px] text-gray-500 font-mono">${scheduleStr}</span>
                                     <span id="price-display-${ev.id}" class="text-[9px] font-headline font-bold text-primary">${prezzoLabel}</span>
                                 </div>
                                 <h4 class="font-headline text-xs font-bold text-white uppercase">${escapeHtml(ev.titolo)}</h4>
@@ -7010,7 +7066,7 @@
                             }
 
                             const scadenzaLabel = currentExpiry 
-                                ? new Date(currentExpiry).toLocaleDateString('it-IT')
+                                ? formatDate(currentExpiry)
                                 : 'DA DEFINIRE';
 
                             return `
@@ -7047,11 +7103,21 @@
                         containerEventiIscr.innerHTML = activeEventiIscr.map(iscr => {
                             const ev = iscr.eventi;
                             if (!ev) return '';
-                            const dataFormat = new Date(ev.data_evento).toLocaleDateString('it-IT');
+                            let dateLabel = 'DATA DA DEFINIRE';
+                            if (ev.data_evento) {
+                                dateLabel = formatDate(ev.data_evento);
+                            } else if (ev.giornate && ev.giornate.length > 0) {
+                                try {
+                                    const g = typeof ev.giornate === 'string' ? JSON.parse(ev.giornate) : ev.giornate;
+                                    if (Array.isArray(g) && g.length > 0 && g[0].data) {
+                                        dateLabel = formatDate(g[0].data);
+                                    }
+                                } catch (e) {}
+                            }
                             return `
                                 <div class="border-l-4 border-green-500 bg-white/5 p-4 space-y-2 uppercase font-mono">
                                     <div class="flex justify-between items-center text-[10px]">
-                                        <span class="text-gray-400 font-bold">${dataFormat}</span>
+                                        <span class="text-gray-400 font-bold">${dateLabel}</span>
                                         <span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>
                                     </div>
                                     <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>

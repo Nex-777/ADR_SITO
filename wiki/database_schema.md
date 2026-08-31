@@ -128,7 +128,7 @@ Stores courses and events information.
 | `id` | `uuid` (PK) | Unique ID of the event. |
 | `titolo` | `varchar` | Title of the course/event. |
 | `descrizione` | `text` | Extended description of details. |
-| `data_evento` | `date` | Scheduled date. |
+| `data_evento` | `date` (nullable) | Scheduled date (NULL per corsi a fruizione continua o orari settimanali). |
 | `ora_evento` | `time` | Scheduled start time. |
 | `luogo` | `text` | Venue description. |
 | `prezzo` | `numeric` | Booking fee (0.00 for free). |
