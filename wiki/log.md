@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-31] feature | Dashboard Contabilità per Corso (v1.05.10)
+- **Backend Webhook (`api/stripe-webhook.js`)**:
+  - Garantito il popolamento esplicito della colonna `evento_id: eventId || null` nella tabella `public.ricevute_pagamenti` ad ogni checkout completato (`checkout.session.completed`).
+- **Frontend UI & Dashboard (`portal/dashboard.html`, `portal/dashboard.js`)**:
+  - Inserito il pulsante `Contabilità` nella tabella corsi dell'Admin (`loadGestioneCorsi`).
+  - Creata la scheda a tutta larghezza `#admin-widget-corso-contabilita` con header personalizzato, selettore dell'anno solare e pulsante di ritorno.
+  - Implementate le KPI cards: Totale Incassato Annuale, Incasso Mese Corrente e Totale Transazioni.
+  - Implementata la griglia di andamento mese per mese (12 mesi) con totale incassi e numero di ricevute registrate.
+  - Implementata la tabella dettagliata di tutte le ricevute del corso (`loadDatiContabilitaCorso`) con link per visualizzare/stampare ogni ricevuta (`stampaRicevuta`).
+- **Documentazione Wiki (`wiki/portal_dashboard.md`, `wiki/log.md`)**:
+  - Documentata la nuova sezione di Contabilità Corsi per il Direttivo.
+- **Global Bump**: Versionamento globale incrementato a `v1.05.10` tramite `npm run bump`.
+
+---
+
 ## [2026-08-31] fix | Risoluzione SyntaxError Onclick Tabelle Corsi Admin e Istruttore (v1.05.09)
 - **Frontend (`portal/dashboard.js`)**:
   - Risolto il crash JavaScript (`Uncaught SyntaxError: Invalid or unexpected token`) generato dal rendering HTML dei corsi continuativi/H24 (`<span>` con attributi a doppi apici) iniettato direttamente nell'attributo `onclick` dei pulsanti "Partecipanti" e "Apri Registro".

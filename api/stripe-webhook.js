@@ -130,6 +130,7 @@ export default async function handler(req, res) {
                     numero_ricevuta: nextNum,
                     anno_fiscale: annoFiscale,
                     utente_id: utenteId,
+                    evento_id: eventId || null,
                     importo: importo,
                     causale: causale,
                     metodo_pagamento: 'STRIPE',

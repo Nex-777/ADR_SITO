@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.09"
+                VERSION: "1.05.10"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -4723,6 +4723,7 @@
         async function loadGestioneCorsi() {
             const tbody = document.getElementById('corsi-list-body');
             if (!tbody) return;
+            if (typeof closeContabilitaCorso === 'function') closeContabilitaCorso();
             const numCols = 6;
             tbody.innerHTML = `<tr><td colspan="${numCols}" class="p-4 text-center text-gray-500">Caricamento in corso...</td></tr>`;
             try {
@@ -4841,6 +4842,9 @@
                                 <button onclick="openRegistroDaAdmin('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.luogo ? evt.luogo.replace(/'/g, "\\'") : ''}', '${orariStrText.replace(/'/g, "\\'")}')" class="border border-green-500/30 bg-green-500/10 text-green-500 px-3 py-1 font-headline font-bold text-[10px] hover:bg-green-500 hover:text-white transition-all uppercase">
                                     Partecipanti
                                 </button>
+                                <button onclick="openContabilitaCorso('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" class="border border-amber-500/30 bg-amber-500/10 text-amber-500 px-3 py-1 font-headline font-bold text-[10px] hover:bg-amber-500 hover:text-white transition-all uppercase">
+                                    Contabilità
+                                </button>
                                 <button onclick="openModalAssegnaIstruttori('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" class="border border-primary/30 bg-primary/10 text-primary px-3 py-1 font-headline font-bold text-[10px] hover:bg-primary hover:text-white transition-all uppercase">
                                     Istruttori
                                 </button>
@@ -4864,6 +4868,184 @@
                 console.error("Errore loadGestioneCorsi:", err);
                 const numCols = currentCorsiSubTab === 'corso' ? 6 : 5;
                 tbody.innerHTML = `<tr><td colspan="${numCols}" class="p-4 text-center text-red-500">Errore: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        // ==========================================
+        // GESTIONE CONTABILITÀ CORSO (ADMIN)
+        // ==========================================
+        let currentContabilitaCorsoId = null;
+        let currentContabilitaCorsoTitolo = '';
+        let currentContabilitaAnno = new Date().getFullYear();
+
+        window.openContabilitaCorso = function(eventoId, titolo) {
+            currentContabilitaCorsoId = eventoId;
+            currentContabilitaCorsoTitolo = titolo;
+            currentContabilitaAnno = new Date().getFullYear();
+
+            const mainView = document.getElementById('gestione-corsi-main-view');
+            const contWidget = document.getElementById('admin-widget-corso-contabilita');
+            if (mainView && contWidget) {
+                mainView.classList.add('hidden');
+                contWidget.classList.remove('hidden');
+            }
+
+            const titleEl = document.getElementById('corso-contabilita-title');
+            if (titleEl) titleEl.textContent = titolo.toUpperCase();
+
+            const yearSelect = document.getElementById('corso-contabilita-year');
+            if (yearSelect) {
+                const currentY = new Date().getFullYear();
+                yearSelect.innerHTML = `
+                    <option value="${currentY}" selected>${currentY}</option>
+                    <option value="${currentY - 1}">${currentY - 1}</option>
+                    <option value="${currentY - 2}">${currentY - 2}</option>
+                `;
+            }
+
+            loadDatiContabilitaCorso(eventoId, titolo, currentContabilitaAnno);
+        };
+
+        window.closeContabilitaCorso = function() {
+            currentContabilitaCorsoId = null;
+            currentContabilitaCorsoTitolo = '';
+
+            const mainView = document.getElementById('gestione-corsi-main-view');
+            const contWidget = document.getElementById('admin-widget-corso-contabilita');
+            if (mainView && contWidget) {
+                contWidget.classList.add('hidden');
+                mainView.classList.remove('hidden');
+            }
+        };
+
+        window.onContabilitaYearChange = function() {
+            const yearSelect = document.getElementById('corso-contabilita-year');
+            if (!yearSelect) return;
+            const anno = parseInt(yearSelect.value, 10) || new Date().getFullYear();
+            currentContabilitaAnno = anno;
+            if (currentContabilitaCorsoId) {
+                loadDatiContabilitaCorso(currentContabilitaCorsoId, currentContabilitaCorsoTitolo, anno);
+            }
+        };
+
+        async function loadDatiContabilitaCorso(eventoId, titolo, anno) {
+            const mesiGrid = document.getElementById('corso-cont-mesi-grid');
+            const receiptsBody = document.getElementById('corso-cont-ricevute-body');
+            const totAnnoEl = document.getElementById('corso-cont-totale-anno');
+            const totMeseAttualeEl = document.getElementById('corso-cont-totale-mese-attuale');
+            const totTransazioniEl = document.getElementById('corso-cont-totale-transazioni');
+
+            if (mesiGrid) mesiGrid.innerHTML = '<p class="col-span-full text-xs text-gray-500 font-mono">Caricamento dati contabili...</p>';
+            if (receiptsBody) receiptsBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-gray-500">Caricamento transazioni...</td></tr>';
+
+            try {
+                const { data: receipts, error } = await supabaseClient
+                    .from('ricevute_pagamenti')
+                    .select(`
+                        id,
+                        numero_ricevuta,
+                        anno_fiscale,
+                        importo,
+                        causale,
+                        data_pagamento,
+                        metodo_pagamento,
+                        codice_transazione,
+                        evento_id,
+                        utenti ( nome, cognome )
+                    `)
+                    .eq('anno_fiscale', anno)
+                    .or(`evento_id.eq.${eventoId},causale.ilike.%${titolo}%`)
+                    .order('data_pagamento', { ascending: false });
+
+                if (error) throw error;
+
+                const list = Array.isArray(receipts) ? receipts : [];
+
+                const mesiNomiBrevi = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'];
+                const mesiStats = Array.from({ length: 12 }, (_, i) => ({
+                    meseIndex: i,
+                    nomeBreve: mesiNomiBrevi[i],
+                    totale: 0,
+                    conteggio: 0
+                }));
+
+                let totaleAnno = 0;
+                const currentMonthIdx = new Date().getMonth(); // 0-11
+
+                list.forEach(r => {
+                    const imp = parseFloat(r.importo) || 0;
+                    totaleAnno += imp;
+
+                    let mIdx = -1;
+                    if (r.data_pagamento) {
+                        const parts = String(r.data_pagamento).split('-');
+                        if (parts.length >= 2) {
+                            mIdx = parseInt(parts[1], 10) - 1;
+                        }
+                    }
+                    if (mIdx >= 0 && mIdx < 12) {
+                        mesiStats[mIdx].totale += imp;
+                        mesiStats[mIdx].conteggio += 1;
+                    }
+                });
+
+                if (totAnnoEl) totAnnoEl.textContent = `€${totaleAnno.toFixed(2)}`;
+                const totMeseAttuale = (anno === new Date().getFullYear()) ? mesiStats[currentMonthIdx].totale : 0;
+                if (totMeseAttualeEl) totMeseAttualeEl.textContent = `€${totMeseAttuale.toFixed(2)}`;
+                if (totTransazioniEl) totTransazioniEl.textContent = list.length;
+
+                if (mesiGrid) {
+                    mesiGrid.innerHTML = '';
+                    mesiStats.forEach(m => {
+                        const isCurrent = (anno === new Date().getFullYear() && m.meseIndex === currentMonthIdx);
+                        const card = document.createElement('div');
+                        card.className = `p-3 border ${isCurrent ? 'border-primary bg-primary/10' : 'border-white/10 bg-black/20'} flex flex-col justify-between hover:border-white/30 transition-all`;
+                        card.innerHTML = `
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-headline font-bold text-[11px] ${isCurrent ? 'text-primary' : 'text-gray-300'}">${m.nomeBreve}</span>
+                                <span class="text-[9px] font-mono text-gray-500">${m.conteggio} ric.</span>
+                            </div>
+                            <p class="font-headline font-bold text-sm ${m.totale > 0 ? (isCurrent ? 'text-primary' : 'text-green-500') : 'text-gray-600'}">
+                                €${m.totale.toFixed(2)}
+                            </p>
+                        `;
+                        mesiGrid.appendChild(card);
+                    });
+                }
+
+                if (receiptsBody) {
+                    if (list.length === 0) {
+                        receiptsBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-500 font-mono text-xs">Nessuna transazione o ricevuta registrata per l'anno ${anno}.</td></tr>`;
+                    } else {
+                        receiptsBody.innerHTML = '';
+                        list.forEach(r => {
+                            const atletaNome = r.utenti ? `${r.utenti.nome} ${r.utenti.cognome}`.toUpperCase() : 'N/D';
+                            const dataFmt = formatDate(r.data_pagamento);
+                            const imp = parseFloat(r.importo) || 0;
+                            const tr = document.createElement('tr');
+                            tr.className = "hover:bg-white/5 transition-all";
+                            tr.innerHTML = `
+                                <td class="p-3 text-gray-300">${dataFmt}</td>
+                                <td class="p-3 font-bold text-white font-mono">N. ${r.numero_ricevuta}/${r.anno_fiscale}</td>
+                                <td class="p-3 font-bold text-white">${escapeHtml(atletaNome)}</td>
+                                <td class="p-3 text-gray-400 font-mono text-[11px]">${escapeHtml(r.causale || '-')}</td>
+                                <td class="p-3 text-gray-300"><span class="border border-white/20 bg-white/5 px-2 py-0.5 text-[9px] font-bold">${escapeHtml(r.metodo_pagamento || 'STRIPE')}</span></td>
+                                <td class="p-3 text-right font-bold text-green-500 font-mono">€${imp.toFixed(2)}</td>
+                                <td class="p-3 text-center">
+                                    <button onclick="stampaRicevuta('${r.id}')" class="text-primary hover:underline font-bold text-[10px] font-headline uppercase flex items-center justify-center gap-1 mx-auto">
+                                        <span class="material-symbols-outlined text-xs">print</span> APRI
+                                    </button>
+                                </td>
+                            `;
+                            receiptsBody.appendChild(tr);
+                        });
+                    }
+                }
+
+            } catch (err) {
+                console.error("Errore loadDatiContabilitaCorso:", err);
+                if (mesiGrid) mesiGrid.innerHTML = `<p class="col-span-full text-xs text-red-500 font-mono">Errore nel caricamento dati: ${escapeHtml(err.message)}</p>`;
+                if (receiptsBody) receiptsBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">Errore: ${escapeHtml(err.message)}</td></tr>`;
             }
         }
 

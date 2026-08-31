@@ -79,6 +79,13 @@ Aggiunto nella versione **1.03.26**:
 -   **Assegnazione Istruttori**:
     -   Modale attivabile sulla riga del corso per assegnare uno o più istruttori (utenti con ruolo `istruttore`).
     -   Gestione dei differenziali (inserisce o cancella record in `istruttori_eventi` in base al delta delle checkbox).
+-   **Contabilità del Corso (Riforma v1.05.10)**:
+    -   Pulsante **Contabilità** in ciascuna riga corso nel pannello Admin.
+    -   Apre una dashboard a tutta larghezza con:
+        -   Selettore dinamico dell'**Anno Solare** (es. 2026, 2025, 2024).
+        -   **KPI Cards**: Totale incassato annuo, incasso mese corrente e numero totale transazioni/ricevute.
+        -   **Andamento Mensile**: Griglia dei 12 mesi con aggregazione automatica degli incassi e conteggio ricevute.
+        -   **Elenco Dettagliato Transazioni**: Tabella con data, numero ricevuta fiscale, nominativo atleta, causale/piano, metodo di pagamento e pulsante di stampa/apertura ricevuta (`stampaRicevuta`).
 
 ---
 

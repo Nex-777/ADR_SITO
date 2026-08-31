@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.05.09"></script>
+    <script src="config.js?v=1.05.10"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -493,7 +493,7 @@
             color: #C9A84C;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.05.09">
+    <link rel="stylesheet" href="../output.css?v=1.05.10">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -519,7 +519,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.05.09</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.05.10</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer hidden">
                     <option value="board">AREA DIRETTIVO</option>
                     <option value="member">AREA SOCIO</option>
@@ -1476,50 +1476,127 @@
 
             <!-- TAB: GESTIONE CORSI -->
             <div id="panel-gestione_corsi" class="tab-panel space-y-6 hidden">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="font-headline text-lg font-bold uppercase">Gestione Corsi ed Eventi</h2>
-                        <p class="text-xs text-gray-500 uppercase">Crea e modifica i programmi dei corsi, i relativi orari e assegna gli istruttori</p>
+                <!-- VISTA PRINCIPALE: TABELLA CORSI ED EVENTI -->
+                <div id="gestione-corsi-main-view" class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="font-headline text-lg font-bold uppercase">Gestione Corsi ed Eventi</h2>
+                            <p class="text-xs text-gray-500 uppercase">Crea e modifica i programmi dei corsi, i relativi orari e assegna gli istruttori</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase" id="auto-dashboard-click-42">
+                                NUOVO CORSO
+                            </button>
+                            <button class="border border-white/20 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-white hover:text-black transition-all uppercase" id="auto-dashboard-click-43">
+                                NUOVO EVENTO
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button class="bg-white text-black font-headline text-xs font-bold px-4 py-2 hover:bg-primary hover:text-white transition-all uppercase" id="auto-dashboard-click-42">
-                            NUOVO CORSO
+
+                    <!-- Tab Interni Corsi/Eventi -->
+                    <div class="flex gap-4 border-b border-white/10 pb-px">
+                        <button id="subtab-btn-corsi" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide">
+                            CORSI ATTIVI
                         </button>
-                        <button class="border border-white/20 text-white font-headline text-xs font-bold px-4 py-2 hover:bg-white hover:text-black transition-all uppercase" id="auto-dashboard-click-43">
-                            NUOVO EVENTO
+                        <button id="subtab-btn-eventi" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide">
+                            EVENTI IN PROGRAMMA
                         </button>
+                    </div>
+
+                    <!-- Tabella Corsi/Eventi -->
+                    <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                                <tr>
+                                    <th class="p-4">Titolo</th>
+                                    <th class="p-4">Luogo</th>
+                                    <th class="p-4" id="col-orari-header">Orari Settimanali</th>
+                                    <th class="p-4" id="col-istruttori-header">Istruttori</th>
+                                    <th class="p-4 text-center">N. Iscritti</th>
+                                    <th class="p-4 text-right">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody id="corsi-list-body" class="divide-y divide-white/5 uppercase font-mono">
+                                <tr>
+                                    <td colspan="6" class="p-4 text-center text-gray-500">Caricamento corsi...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Tab Interni Corsi/Eventi -->
-                <div class="flex gap-4 border-b border-white/10 pb-px">
-                    <button id="subtab-btn-corsi" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-primary text-white tracking-wide">
-                        CORSI ATTIVI
-                    </button>
-                    <button id="subtab-btn-eventi" class="pb-2 font-headline text-xs font-bold uppercase border-b-2 border-transparent text-gray-500 hover:text-white tracking-wide">
-                        EVENTI IN PROGRAMMA
-                    </button>
-                </div>
+                <!-- WIDGET CONTABILITÀ CORSO (ADMIN) -->
+                <div id="admin-widget-corso-contabilita" class="space-y-6 hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-4">
+                        <div>
+                            <button onclick="closeContabilitaCorso()" class="text-xs text-primary hover:underline font-headline font-bold uppercase tracking-wider flex items-center gap-1 mb-2">
+                                <span class="material-symbols-outlined text-xs">arrow_back</span> TORNA A GESTIONE CORSI
+                            </button>
+                            <h2 id="corso-contabilita-title" class="font-headline text-xl font-bold uppercase text-white">NOME CORSO</h2>
+                            <p id="corso-contabilita-subtitle" class="text-xs text-gray-400 uppercase">RIEPILOGO INCASSI, ANDAMENTO MENSILE E TRANSAZIONI</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label for="corso-contabilita-year" class="text-xs text-gray-400 font-headline uppercase font-bold tracking-wider">Anno Solare:</label>
+                            <select id="corso-contabilita-year" onchange="onContabilitaYearChange()" class="bg-black/60 border border-white/20 text-white text-xs px-3 py-1.5 font-headline font-bold uppercase focus:border-primary outline-none cursor-pointer">
+                                <option value="2026" selected>2026</option>
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                            </select>
+                        </div>
+                    </div>
 
-                <!-- Tabella Corsi/Eventi -->
-                <div class="border border-white/10 bg-black/40 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
-                            <tr>
-                                <th class="p-4">Titolo</th>
-                                <th class="p-4">Luogo</th>
-                                <th class="p-4" id="col-orari-header">Orari Settimanali</th>
-                                <th class="p-4" id="col-istruttori-header">Istruttori</th>
-                                <th class="p-4 text-center">N. Iscritti</th>
-                                <th class="p-4 text-right">Azioni</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corsi-list-body" class="divide-y divide-white/5 uppercase font-mono">
-                            <tr>
-                                <td colspan="6" class="p-4 text-center text-gray-500">Caricamento corsi...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <!-- KPI CARDS -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="border border-white/10 p-4 bg-black/40">
+                            <p class="text-[10px] text-green-500 font-headline uppercase font-bold tracking-wider">TOTALE INCASSATO ANNUALE</p>
+                            <p id="corso-cont-totale-anno" class="text-2xl font-headline font-black text-green-500 mt-1">€0.00</p>
+                        </div>
+                        <div class="border border-white/10 p-4 bg-black/40">
+                            <p class="text-[10px] text-yellow-500 font-headline uppercase font-bold tracking-wider">INCASSO MESE CORRENTE</p>
+                            <p id="corso-cont-totale-mese-attuale" class="text-2xl font-headline font-black text-yellow-500 mt-1">€0.00</p>
+                        </div>
+                        <div class="border border-white/10 p-4 bg-black/40">
+                            <p class="text-[10px] text-gray-400 font-headline uppercase font-bold tracking-wider">TOTALE TRANSAZIONI / RICEVUTE</p>
+                            <p id="corso-cont-totale-transazioni" class="text-2xl font-headline font-black text-white mt-1">0</p>
+                        </div>
+                    </div>
+
+                    <!-- RIEPILOGO MESE PER MESE (12 MESI) -->
+                    <div class="border border-white/10 bg-black/40 p-5 space-y-4">
+                        <h3 class="font-headline text-xs font-bold uppercase tracking-widest text-gray-300 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm text-primary">calendar_month</span> ANDAMENTO MENSILE INCASSI
+                        </h3>
+                        <div id="corso-cont-mesi-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                            <!-- 12 monthly cards generated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- DETTAGLIO RICEVUTE -->
+                    <div class="space-y-3">
+                        <h3 class="font-headline text-xs font-bold uppercase tracking-widest text-gray-300 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm text-primary">receipt_long</span> RICEVUTE E TRANSAZIONI REGISTRATE
+                        </h3>
+                        <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                                    <tr>
+                                        <th class="p-3">Data</th>
+                                        <th class="p-3">N. Ricevuta</th>
+                                        <th class="p-3">Atleta</th>
+                                        <th class="p-3">Causale / Abbonamento</th>
+                                        <th class="p-3">Metodo</th>
+                                        <th class="p-3 text-right">Importo</th>
+                                        <th class="p-3 text-center">Ricevuta</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corso-cont-ricevute-body" class="divide-y divide-white/5 uppercase font-mono">
+                                    <tr>
+                                        <td colspan="7" class="p-4 text-center text-gray-500">Nessuna transazione registrata</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -3138,8 +3215,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.05.09"></script>
-    <script src="dashboard.js?v=1.05.09"></script>
+    <script src="password-validator.js?v=1.05.10"></script>
+    <script src="dashboard.js?v=1.05.10"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
