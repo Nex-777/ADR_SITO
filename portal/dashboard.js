@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.07"
+                VERSION: "1.05.08"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -5829,7 +5829,12 @@
                     const abbonamentoStr = atl.abbonamento_scelto || 'N/D';
                     
                     let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
-                    if (atl.tipo_pagamento === 'A RATE') {
+                    if (atl.tipo_iscrizione === 'PROMO_BUNDLE') {
+                        tipoPagamentoBadge = '<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">🎁 COMPRESO CON IBRIDO</span>';
+                    } else if (atl.ingressi_totali) {
+                        const rimasti = Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0));
+                        tipoPagamentoBadge = `<span class="bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">CARNET (${rimasti}/${atl.ingressi_totali})</span>`;
+                    } else if (atl.tipo_pagamento === 'A RATE') {
                         const totRate = atl.totale_rate || (atl.abbonamento_scelto && atl.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
                         const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
                         const statoRate = atl.stato_rate || 'IN_REGOLA';
@@ -5937,6 +5942,33 @@
                                 </div>
                             </div>
                         </div>
+
+                        ${atl.ingressi_totali ? `
+                            <div class="mt-3 pt-3 border-t border-primary/20 bg-primary/5 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-primary text-xl">confirmation_number</span>
+                                    <div>
+                                        <div class="text-[10px] font-headline font-bold text-white uppercase tracking-wider">
+                                            CARNET INGRESSI: <span class="text-primary font-mono text-xs font-bold">${Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0))}</span> / ${atl.ingressi_totali} RIMANENTI
+                                        </div>
+                                        <div class="text-[9px] text-gray-400 font-mono">
+                                            Utilizzati: ${atl.ingressi_usati || 0} di ${atl.ingressi_totali} (Scadenza fissa: ${dataScadenzaStr})
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    ${(atl.ingressi_totali - (atl.ingressi_usati || 0) > 0) ? `
+                                        <button onclick="scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="bg-primary text-black hover:bg-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all tracking-wider flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-xs">check</span> SCALA 1 INGRESSO
+                                        </button>
+                                    ` : `
+                                        <span class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 text-[9px] font-mono font-bold uppercase tracking-wider">
+                                            INGRESSI ESAURITI
+                                        </span>
+                                    `}
+                                </div>
+                            </div>
+                        ` : ''}
                     `;
 
                     container.appendChild(card);
@@ -5947,6 +5979,57 @@
                 container.innerHTML = `<div class="p-6 text-center text-red-500 font-mono text-xs uppercase bg-black/40 border border-white/10">Errore: ${escapeHtml(err.message)}</div>`;
             }
         }
+
+        window.scalaIngresso = async function(iscrizioneId, utenteId, eventoId) {
+            try {
+                if (!confirm("Confermi di voler scalare 1 ingresso e registrare la presenza dell'atleta?")) return;
+                showLoader();
+                
+                const { data: iscr, error: fetchErr } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .select('id, ingressi_totali, ingressi_usati')
+                    .eq('id', iscrizioneId)
+                    .single();
+                
+                if (fetchErr || !iscr) throw new Error("Iscrizione carnet non trovata.");
+                
+                const usati = iscr.ingressi_usati || 0;
+                const tot = iscr.ingressi_totali || 0;
+                if (usati >= tot) {
+                    alert("Tutti gli ingressi del carnet sono già stati utilizzati!");
+                    hideLoader();
+                    return;
+                }
+                
+                const newUsati = usati + 1;
+                const { error: updErr } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .update({ ingressi_usati: newUsati })
+                    .eq('id', iscrizioneId);
+                
+                if (updErr) throw updErr;
+                
+                // Registra presenza
+                const todayStr = new Date().toISOString().split('T')[0];
+                await supabaseClient
+                    .from('presenze_eventi')
+                    .insert({
+                        evento_id: eventoId,
+                        utente_id: utenteId,
+                        data_lezione: todayStr,
+                        presente: true,
+                        registrato_da: currentUser?.id || null
+                    });
+                
+                hideLoader();
+                alert(`Ingresso registrato! Ingressi rimanenti: ${tot - newUsati} di ${tot}`);
+                await loadRegistroIscritti();
+            } catch (err) {
+                hideLoader();
+                console.error("Errore scalaIngresso:", err);
+                alert("Errore durante lo scalamento dell'ingresso: " + err.message);
+            }
+        };
 
         function updatePresenceCount() {}
         async function savePresenze() {}
@@ -6984,12 +7067,29 @@
                         prezzo = parseFloat(firstPiano.prezzo) || 0;
 
                         const todayStr = new Date().toISOString().split('T')[0];
+                        const currentMonth = new Date().getMonth() + 1;
+
+                        const isIbridoCourse = ev.id === '11102454-b063-4811-a361-6c8459764ce8' || (ev.titolo && ev.titolo.toLowerCase().includes('ibrido'));
+                        const initialPlanName = firstPiano.nome || '';
+                        const showPromoInitially = isIbridoCourse && ['trimestre', 'semestre', 'annuale'].some(p => initialPlanName.toLowerCase().includes(p));
+
                         selectHtml = `
                             <div class="mt-2 flex flex-col space-y-1">
                                 <label class="text-[8px] text-gray-500 font-mono uppercase tracking-wider">PIANO ABBONAMENTO</label>
-                                <select id="plan-select-${ev.id}" onchange="aggiornaPrezzoCard('${ev.id}')" class="w-full bg-black text-white text-[11px] p-2 border border-white/20 font-mono uppercase focus:outline-none focus:border-primary rounded-none">
-                                    ${ev.piani_abbonamento.map(p => `<option value="${p.nome}" data-price="${p.prezzo}">${p.nome} - €${p.prezzo}</option>`).join('')}
+                                <select id="plan-select-${ev.id}" onchange="aggiornaPrezzoCard('${ev.id}')" data-is-ibrido="${isIbridoCourse ? 'true' : 'false'}" class="w-full bg-black text-white text-[11px] p-2 border border-white/20 font-mono uppercase focus:outline-none focus:border-primary rounded-none">
+                                    ${ev.piani_abbonamento.map(p => {
+                                        const isBlocked = p.da_mese && currentMonth < parseInt(p.da_mese);
+                                        if (isBlocked) {
+                                            return `<option value="${p.nome}" data-price="${p.prezzo}" disabled>${p.nome} - €${p.prezzo} (DISPONIBILE DA MAGGIO)</option>`;
+                                        }
+                                        return `<option value="${p.nome}" data-price="${p.prezzo}">${p.nome} - €${p.prezzo}</option>`;
+                                    }).join('')}
                                 </select>
+                                <div id="promo-badge-${ev.id}" class="${showPromoInitially ? '' : 'hidden'} mt-1">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-mono font-bold uppercase tracking-wider">
+                                        🎁 CORSO SCAB COMPRESO
+                                    </span>
+                                </div>
                             </div>
                             <div class="mt-2 flex flex-col space-y-1">
                                 <label class="text-[8px] text-gray-500 font-mono uppercase tracking-wider">DATA INIZIO CORSO</label>
@@ -7069,14 +7169,28 @@
                                 ? formatDate(currentExpiry)
                                 : 'DA DEFINIRE';
 
+                            const isPromoScab = iscr.tipo_iscrizione === 'PROMO_BUNDLE';
+                            let statusBadge = `<span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>`;
+                            if (isPromoScab) {
+                                statusBadge = `<span class="text-green-400 font-bold">🎁 COMPRESO CON IBRIDO</span>`;
+                            }
+
+                            let infoExtra = '';
+                            if (iscr.ingressi_totali) {
+                                const usati = iscr.ingressi_usati || 0;
+                                const tot = iscr.ingressi_totali;
+                                infoExtra = `<div class="text-[10px] text-primary font-mono font-bold mt-1">INGRESSI: ${tot - usati} RIMANENTI (UTILIZZATI: ${usati}/${tot})</div>`;
+                            }
+
                             return `
                                 <div class="border-l-4 border-green-500 bg-white/5 p-4 space-y-2 uppercase font-mono">
                                     <div class="flex justify-between items-center text-[10px]">
                                         <span class="text-gray-400 font-bold">Scadenza: ${scadenzaLabel}</span>
-                                        <span class="text-green-500 font-bold">${iscr.stato_pagamento}</span>
+                                        ${statusBadge}
                                     </div>
                                     <h4 class="font-headline text-xs font-bold text-white">${escapeHtml(ev.titolo)}</h4>
                                     <p class="text-[9px] text-gray-500">Luogo: ${escapeHtml(ev.luogo || 'Sede Club')}</p>
+                                    ${infoExtra}
                                     <label class="flex items-center gap-2 mt-2 text-[10px] text-gray-300 cursor-pointer hover:text-white transition-all normal-case font-sans">
                                         <input type="checkbox" onchange="toggleOrarioLibero('${ev.id}', this.checked)" ${iscr.orario_libero ? 'checked' : ''} class="bg-black border-white/20 text-primary focus:ring-primary">
                                         <span>Orario Libero (svolgo il programma fuori orario)</span>
@@ -7157,6 +7271,19 @@
             const display = document.getElementById(`price-display-${eventoId}`);
             if (display) {
                 display.textContent = priceLabel;
+            }
+
+            // Aggiorna visibilità badge promozionale SCAB per Ibrido
+            const isIbrido = select.getAttribute('data-is-ibrido') === 'true';
+            const promoBadge = document.getElementById(`promo-badge-${eventoId}`);
+            if (promoBadge) {
+                const planName = (selectedOption.value || '').toLowerCase();
+                const isPromo = isIbrido && ['trimestre', 'semestre', 'annuale'].some(p => planName.includes(p));
+                if (isPromo) {
+                    promoBadge.classList.remove('hidden');
+                } else {
+                    promoBadge.classList.add('hidden');
+                }
             }
         };
 

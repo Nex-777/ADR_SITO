@@ -288,7 +288,7 @@ export default async function handler(req, res) {
                 .from('iscrizioni_eventi')
                 .select('id, stato_pagamento')
                 .eq('evento_id', eventId)
-                .eq('utente_id', utenteId)
+.eq('utente_id', utenteId)
                 .maybeSingle();
 
             if (iscrizioneEsistente && !renew) {
@@ -300,9 +300,9 @@ export default async function handler(req, res) {
                 prezzo = 0;
             }
             let causaleDettaglio = '';
+            let piano = null;
 
             if (evento.piani_abbonamento && Array.isArray(evento.piani_abbonamento) && evento.piani_abbonamento.length > 0) {
-                let piano = null;
                 if (nomePiano) {
                     piano = evento.piani_abbonamento.find(p => p.nome.toLowerCase() === nomePiano.toLowerCase());
                     if (!piano) {
@@ -311,6 +311,16 @@ export default async function handler(req, res) {
                 } else {
                     piano = evento.piani_abbonamento[0]; // fallback
                 }
+
+                // Controllo disponibilità stagionale (es. 4 Ingressi disponibile solo da Maggio)
+                if (piano && piano.tipo === 'carnet' && piano.da_mese) {
+                    const now = new Date();
+                    const currentMonth = now.getMonth() + 1; // 1-12
+                    if (currentMonth < parseInt(piano.da_mese)) {
+                        return res.status(400).json({ error: `Il piano ${piano.nome} è selezionabile solo a partire da maggio.` });
+                    }
+                }
+
                 prezzo = parseFloat(piano.prezzo);
                 causaleDettaglio = ` - Abbonamento ${piano.nome}`;
             }
@@ -318,6 +328,12 @@ export default async function handler(req, res) {
             if (isNaN(prezzo) || prezzo < 0) {
                 return res.status(400).json({ error: 'Prezzo dell\'evento non valido.' });
             }
+
+            // Identificazione Bundle Promozionale Ibrido + SCAB
+            const IBRIDO_ID = '11102454-b063-4811-a361-6c8459764ce8';
+            const SCAB_ID = '3854f25c-db1c-4c6a-b62a-70398643239a';
+            const isIbrido = (eventId === IBRIDO_ID || (evento.titolo && evento.titolo.toLowerCase().includes('ibrido')));
+            const isPromoBundle = isIbrido && nomePiano && ['trimestre', 'semestre', 'annuale'].some(p => (nomePiano || '').toLowerCase().includes(p));
 
             // 2. Recupera dati profilo utente per email
             const { data: profile } = await supabase
@@ -354,7 +370,9 @@ export default async function handler(req, res) {
             let isInstallment = req.body?.is_installment === true || req.body?.is_installment === 'true';
             let numRate = 1;
 
-            if (nomePiano) {
+            if (piano && piano.tipo === 'carnet') {
+                isInstallment = false;
+            } else if (nomePiano) {
                 const lower = nomePiano.toLowerCase();
                 if (lower.includes('trimest') || lower.includes('3 mes')) {
                     // Trimestrale NON rateizzabile internamente
@@ -370,6 +388,9 @@ export default async function handler(req, res) {
             } else {
                 isInstallment = false;
             }
+
+            const tipoPianoVal = piano?.tipo || 'abbonamento';
+            const ingressiVal = piano?.ingressi ? String(piano.ingressi) : '';
 
             if (isInstallment) {
 
@@ -423,7 +444,11 @@ export default async function handler(req, res) {
                             causale: description,
                             renew: renew ? 'true' : 'false',
                             nomePiano: nomePiano || '',
-                            dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0]
+                            dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0],
+                            tipo_piano: tipoPianoVal,
+                            ingressi: ingressiVal,
+                            is_promo_bundle: isPromoBundle ? 'true' : 'false',
+                            scab_evento_id: isPromoBundle ? SCAB_ID : ''
                         }
                     },
                     metadata: {
@@ -435,7 +460,11 @@ export default async function handler(req, res) {
                         causale: `${description} (Abbonamento ${numRate} Rate)`,
                         renew: renew ? 'true' : 'false',
                         nomePiano: nomePiano || '',
-                        dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0]
+                        dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0],
+                        tipo_piano: tipoPianoVal,
+                        ingressi: ingressiVal,
+                        is_promo_bundle: isPromoBundle ? 'true' : 'false',
+                        scab_evento_id: isPromoBundle ? SCAB_ID : ''
                     },
                     success_url: `${reqOrigin}/portal/dashboard.html?event_payment=success&event_id=${eventId}&type=subscription`,
                     cancel_url: `${reqOrigin}/portal/dashboard.html?event_payment=cancel`,
@@ -483,7 +512,11 @@ export default async function handler(req, res) {
                     causale: description,
                     renew: renew ? 'true' : 'false',
                     nomePiano: nomePiano || '',
-                    dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0]
+                    dataInizioCorso: dataInizioCorso || new Date().toISOString().split('T')[0],
+                    tipo_piano: tipoPianoVal,
+                    ingressi: ingressiVal,
+                    is_promo_bundle: isPromoBundle ? 'true' : 'false',
+                    scab_evento_id: isPromoBundle ? SCAB_ID : ''
                 },
                 success_url: `${reqOrigin}/portal/dashboard.html?event_payment=success&event_id=${eventId}`,
                 cancel_url: `${reqOrigin}/portal/dashboard.html?event_payment=cancel`,

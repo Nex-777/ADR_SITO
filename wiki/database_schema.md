@@ -144,8 +144,19 @@ Tracks athlete bookings to courses and events.
 | `evento_id` | `uuid` (FK) | References `eventi(id)`. |
 | `utente_id` | `uuid` (FK) | References `utenti(id)`. |
 | `data_iscrizione` | `timestamp` | Time the registration occurred. |
-| `stato_pagamento` | `varchar` | State of payment (`DA_PAGARE`, `PAGATO`, `GRATUITO`). |
+| `stato_pagamento` | `varchar` | State of payment (`DA_PAGARE`, `PAGATO`, `GRATUITO`, `SOSPESO`, `ANNULLATO`). |
 | `codice_transazione` | `text` | Stripe payment intent code (if paid). |
+| `data_inizio_corso` | `date` | Effective start date of the enrollment. |
+| `data_scadenza_corso` | `date` | Expiration date of the enrollment (31/07 for carnet). |
+| `abbonamento_scelto` | `varchar` | Selected plan name (e.g. `Trimestre`, `8 Ingressi`). |
+| `tipo_pagamento` | `varchar` | Payment mode (`UNICA RATA`, `A RATE`, `GRATUITO`). |
+| `totale_rate` | `smallint` | Total number of installments (e.g. 6 or 12). |
+| `rate_pagate` | `smallint` | Number of installments paid so far. |
+| `stato_rate` | `varchar` | Status of installments (`IN_REGOLA`, `INSOLUTO`, `ANNULLATO`). |
+| `ingressi_totali` | `smallint` | Total entries purchased for carnet packages (4 or 8). |
+| `ingressi_usati` | `smallint` | Number of entries consumed by the athlete. |
+| `iscrizione_promo_padre_id` | `uuid` (FK) | Reference to parent enrollment (e.g. Ibrido) for bundled courses (SCAB). |
+| `tipo_iscrizione` | `varchar` | Classification (`CARNET_8`, `CARNET_4`, `PROMO_BUNDLE`). |
 
 ### 10. `public.comunicazioni`
 Stores noticeboard announcements.

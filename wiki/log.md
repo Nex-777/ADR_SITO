@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-31] feature | Sistema Promo Bundle Ibrido+SCAB e Carnet Ingressi SCAB (v1.05.08)
+- **Database (Supabase `zpategmkelqmexetpaot`)**:
+  - Estesa la tabella `public.iscrizioni_eventi` con le colonne `ingressi_totali`, `ingressi_usati`, `iscrizione_promo_padre_id` e `tipo_iscrizione`.
+  - Configurato il corso SCAB con piani Trimestre (€90), Semestre (€150), Annuale (€240), Carnet 8 Ingressi (€55) e Carnet 4 Ingressi (€30, con vincolo stagionale Maggio).
+  - Ricreata la vista `public.vw_stato_atleta_corso` per esporre i campi carnet e promozionali.
+- **Backend Checkout & Webhook (`api/create-checkout-session.js`, `api/stripe-webhook.js`)**:
+  - `create-checkout-session.js`: blocco server-side per il carnet 4 ingressi prima del 1° Maggio, calcolo scadenza carnet fissa al 31/07 e passaggio metadati arricchiti per bundle e tipologia carnet.
+  - `stripe-webhook.js`: all'evento `checkout.session.completed`, creazione automatica dell'iscrizione SCAB gratuita (`PROMO_BUNDLE`) per chi acquista Ibrido con abbonamento Trimestrale, Semestrale o Annuale; sincronizzazione automatica dello stato su mancato pagamento (`invoice.payment_failed` $\rightarrow$ sospensione collegata) o cancellazione abbonamento (`customer.subscription.deleted`).
+- **Frontend (`portal/dashboard.js`)**:
+  - `loadUserEventi()` / `aggiornaPrezzoCard()`: badge dinamico `🎁 CORSO SCAB COMPRESO` nella card Ibrido quando selezionato Trimestre/Semestre/Annuale; disabilitazione dell'opzione 4 Ingressi nei mesi antecedenti a Maggio; badge `🎁 COMPRESO CON IBRIDO` e contatore ingressi nel pannello iscrizioni utente.
+  - `loadRegistroIscritti()`: visualizzazione carnet ingressi con badge di stato, contatore ingressi rimanenti e pulsante `[-1 SCALA INGRESSO]` con handler `scalaIngresso()` che aggiorna il DB e registra la presenza in `presenze_eventi`.
+- **Global Bump**: Versionamento globale incrementato a `v1.05.08` tramite `npm run bump`.
+
+---
+
 ## [2026-08-31] fix | Risoluzione Vincolo data_evento Nullable per Corsi H24 e Gestione Orari (v1.05.07)
 - **Database (Supabase `zpategmkelqmexetpaot`)**:
   - Applicato `ALTER TABLE public.eventi ALTER COLUMN data_evento DROP NOT NULL;` per consentire ai corsi a fruizione continuativa/H24 (es. *Ibrido*) o con programmazione settimanale di avere `data_evento = NULL`, risolvendo l'errore PostgREST `400 Bad Request` in salvataggio/modifica.

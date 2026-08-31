@@ -197,9 +197,26 @@ export default async function handler(req, res) {
                 const renew = session.metadata?.renew === 'true';
                 const nomePiano = session.metadata?.nomePiano;
                 const dataInizioCorso = session.metadata?.dataInizioCorso || new Date().toISOString().split('T')[0];
+                const tipoPiano = session.metadata?.tipo_piano;
+                const ingressiStr = session.metadata?.ingressi;
                 let dataScadenzaCorso = null;
+                let ingressiTotaliVal = null;
+                let ingressiUsatiVal = null;
+                let tipoIscrizioneVal = null;
 
-                if (nomePiano) {
+                if (tipoPiano === 'carnet' || ingressiStr) {
+                    const ingNum = parseInt(ingressiStr || '8');
+                    ingressiTotaliVal = isNaN(ingNum) ? 8 : ingNum;
+                    ingressiUsatiVal = 0;
+                    tipoIscrizioneVal = ingressiTotaliVal === 4 ? 'CARNET_4' : (ingressiTotaliVal === 8 ? 'CARNET_8' : 'CARNET');
+
+                    // Scadenza fissa per carnet al 31 Luglio dell'anno sportivo
+                    const start = new Date(dataInizioCorso);
+                    const currentMonth = start.getMonth() + 1; // 1-12
+                    const currentYear = start.getFullYear();
+                    const refYear = currentMonth >= 8 ? currentYear + 1 : currentYear;
+                    dataScadenzaCorso = `${refYear}-07-31`;
+                } else if (nomePiano) {
                     const { data: ev } = await supabase
                         .from('eventi')
                         .select('piani_abbonamento')
@@ -230,10 +247,11 @@ export default async function handler(req, res) {
                 const totaleRateVal = isInstallment ? parseInt(session.metadata?.installments_total || '12') : null;
                 const ratePagateVal = isInstallment ? 1 : null;
                 const statoRateVal = isInstallment ? 'IN_REGOLA' : null;
+                let primaryIscrizioneId = null;
 
                 if (renew) {
                     // Aggiorna l'iscrizione esistente per rinnovo
-                    const { error: eventRegError } = await supabase
+                    const { data: updatedIscr, error: eventRegError } = await supabase
                         .from('iscrizioni_eventi')
                         .update({
                             stato_pagamento: 'PAGATO',
@@ -246,18 +264,24 @@ export default async function handler(req, res) {
                             tipo_pagamento: tipoPagamento,
                             totale_rate: totaleRateVal,
                             rate_pagate: ratePagateVal,
-                            stato_rate: statoRateVal
+                            stato_rate: statoRateVal,
+                            ingressi_totali: ingressiTotaliVal,
+                            ingressi_usati: ingressiUsatiVal,
+                            tipo_iscrizione: tipoIscrizioneVal
                         })
                         .eq('evento_id', eventId)
-                        .eq('utente_id', utenteId);
+                        .eq('utente_id', utenteId)
+                        .select('id')
+                        .single();
                     
                     if (eventRegError) {
                         throw new Error("Errore aggiornamento iscrizione evento per rinnovo: " + eventRegError.message);
                     }
+                    primaryIscrizioneId = updatedIscr?.id;
                     console.log(`Rinnovato corso/evento ${eventId} per utente ${utenteId} (Inizio: ${dataInizioCorso}, Scadenza: ${dataScadenzaCorso})`);
                 } else {
                     // Iscrizione Corso/Evento: inserisci l'iscrizione
-                    const { error: eventRegError } = await supabase
+                    const { data: insertedIscr, error: eventRegError } = await supabase
                         .from('iscrizioni_eventi')
                         .insert({
                             evento_id: eventId,
@@ -270,13 +294,87 @@ export default async function handler(req, res) {
                             tipo_pagamento: tipoPagamento,
                             totale_rate: totaleRateVal,
                             rate_pagate: ratePagateVal,
-                            stato_rate: statoRateVal
-                        });
+                            stato_rate: statoRateVal,
+                            ingressi_totali: ingressiTotaliVal,
+                            ingressi_usati: ingressiUsatiVal,
+                            tipo_iscrizione: tipoIscrizioneVal
+                        })
+                        .select('id')
+                        .single();
                     
                     if (eventRegError) {
                         throw new Error("Errore inserimento iscrizione evento: " + eventRegError.message);
                     }
+                    primaryIscrizioneId = insertedIscr?.id;
                     console.log(`Iscritto utente ${utenteId} all'evento ${eventId} (Inizio: ${dataInizioCorso}, Scadenza: ${dataScadenzaCorso})`);
+                }
+
+                // ==========================================
+                // BUNDLE PROMOZIONALE: IBRIDO + SCAB
+                // ==========================================
+                if (session.metadata?.is_promo_bundle === 'true' && primaryIscrizioneId) {
+                    const scabEventoId = session.metadata?.scab_evento_id || '3854f25c-db1c-4c6a-b62a-70398643239a';
+                    try {
+                        const { data: existingScab } = await supabase
+                            .from('iscrizioni_eventi')
+                            .select('id')
+                            .eq('evento_id', scabEventoId)
+                            .eq('utente_id', utenteId)
+                            .maybeSingle();
+
+                        if (existingScab) {
+                            await supabase
+                                .from('iscrizioni_eventi')
+                                .update({
+                                    stato_pagamento: 'PAGATO',
+                                    tipo_pagamento: 'GRATUITO',
+                                    tipo_iscrizione: 'PROMO_BUNDLE',
+                                    data_iscrizione: new Date().toISOString(),
+                                    data_inizio_corso: dataInizioCorso,
+                                    data_scadenza_corso: dataScadenzaCorso,
+                                    scadenza_modificata_a_mano: false,
+                                    abbonamento_scelto: `${abbonamentoScelto} (Promo Ibrido)`,
+                                    iscrizione_promo_padre_id: primaryIscrizioneId
+                                })
+                                .eq('id', existingScab.id);
+                        } else {
+                            await supabase
+                                .from('iscrizioni_eventi')
+                                .insert({
+                                    evento_id: scabEventoId,
+                                    utente_id: utenteId,
+                                    stato_pagamento: 'PAGATO',
+                                    tipo_pagamento: 'GRATUITO',
+                                    tipo_iscrizione: 'PROMO_BUNDLE',
+                                    data_inizio_corso: dataInizioCorso,
+                                    data_scadenza_corso: dataScadenzaCorso,
+                                    abbonamento_scelto: `${abbonamentoScelto} (Promo Ibrido)`,
+                                    iscrizione_promo_padre_id: primaryIscrizioneId
+                                });
+                        }
+
+                        // Audit log per attivazione bundle
+                        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Stripe Webhook';
+                        await supabase
+                            .from('registro_audit_operazioni')
+                            .insert({
+                                operatore_id: utenteId,
+                                azione: 'ISCRIZIONE_SCAB_PROMO_BUNDLE',
+                                tabella_target: 'iscrizioni_eventi',
+                                record_target_id: String(primaryIscrizioneId),
+                                dettagli: {
+                                    evento_padre_id: eventId,
+                                    evento_omaggio_id: scabEventoId,
+                                    scadenza: dataScadenzaCorso,
+                                    piano: abbonamentoScelto
+                                },
+                                ip_address: typeof ip === 'string' ? ip.split(',')[0].trim() : 'Stripe Webhook'
+                            });
+
+                        console.log(`🎁 [PROMO BUNDLE] Iscrizione SCAB attivata con successo per utente ${utenteId} (Inizio: ${dataInizioCorso}, Scadenza: ${dataScadenzaCorso})`);
+                    } catch (promoErr) {
+                        console.error('❌ Errore attivazione corso SCAB promozionale:', promoErr);
+                    }
                 }
             } else {
                 // Quota Associativa: Salda la quota impostando a 0.00
@@ -437,6 +535,15 @@ export default async function handler(req, res) {
                         })
                         .eq('id', iscrizione.id);
 
+                    // Sincronizza eventuale iscrizione omaggio collegata (es. SCAB con Ibrido)
+                    await supabase
+                        .from('iscrizioni_eventi')
+                        .update({
+                            stato_pagamento: 'PAGATO',
+                            stato_rate: 'IN_REGOLA'
+                        })
+                        .eq('iscrizione_promo_padre_id', iscrizione.id);
+
                     // Audit log
                     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Stripe Webhook';
                     await supabase
@@ -490,6 +597,15 @@ export default async function handler(req, res) {
                         })
                         .eq('id', iscrizione.id);
 
+                    // Sospendi eventuale corso omaggio collegato (es. SCAB con Ibrido)
+                    await supabase
+                        .from('iscrizioni_eventi')
+                        .update({
+                            stato_pagamento: 'SOSPESO',
+                            stato_rate: 'INSOLUTO'
+                        })
+                        .eq('iscrizione_promo_padre_id', iscrizione.id);
+
                     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Stripe Webhook';
                     await supabase
                         .from('registro_audit_operazioni')
@@ -506,7 +622,7 @@ export default async function handler(req, res) {
                             ip_address: typeof ip === 'string' ? ip.split(',')[0].trim() : 'Stripe Webhook'
                         });
 
-                    console.log(`⚠️ Segnalato stato INSOLUTO per iscrizione ${iscrizione.id} (Subscription: ${subId})`);
+                    console.log(`⚠️ Segnalato stato INSOLUTO per iscrizione ${iscrizione.id} e corsi promozionali collegati`);
                 }
             } catch (failErr) {
                 console.error("❌ Errore elaborazione invoice.payment_failed:", failErr);
@@ -537,7 +653,16 @@ export default async function handler(req, res) {
                     })
                     .eq('id', iscrizione.id);
 
-                console.log(`ℹ️ Sottoscrizione terminata/annullata anticipatamente per iscrizione ${iscrizione.id}`);
+                // Annulla eventuale corso omaggio collegato
+                await supabase
+                    .from('iscrizioni_eventi')
+                    .update({
+                        stato_pagamento: 'ANNULLATO',
+                        stato_rate: 'ANNULLATO'
+                    })
+                    .eq('iscrizione_promo_padre_id', iscrizione.id);
+
+                console.log(`ℹ️ Sottoscrizione terminata/annullata anticipatamente per iscrizione ${iscrizione.id} e corsi promo collegati`);
             }
         } catch (delErr) {
             console.error("❌ Errore elaborazione subscription.deleted:", delErr);
