@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-31] fix | Logica Inversa Presenze Campo Marzio (Opt-Out) & Sincronizzazione Iscrizioni (v1.05.13)
+- **Database & Trigger (`supabase/migration_epika_sync_abilitazioni_cm.sql`)**:
+  - Aggiornata la trigger function `epika_trg_sync_scadenza_abilitazioni()` con logica inversa (Opt-Out): tutti gli iscritti a Campo Marzio (`epika_iscrizioni_eventi`) sono considerati presenti estendendo l'abilitazione al `31/12/YYYY`, a meno che non sia registrata un'esplicita defezione (`presente = FALSE`) in `epika_presenze_eventi`.
+  - Agganciato il trigger sia a `epika_presenze_eventi` (`trg_sync_abilitazioni_scadenza`) sia a `epika_iscrizioni_eventi` (`trg_sync_abilitazioni_iscrizioni`).
+  - Eseguito backfill retroattivo su `epika_scab_abilitazioni`, estendendo la data al `31/12/2026` per tutti gli 80 atleti iscritti a Campo Marzio 2026.
+- **Frontend UI (`portal/epika.js`)**:
+  - In `mostraPannelloPresenze()`: impostato lo stato iniziale di presenza in modalità Opt-Out (`presenzeMappa[utente_id] !== false`), mostrando tutti gli atleti con il pulsante verde `PRESENTE` di default e consentendo all'amministratore di cliccare per segnare le defezioni come `ASSENTE`.
+- **Global Bump**: Versionamento globale incrementato a `v1.05.13` tramite `npm run bump`.
+
+---
+
 ## [2026-08-31] feature | Sincronizzazione Realtime Scadenze Abilitazioni SCAB & Rollover Anno (v1.05.11)
 - **Database & Trigger (`supabase/migration_epika_sync_abilitazioni_cm.sql`)**:
   - Implementata la trigger function `epika_trg_sync_scadenza_abilitazioni()` su `public.epika_presenze_eventi` (AFTER INSERT, UPDATE OF `presente`, DELETE).

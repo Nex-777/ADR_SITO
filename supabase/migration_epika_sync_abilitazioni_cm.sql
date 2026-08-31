@@ -1,5 +1,5 @@
 -- ===========================================================================
--- MIGRAZIONE EPIKA: Sincronizzazione Realtime Presenze Campo Marzio & Scadenza Abilitazioni
+-- MIGRAZIONE EPIKA: Sincronizzazione Realtime Presenze Campo Marzio & Scadenza Abilitazioni (Logica Inversa / Opt-out)
 -- ===========================================================================
 
 -- 1. Trigger Function: epika_trg_sync_scadenza_abilitazioni
@@ -31,15 +31,18 @@ BEGIN
     IF v_tipo_evento = 'campo_marzio' AND v_data_inizio IS NOT NULL THEN
         v_anno_evento := EXTRACT(YEAR FROM v_data_inizio);
 
-        -- Ricalcola la presenza a qualsiasi CM dell'anno per questo utente
+        -- Ricalcola la presenza a qualsiasi CM dell'anno per questo utente con LOGICA INVERSA (Opt-out):
+        -- Un utente è considerato presente se è iscritto (epika_iscrizioni_eventi) E non ha un record con presente = FALSE in epika_presenze_eventi
         SELECT EXISTS (
-            SELECT 1 FROM public.epika_presenze_eventi pe
-            JOIN public.epika_eventi ev ON pe.evento_id = ev.id
-            WHERE pe.utente_id = v_utente_id
-              AND (TG_OP <> 'DELETE' OR pe.id <> OLD.id)
-              AND pe.presente = TRUE
+            SELECT 1 
+            FROM public.epika_iscrizioni_eventi isc
+            JOIN public.epika_eventi ev ON isc.evento_id = ev.id
+            LEFT JOIN public.epika_presenze_eventi pe 
+              ON pe.evento_id = isc.evento_id AND pe.utente_id = isc.utente_id
+            WHERE isc.utente_id = v_utente_id
               AND ev.tipo_evento = 'campo_marzio'
               AND EXTRACT(YEAR FROM ev.data_inizio) = v_anno_evento
+              AND COALESCE(pe.presente, TRUE) = TRUE
         ) INTO v_ha_cm;
         
         -- Calcola la nuova scadenza
@@ -73,24 +76,39 @@ AFTER INSERT OR UPDATE OF presente OR DELETE ON public.epika_presenze_eventi
 FOR EACH ROW
 EXECUTE FUNCTION public.epika_trg_sync_scadenza_abilitazioni();
 
--- 3. Backfill retroattivo per allineare subito lo stato reale di tutte le abilitazioni correnti
+-- 3. Aggancio Trigger su epika_iscrizioni_eventi
+DROP TRIGGER IF EXISTS trg_sync_abilitazioni_iscrizioni ON public.epika_iscrizioni_eventi;
+CREATE TRIGGER trg_sync_abilitazioni_iscrizioni
+AFTER INSERT OR DELETE ON public.epika_iscrizioni_eventi
+FOR EACH ROW
+EXECUTE FUNCTION public.epika_trg_sync_scadenza_abilitazioni();
+
+-- 4. Backfill retroattivo per allineare subito lo stato reale con logica inversa (Opt-out)
 UPDATE public.epika_scab_abilitazioni a
 SET ha_partecipato_cm = (
-        SELECT COALESCE(BOOL_OR(pe.presente), FALSE)
-        FROM public.epika_presenze_eventi pe
-        JOIN public.epika_eventi ev ON pe.evento_id = ev.id
-        WHERE pe.utente_id = a.profilo_id
-          AND ev.tipo_evento = 'campo_marzio'
-          AND EXTRACT(YEAR FROM ev.data_inizio) = a.anno_abilitativo
+        SELECT EXISTS (
+            SELECT 1 
+            FROM public.epika_iscrizioni_eventi isc
+            JOIN public.epika_eventi ev ON isc.evento_id = ev.id
+            LEFT JOIN public.epika_presenze_eventi pe 
+              ON pe.evento_id = isc.evento_id AND pe.utente_id = isc.utente_id
+            WHERE isc.utente_id = a.profilo_id
+              AND ev.tipo_evento = 'campo_marzio'
+              AND EXTRACT(YEAR FROM ev.data_inizio) = a.anno_abilitativo
+              AND COALESCE(pe.presente, TRUE) = TRUE
+        )
     ),
     data_scadenza = CASE
         WHEN EXISTS (
-            SELECT 1 FROM public.epika_presenze_eventi pe
-            JOIN public.epika_eventi ev ON pe.evento_id = ev.id
-            WHERE pe.utente_id = a.profilo_id
-              AND pe.presente = TRUE
+            SELECT 1 
+            FROM public.epika_iscrizioni_eventi isc
+            JOIN public.epika_eventi ev ON isc.evento_id = ev.id
+            LEFT JOIN public.epika_presenze_eventi pe 
+              ON pe.evento_id = isc.evento_id AND pe.utente_id = isc.utente_id
+            WHERE isc.utente_id = a.profilo_id
               AND ev.tipo_evento = 'campo_marzio'
               AND EXTRACT(YEAR FROM ev.data_inizio) = a.anno_abilitativo
+              AND COALESCE(pe.presente, TRUE) = TRUE
         ) THEN MAKE_DATE(a.anno_abilitativo, 12, 31)
         ELSE MAKE_DATE(a.anno_abilitativo, 8, 31)
     END,

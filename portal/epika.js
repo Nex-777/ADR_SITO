@@ -4407,7 +4407,7 @@ async function mostraPannelloPresenze(eventoId, eventoTitolo) {
         if (errIsc) throw errIsc;
 
         const presenzeMappa = {};
-        (presenze || []).forEach(p => { presenzeMappa[p.utente_id] = p.presente === true; });
+        (presenze || []).forEach(p => { presenzeMappa[p.utente_id] = p.presente; });
 
         if (!iscritti || iscritti.length === 0) {
             presenzeIscrittiCache = [];
@@ -4445,7 +4445,7 @@ async function mostraPannelloPresenze(eventoId, eventoTitolo) {
             const u = utentiMappa[isc.utente_id];
             const nomeReale = u ? `${u.nome} ${u.cognome}`.trim() : 'N/D';
             const nomeStorico = (isc.profilo && isc.profilo.nome_di_battaglia) ? isc.profilo.nome_di_battaglia.trim() : 'N/D';
-            const isPresente = presenzeMappa[isc.utente_id] === true;
+            const isPresente = presenzeMappa[isc.utente_id] !== false;
 
             // Estrazione scadenze certificate
             let scadenze = [];
