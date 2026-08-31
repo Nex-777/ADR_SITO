@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.08"
+                VERSION: "1.05.09"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -4775,22 +4775,27 @@
                     const nIscritti = iscrizioni.filter(i => i.evento_id === evt.id).length;
 
                     // Formatta orari o date
-                    let orariStr = '-';
+                    let orariStrText = '-';
+                    let orariStrHtml = '-';
                     if (evt.tipo === 'corso') {
                         if (evt.orari_settimanali) {
                             try {
                                 const orari = typeof evt.orari_settimanali === 'string' ? JSON.parse(evt.orari_settimanali) : evt.orari_settimanali;
                                 if (Array.isArray(orari) && orari.length > 0) {
-                                    orariStr = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(', ');
+                                    orariStrText = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(', ');
+                                    orariStrHtml = orariStrText;
                                 } else {
-                                    orariStr = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
+                                    orariStrText = 'ACCESSO H24 / CONTINUATIVO';
+                                    orariStrHtml = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
                                 }
                             } catch (e) {
                                 console.error("Errore parse orari:", e);
-                                orariStr = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
+                                orariStrText = 'ACCESSO H24 / CONTINUATIVO';
+                                orariStrHtml = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
                             }
                         } else {
-                            orariStr = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
+                            orariStrText = 'ACCESSO H24 / CONTINUATIVO';
+                            orariStrHtml = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
                         }
                     } else if (evt.tipo === 'evento') {
                         try {
@@ -4798,19 +4803,24 @@
                                 const giornate = typeof evt.giornate === 'string' ? JSON.parse(evt.giornate) : evt.giornate;
                                 if (Array.isArray(giornate) && giornate.length > 0) {
                                     if (giornate.length === 1) {
-                                        orariStr = `${formatDate(giornate[0].data)} ${giornate[0].ora_inizio || ''}`;
+                                        orariStrText = `${formatDate(giornate[0].data)} ${giornate[0].ora_inizio || ''}`;
+                                        orariStrHtml = orariStrText;
                                     } else {
-                                        orariStr = `${formatDate(giornate[0].data)} (+${giornate.length - 1} date)`;
+                                        orariStrText = `${formatDate(giornate[0].data)} (+${giornate.length - 1} date)`;
+                                        orariStrHtml = orariStrText;
                                     }
                                 }
                             } else if (evt.data_evento) {
-                                orariStr = `${formatDate(evt.data_evento)} ${evt.ora_evento || ''}`;
+                                orariStrText = `${formatDate(evt.data_evento)} ${evt.ora_evento || ''}`;
+                                orariStrHtml = orariStrText;
                             } else {
-                                orariStr = 'DATA DA DEFINIRE';
+                                orariStrText = 'DATA DA DEFINIRE';
+                                orariStrHtml = 'DATA DA DEFINIRE';
                             }
                         } catch(e) {
                             console.error("Errore parse giornate:", e);
-                            orariStr = 'DATA DA DEFINIRE';
+                            orariStrText = 'DATA DA DEFINIRE';
+                            orariStrHtml = 'DATA DA DEFINIRE';
                         }
                     }
 
@@ -4822,13 +4832,13 @@
                             ${evt.link_sito ? `<a href="${evt.link_sito}" target="_blank" class="ml-2 text-primary hover:underline" title="Visita il sito dell'evento"><span class="material-symbols-outlined text-[10px] align-middle">language</span></a>` : ''}
                         </td>
                         <td class="p-4 text-gray-300">${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}</td>
-                        <td class="p-4 text-gray-400 font-mono text-[11px]">${orariStr}</td>
+                        <td class="p-4 text-gray-400 font-mono text-[11px]">${orariStrHtml}</td>
                         <td class="p-4">${istruttoriBadge}</td>
                         <td class="p-4 text-center font-bold text-white">${nIscritti}</td>
                         <td class="p-4 text-right">
                             <div class="flex justify-end gap-2">
                                 ${currentCorsiSubTab === 'corso' ? `
-                                <button onclick="openRegistroDaAdmin('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.luogo ? evt.luogo.replace(/'/g, "\\'") : ''}', '${orariStr.replace(/'/g, "\\'")}')" class="border border-green-500/30 bg-green-500/10 text-green-500 px-3 py-1 font-headline font-bold text-[10px] hover:bg-green-500 hover:text-white transition-all uppercase">
+                                <button onclick="openRegistroDaAdmin('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.luogo ? evt.luogo.replace(/'/g, "\\'") : ''}', '${orariStrText.replace(/'/g, "\\'")}')" class="border border-green-500/30 bg-green-500/10 text-green-500 px-3 py-1 font-headline font-bold text-[10px] hover:bg-green-500 hover:text-white transition-all uppercase">
                                     Partecipanti
                                 </button>
                                 <button onclick="openModalAssegnaIstruttori('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}')" class="border border-primary/30 bg-primary/10 text-primary px-3 py-1 font-headline font-bold text-[10px] hover:bg-primary hover:text-white transition-all uppercase">
@@ -5599,12 +5609,14 @@
                     const orarioLiberoCount = iscrizioni.filter(i => i.evento_id === evt.id && i.orario_libero).length;
 
                     // Formatta orari
-                    let orariStr = 'ORARIO NON SPECIFICATO';
+                    let orariStrText = 'ACCESSO H24 / CONTINUATIVO';
+                    let orariStrHtml = '<span class="text-primary font-bold font-mono text-[9px] uppercase tracking-wider">ACCESSO H24 / CONTINUATIVO</span>';
                     if (evt.orari_settimanali) {
                         try {
                             const orari = typeof evt.orari_settimanali === 'string' ? JSON.parse(evt.orari_settimanali) : evt.orari_settimanali;
-                            if (Array.isArray(orari)) {
-                                orariStr = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(' | ');
+                            if (Array.isArray(orari) && orari.length > 0) {
+                                orariStrText = orari.map(o => `${o.giorno} ${o.ora || ''}`).join(' | ');
+                                orariStrHtml = orariStrText;
                             }
                         } catch (e) {
                             console.error("Errore parse orari:", e);
@@ -5618,7 +5630,7 @@
                             <span class="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest">${evt.tipo}</span>
                             <h3 class="font-headline text-sm font-bold uppercase text-white">${evt.titolo.toUpperCase()}</h3>
                             <p class="text-[10px] text-gray-400 font-mono flex items-center gap-1 uppercase">
-                                <span class="material-symbols-outlined text-xs">schedule</span> ${orariStr}
+                                <span class="material-symbols-outlined text-xs">schedule</span> ${orariStrHtml}
                             </p>
                             <p class="text-[10px] text-gray-400 font-mono flex items-center gap-1 uppercase">
                                 <span class="material-symbols-outlined text-xs">location_on</span> LUOGO: ${evt.luogo ? evt.luogo.toUpperCase() : 'N/D'}
@@ -5634,7 +5646,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button onclick="openRegistroCorso('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.luogo ? evt.luogo.replace(/'/g, "\\'") : ''}', '${orariStr.replace(/'/g, "\\'")}')" class="w-full bg-white text-black font-headline text-xs font-bold py-2 hover:bg-primary hover:text-white transition-all uppercase tracking-wider">
+                        <button onclick="openRegistroCorso('${evt.id}', '${evt.titolo.replace(/'/g, "\\'")}', '${evt.luogo ? evt.luogo.replace(/'/g, "\\'") : ''}', '${orariStrText.replace(/'/g, "\\'")}')" class="w-full bg-white text-black font-headline text-xs font-bold py-2 hover:bg-primary hover:text-white transition-all uppercase tracking-wider">
                             APRI REGISTRO
                         </button>
                     `;

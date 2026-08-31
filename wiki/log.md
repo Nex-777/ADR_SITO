@@ -2,6 +2,14 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-08-31] fix | Risoluzione SyntaxError Onclick Tabelle Corsi Admin e Istruttore (v1.05.09)
+- **Frontend (`portal/dashboard.js`)**:
+  - Risolto il crash JavaScript (`Uncaught SyntaxError: Invalid or unexpected token`) generato dal rendering HTML dei corsi continuativi/H24 (`<span>` con attributi a doppi apici) iniettato direttamente nell'attributo `onclick` dei pulsanti "Partecipanti" e "Apri Registro".
+  - Separate rigorosamente la stringa pura (`orariStrText`) passata ai parametri funzione (`openRegistroDaAdmin`, `openRegistroCorso`) dalla stringa formattata HTML (`orariStrHtml`) renderizzata a livello di cella tabella e card.
+- **Global Bump**: Versionamento globale incrementato a `v1.05.09` tramite `npm run bump`.
+
+---
+
 ## [2026-08-31] feature | Sistema Promo Bundle Ibrido+SCAB e Carnet Ingressi SCAB (v1.05.08)
 - **Database (Supabase `zpategmkelqmexetpaot`)**:
   - Estesa la tabella `public.iscrizioni_eventi` con le colonne `ingressi_totali`, `ingressi_usati`, `iscrizione_promo_padre_id` e `tipo_iscrizione`.
