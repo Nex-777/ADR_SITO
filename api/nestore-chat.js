@@ -87,34 +87,97 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Messaggio o immagine obbligatori.' });
         }
 
-        // 6. Recupera Contesto Utente (Anagrafica + Ultimo peso + Ultimi pasti)
-        const [userRes, pesoRes, pastiRes] = await Promise.all([
+        // 6. Data Odierna e Riferimenti Temporali (Timezone Europe/Rome)
+        const adesso = new Date();
+        const formatterData = new Intl.DateTimeFormat('it-IT', {
+            timeZone: 'Europe/Rome',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        const formatterIso = new Intl.DateTimeFormat('sv-SE', {
+            timeZone: 'Europe/Rome'
+        });
+        const oggiIso = formatterIso.format(adesso); // es. "2026-09-08"
+        const oggiDesc = formatterData.format(adesso); // es. "martedì 8 settembre 2026"
+        const ieriDate = new Date(adesso.getTime() - 86400000);
+        const ieriIso = formatterIso.format(ieriDate); // es. "2026-09-07"
+
+        // 7. Recupera Contesto Utente (Anagrafica + Storico Pesi + Storico Allenamenti + Storico Pasti + Chat History)
+        const [userRes, pesiRes, allenamentiRes, pastiRes, historyRes] = await Promise.all([
             supabaseAdmin.from('utenti').select('nome, cognome').eq('id', utenteId).maybeSingle(),
-            supabaseAdmin.from('nestore_pesi_misure').select('peso_kg, data_rilevazione').eq('utente_id', utenteId).eq('attivo', true).order('data_rilevazione', { ascending: false }).limit(1).maybeSingle(),
-            supabaseAdmin.from('nestore_pasti').select('descrizione, calorie_stimate').eq('utente_id', utenteId).eq('data_pasto', new Date().toISOString().split('T')[0]).eq('attivo', true)
+            supabaseAdmin.from('nestore_pesi_misure')
+                .select('data_rilevazione, peso_kg, vita_cm, torace_cm, braccio_dx_cm, note')
+                .eq('utente_id', utenteId)
+                .eq('attivo', true)
+                .order('data_rilevazione', { ascending: false })
+                .limit(30),
+            supabaseAdmin.from('nestore_allenamenti')
+                .select('data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, note')
+                .eq('utente_id', utenteId)
+                .eq('attivo', true)
+                .order('data_allenamento', { ascending: false })
+                .limit(30),
+            supabaseAdmin.from('nestore_pasti')
+                .select('data_pasto, tipo_pasto, descrizione, calorie_stimate, proteine_g, carboidrati_g, grassi_g')
+                .eq('utente_id', utenteId)
+                .eq('attivo', true)
+                .order('data_pasto', { ascending: false })
+                .limit(30),
+            supabaseAdmin.from('nestore_chat_messaggi')
+                .select('ruolo, contenuto, creato_il')
+                .eq('utente_id', utenteId)
+                .order('creato_il', { ascending: true })
+                .limit(20)
         ]);
 
         const nomeAtleta = userRes.data?.nome || 'Atleta';
-        const ultimoPeso = pesoRes.data?.peso_kg ? `${pesoRes.data.peso_kg} kg (${pesoRes.data.data_rilevazione})` : 'Nessun peso registrato';
-        const pastiOggi = (pastiRes.data || []).map(p => `${p.descrizione} (~${p.calorie_stimate || 0} kcal)`).join(', ') || 'Nessun pasto registrato oggi';
 
-        // 7. System Prompt Specializzato
+        // Formattazione elenchi storici per il System Prompt
+        const pesiList = (pesiRes.data || []).map(p => 
+            `- Data ${p.data_rilevazione}: ${p.peso_kg ? p.peso_kg + ' kg' : ''}${p.vita_cm ? ', vita ' + p.vita_cm + 'cm' : ''}${p.torace_cm ? ', torace ' + p.torace_cm + 'cm' : ''}${p.note ? ' (' + p.note + ')' : ''}`
+        ).join('\n') || '- Nessun peso ancora registrato';
+
+        const allenamentiList = (allenamentiRes.data || []).map(a =>
+            `- Data ${a.data_allenamento}: ${a.corso_disciplina || 'Workout'}${a.durata_minuti ? ' (' + a.durata_minuti + ' min)' : ''}${a.rpe_fatica ? ' RPE ' + a.rpe_fatica + '/10' : ''}${a.note ? ' - ' + a.note : ''}`
+        ).join('\n') || '- Nessun allenamento ancora registrato';
+
+        const pastiList = (pastiRes.data || []).map(p =>
+            `- Data ${p.data_pasto} [${p.tipo_pasto || 'pasto'}]: ${p.descrizione}${p.calorie_stimate ? ' (~' + p.calorie_stimate + ' kcal)' : ''}`
+        ).join('\n') || '- Nessun pasto ancora registrato';
+
+        // 8. System Prompt Specializzato e Contestualizzato
         const systemPrompt = `Sei NESTORE, l'assistente virtuale di fitness, preparazione atletica e nutrizione del club sportivo Adrenalina Club.
 Parli direttamente con l'atleta ${nomeAtleta}.
-Il suo ultimo peso registrato è: ${ultimoPeso}.
-Pasti registrati oggi: ${pastiOggi}.
+
+CALENDARIO & DATA DI RIFERIMENTO:
+- Oggi è: ${oggiDesc} (Data ISO: ${oggiIso}).
+- Ieri era: ${ieriIso}.
+
+STORICO REGISTRAZIONI RECENTI DELL'ATLETA NEL DATABASE:
+--- PESO E CIRCONFERENZE ---
+${pesiList}
+
+--- ALLENAMENTI E WORKOUT ---
+${allenamentiList}
+
+--- PASTI E NUTRIZIONE ---
+${pastiList}
 
 LINEE GUIDA E COMPORTAMENTO:
 1. Sii motivante, professionale, chiaro e sintetico. Usa un tono energico e da coach esperto.
-2. Aiuta l'atleta a monitorare:
-   - Peso corporeo e misurazioni (collo, torace, vita, fianchi, braccia, cosce).
-   - Allenamenti, esercizi, carichi (kg), ripetizioni, serie e scala di fatica RPE (1-10).
-   - Dieta, alimenti, stima approssimativa di calorie e macronutrienti (proteine, carboidrati, grassi). Se l'utente invia una foto di un piatto, stima porzione, calorie e macro principali.
-3. Se l'utente ti sta comunicando dati da registrare (peso, misure, un pasto consumato o un allenamento svolto), rispondi amichevolmente E includi OBBLIGATORIAMENTE alla fine della risposta un blocco JSON formattato esattamente così:
+2. Rispondi con precisione alle domande dell'atleta sui suoi progressi, confrontando i dati storici sopra elencati quando richiesto (es. "quanto pesavo ieri?", "che allenamento ho fatto il 5?", "che progressi ho fatto?").
+3. REGISTRAZIONE DATI (PESO, MISURE, PASTI, ALLENAMENTI):
+Quando l'atleta comunica dati da registrare, ANCHE SE RIFERITI AL PASSATO (es. "ieri pesavo 75.9kg", "lunedì ho mangiato...", "il 07/09 pesavo 76kg"):
+- Riconosci SEMPRE che si tratta di un inserimento dati da salvare.
+- Calcola SEMPRE accuratamente la data corrispondente nel formato "YYYY-MM-DD" prendendo come perno la data di oggi (${oggiIso}). Se dice "ieri" imposta "${ieriIso}". Se non specifica date o dice "oggi", imposta "${oggiIso}". Se specifica un giorno/mese, calcolalo coerentemente.
+- Rispondi con incoraggiamento o commento tecnico, E ALLA FINE DEL MESSAGGIO INCLUDI OBBLIGATORIAMENTE il blocco di estrazione strutturato:
 \`\`\`json:extraction
 {
   "tipo": "peso_misure" | "pasto" | "allenamento",
-  "peso_kg": 78.5,
+  "data": "YYYY-MM-DD",
+  "peso_kg": 75.9,
   "vita_cm": 84.0,
   "torace_cm": 102.0,
   "tipo_pasto": "colazione" | "pranzo" | "cena" | "snack",
@@ -129,15 +192,38 @@ LINEE GUIDA E COMPORTAMENTO:
   "note": "eventuali note"
 }
 \`\`\`
-Inserisci nel JSON solo i campi pertinenti a ciò che l'utente ha comunicato (ometti i campi non menzionati o non rilevabili). Se l'utente fa solo una domanda informativa o saluta, NON inserire il blocco json:extraction.`;
+Inserisci nel JSON solo i campi pertinenti al dato comunicato. Il campo "data" DEVE SEMPRE ESSERE PRESENTE in formato YYYY-MM-DD.
+Se l'utente fa solo una domanda informativa, chiede un riepilogo o saluta, rispondi usando i dati dello storico e NON inserire il blocco json:extraction.`;
 
-        // 8. Costruzione Payload per Google Gemini API
+        // 9. Costruzione Payload Conversazionale Multi-Turn per Google Gemini API
         const contents = [];
-        const userParts = [];
+        let lastRole = null;
 
+        // Inserimento cronologia recente (ultimi messaggi alternati user / model)
+        const recentMsgs = historyRes.data || [];
+        for (const m of recentMsgs) {
+            if (!m.contenuto || typeof m.contenuto !== 'string') continue;
+            const geminiRole = m.ruolo === 'assistant' ? 'model' : 'user';
+
+            // Gemini richiede che il primo turno sia sempre 'user'
+            if (contents.length === 0 && geminiRole !== 'user') continue;
+
+            if (geminiRole === lastRole) {
+                contents[contents.length - 1].parts.push({ text: m.contenuto });
+            } else {
+                contents.push({
+                    role: geminiRole,
+                    parts: [{ text: m.contenuto }]
+                });
+                lastRole = geminiRole;
+            }
+        }
+
+        // Preparazione messaggio corrente dell'utente
+        const currentParts = [];
         if (image_base64) {
             const rawBase64 = image_base64.replace(/^data:image\/\w+;base64,/, '');
-            userParts.push({
+            currentParts.push({
                 inline_data: {
                     mime_type: image_mime || 'image/jpeg',
                     data: rawBase64
@@ -145,16 +231,25 @@ Inserisci nel JSON solo i campi pertinenti a ciò che l'utente ha comunicato (om
             });
         }
 
-        userParts.push({
+        currentParts.push({
             text: message || "Analizza questa foto e aiutami a registrarla."
         });
 
+        // Se l'ultimo messaggio nella cronologia era già 'user', aggiungiamo un placeholder model per rispettare l'alternanza
+        if (lastRole === 'user') {
+            contents.push({
+                role: 'model',
+                parts: [{ text: "Ricevuto." }]
+            });
+        }
+
+        // Aggiungi il messaggio utente corrente
         contents.push({
             role: 'user',
-            parts: userParts
+            parts: currentParts
         });
 
-        // 9. Invocazione API Gemini (modello gemini-2.5-flash)
+        // 10. Invocazione API Gemini (modello gemini-2.5-flash)
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
         const geminiResponse = await fetch(geminiUrl, {

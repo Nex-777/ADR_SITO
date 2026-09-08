@@ -178,12 +178,75 @@ body.nst-body {
     box-sizing: border-box;
 }
 
+/* Mobile Tab Switcher */
+.nst-mobile-tab-bar {
+    display: none;
+}
+
 @media (max-width: 1024px) {
+    .nst-mobile-tab-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: var(--nst-bg-alt);
+        border-bottom: 1px solid var(--nst-border);
+        position: sticky;
+        top: 0;
+        z-index: 30;
+    }
+
+    .nst-mobile-tab-btn {
+        flex: 1;
+        max-width: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 9px 14px;
+        background: var(--nst-surface);
+        border: 1px solid var(--nst-border);
+        border-radius: 8px;
+        color: var(--nst-text-muted);
+        font-family: 'Orbitron', sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .nst-mobile-tab-btn:hover {
+        border-color: rgba(0, 229, 255, 0.4);
+        color: #fff;
+    }
+
+    .nst-mobile-tab-btn.active {
+        background: rgba(0, 229, 255, 0.12);
+        border-color: var(--nst-cyan);
+        color: var(--nst-cyan);
+        box-shadow: 0 0 10px var(--nst-cyan-dim);
+    }
+
     .nst-main-grid {
         grid-template-columns: 1fr;
         height: auto;
-        padding: 14px;
-        gap: 16px;
+        padding: 12px;
+        gap: 14px;
+    }
+
+    /* Su mobile, di default la Dashboard KPI è nascosta e la Chat è visibile per prima */
+    .nst-dashboard-panel {
+        display: none !important;
+    }
+
+    .nst-dashboard-panel.nst-mobile-active {
+        display: flex !important;
+        height: auto;
+    }
+
+    .nst-chat-panel.nst-mobile-hidden {
+        display: none !important;
     }
 }
 
@@ -416,7 +479,8 @@ input:checked + .nst-slider:before {
 
 @media (max-width: 1024px) {
     .nst-chat-panel {
-        height: 540px;
+        height: calc(100dvh - 145px);
+        min-height: 480px;
     }
 }
 

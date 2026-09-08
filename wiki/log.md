@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-08] feature | Memoria Conversazionale, Risoluzione Date Retroattive e Tab Switcher Mobile Nestore
+- **Backend AI (`api/nestore-chat.js`)**:
+  - Iniettata data odierna e data di ieri nel System Prompt con fuso orario italiano Europe/Rome.
+  - Aggiunto caricamento esteso dello storico da database (ultimi 30 pesi, 30 workout e 30 pasti) per consentire a Nestore di rispondere a qualsiasi interrogazione sui dati storici dell'atleta.
+  - Implementata cronologia chat multi-turn in formato alternato `user` / `model` conforme a Google Gemini API v1beta.
+  - Campo `"data": "YYYY-MM-DD"` reso obbligatorio nel template `json:extraction` con risoluzione esplicita delle date relative ("ieri", "lunedì scorso", date specifiche).
+- **Frontend UI & Responsive Mobile (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Introdotto Tab Switcher Mobile (`#nst-mobile-tabs`) sticky in testa alla pagina su schermi <= 1024px, con toggle rapido tra `CHAT ASSISTANT` e `DASHBOARD KPI`.
+  - Su mobile la Chat è ora posizionata in primo piano all'accesso a tutta altezza (`calc(100dvh - 145px)`), mentre le card della dashboard sono consultabili nel tab dedicato senza allungare la pagina.
+- **Validazione & Test**:
+  - Test unitari passati 5/5 con Vitest. Test di estrazione date retroattive e interrogazioni storiche validati con esito positivo.
+
+---
+
 ## [2026-09-08] fix | Aggiornamento Modello Google Gemini a 2.5-Flash per Nestore AI
 - **Backend API (`api/nestore-chat.js`)**:
   - Aggiornato l'endpoint di invocazione Google Generative Language API migrando dal modello deprecato `gemini-1.5-flash` (404) al modello stabile ad alte prestazioni `gemini-2.5-flash`.

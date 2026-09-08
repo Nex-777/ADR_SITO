@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.16">
+    <link rel="stylesheet" href="nestore.css?v=1.05.17">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.16"></script>
+    <script src="config.js?v=1.05.17"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.16</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.17</span>
             </div>
         </div>
 
@@ -43,11 +43,23 @@
         </div>
     </header>
 
+    <!-- Mobile Tab Switcher (Chat vs Dashboard) -->
+    <nav class="nst-mobile-tab-bar" id="nst-mobile-tabs" aria-label="Selettore vista mobile">
+        <button type="button" class="nst-mobile-tab-btn active" id="nst-tab-btn-chat" onclick="switchMobileTab('chat')">
+            <span class="material-symbols-outlined" style="font-size: 18px;">chat</span>
+            <span>CHAT ASSISTANT</span>
+        </button>
+        <button type="button" class="nst-mobile-tab-btn" id="nst-tab-btn-dash" onclick="switchMobileTab('dashboard')">
+            <span class="material-symbols-outlined" style="font-size: 18px;">dashboard</span>
+            <span>DASHBOARD KPI</span>
+        </button>
+    </nav>
+
     <!-- Main Grid -->
     <div class="nst-main-grid">
 
         <!-- Colonna Sinistra: Dashboard KPI & Preferenze -->
-        <aside class="nst-dashboard-panel">
+        <aside class="nst-dashboard-panel" id="nst-dashboard-panel">
 
             <!-- Card 1: Peso Corporeo & Misure -->
             <div class="nst-card">
@@ -148,7 +160,7 @@
         </aside>
 
         <!-- Colonna Destra: Chat Interattiva Multimodale con NESTORE -->
-        <main class="nst-chat-panel">
+        <main class="nst-chat-panel" id="nst-chat-panel">
             <div class="nst-chat-header">
                 <div class="nst-chat-status">
                     <span class="nst-status-dot"></span>
@@ -200,6 +212,6 @@
     </div>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.16"></script>
+    <script src="nestore.js?v=1.05.17"></script>
 </body>
 </html>

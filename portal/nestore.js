@@ -789,3 +789,26 @@ function formatDate(dateStr) {
 function switchNestoreView(val) {
     console.log("Switch vista Nestore a:", val);
 }
+
+// ---------------------------------------------------------------------------
+// GESTIONE TAB MOBILE (Opzione B: Chat vs Dashboard)
+// ---------------------------------------------------------------------------
+function switchMobileTab(tab) {
+    const chatBtn = document.getElementById('nst-tab-btn-chat');
+    const dashBtn = document.getElementById('nst-tab-btn-dash');
+    const chatPanel = document.getElementById('nst-chat-panel');
+    const dashPanel = document.getElementById('nst-dashboard-panel');
+
+    if (tab === 'dashboard') {
+        if (dashBtn) dashBtn.classList.add('active');
+        if (chatBtn) chatBtn.classList.remove('active');
+        if (dashPanel) dashPanel.classList.add('nst-mobile-active');
+        if (chatPanel) chatPanel.classList.add('nst-mobile-hidden');
+    } else {
+        if (chatBtn) chatBtn.classList.add('active');
+        if (dashBtn) dashBtn.classList.remove('active');
+        if (chatPanel) chatPanel.classList.remove('nst-mobile-hidden');
+        if (dashPanel) dashPanel.classList.remove('nst-mobile-active');
+        scrollChatToBottom();
+    }
+}
