@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NESTORE — Assistente AI Adrenalina Club</title>
+    <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+    <link rel="stylesheet" href="nestore.css?v=1.05.14">
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
+    <script src="config.js?v=1.05.14"></script>
+</head>
+<body class="nst-body">
+
+    <!-- Header Navbar -->
+    <header class="nst-header">
+        <div class="nst-header-left">
+            <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
+            <div>
+                <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.14</span>
+            </div>
+        </div>
+
+        <div class="nst-header-right">
+            <!-- Selettore di vista (predisposto per Fase 2 Coach/Admin) -->
+            <select id="nst-view-switcher" class="nst-select nst-hidden" onchange="switchNestoreView(this.value)">
+                <option value="athlete">VISTA ATLETA</option>
+                <option value="coach">VISTA ALLENATORE</option>
+                <option value="admin">VISTA AMMINISTRATORE</option>
+            </select>
+
+            <!-- Info Utente -->
+            <div class="nst-user-badge">
+                <span id="nst-user-name" class="nst-user-name">Caricamento...</span>
+                <span id="nst-user-course" class="nst-user-course">CORSO ATTIVO</span>
+            </div>
+
+            <!-- Tasto Chiudi / Torna alla Dashboard -->
+            <button class="nst-btn-close" onclick="tornaAdAdrenalina()" title="Torna alla Dashboard Adrenalina">CHIUDI</button>
+        </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="nst-main-grid">
+
+        <!-- Colonna Sinistra: Dashboard KPI & Preferenze -->
+        <aside class="nst-dashboard-panel">
+
+            <!-- Card 1: Peso Corporeo & Misure -->
+            <div class="nst-card">
+                <div class="nst-card-header">
+                    <span class="nst-card-title">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">scale</span>
+                        PESO CORPOREO
+                    </span>
+                    <span id="nst-peso-delta" class="nst-kpi-delta nst-delta-neutral">--</span>
+                </div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <div>
+                        <span id="nst-current-weight" class="nst-kpi-value">--</span>
+                        <span class="nst-kpi-unit">kg</span>
+                    </div>
+                    <span id="nst-peso-data" style="font-size: 11px; color: var(--nst-text-muted);">Nessuna rilevazione</span>
+                </div>
+
+                <!-- Circonferenze recenti -->
+                <div id="nst-misure-summary" style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11px; color: var(--nst-text-muted); display: flex; justify-content: space-between;">
+                    <span>Vita: <strong id="nst-vita-val" style="color:#fff;">--</strong></span>
+                    <span>Torace: <strong id="nst-torace-val" style="color:#fff;">--</strong></span>
+                    <span>Braccio: <strong id="nst-braccio-val" style="color:#fff;">--</strong></span>
+                </div>
+            </div>
+
+            <!-- Card 2: Allenamenti & Trend -->
+            <div class="nst-card">
+                <div class="nst-card-header">
+                    <span class="nst-card-title lime">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">fitness_center</span>
+                        ALLENAMENTI
+                    </span>
+                    <span id="nst-training-count" class="nst-kpi-delta nst-delta-down" style="font-size: 10px;">0 SESSIONI (7gg)</span>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: var(--nst-text-muted); margin-bottom: 4px;">Ultima sessione:</div>
+                    <div id="nst-last-workout-name" style="font-size: 13px; font-weight: 700; color: #fff;">Nessun allenamento registrato</div>
+                    <div id="nst-last-workout-details" style="font-size: 11px; color: var(--nst-lime); margin-top: 4px;">Dì a Nestore o scrivi cosa hai fatto oggi</div>
+                </div>
+            </div>
+
+            <!-- Card 3: Nutrizione & Macro Odierni -->
+            <div class="nst-card">
+                <div class="nst-card-header">
+                    <span class="nst-card-title">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">restaurant</span>
+                        DIETA ODIERNA
+                    </span>
+                    <span id="nst-kcal-val" style="font-family:'Exo 2', sans-serif; font-size: 16px; font-weight: 800; color:#fff;">0 <span style="font-size:11px; font-weight:400; color:var(--nst-text-muted);">kcal</span></span>
+                </div>
+
+                <div class="nst-macro-bar-container">
+                    <div>
+                        <div class="nst-macro-row">
+                            <span>Proteine</span>
+                            <span id="nst-macro-pro">0g</span>
+                        </div>
+                        <div class="nst-progress-track">
+                            <div id="nst-bar-pro" class="nst-progress-fill cyan" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="nst-macro-row">
+                            <span>Carboidrati</span>
+                            <span id="nst-macro-carb">0g</span>
+                        </div>
+                        <div class="nst-progress-track">
+                            <div id="nst-bar-carb" class="nst-progress-fill amber" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="nst-macro-row">
+                            <span>Grassi</span>
+                            <span id="nst-macro-fat">0g</span>
+                        </div>
+                        <div class="nst-progress-track">
+                            <div id="nst-bar-fat" class="nst-progress-fill lime" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: Modalità Salvataggio Dati (Q3) -->
+            <div class="nst-card">
+                <div class="nst-toggle-row">
+                    <div>
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700; color: #fff; text-transform: uppercase;">Controllo Preventivo</div>
+                        <div class="nst-toggle-label">Mostra una scheda di conferma prima di salvare nel diario</div>
+                    </div>
+                    <label class="nst-switch">
+                        <input type="checkbox" id="nst-pref-conferma" checked onchange="aggiornaPreferenzaConferma(this.checked)">
+                        <span class="nst-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Colonna Destra: Chat Interattiva Multimodale con NESTORE -->
+        <main class="nst-chat-panel">
+            <div class="nst-chat-header">
+                <div class="nst-chat-status">
+                    <span class="nst-status-dot"></span>
+                    <span>NESTORE AI ASSISTANT</span>
+                </div>
+                <div style="font-size: 11px; color: var(--nst-text-muted);">
+                    Chat Vocale & Multimodale
+                </div>
+            </div>
+
+            <!-- Messaggi della chat -->
+            <div id="nst-chat-messages" class="nst-chat-messages">
+                <!-- Verrà popolato dinamicamente da nestore.js -->
+            </div>
+
+            <!-- Barra preview immagine se selezionata -->
+            <div id="nst-image-preview-bar" class="nst-preview-bar nst-hidden">
+                <img id="nst-preview-img" src="" alt="Anteprima foto" class="nst-preview-thumb">
+                <span id="nst-preview-name" style="flex-grow: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                <button type="button" onclick="rimuoviFotoAllegata()" style="background:transparent; border:none; color:var(--nst-danger); cursor:pointer; font-size:14px;">✕</button>
+            </div>
+
+            <!-- Input bar -->
+            <div class="nst-chat-input-bar">
+                <input type="file" id="nst-file-input" accept="image/*" class="nst-hidden" onchange="gestisciFileSelezionato(event)">
+
+                <div class="nst-input-wrapper">
+                    <!-- Tasto Allega Immagine -->
+                    <button type="button" class="nst-btn-tool" onclick="document.getElementById('nst-file-input').click()" title="Allega foto pasto o scheda">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">add_a_photo</span>
+                    </button>
+
+                    <!-- Textarea -->
+                    <textarea id="nst-chat-input" class="nst-textarea" rows="1" placeholder="Scrivi a Nestore, detta con la voce o allega una foto..." onkeydown="gestisciInvioTasto(event)"></textarea>
+
+                    <!-- Tasto Microfono -->
+                    <button type="button" id="nst-mic-btn" class="nst-btn-tool" onclick="toggleInputVocale()" title="Dettatura vocale">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">mic</span>
+                    </button>
+                </div>
+
+                <!-- Tasto Invio -->
+                <button type="button" id="nst-send-btn" class="nst-btn-send" onclick="inviaMessaggioChat()" title="Invia a Nestore">
+                    <span class="material-symbols-outlined" style="font-size: 20px;">send</span>
+                </button>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Script del portale Nestore -->
+    <script src="nestore.js?v=1.05.14"></script>
+</body>
+</html>

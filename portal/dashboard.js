@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.13"
+                VERSION: "1.05.14"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -520,6 +520,8 @@
                     document.getElementById('tab-btn-user_documento').classList.add('hidden');
                     const epikaBtnIncompleto = document.getElementById('tab-btn-user-epika');
                     if (epikaBtnIncompleto) epikaBtnIncompleto.classList.add('hidden');
+                    const nestoreBtnIncompleto = document.getElementById('tab-btn-user-nestore');
+                    if (nestoreBtnIncompleto) nestoreBtnIncompleto.classList.add('hidden');
 
                     // Banner bloccante per registrazione incompleta
                     const existingBannerIncompleto = document.getElementById('legacy-cert-alert-banner');
@@ -756,6 +758,84 @@
                         }
                     };
                 }
+
+                // --- NESTORE AI BUTTON LOGIC ---
+                const nestoreBtn = document.getElementById('tab-btn-user-nestore');
+                if (nestoreBtn) {
+                    nestoreBtn.classList.remove('hidden');
+
+                    nestoreBtn.onclick = async (e) => {
+                        e.preventDefault();
+
+                        // 1. Controllo base approvazione e tesseramento
+                        if (!isApproved || hasPendingPayment) {
+                            showNestoreAccessModal({
+                                title: "TESSERAMENTO RICHIESTO",
+                                body: "Per accedere a Nestore devi completare il tesseramento ad Adrenalina Club e saldare la quota associativa.",
+                                ctaLabel: "VAI ALLA PANORAMICA",
+                                ctaAction: () => {
+                                    document.getElementById('nestore-access-modal').classList.add('hidden');
+                                    switchTab('panoramica');
+                                }
+                            });
+                            return;
+                        }
+
+                        // 2. Controllo documenti / certificati
+                        if (isBlocked) {
+                            showNestoreAccessModal({
+                                title: "DOCUMENTAZIONE IN SOSPESO",
+                                body: "Per accedere a Nestore è necessario che il tuo certificato medico e il documento d'identità siano in regola e approvati.",
+                                ctaLabel: "VAI AL CERTIFICATO",
+                                ctaAction: () => {
+                                    document.getElementById('nestore-access-modal').classList.add('hidden');
+                                    switchTab('user_certificato');
+                                }
+                            });
+                            return;
+                        }
+
+                        // 3. Controllo iscrizione attiva a corso continuativo
+                        let haCorsoAttivoNestore = false;
+                        try {
+                            const oggi = new Date().toISOString().split('T')[0];
+                            const { data: iscrizioniUtente, error: errIsc } = await supabaseClient
+                                .from('iscrizioni_eventi')
+                                .select('id, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, eventi!inner(tipo)')
+                                .eq('utente_id', currentUser.id)
+                                .eq('eventi.tipo', 'corso')
+                                .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
+
+                            if (!errIsc && Array.isArray(iscrizioniUtente) && iscrizioniUtente.length > 0) {
+                                haCorsoAttivoNestore = iscrizioniUtente.some(isc => {
+                                    if (isc.data_scadenza_corso) {
+                                        return isc.data_scadenza_corso >= oggi;
+                                    }
+                                    if (isc.ingressi_totali) {
+                                        return (isc.ingressi_usati || 0) < isc.ingressi_totali;
+                                    }
+                                    return false;
+                                });
+                            }
+                        } catch (errNst) {
+                            console.error("Errore verifica corso per Nestore:", errNst);
+                        }
+
+                        if (haCorsoAttivoNestore) {
+                            openNestore();
+                        } else {
+                            showNestoreAccessModal({
+                                title: "NESTORE — SOLO PER ISCRITTI AI CORSI",
+                                body: "Nestore è l'assistente personale riservato agli atleti con un'iscrizione attiva ad un corso continuativo (es. Ibrido, SCAB, Strongman). Iscriviti ad un corso per sbloccare l'accesso al tuo assistente!",
+                                ctaLabel: "SCOPRI I CORSI",
+                                ctaAction: () => {
+                                    document.getElementById('nestore-access-modal').classList.add('hidden');
+                                    switchTab('user_corsi');
+                                }
+                            });
+                        }
+                    };
+                }
                 
                 if (isBlocked) {
                     document.getElementById('tab-btn-user_corsi').classList.add('hidden');
@@ -895,6 +975,17 @@
                     ctaAction: () => {
                         document.getElementById('epika-access-modal').classList.add('hidden');
                         switchTab('panoramica');
+                    }
+                });
+            } else if (epkParams.get('nestore_blocked') === '1') {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showNestoreAccessModal({
+                    title: "ACCESSO NESTORE RISERVATO",
+                    body: "Non risultano corsi attivi collegati al tuo profilo. Per accedere a Nestore è richiesta l'iscrizione a un corso continuativo (es. Ibrido, SCAB, Strongman).",
+                    ctaLabel: "SCOPRI I CORSI",
+                    ctaAction: () => {
+                        document.getElementById('nestore-access-modal').classList.add('hidden');
+                        switchTab('user_corsi');
                     }
                 });
             }
@@ -1094,6 +1185,30 @@
                 epikaUrl += `${sep}impersonate_id=${currentUser.id}`;
             }
             window.location.href = epikaUrl;
+        }
+
+        // Funzione per mostrare il modal di accesso a Nestore
+        function showNestoreAccessModal({ title, body, ctaLabel, ctaAction }) {
+            const modal = document.getElementById('nestore-access-modal');
+            const titleEl = document.getElementById('nestore-modal-title');
+            const bodyEl = document.getElementById('nestore-modal-body');
+            const ctaBtn = document.getElementById('nestore-modal-cta');
+            if (!modal || !titleEl || !bodyEl || !ctaBtn) return;
+            titleEl.textContent = title;
+            bodyEl.innerHTML = body;
+            ctaBtn.textContent = ctaLabel;
+            ctaBtn.onclick = ctaAction;
+            modal.classList.remove('hidden');
+        }
+
+        // Funzione di navigazione centralizzata verso Nestore
+        function openNestore() {
+            let nestoreUrl = 'nestore.html';
+            if (_assistenzaAttiva && currentUser && currentUser.id) {
+                const sep = nestoreUrl.includes('?') ? '&' : '?';
+                nestoreUrl += `${sep}impersonate_id=${currentUser.id}`;
+            }
+            window.location.href = nestoreUrl;
         }
 
         // Funzione per reindirizzare al pagamento Stripe
@@ -11082,6 +11197,14 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
             _epikaBtnOverride.onclick = (e) => {
                 e.preventDefault();
                 openEpika(false);
+            };
+        }
+
+        const _nestoreBtnOverride = document.getElementById('tab-btn-user-nestore');
+        if (_nestoreBtnOverride) {
+            _nestoreBtnOverride.onclick = (e) => {
+                e.preventDefault();
+                openNestore();
             };
         }
 

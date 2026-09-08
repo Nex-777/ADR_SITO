@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-08] ingest | Portale NESTORE & Assistente AI Sportivo-Nutrizionale
+- **Database & Storicizzazione (`supabase/migration_nestore_v1.sql`)**:
+  - Create 5 tabelle con Row Level Security (RLS) attiva: `nestore_preferenze`, `nestore_pesi_misure`, `nestore_allenamenti`, `nestore_pasti`, `nestore_chat_messaggi`.
+  - Storicizzazione conforme a `.agents/AGENTS.md` (append-only con flag `attivo = true` e date rilevazione).
+- **Dashboard Adrenalina (`portal/dashboard.html` & `portal/dashboard.js`)**:
+  - Aggiunto pulsante `#tab-btn-user-nestore` nella sidebar e nel menu mobile con branding Ciano/Lime dal logo ufficiale Nestore.
+  - Implementato gatekeeping con modale informativa `#nestore-access-modal`: accesso consentito solo a tesserati approvati con corsi continuativi attivi (`iscrizioni_eventi.data_scadenza_corso >= OGGI` o ingressi residui carnet).
+- **Portale Indipendente NESTORE (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
+  - Sub-app a tutto schermo con Cyber-Bio theme (`#060c18`, `#00e5ff`, `#76ff03`).
+  - Dashboard KPI reattiva (peso corporeo con delta $\Delta$, ultimi workout, calorie e macronutrienti odierni).
+  - Chat assistente multimodale con riconoscimento vocale in tempo reale (Web Speech API) e upload foto compresse.
+  - Toggle impostazioni per scelta utente tra salvataggio diretto o controllo preventivo con card di conferma interattiva.
+- **Backend AI Serverless (`api/nestore-chat.js`)**:
+  - Endpoint Vercel protetto con Bearer JWT verification (`SECURITY.md §1.1`), rate limiting (60 req/h) e integrazione con Google Gemini API (`gemini-1.5-flash`).
+  - Estrazione strutturata automatica dei dati (`json:extraction`) per pasti, pesi e allenamenti.
+- **Wiki Documentation (`wiki/nestore_portal.md`, `wiki/index.md`)**:
+  - Documentati flussi, permessi, schema e architettura del nuovo modulo.
+
+---
+
 ## [2026-08-31] fix | Logica Inversa Presenze Campo Marzio (Opt-Out) & Sincronizzazione Iscrizioni (v1.05.13)
 - **Database & Trigger (`supabase/migration_epika_sync_abilitazioni_cm.sql`)**:
   - Aggiornata la trigger function `epika_trg_sync_scadenza_abilitazioni()` con logica inversa (Opt-Out): tutti gli iscritti a Campo Marzio (`epika_iscrizioni_eventi`) sono considerati presenti estendendo l'abilitazione al `31/12/YYYY`, a meno che non sia registrata un'esplicita defezione (`presente = FALSE`) in `epika_presenze_eventi`.

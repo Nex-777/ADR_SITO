@@ -24,6 +24,9 @@ Welcome to the **Adrenalina Club (ADR_SITO)** LLM Wiki. This is a persistent kno
 ### 🎭 EPIKA Historical Portal
 *   **[EPIKA Portal Architecture](epika_portal.md)** – Overview of the classical antiquity historical re-enactment portal (300 BC - 0 AD), including its database schema, authentication flow, and administrative tools.
 
+### 🤖 NESTORE AI Assistant
+*   **[NESTORE Portal Architecture](nestore_portal.md)** – Overview of the AI fitness and nutrition assistant for active course athletes, including database schema, multimodal chat, voice speech-to-text, and gatekeeping rules.
+
 ---
 
 ## 🪵 Changelog & History
