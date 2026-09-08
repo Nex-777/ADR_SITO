@@ -391,3 +391,54 @@ Trigger automatico `trg_epika_log_profilo_modifiche()` per la storicizzazione ap
 - `Ruolo Combattimento`
 - `Allenatore` (traccia cambi di maestro/struttura)
 
+---
+
+## 🤖 Tabelle Modulo NESTORE (Assistente AI Sportivo-Nutrizionale)
+
+Introdotte con `supabase/migration_nestore_v1.sql` e protette da Row Level Security (RLS) specifica per utente:
+
+### 1. `public.nestore_preferenze`
+Configurazione individuale dell'atleta e modalità operative di Nestore.
+- `utente_id` (UUID PK, FK `utenti.id` ON DELETE CASCADE)
+- `conferma_preventiva` (BOOLEAN DEFAULT true): Attiva la richiesta di conferma interattiva prima del salvataggio nel database.
+- `calorie_target`, `proteine_target_g`, `peso_target_kg`
+- `creato_il`, `aggiornato_il`
+
+### 2. `public.nestore_pesi_misure`
+Registro append-only per il monitoraggio di peso e circonferenze.
+- `id` (UUID PK), `utente_id` (UUID FK `utenti.id`)
+- `data_rilevazione` (DATE NOT NULL)
+- `peso_kg` (NUMERIC(5,2))
+- `collo_cm`, `torace_cm`, `vita_cm`, `fianchi_cm`, `braccio_dx_cm`, `braccio_sx_cm`, `coscia_dx_cm`, `coscia_sx_cm`
+- `note` (TEXT), `attivo` (BOOLEAN DEFAULT true), `creato_il` (TIMESTAMPTZ)
+
+### 3. `public.nestore_allenamenti`
+Registro sessioni di allenamento, carichi e fatica percepita.
+- `id` (UUID PK), `utente_id` (UUID FK `utenti.id`)
+- `data_allenamento` (DATE NOT NULL)
+- `corso_disciplina` (TEXT)
+- `durata_minuti` (INTEGER)
+- `scheda_dati` (JSONB)
+- `rpe_fatica` (SMALLINT CHECK 1-10)
+- `note` (TEXT), `attivo` (BOOLEAN DEFAULT true), `creato_il` (TIMESTAMPTZ)
+
+### 4. `public.nestore_pasti`
+Diario nutrizionale con stime caloriche e macronutrienti.
+- `id` (UUID PK), `utente_id` (UUID FK `utenti.id`)
+- `data_pasto` (DATE NOT NULL)
+- `tipo_pasto` (VARCHAR: `colazione`, `pranzo`, `cena`, `snack`)
+- `descrizione` (TEXT NOT NULL)
+- `calorie_stimate` (INTEGER)
+- `carboidrati_g`, `proteine_g`, `grassi_g` (NUMERIC(5,1))
+- `foto_url` (TEXT), `attivo` (BOOLEAN DEFAULT true), `creato_il` (TIMESTAMPTZ)
+
+### 5. `public.nestore_chat_messaggi`
+Archivio cronologico della conversazione multimodale con Nestore.
+- `id` (UUID PK), `utente_id` (UUID FK `utenti.id`)
+- `ruolo` (VARCHAR: `user`, `assistant`, `system`)
+- `contenuto` (TEXT NOT NULL)
+- `foto_url` (TEXT)
+- `metadata` (JSONB): Traccia `dati_estratti` e flag `salvato`.
+- `creato_il` (TIMESTAMPTZ)
+
+

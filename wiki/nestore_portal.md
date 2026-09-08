@@ -20,9 +20,9 @@ Access to Nestore follows the standalone portal pattern established by [EPIKA Po
 
 1. **Sidebar Presence**: The NESTORE button (`#tab-btn-user-nestore`) is visible in the Adrenalina Club portal sidebar and mobile menu with distinctive branding (Electric Cyan `#00e5ff` and Neon Lime `#76ff03`).
 2. **Authorization Requirements**:
-   - Athlete registration and annual dues approved (`registro_approvazioni.stato === 'APPROVATO'`).
-   - Active, non-expired enrollment in an ongoing course (`eventi.tipo === 'corso'` with `data_scadenza_corso >= CURRENT_DATE` or available carnet entries in `iscrizioni_eventi`).
-   - Approved medical certificate and valid identity document.
+   - **Standard Athletes**: Require athlete registration and annual dues approved (`registro_approvazioni.stato === 'APPROVATO'`), active non-expired course enrollment (`eventi.tipo === 'corso'` with `data_scadenza_corso >= CURRENT_DATE` or available carnet entries in `iscrizioni_eventi`), and approved medical certificate.
+   - **Unconditional Access (v1.05.15)**: Board Members (`ruolo_utente` including `presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`) and certified instructors registered in `public.registro_istruttori` bypass the active course requirement and have permanent access.
+   - **Role-Aware View Switcher**: A contextual switcher in the header enables direct personal usage while preserving role state for upcoming coach management features.
 3. **Restricted Modal**: If a non-eligible user clicks NESTORE, `#nestore-access-modal` informs the athlete and directs them via CTA to the available courses list (`user_corsi`).
 
 ---
@@ -80,16 +80,37 @@ Chat history between athlete and NESTORE assistant.
 
 ---
 
-## 4. Frontend & Backend Components
+## 4. AI Engine & Conversational Context (`api/nestore-chat.js`)
 
-- **`portal/nestore.html`**: Dedicated full-screen sub-app featuring a responsive cyber-bio layout with KPI summary cards (weight delta, weekly workouts, daily macros) and interactive chat pane.
-- **`portal/nestore.css`**: Styling tokens, dark navy backgrounds, cyan/lime glows, responsive grid, and pulse recording animations.
-- **`portal/nestore.js`**: Client-side logic for authentication check, real-time KPI data binding, voice speech recognition via `webkitSpeechRecognition`, image compression, and API communication.
-- **`api/nestore-chat.js`**: Protected Vercel serverless function with Bearer JWT verification, rate limiting (60 req/h), multimodal Google Gemini integration, and structured JSON extraction (`json:extraction`).
+- **LLM Model**: Google Gemini 2.5 Flash (`gemini-2.5-flash`), balancing multimodal visual understanding with low latency.
+- **Server-Side Temporal Anchoring**: Italian server date (`Europe/Rome`) is injected into the system prompt, enabling accurate parsing of relative expressions (e.g., *"ieri il mio peso era..."*, *"lunedì scorso"*).
+- **Mandatory Date Field in Extraction**: The extraction JSON block requires `"data": "YYYY-MM-DD"`, which allows retroactive tracking without overwriting today's date.
+- **Multi-Turn Chat Memory**: Recent chat history is formatted as alternating `user` and `model` turns, providing the model with conversational awareness.
+- **Full Database Context Feed**: Historical weigh-ins, recent workouts, and nutritional intake logs are synthesized into the system prompt, allowing athletes to ask retrospective analytical questions directly (e.g., *"quanto pesavo la scorsa settimana?"*).
 
 ---
 
-## 5. Related Concept Pages
+## 5. Visual Analytics & Responsive UI (`portal/nestore.*`)
+
+### 5.1. Interactive Chart.js Visualizations
+Integrated via CDN (`https://cdn.jsdelivr.net/npm/chart.js`, authorized in CSP):
+1. **Weight & Body Dimensions (Multi-Line Chart)**:
+   - Dual Y-Axis: Left axis for Weight (kg) in Cyan `#00e5ff`; Right axis for Waist, Chest, and Arm (cm) in Lime/Gold/Magenta.
+   - Interactive series toggling and dark-themed tooltips.
+2. **Workouts Timeline (Scatter / Frequency Line)**:
+   - Chronologically tracks training dates with illuminated points and detailed tooltips (discipline, duration, RPE).
+3. **Daily Nutrition (Stacked Bar Chart in Kcal)**:
+   - Stacks daily Carbs ($\times 4\text{ kcal}$), Protein ($\times 4\text{ kcal}$), and Fats ($\times 9\text{ kcal}$) into a single daily energy bar, matching the athlete's target breakdown.
+4. **Time Horizon Filter Chips**:
+   - Independent `7G`, `14G`, `30G`, `ALL` selectors on every card, defaulting to 30 days.
+
+### 5.2. Mobile Tab Switcher Layout
+- On viewports $\le 1024\text{px}$, a sticky header bar toggles between **`💬 CHAT ASSISTANT`** and **`📊 DASHBOARD KPI`**.
+- Chat is presented full-height on entry (`calc(100dvh - 145px)`), ensuring instant mobile usability without forcing athletes to scroll past the dashboard cards.
+
+---
+
+## 6. Related Concept Pages
 - [Database Schema](database_schema.md)
 - [Portal Dashboard](portal_dashboard.md)
 - [EPIKA Portal Architecture](epika_portal.md)
