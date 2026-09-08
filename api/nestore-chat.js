@@ -154,8 +154,8 @@ Inserisci nel JSON solo i campi pertinenti a ciò che l'utente ha comunicato (om
             parts: userParts
         });
 
-        // 9. Invocazione API Gemini (modello gemini-1.5-flash)
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+        // 9. Invocazione API Gemini (modello gemini-2.5-flash)
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
         const geminiResponse = await fetch(geminiUrl, {
             method: 'POST',

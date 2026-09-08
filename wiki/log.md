@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-08] fix | Aggiornamento Modello Google Gemini a 2.5-Flash per Nestore AI
+- **Backend API (`api/nestore-chat.js`)**:
+  - Aggiornato l'endpoint di invocazione Google Generative Language API migrando dal modello deprecato `gemini-1.5-flash` (404) al modello stabile ad alte prestazioni `gemini-2.5-flash`.
+  - Risolto l'errore 500 generato dalla mancata configurazione della variabile d'ambiente `GEMINI_API_KEY` su Vercel e dal modello legacy.
+- **Validazione & Test (`tests/nestore-chat.test.js`)**:
+  - Eseguiti tutti i test unitari con Vitest con esito 100% positivo (5/5 passing).
+
+---
+
 ## [2026-09-08] ingest | Portale NESTORE & Assistente AI Sportivo-Nutrizionale
 - **Database & Storicizzazione (`supabase/migration_nestore_v1.sql`)**:
   - Create 5 tabelle con Row Level Security (RLS) attiva: `nestore_preferenze`, `nestore_pesi_misure`, `nestore_allenamenti`, `nestore_pasti`, `nestore_chat_messaggi`.
