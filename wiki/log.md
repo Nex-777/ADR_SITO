@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-09] feature | Grafici Interattivi Chart.js e Filtri Temporali per Dashboard Nestore
+- **Frontend UI & Grafici (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Integrata libreria vettoriale Chart.js v4 via CDN autorizzata in CSP (`cdn.jsdelivr.net`).
+  - **Card 1 - Peso Corporeo & Misure**: Sostituiti i numeri statici con grafico multi-linea dinamico con doppio asse Y (Asse Sinistro: Peso in kg in Ciano Cyber; Asse Destro: Vita, Torace, Braccio in cm in Lime/Oro/Magenta) per visualizzare l'evoluzione corporea senza schiacciare le scale.
+  - **Card 2 - Allenamenti & Frequenza**: Implementato grafico a linea/scatter di frequenza che traccia cronologicamente le sessioni svolte dall'atleta, evidenziando le date con punti illuminati e tooltip dettagliati (disciplina, durata e RPE).
+  - **Card 3 - Dieta & Macro (Kcal Stacked)**: Realizzato grafico a colonne in pila (stacked bar chart) per data, dove ciascuna colonna giornaliera è composta da 3 segmenti energetici sovrapposti: Carboidrati (Ambra, x4 kcal), Proteine (Ciano, x4 kcal) e Grassi (Lime, x9 kcal), la cui somma costituisce l'apporto calorico totale della giornata conforme all'esempio Excel fornito dall'utente.
+  - **Filtri Temporali Dinamici**: Aggiunti in cima a ciascuna card i chip di filtro orizzonte `[7G] [14G] [30G] [ALL]`, con valore predefinito impostato a 30 giorni.
+- **Validazione**: Eseguiti test unitari Vitest (5/5 passing).
+
+---
+
 ## [2026-09-08] feature | Memoria Conversazionale, Risoluzione Date Retroattive e Tab Switcher Mobile Nestore
 - **Backend AI (`api/nestore-chat.js`)**:
   - Iniettata data odierna e data di ieri nel System Prompt con fuso orario italiano Europe/Rome.

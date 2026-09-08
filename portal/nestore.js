@@ -212,145 +212,550 @@ async function aggiornaPreferenzaConferma(valore) {
 }
 
 // ---------------------------------------------------------------------------
-// CARICAMENTO KPI DASHBOARD
 // ---------------------------------------------------------------------------
+// GESTIONE GRAFICI DASHBOARD (Chart.js) & FILTRI TEMPORALI
+// ---------------------------------------------------------------------------
+let chartPesoInstance = null;
+let chartAllenamentiInstance = null;
+let chartDietaInstance = null;
+
+const rangeFiltri = {
+    peso: '30',
+    allenamenti: '30',
+    dieta: '30'
+};
+
+function calcolaDataInizio(rangeStr) {
+    if (rangeStr === 'ALL') return null;
+    const giorni = parseInt(rangeStr, 10) || 30;
+    const d = new Date();
+    d.setDate(d.getDate() - giorni);
+    return d.toISOString().split('T')[0];
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
+    return dateStr;
+}
+
+async function impostaRangeCard(tipo, range) {
+    rangeFiltri[tipo] = range;
+    
+    // Aggiorna classe active sui chip
+    const chipContainer = document.getElementById(`nst-chips-${tipo}`);
+    if (chipContainer) {
+        chipContainer.querySelectorAll('.nst-time-chip').forEach(btn => {
+            if (btn.getAttribute('data-range') === range) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    if (tipo === 'peso') await renderGraficoPesiMisure();
+    else if (tipo === 'allenamenti') await renderGraficoAllenamenti();
+    else if (tipo === 'dieta') await renderGraficoDieta();
+}
+
 async function caricaKpiDashboard() {
     await Promise.all([
-        caricaUltimoPeso(),
-        caricaUltimiAllenamenti(),
-        caricaPastiOdierni()
+        renderGraficoPesiMisure(),
+        renderGraficoAllenamenti(),
+        renderGraficoDieta()
     ]);
 }
 
-async function caricaUltimoPeso() {
+async function renderGraficoPesiMisure() {
     try {
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('nestore_pesi_misure')
             .select('*')
             .eq('utente_id', currentUser.id)
-            .eq('attivo', true)
-            .order('data_rilevazione', { ascending: false })
-            .order('creato_il', { ascending: false })
-            .limit(2);
+            .eq('attivo', true);
+
+        const dataInizio = calcolaDataInizio(rangeFiltri.peso);
+        if (dataInizio) {
+            query = query.gte('data_rilevazione', dataInizio);
+        }
+
+        const { data, error } = await query
+            .order('data_rilevazione', { ascending: true })
+            .order('creato_il', { ascending: true });
+
+        const emptyMsg = document.getElementById('nst-empty-peso');
 
         if (error || !data || data.length === 0) {
+            if (emptyMsg) emptyMsg.classList.remove('nst-hidden');
+            if (chartPesoInstance) {
+                chartPesoInstance.destroy();
+                chartPesoInstance = null;
+            }
             document.getElementById('nst-current-weight').textContent = '--';
             document.getElementById('nst-peso-delta').textContent = 'N/D';
+            document.getElementById('nst-vita-val').textContent = '--';
+            document.getElementById('nst-torace-val').textContent = '--';
+            document.getElementById('nst-braccio-val').textContent = '--';
             return;
         }
 
-        const ultimo = data[0];
+        if (emptyMsg) emptyMsg.classList.add('nst-hidden');
+
+        // Aggiorna riassunto ultimo peso & delta
+        const ultimo = data[data.length - 1];
         document.getElementById('nst-current-weight').textContent = ultimo.peso_kg ? Number(ultimo.peso_kg).toFixed(1) : '--';
-        document.getElementById('nst-peso-data').textContent = formatDate(ultimo.data_rilevazione);
+        document.getElementById('nst-vita-val').textContent = ultimo.vita_cm ? `${ultimo.vita_cm}cm` : '--';
+        document.getElementById('nst-torace-val').textContent = ultimo.torace_cm ? `${ultimo.torace_cm}cm` : '--';
+        document.getElementById('nst-braccio-val').textContent = ultimo.braccio_dx_cm ? `${ultimo.braccio_dx_cm}cm` : '--';
 
-        // Misure
-        if (ultimo.vita_cm) document.getElementById('nst-vita-val').textContent = `${ultimo.vita_cm}cm`;
-        if (ultimo.torace_cm) document.getElementById('nst-torace-val').textContent = `${ultimo.torace_cm}cm`;
-        if (ultimo.braccio_dx_cm) document.getElementById('nst-braccio-val').textContent = `${ultimo.braccio_dx_cm}cm`;
-
-        // Calcolo Delta rispetto alla rilevazione precedente
         const deltaEl = document.getElementById('nst-peso-delta');
-        if (data.length > 1 && data[1].peso_kg && ultimo.peso_kg) {
-            const diff = (Number(ultimo.peso_kg) - Number(data[1].peso_kg)).toFixed(1);
-            if (diff > 0) {
-                deltaEl.className = 'nst-kpi-delta nst-delta-up';
-                deltaEl.textContent = `+${diff} kg`;
-            } else if (diff < 0) {
-                deltaEl.className = 'nst-kpi-delta nst-delta-down';
-                deltaEl.textContent = `${diff} kg`;
+        if (data.length > 1) {
+            const penultimo = data[data.length - 2];
+            if (ultimo.peso_kg && penultimo.peso_kg) {
+                const diff = (Number(ultimo.peso_kg) - Number(penultimo.peso_kg)).toFixed(1);
+                if (diff > 0) {
+                    deltaEl.className = 'nst-kpi-delta nst-delta-up';
+                    deltaEl.textContent = `+${diff} kg`;
+                } else if (diff < 0) {
+                    deltaEl.className = 'nst-kpi-delta nst-delta-down';
+                    deltaEl.textContent = `${diff} kg`;
+                } else {
+                    deltaEl.className = 'nst-kpi-delta nst-delta-neutral';
+                    deltaEl.textContent = `= 0 kg`;
+                }
             } else {
                 deltaEl.className = 'nst-kpi-delta nst-delta-neutral';
-                deltaEl.textContent = `= 0 kg`;
+                deltaEl.textContent = '1ª RIL.';
             }
         } else {
             deltaEl.className = 'nst-kpi-delta nst-delta-neutral';
             deltaEl.textContent = '1ª RIL.';
         }
+
+        // Prepara dati Chart.js
+        const labels = data.map(d => formatDateShort(d.data_rilevazione));
+        const pesi = data.map(d => d.peso_kg ? Number(d.peso_kg) : null);
+        const vite = data.map(d => d.vita_cm ? Number(d.vita_cm) : null);
+        const toraci = data.map(d => d.torace_cm ? Number(d.torace_cm) : null);
+        const braccia = data.map(d => d.braccio_dx_cm ? Number(d.braccio_dx_cm) : null);
+
+        const canvas = document.getElementById('nst-chart-peso');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        if (chartPesoInstance) {
+            chartPesoInstance.destroy();
+        }
+
+        chartPesoInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Peso (kg)',
+                        data: pesi,
+                        borderColor: '#00e5ff',
+                        backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                        borderWidth: 2.5,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#00e5ff',
+                        tension: 0.25,
+                        yAxisID: 'yPeso',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Vita (cm)',
+                        data: vite,
+                        borderColor: '#76ff03',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.8,
+                        pointRadius: 2.5,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#76ff03',
+                        tension: 0.25,
+                        yAxisID: 'yMisure',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Torace (cm)',
+                        data: toraci,
+                        borderColor: '#ffd600',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.8,
+                        pointRadius: 2.5,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#ffd600',
+                        tension: 0.25,
+                        yAxisID: 'yMisure',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Braccio (cm)',
+                        data: braccia,
+                        borderColor: '#e040fb',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.8,
+                        pointRadius: 2.5,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: '#e040fb',
+                        tension: 0.25,
+                        yAxisID: 'yMisure',
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#94a3b8',
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            padding: 6,
+                            font: { size: 9, family: "'Orbitron', sans-serif" }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(6, 12, 24, 0.95)',
+                        titleColor: '#00e5ff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(0, 229, 255, 0.3)',
+                        borderWidth: 1,
+                        padding: 8,
+                        titleFont: { family: "'Orbitron', sans-serif", size: 10 },
+                        bodyFont: { size: 10 }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }
+                    },
+                    yPeso: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: {
+                            color: '#00e5ff',
+                            font: { size: 9 },
+                            callback: v => v + 'kg'
+                        }
+                    },
+                    yMisure: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: {
+                            color: '#76ff03',
+                            font: { size: 9 },
+                            callback: v => v + 'cm'
+                        }
+                    }
+                }
+            }
+        });
+
     } catch (e) {
-        console.error("Errore caricamento peso:", e);
+        console.error("Errore grafico pesi e misure:", e);
     }
 }
 
-async function caricaUltimiAllenamenti() {
+async function renderGraficoAllenamenti() {
     try {
-        // Calcola data 7 giorni fa
-        const setteGiorniFa = new Date();
-        setteGiorniFa.setDate(setteGiorniFa.getDate() - 7);
-        const dataLimite = setteGiorniFa.toISOString().split('T')[0];
-
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('nestore_allenamenti')
             .select('*')
             .eq('utente_id', currentUser.id)
-            .eq('attivo', true)
-            .gte('data_allenamento', dataLimite)
-            .order('data_allenamento', { ascending: false });
+            .eq('attivo', true);
 
-        if (error) {
-            console.error("Errore allenamenti:", error);
+        const dataInizio = calcolaDataInizio(rangeFiltri.allenamenti);
+        if (dataInizio) {
+            query = query.gte('data_allenamento', dataInizio);
+        }
+
+        const { data, error } = await query
+            .order('data_allenamento', { ascending: true });
+
+        const emptyMsg = document.getElementById('nst-empty-allenamenti');
+
+        if (error || !data || data.length === 0) {
+            if (emptyMsg) emptyMsg.classList.remove('nst-hidden');
+            if (chartAllenamentiInstance) {
+                chartAllenamentiInstance.destroy();
+                chartAllenamentiInstance = null;
+            }
+            document.getElementById('nst-training-count').textContent = '0 sessioni nel periodo';
+            document.getElementById('nst-last-workout-name').textContent = 'Nessuna sessione';
             return;
         }
 
-        const count = data ? data.length : 0;
-        const countBadge = document.getElementById('nst-training-count');
-        countBadge.textContent = `${count} SESSION${count === 1 ? 'E' : 'I'} (7gg)`;
+        if (emptyMsg) emptyMsg.classList.add('nst-hidden');
 
-        if (data && data.length > 0) {
-            const ultimo = data[0];
-            document.getElementById('nst-last-workout-name').textContent = (ultimo.corso_disciplina || 'Allenamento').toUpperCase();
-            const durata = ultimo.durata_minuti ? `${ultimo.durata_minuti} min` : '';
-            const rpe = ultimo.rpe_fatica ? `RPE: ${ultimo.rpe_fatica}/10` : '';
-            const info = [formatDate(ultimo.data_allenamento), durata, rpe].filter(Boolean).join(' • ');
-            document.getElementById('nst-last-workout-details').textContent = info || 'Registrato';
+        // Aggiorna riassunto
+        document.getElementById('nst-training-count').textContent = `${data.length} session${data.length === 1 ? 'e' : 'i'} registrat${data.length === 1 ? 'a' : 'e'}`;
+        const ultimo = data[data.length - 1];
+        document.getElementById('nst-last-workout-name').textContent = `${formatDateShort(ultimo.data_allenamento)}: ${(ultimo.corso_disciplina || 'Workout').toUpperCase()}`;
+
+        // Prepara serie temporale (data e presenza/durata)
+        const labels = data.map(a => formatDateShort(a.data_allenamento));
+        const durate = data.map(a => a.durata_minuti ? Number(a.durata_minuti) : 60);
+
+        const canvas = document.getElementById('nst-chart-allenamenti');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        if (chartAllenamentiInstance) {
+            chartAllenamentiInstance.destroy();
         }
+
+        chartAllenamentiInstance = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Sessione Svolta (min)',
+                    data: durate,
+                    borderColor: '#76ff03',
+                    backgroundColor: 'rgba(118, 255, 3, 0.12)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: '#76ff03',
+                    pointBorderColor: '#060c18',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(6, 12, 24, 0.95)',
+                        titleColor: '#76ff03',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(118, 255, 3, 0.3)',
+                        borderWidth: 1,
+                        padding: 8,
+                        titleFont: { family: "'Orbitron', sans-serif", size: 10 },
+                        bodyFont: { size: 10 },
+                        callbacks: {
+                            label: function(ctx) {
+                                const item = data[ctx.dataIndex];
+                                const disc = item.corso_disciplina || 'Workout';
+                                const dur = item.durata_minuti ? `${item.durata_minuti} min` : '';
+                                const rpe = item.rpe_fatica ? `RPE ${item.rpe_fatica}/10` : '';
+                                return [disc, [dur, rpe].filter(Boolean).join(' • ')].filter(Boolean);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: {
+                            color: '#76ff03',
+                            font: { size: 9 },
+                            callback: v => v + 'm'
+                        },
+                        suggestedMin: 0
+                    }
+                }
+            }
+        });
+
     } catch (e) {
-        console.error("Errore ultimi allenamenti:", e);
+        console.error("Errore grafico allenamenti:", e);
     }
 }
 
-async function caricaPastiOdierni() {
+async function renderGraficoDieta() {
     try {
-        const oggi = new Date().toISOString().split('T')[0];
-        const { data, error } = await supabaseClient
+        let query = supabaseClient
             .from('nestore_pasti')
             .select('*')
             .eq('utente_id', currentUser.id)
-            .eq('data_pasto', oggi)
             .eq('attivo', true);
 
-        if (error) {
-            console.error("Errore pasti:", error);
+        const dataInizio = calcolaDataInizio(rangeFiltri.dieta);
+        if (dataInizio) {
+            query = query.gte('data_pasto', dataInizio);
+        }
+
+        const { data, error } = await query
+            .order('data_pasto', { ascending: true });
+
+        const emptyMsg = document.getElementById('nst-empty-dieta');
+
+        if (error || !data || data.length === 0) {
+            if (emptyMsg) emptyMsg.classList.remove('nst-hidden');
+            if (chartDietaInstance) {
+                chartDietaInstance.destroy();
+                chartDietaInstance = null;
+            }
+            document.getElementById('nst-kcal-val').textContent = '0';
+            document.getElementById('nst-macro-pro').textContent = '0g';
+            document.getElementById('nst-macro-carb').textContent = '0g';
+            document.getElementById('nst-macro-fat').textContent = '0g';
             return;
         }
 
-        let totKcal = 0;
-        let totPro = 0;
-        let totCarb = 0;
-        let totFat = 0;
+        if (emptyMsg) emptyMsg.classList.add('nst-hidden');
 
-        (data || []).forEach(p => {
-            totKcal += Number(p.calorie_stimate || 0);
-            totPro += Number(p.proteine_g || 0);
-            totCarb += Number(p.carboidrati_g || 0);
-            totFat += Number(p.grassi_g || 0);
+        // Aggregazione per data
+        const aggregati = {};
+        const oggi = new Date().toISOString().split('T')[0];
+        let totKcalOggi = 0, totProOggi = 0, totCarbOggi = 0, totFatOggi = 0;
+
+        data.forEach(p => {
+            const d = p.data_pasto;
+            if (!aggregati[d]) {
+                aggregati[d] = {
+                    proG: 0,
+                    carbG: 0,
+                    fatG: 0,
+                    proKcal: 0,
+                    carbKcal: 0,
+                    fatKcal: 0
+                };
+            }
+            const pro = Number(p.proteine_g || 0);
+            const carb = Number(p.carboidrati_g || 0);
+            const fat = Number(p.grassi_g || 0);
+
+            aggregati[d].proG += pro;
+            aggregati[d].carbG += carb;
+            aggregati[d].fatG += fat;
+            aggregati[d].proKcal += pro * 4;
+            aggregati[d].carbKcal += carb * 4;
+            aggregati[d].fatKcal += fat * 9;
+
+            if (d === oggi) {
+                totProOggi += pro;
+                totCarbOggi += carb;
+                totFatOggi += fat;
+                totKcalOggi += Number(p.calorie_stimate || (pro * 4 + carb * 4 + fat * 9));
+            }
         });
 
-        document.getElementById('nst-kcal-val').innerHTML = `${totKcal} <span style="font-size:11px; font-weight:400; color:var(--nst-text-muted);">kcal</span>`;
-        document.getElementById('nst-macro-pro').textContent = `${totPro.toFixed(0)}g`;
-        document.getElementById('nst-macro-carb').textContent = `${totCarb.toFixed(0)}g`;
-        document.getElementById('nst-macro-fat').textContent = `${totFat.toFixed(0)}g`;
+        // Aggiorna riassunto oggi
+        document.getElementById('nst-kcal-val').textContent = totKcalOggi.toFixed(0);
+        document.getElementById('nst-macro-pro').textContent = `${totProOggi.toFixed(0)}g`;
+        document.getElementById('nst-macro-carb').textContent = `${totCarbOggi.toFixed(0)}g`;
+        document.getElementById('nst-macro-fat').textContent = `${totFatOggi.toFixed(0)}g`;
 
-        // Barre progresso macro (target di riferimento)
-        const targetPro = userPreferenze.proteine_target_g || 140;
-        const targetCarb = 250;
-        const targetFat = 70;
+        // Date ordinate
+        const dateOrdinate = Object.keys(aggregati).sort();
+        const labels = dateOrdinate.map(d => formatDateShort(d));
+        const serieCarb = dateOrdinate.map(d => Math.round(aggregati[d].carbKcal));
+        const seriePro = dateOrdinate.map(d => Math.round(aggregati[d].proKcal));
+        const serieFat = dateOrdinate.map(d => Math.round(aggregati[d].fatKcal));
 
-        document.getElementById('nst-bar-pro').style.width = `${Math.min(100, (totPro / targetPro) * 100)}%`;
-        document.getElementById('nst-bar-carb').style.width = `${Math.min(100, (totCarb / targetCarb) * 100)}%`;
-        document.getElementById('nst-bar-fat').style.width = `${Math.min(100, (totFat / targetFat) * 100)}%`;
+        const canvas = document.getElementById('nst-chart-dieta');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        if (chartDietaInstance) {
+            chartDietaInstance.destroy();
+        }
+
+        chartDietaInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Carboidrati (kcal)',
+                        data: serieCarb,
+                        backgroundColor: '#ffb300', // Amber
+                        stack: 'macro',
+                        borderRadius: 2
+                    },
+                    {
+                        label: 'Proteine (kcal)',
+                        data: seriePro,
+                        backgroundColor: '#00e5ff', // Cyan
+                        stack: 'macro',
+                        borderRadius: 2
+                    },
+                    {
+                        label: 'Grassi (kcal)',
+                        data: serieFat,
+                        backgroundColor: '#76ff03', // Lime
+                        stack: 'macro',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#94a3b8',
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            padding: 6,
+                            font: { size: 9, family: "'Orbitron', sans-serif" }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(6, 12, 24, 0.95)',
+                        titleColor: '#ffb300',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 179, 0, 0.3)',
+                        borderWidth: 1,
+                        padding: 8,
+                        titleFont: { family: "'Orbitron', sans-serif", size: 10 },
+                        bodyFont: { size: 10 },
+                        callbacks: {
+                            footer: function(tooltipItems) {
+                                let sum = 0;
+                                tooltipItems.forEach(ti => { sum += ti.parsed.y; });
+                                return `Totale: ${sum} kcal`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }
+                    },
+                    y: {
+                        stacked: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 9 },
+                            callback: v => v + ' kcal'
+                        }
+                    }
+                }
+            }
+        });
 
     } catch (e) {
-        console.error("Errore pasti odierni:", e);
+        console.error("Errore grafico dieta:", e);
     }
 }
 
@@ -812,3 +1217,6 @@ function switchMobileTab(tab) {
         scrollChatToBottom();
     }
 }
+
+window.impostaRangeCard = impostaRangeCard;
+window.switchMobileTab = switchMobileTab;
