@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.14"
+                VERSION: "1.05.15"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -795,30 +795,56 @@
                             return;
                         }
 
-                        // 3. Controllo iscrizione attiva a corso continuativo
+                        // 3. Controllo iscrizione attiva a corso continuativo o ruolo speciale
                         let haCorsoAttivoNestore = false;
-                        try {
-                            const oggi = new Date().toISOString().split('T')[0];
-                            const { data: iscrizioniUtente, error: errIsc } = await supabaseClient
-                                .from('iscrizioni_eventi')
-                                .select('id, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, eventi!inner(tipo)')
-                                .eq('utente_id', currentUser.id)
-                                .eq('eventi.tipo', 'corso')
-                                .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
+                        let hasUnconditionalAccess = false;
 
-                            if (!errIsc && Array.isArray(iscrizioniUtente) && iscrizioniUtente.length > 0) {
-                                haCorsoAttivoNestore = iscrizioniUtente.some(isc => {
-                                    if (isc.data_scadenza_corso) {
-                                        return isc.data_scadenza_corso >= oggi;
-                                    }
-                                    if (isc.ingressi_totali) {
-                                        return (isc.ingressi_usati || 0) < isc.ingressi_totali;
-                                    }
-                                    return false;
-                                });
+                        // Verifica se membro del direttivo
+                        if (Array.isArray(userRoles) && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r))) {
+                            hasUnconditionalAccess = true;
+                        }
+
+                        // Verifica se istruttore (tramite anagrafica)
+                        if (!hasUnconditionalAccess && currentUserProfile && currentUserProfile.anagrafiche && currentUserProfile.anagrafiche.length > 0) {
+                            try {
+                                const anagId = currentUserProfile.anagrafiche[0].id;
+                                const { data: istrData, error: istrErr } = await supabaseClient
+                                    .from('registro_istruttori')
+                                    .select('id')
+                                    .eq('anagrafica_id', anagId)
+                                    .maybeSingle();
+                                if (istrData) hasUnconditionalAccess = true;
+                            } catch (e) {
+                                console.error("Errore verifica istruttore per Nestore:", e);
                             }
-                        } catch (errNst) {
-                            console.error("Errore verifica corso per Nestore:", errNst);
+                        }
+
+                        if (hasUnconditionalAccess) {
+                            haCorsoAttivoNestore = true;
+                        } else {
+                            try {
+                                const oggi = new Date().toISOString().split('T')[0];
+                                const { data: iscrizioniUtente, error: errIsc } = await supabaseClient
+                                    .from('iscrizioni_eventi')
+                                    .select('id, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, eventi!inner(tipo)')
+                                    .eq('utente_id', currentUser.id)
+                                    .eq('eventi.tipo', 'corso')
+                                    .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
+
+                                if (!errIsc && Array.isArray(iscrizioniUtente) && iscrizioniUtente.length > 0) {
+                                    haCorsoAttivoNestore = iscrizioniUtente.some(isc => {
+                                        if (isc.data_scadenza_corso) {
+                                            return isc.data_scadenza_corso >= oggi;
+                                        }
+                                        if (isc.ingressi_totali) {
+                                            return (isc.ingressi_usati || 0) < isc.ingressi_totali;
+                                        }
+                                        return false;
+                                    });
+                                }
+                            } catch (errNst) {
+                                console.error("Errore verifica corso per Nestore:", errNst);
+                            }
                         }
 
                         if (haCorsoAttivoNestore) {

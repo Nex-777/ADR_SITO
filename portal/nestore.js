@@ -71,6 +71,24 @@ async function initNestore() {
         }
 
         const isAuthorizedAdmin = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente'].includes(r));
+        const isBoardMember = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+        
+        let isIstruttore = false;
+        if (!isBoardMember && profile.anagrafiche && profile.anagrafiche.length > 0) {
+            try {
+                const anagId = profile.anagrafiche[0].id;
+                const { data: istrData } = await supabaseClient
+                    .from('registro_istruttori')
+                    .select('id')
+                    .eq('anagrafica_id', anagId)
+                    .maybeSingle();
+                if (istrData) isIstruttore = true;
+            } catch (e) {
+                console.error("Errore verifica istruttore in nestore:", e);
+            }
+        }
+
+        const hasUnconditionalAccess = isBoardMember || isIstruttore;
 
         if (impersonateId && isAuthorizedAdmin) {
             currentUser = { ...currentUser, id: impersonateId };
@@ -87,7 +105,7 @@ async function initNestore() {
         document.getElementById('nst-user-name').textContent = nomeCompleto;
 
         // Predisposizione View Switcher per Admin / Coach (Fase 2)
-        if (isAuthorizedAdmin) {
+        if (hasUnconditionalAccess) {
             const switcher = document.getElementById('nst-view-switcher');
             if (switcher) switcher.classList.remove('nst-hidden');
         }
@@ -111,8 +129,8 @@ async function initNestore() {
             return false;
         });
 
-        // Se non è admin e non ha corsi validi, blocca l'accesso
-        if (!isAuthorizedAdmin && corsiValidi.length === 0) {
+        // Se non ha accesso incondizionato e non ha corsi validi, blocca l'accesso
+        if (!hasUnconditionalAccess && corsiValidi.length === 0) {
             console.warn("Utente senza corsi continuativi attivi. Reindirizzamento...");
             window.location.href = "dashboard.html?nestore_blocked=1";
             return;
@@ -122,7 +140,11 @@ async function initNestore() {
             const nomeCorso = corsiValidi[0].eventi?.titolo || 'CORSO ATTIVO';
             document.getElementById('nst-user-course').textContent = nomeCorso.toUpperCase();
         } else {
-            document.getElementById('nst-user-course').textContent = 'MODALITÀ ADMIN';
+            let labelText = 'MODALITÀ ADMIN';
+            if (!isAuthorizedAdmin) {
+                labelText = isIstruttore ? 'ISTRUTTORE' : 'DIRETTIVO';
+            }
+            document.getElementById('nst-user-course').textContent = labelText;
         }
 
         // 4. Carica Preferenze Utente

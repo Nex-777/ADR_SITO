@@ -3007,3 +3007,7 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ## [2026-08-27] patch | epika.js
 - Fix: Rimosse colonne inesistenti (es. attivo, ordine) e filtri errati (.eq('attivo', true)) dalle query Supabase del grafo, introdotte per errore precedentemente, ripristinando il caricamento corretto (v1.05.06).
+
+## [2026-09-08] ingest | Accesso Nestore Direttivo/Istruttori
+- Aggiunta policy RLS su registro_istruttori per lettura personale.
+- Modificati portal/dashboard.js e portal/nestore.js per permettere l'accesso incondizionato a Nestore per Direttivo e Istruttori.
