@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-09] fix | Risoluzione Duplicazione e Balbuzie Input Vocale Nestore (Opzione A)
+- **Frontend Speech-to-Text (`portal/nestore.js`)**:
+  - Risolto bug critico di duplicazione ricorsiva causato dal loop a indice zero su frammenti provvisori (`interimResults`).
+  - Adottata **Opzione A**: impostato `speechRecognizer.interimResults = false` mantenendo `continuous = true`. Il browser elabora ed emette solo token definitivi e consolidati, azzerando le ripetizioni parziali in tempo reale.
+  - Il loop di elaborazione in `onresult` parte ora rigorosamente da `event.resultIndex`.
+  - Introdotto accumulatore di sessione `testoTrascrittoSessione` separato da `testoBaseInputVocale` con filtro anti-duplicazione dei chunk consecutivi identici (specifico per quirk Chrome Android).
+- **Validazione & Test**: Tutti i test Vitest (5/5) passati.
+
+---
+
 ## [2026-09-09] fix | Tono Diretto, Calcolo Calorie Pasti, Validazione Dati Incompleti e Dettatura Vocale Continua Nestore
 - **Backend AI Prompt Engineering (`api/nestore-chat.js`)**:
   - Eliminati slogan motivazionali ed enfasi cheerleader (`Avanti tutta! 💪`, `Ottimo lavoro!`). Risposte di conferma conformate allo standard secco: `Registrato: [riepilogo sintetico del dato].`

@@ -1053,6 +1053,7 @@ function annullaConfermaDati(btn) {
 // GESTIONE INPUT VOCALE (Web Speech API)
 // ---------------------------------------------------------------------------
 let testoBaseInputVocale = '';
+let testoTrascrittoSessione = '';
 
 function inizializzaRiconoscimentoVocale() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1068,35 +1069,32 @@ function inizializzaRiconoscimentoVocale() {
         speechRecognizer = new SpeechRecognition();
         speechRecognizer.lang = 'it-IT';
         speechRecognizer.continuous = true; // Ascolto continuo senza interruzione anticipata
-        speechRecognizer.interimResults = true;
+        speechRecognizer.interimResults = false; // Opzione A: solo risultati consolidati (elimina eco e duplicazioni)
 
         speechRecognizer.onstart = () => {
             isRecordingVoice = true;
+            testoTrascrittoSessione = '';
             if (micBtn) micBtn.classList.add('nst-recording');
         };
 
         speechRecognizer.onresult = (event) => {
-            let finale = '';
-            let provvisorio = '';
-            for (let i = 0; i < event.results.length; i++) {
-                const chunk = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finale += chunk + ' ';
-                } else {
-                    provvisorio += chunk;
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const res = event.results[i];
+                if (res.isFinal || !speechRecognizer.interimResults) {
+                    const chunk = (res[0] && res[0].transcript ? res[0].transcript : '').trim();
+                    if (chunk) {
+                        // Protezione anti-duplicazione per bug noti di Chrome/Android
+                        if (!testoTrascrittoSessione.endsWith(chunk)) {
+                            testoTrascrittoSessione = (testoTrascrittoSessione ? testoTrascrittoSessione + ' ' : '') + chunk;
+                        }
+                    }
                 }
             }
 
-            const parlato = (finale + provvisorio).trim();
             const input = document.getElementById('nst-chat-input');
             if (input) {
-                if (testoBaseInputVocale && parlato) {
-                    input.value = testoBaseInputVocale + ' ' + parlato;
-                } else if (parlato) {
-                    input.value = parlato;
-                } else {
-                    input.value = testoBaseInputVocale;
-                }
+                const testoCompleto = [testoBaseInputVocale, testoTrascrittoSessione].filter(Boolean).join(' ');
+                input.value = testoCompleto;
             }
         };
 
@@ -1111,6 +1109,10 @@ function inizializzaRiconoscimentoVocale() {
         speechRecognizer.onend = () => {
             isRecordingVoice = false;
             if (micBtn) micBtn.classList.remove('nst-recording');
+            const input = document.getElementById('nst-chat-input');
+            if (input) {
+                testoBaseInputVocale = input.value.trim();
+            }
         };
     } catch (e) {
         console.error("Errore setup SpeechRecognition:", e);
@@ -1137,6 +1139,7 @@ function toggleInputVocale() {
             } else {
                 testoBaseInputVocale = '';
             }
+            testoTrascrittoSessione = '';
             speechRecognizer.start();
         } catch (e) {
             console.warn("Errore start SpeechRecognizer:", e);
