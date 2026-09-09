@@ -1052,6 +1052,8 @@ function annullaConfermaDati(btn) {
 // ---------------------------------------------------------------------------
 // GESTIONE INPUT VOCALE (Web Speech API)
 // ---------------------------------------------------------------------------
+let testoBaseInputVocale = '';
+
 function inizializzaRiconoscimentoVocale() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const micBtn = document.getElementById('nst-mic-btn');
@@ -1065,7 +1067,7 @@ function inizializzaRiconoscimentoVocale() {
     try {
         speechRecognizer = new SpeechRecognition();
         speechRecognizer.lang = 'it-IT';
-        speechRecognizer.continuous = false;
+        speechRecognizer.continuous = true; // Ascolto continuo senza interruzione anticipata
         speechRecognizer.interimResults = true;
 
         speechRecognizer.onstart = () => {
@@ -1074,18 +1076,36 @@ function inizializzaRiconoscimentoVocale() {
         };
 
         speechRecognizer.onresult = (event) => {
-            let trascrizione = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                trascrizione += event.results[i][0].transcript;
+            let finale = '';
+            let provvisorio = '';
+            for (let i = 0; i < event.results.length; i++) {
+                const chunk = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finale += chunk + ' ';
+                } else {
+                    provvisorio += chunk;
+                }
             }
+
+            const parlato = (finale + provvisorio).trim();
             const input = document.getElementById('nst-chat-input');
-            if (input) input.value = trascrizione;
+            if (input) {
+                if (testoBaseInputVocale && parlato) {
+                    input.value = testoBaseInputVocale + ' ' + parlato;
+                } else if (parlato) {
+                    input.value = parlato;
+                } else {
+                    input.value = testoBaseInputVocale;
+                }
+            }
         };
 
         speechRecognizer.onerror = (event) => {
             console.warn("Speech recognition error:", event.error);
-            isRecordingVoice = false;
-            if (micBtn) micBtn.classList.remove('nst-recording');
+            if (event.error !== 'no-speech') {
+                isRecordingVoice = false;
+                if (micBtn) micBtn.classList.remove('nst-recording');
+            }
         };
 
         speechRecognizer.onend = () => {
@@ -1100,11 +1120,23 @@ function inizializzaRiconoscimentoVocale() {
 function toggleInputVocale() {
     if (!speechRecognizer) return;
 
+    const micBtn = document.getElementById('nst-mic-btn');
+    const input = document.getElementById('nst-chat-input');
+
     if (isRecordingVoice) {
         speechRecognizer.stop();
         isRecordingVoice = false;
+        if (micBtn) micBtn.classList.remove('nst-recording');
+        if (input) {
+            testoBaseInputVocale = input.value.trim();
+        }
     } else {
         try {
+            if (input) {
+                testoBaseInputVocale = input.value.trim();
+            } else {
+                testoBaseInputVocale = '';
+            }
             speechRecognizer.start();
         } catch (e) {
             console.warn("Errore start SpeechRecognizer:", e);
@@ -1220,3 +1252,4 @@ function switchMobileTab(tab) {
 
 window.impostaRangeCard = impostaRangeCard;
 window.switchMobileTab = switchMobileTab;
+window.toggleInputVocale = toggleInputVocale;

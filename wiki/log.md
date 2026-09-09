@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-09] fix | Tono Diretto, Calcolo Calorie Pasti, Validazione Dati Incompleti e Dettatura Vocale Continua Nestore
+- **Backend AI Prompt Engineering (`api/nestore-chat.js`)**:
+  - Eliminati slogan motivazionali ed enfasi cheerleader (`Avanti tutta! 💪`, `Ottimo lavoro!`). Risposte di conferma conformate allo standard secco: `Registrato: [riepilogo sintetico del dato].`
+  - Implementato il protocollo di validazione dati incompleti: se un alimento o ingrediente viene comunicato senza momento del pasto (colazione, pranzo, cena, snack), Nestore non salva un pasto parziale da poche calorie ma interroga l'atleta per completare le informazioni.
+  - Implementato l'accumulo multi-turn del pasto: al completamento degli ingredienti, Nestore calcola l'apporto calorico e macro cumulativo sull'intero pasto, prevenendo registrazioni isolate e stime errate.
+  - Inserita tabella standard di riferimento nutrizionale per alimenti comuni nel System Prompt (pane, uova, zucchine, pasta, carne, pesce, olio) e ridotta la temperatura di generazione a `0.2` per massima precisione deterministica.
+- **Frontend Speech-to-Text (`portal/nestore.js`)**:
+  - Impostato `speechRecognizer.continuous = true` per mantenere attivo l'ascolto vocale senza interruzioni premature dopo pause brevi.
+  - Risolto il bug di cancellazione del testo: la nuova dettatura viene concatenata in coda al contenuto esistente della textarea (`testoBaseInputVocale`), consentendo registrazioni vocali multiple e modifiche miste testo/voce.
+- **Validazione & Test**: Tutti i test unitari passano (5/5). Validazione empirica multi-turn con script di prova completata con successo.
+
+---
+
 ## [2026-09-09] feature | Grafici Interattivi Chart.js e Filtri Temporali per Dashboard Nestore
 - **Frontend UI & Grafici (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Integrata libreria vettoriale Chart.js v4 via CDN autorizzata in CSP (`cdn.jsdelivr.net`).
