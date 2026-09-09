@@ -467,6 +467,25 @@ async function renderGraficoPesiMisure() {
             }
         });
 
+        // Genera Tabella Storico Pesi
+        const tbody = document.getElementById('nst-tbody-peso');
+        if (tbody) {
+            tbody.innerHTML = '';
+            // Iteriamo all'incontrario per avere il più recente in cima
+            for (let i = data.length - 1; i >= 0; i--) {
+                const item = data[i];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${formatDateShort(item.data_rilevazione)}</td>
+                    <td style="color: var(--nst-cyan); font-weight: 600;">${item.peso_kg ? Number(item.peso_kg).toFixed(1) : '-'}</td>
+                    <td>${item.vita_cm || '-'}</td>
+                    <td>${item.torace_cm || '-'}</td>
+                    <td>${item.braccio_dx_cm || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
     } catch (e) {
         console.error("Errore grafico pesi e misure:", e);
     }
@@ -580,6 +599,24 @@ async function renderGraficoAllenamenti() {
                 }
             }
         });
+
+        // Genera Tabella Storico Allenamenti
+        const tbody = document.getElementById('nst-tbody-allenamenti');
+        if (tbody) {
+            tbody.innerHTML = '';
+            for (let i = data.length - 1; i >= 0; i--) {
+                const item = data[i];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${formatDateShort(item.data_allenamento)}</td>
+                    <td style="color: var(--nst-lime); font-weight: 600;">${(item.corso_disciplina || 'Workout').toUpperCase()}</td>
+                    <td>${item.durata_minuti || '-'}</td>
+                    <td>${item.rpe_fatica ? item.rpe_fatica + '/10' : '-'}</td>
+                    <td style="max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.note || '')}">${escapeHtml(item.note || '')}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
 
     } catch (e) {
         console.error("Errore grafico allenamenti:", e);
@@ -753,6 +790,28 @@ async function renderGraficoDieta() {
                 }
             }
         });
+
+        // Genera Tabella Storico Pasti
+        const tbody = document.getElementById('nst-tbody-dieta');
+        if (tbody) {
+            tbody.innerHTML = '';
+            for (let i = data.length - 1; i >= 0; i--) {
+                const item = data[i];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${formatDateShort(item.data_pasto)}</td>
+                    <td style="color: #f59e0b; font-weight: 600; text-transform: capitalize;">${escapeHtml(item.tipo_pasto || '-')}</td>
+                    <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.descrizione || '')}">${escapeHtml(item.descrizione || '')}</td>
+                    <td>${item.calorie_stimate || '-'}</td>
+                    <td style="font-size: 10px; color: var(--nst-text-muted);">
+                        <span style="color: var(--nst-cyan);">${item.proteine_g || 0}</span> / 
+                        <span style="color: var(--nst-amber);">${item.carboidrati_g || 0}</span> / 
+                        <span style="color: var(--nst-lime);">${item.grassi_g || 0}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
 
     } catch (e) {
         console.error("Errore grafico dieta:", e);
@@ -1231,28 +1290,43 @@ function switchNestoreView(val) {
 }
 
 // ---------------------------------------------------------------------------
-// GESTIONE TAB MOBILE (Opzione B: Chat vs Dashboard)
+// GESTIONE PANNELLI SPA (Desktop Sidebar / Mobile Tabs)
 // ---------------------------------------------------------------------------
-function switchMobileTab(tab) {
-    const chatBtn = document.getElementById('nst-tab-btn-chat');
-    const dashBtn = document.getElementById('nst-tab-btn-dash');
-    const chatPanel = document.getElementById('nst-chat-panel');
-    const dashPanel = document.getElementById('nst-dashboard-panel');
+function switchNestorePanel(panelId) {
+    // Lista pannelli
+    const panels = ['chat', 'peso', 'allenamenti', 'dieta'];
+    
+    panels.forEach(p => {
+        // Nascondi / Mostra Main Panel
+        const panelEl = document.getElementById(`nst-${p}-panel`);
+        if (panelEl) {
+            if (p === panelId) {
+                panelEl.classList.remove('nst-hidden');
+            } else {
+                panelEl.classList.add('nst-hidden');
+            }
+        }
+        
+        // Aggiorna stato active su Desktop Sidebar
+        const navItem = document.getElementById(`nst-nav-${p}`);
+        if (navItem) {
+            if (p === panelId) navItem.classList.add('active');
+            else navItem.classList.remove('active');
+        }
 
-    if (tab === 'dashboard') {
-        if (dashBtn) dashBtn.classList.add('active');
-        if (chatBtn) chatBtn.classList.remove('active');
-        if (dashPanel) dashPanel.classList.add('nst-mobile-active');
-        if (chatPanel) chatPanel.classList.add('nst-mobile-hidden');
-    } else {
-        if (chatBtn) chatBtn.classList.add('active');
-        if (dashBtn) dashBtn.classList.remove('active');
-        if (chatPanel) chatPanel.classList.remove('nst-mobile-hidden');
-        if (dashPanel) dashPanel.classList.remove('nst-mobile-active');
+        // Aggiorna stato active su Mobile Tab Bar
+        const tabBtn = document.getElementById(`nst-tab-btn-${p}`);
+        if (tabBtn) {
+            if (p === panelId) tabBtn.classList.add('active');
+            else tabBtn.classList.remove('active');
+        }
+    });
+
+    if (panelId === 'chat') {
         scrollChatToBottom();
     }
 }
 
 window.impostaRangeCard = impostaRangeCard;
-window.switchMobileTab = switchMobileTab;
+window.switchNestorePanel = switchNestorePanel;
 window.toggleInputVocale = toggleInputVocale;

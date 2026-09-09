@@ -92,21 +92,20 @@ Chat history between athlete and NESTORE assistant.
 
 ## 5. Visual Analytics & Responsive UI (`portal/nestore.*`)
 
-### 5.1. Interactive Chart.js Visualizations
-Integrated via CDN (`https://cdn.jsdelivr.net/npm/chart.js`, authorized in CSP):
-1. **Weight & Body Dimensions (Multi-Line Chart)**:
-   - Dual Y-Axis: Left axis for Weight (kg) in Cyan `#00e5ff`; Right axis for Waist, Chest, and Arm (cm) in Lime/Gold/Magenta.
-   - Interactive series toggling and dark-themed tooltips.
-2. **Workouts Timeline (Scatter / Frequency Line)**:
-   - Chronologically tracks training dates with illuminated points and detailed tooltips (discipline, duration, RPE).
-3. **Daily Nutrition (Stacked Bar Chart in Kcal)**:
-   - Stacks daily Carbs ($\times 4\text{ kcal}$), Protein ($\times 4\text{ kcal}$), and Fats ($\times 9\text{ kcal}$) into a single daily energy bar, matching the athlete's target breakdown.
-4. **Time Horizon Filter Chips**:
-   - Independent `7G`, `14G`, `30G`, `ALL` selectors on every card, defaulting to 30 days.
+### 5.1. Single Page Application (SPA) Panels & History
+Nestore is built as an SPA, transitioning seamlessly between Chat and Data visualizations:
+- **Desktop**: A persistent left-side navigation menu enables switching between Chat, Weight, Workouts, and Diet.
+- **Dedicated Data Panels**: Each metric has a dedicated full-width panel containing an expanded Chart.js visualization (350px height) and a detailed History Table with raw tracking data.
+- **Interactive Chart.js Visualizations** (integrated via CDN):
+  1. **Weight & Body Dimensions (Multi-Line Chart)**: Dual Y-Axis (Weight vs Circumferences).
+  2. **Workouts Timeline (Line Chart)**: Tracks training duration and RPE over time.
+  3. **Daily Nutrition (Stacked Bar Chart)**: Stacks daily Carbs, Protein, and Fats (in kcal).
+- **Time Horizon Filter Chips**: `7G`, `14G`, `30G`, `ALL` selectors for all charts.
 
 ### 5.2. Mobile Tab Switcher Layout
-- On viewports $\le 1024\text{px}$, a sticky header bar toggles between **`💬 CHAT ASSISTANT`** and **`📊 DASHBOARD KPI`**.
-- Chat is presented full-height on entry (`calc(100dvh - 145px)`), ensuring instant mobile usability without forcing athletes to scroll past the dashboard cards.
+- On viewports $\le 1024\text{px}$, the desktop sidebar is hidden.
+- A sticky horizontal scrollable header bar provides 4 direct tabs: **`CHAT`**, **`PESO`**, **`ALLENAMENTI`**, **`DIETA`**.
+- Chat is presented full-height on entry, ensuring instant mobile usability, and the "Controllo Preventivo" toggle is rendered inside the sidebar block but remains available via structural CSS/JS fallbacks.
 
 ---
 

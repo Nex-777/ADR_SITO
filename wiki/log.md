@@ -3068,3 +3068,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 ## [2026-09-08] ingest | Accesso Nestore Direttivo/Istruttori
 - Aggiunta policy RLS su registro_istruttori per lettura personale.
 - Modificati portal/dashboard.js e portal/nestore.js per permettere l'accesso incondizionato a Nestore per Direttivo e Istruttori.
+# #   [ 2 0 2 6 - 0 9 - 0 9 ]   i n g e s t   |   N e s t o r e   U I   R e f a c t o r i n g   S P A 
+ -   I m p l e m e n t a t o   m e n u   d i   n a v i g a z i o n e   l a t e r a l e   d e s k t o p   c o n   p a n n e l l i   d e d i c a t i   p e r   P e s o ,   A l l e n a m e n t i   e   D i e t a . 
+ -   A g g i u n t e   T a b e l l e   C r o n o l o g i c h e   ( S t o r i c o   R i l e v a z i o n i )   d i n a m i c h e   s o t t o   a i   g r a f i c i . 
+ -   A g g i o r n a t a   M o b i l e   T a b   B a r   c o n   s c o r r i m e n t o   o r i z z o n t a l e   a   4   v o c i .  
+ 

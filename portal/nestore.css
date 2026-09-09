@@ -187,7 +187,7 @@ body.nst-body {
     .nst-mobile-tab-bar {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 10px;
         padding: 10px 14px;
         background: var(--nst-bg-alt);
@@ -195,11 +195,18 @@ body.nst-body {
         position: sticky;
         top: 0;
         z-index: 30;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+    }
+
+    .nst-mobile-tab-bar::-webkit-scrollbar {
+        display: none;
     }
 
     .nst-mobile-tab-btn {
-        flex: 1;
-        max-width: 220px;
+        flex: 0 0 auto;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -235,17 +242,9 @@ body.nst-body {
         gap: 14px;
     }
 
-    /* Su mobile, di default la Dashboard KPI è nascosta e la Chat è visibile per prima */
+    /* Su mobile nascondiamo tutto il pannello dashboard laterale TRANNE la card Controllo Preventivo
+       che sposteremo visivamente in coda al nst-chat-panel se usassimo JS, ma per CSS puro la mostriamo come display:flex order: 99 */
     .nst-dashboard-panel {
-        display: none !important;
-    }
-
-    .nst-dashboard-panel.nst-mobile-active {
-        display: flex !important;
-        height: auto;
-    }
-
-    .nst-chat-panel.nst-mobile-hidden {
         display: none !important;
     }
 }
@@ -266,6 +265,106 @@ body.nst-body {
 .nst-dashboard-panel::-webkit-scrollbar-thumb {
     background: var(--nst-surface-elevated);
     border-radius: 4px;
+}
+
+/* Sidebar Menu Navigazione */
+.nst-sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.nst-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border);
+    border-radius: 8px;
+    color: var(--nst-text-muted);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.nst-nav-item:hover {
+    border-color: rgba(0, 229, 255, 0.4);
+    color: #fff;
+    background: rgba(0, 229, 255, 0.05);
+}
+
+.nst-nav-item.active {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--nst-cyan);
+    color: var(--nst-cyan);
+    box-shadow: 0 0 12px var(--nst-cyan-dim);
+}
+
+/* Pannelli Centrali & Utility */
+.nst-data-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.nst-hidden {
+    display: none !important;
+}
+
+/* Container Chart.js Espanso */
+.nst-chart-container-expanded {
+    position: relative;
+    width: 100%;
+    height: 350px;
+    margin: 6px 0 16px 0;
+}
+
+/* Tabelle Storico */
+.nst-history-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.nst-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+.nst-history-table th {
+    background: var(--nst-surface-elevated);
+    color: #fff;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 12px;
+    position: sticky;
+    top: 0;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nst-history-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.nst-history-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.nst-history-table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
 }
 
 /* Cards */
