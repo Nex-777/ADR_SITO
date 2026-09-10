@@ -819,43 +819,144 @@ async function renderGraficoDieta() {
 }
 
 // ---------------------------------------------------------------------------
-// GESTIONE CHAT
+// GESTIONE CHAT (Flusso Invertito Top-Down: più recente in alto, input fisso in cima)
 // ---------------------------------------------------------------------------
+let currentChatOffset = 0;
+const CHAT_PAGE_SIZE = 35;
+const CHAT_MORE_SIZE = 20;
+
+function ancoraChatInAlto() {
+    const container = document.getElementById('nst-chat-messages');
+    if (container) {
+        container.scrollTop = 0;
+    }
+}
+
+function gestisciInputConteggio(textarea) {
+    const counter = document.getElementById('nst-char-counter');
+    const sendBtn = document.getElementById('nst-send-btn');
+    if (!textarea) return;
+    const len = textarea.value.length;
+    const max = 1500;
+
+    if (counter) {
+        counter.textContent = `${len}/${max}`;
+        if (len >= max) {
+            counter.className = 'nst-char-counter limit';
+        } else if (len >= max * 0.85) {
+            counter.className = 'nst-char-counter warning';
+        } else {
+            counter.className = 'nst-char-counter';
+        }
+    }
+
+    if (sendBtn) {
+        sendBtn.disabled = len > max;
+    }
+}
+
 async function caricaCronologiaChat() {
     const container = document.getElementById('nst-chat-messages');
+    let loadMoreBar = document.getElementById('nst-load-more-bar');
+    
+    // Svuota i messaggi preservando il blocco caricamento storico in fondo
     container.innerHTML = '';
+    if (!loadMoreBar) {
+        loadMoreBar = document.createElement('div');
+        loadMoreBar.id = 'nst-load-more-bar';
+        loadMoreBar.className = 'nst-load-more-bar nst-hidden';
+        loadMoreBar.innerHTML = `
+            <button type="button" class="nst-btn-load-more" id="nst-load-more-btn" onclick="caricaMessaggiPrecedenti()">
+                <span class="material-symbols-outlined" style="font-size: 15px;">history</span>
+                Carica messaggi precedenti
+            </button>
+        `;
+    }
+    container.appendChild(loadMoreBar);
+    loadMoreBar.classList.add('nst-hidden');
+    currentChatOffset = 0;
 
     try {
+        // Preleva gli ultimi 35 messaggi ordinati in ordine decrescente (il più recente per primo)
         const { data, error } = await supabaseClient
             .from('nestore_chat_messaggi')
             .select('*')
             .eq('utente_id', currentUser.id)
-            .order('creato_il', { ascending: true })
-            .limit(40);
+            .order('creato_il', { ascending: false })
+            .limit(CHAT_PAGE_SIZE);
 
         if (error) {
             console.error("Errore caricamento cronologia chat:", error);
         }
 
         if (!data || data.length === 0) {
-            // Messaggio di benvenuto se prima conversazione
+            // Messaggio di benvenuto se prima conversazione (in cima)
             renderMessaggioUI({
                 ruolo: 'assistant',
                 contenuto: `Ciao ${currentUserProfile?.nome || 'Atleta'}! Sono **NESTORE**, il tuo assistente sportivo e nutrizionale ad Adrenalina Club.\n\nPuoi parlarmi a voce con il microfono, scrivermi o mandarmi la foto di un piatto o della tua scheda.\n\nEsempi di cosa posso fare:\n- *"Oggi peso 79.4 kg e la vita misura 84 cm"*\n- *"A pranzo ho mangiato 120g di pasta al pomodoro e 150g di petto di pollo"*\n- *"Oggi allenamento Strongman: log press 4x6 a 70kg e deadlift"*`,
                 creato_il: new Date().toISOString()
-            });
+            }, 'beforeLoadMore');
         } else {
-            data.forEach(m => renderMessaggioUI(m));
+            // Render dei messaggi: data[0] (più recente) in cima, seguiti dai più vecchi verso il basso
+            data.forEach(m => renderMessaggioUI(m, 'beforeLoadMore'));
+            currentChatOffset = data.length;
+
+            // Mostra pulsante caricamento storico se abbiamo raggiunto la dimensione di pagina
+            if (data.length === CHAT_PAGE_SIZE) {
+                loadMoreBar.classList.remove('nst-hidden');
+            }
         }
 
-        scrollChatToBottom();
+        ancoraChatInAlto();
     } catch (e) {
         console.error("Eccezione cronologia chat:", e);
     }
 }
 
-function renderMessaggioUI(msg) {
+async function caricaMessaggiPrecedenti() {
+    const loadBtn = document.getElementById('nst-load-more-btn');
+    const loadMoreBar = document.getElementById('nst-load-more-bar');
+    if (!loadBtn) return;
+
+    loadBtn.disabled = true;
+    loadBtn.innerHTML = `<span class="nst-loader-inline" style="width:12px; height:12px;"></span> Caricamento...`;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('nestore_chat_messaggi')
+            .select('*')
+            .eq('utente_id', currentUser.id)
+            .order('creato_il', { ascending: false })
+            .range(currentChatOffset, currentChatOffset + CHAT_MORE_SIZE - 1);
+
+        if (error) {
+            console.error("Errore caricamento messaggi precedenti:", error);
+            loadBtn.disabled = false;
+            loadBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 15px;">history</span> Riprova`;
+            return;
+        }
+
+        if (data && data.length > 0) {
+            data.forEach(m => renderMessaggioUI(m, 'beforeLoadMore'));
+            currentChatOffset += data.length;
+        }
+
+        if (!data || data.length < CHAT_MORE_SIZE) {
+            if (loadMoreBar) loadMoreBar.classList.add('nst-hidden');
+        } else {
+            loadBtn.disabled = false;
+            loadBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 15px;">history</span> Carica messaggi precedenti`;
+        }
+    } catch (e) {
+        console.error("Eccezione caricamento precedenti:", e);
+        loadBtn.disabled = false;
+        loadBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 15px;">history</span> Carica messaggi precedenti`;
+    }
+}
+
+function renderMessaggioUI(msg, position = 'prepend') {
     const container = document.getElementById('nst-chat-messages');
+    const loadMoreBar = document.getElementById('nst-load-more-bar');
     const msgDiv = document.createElement('div');
     msgDiv.className = `nst-msg ${msg.ruolo === 'user' ? 'user' : 'assistant'}`;
 
@@ -884,14 +985,21 @@ function renderMessaggioUI(msg) {
         renderCardConfermaInMessage(msgDiv, msg.metadata.dati_estratti, msg.id);
     }
 
-    container.appendChild(msgDiv);
-    scrollChatToBottom();
-}
-
-function scrollChatToBottom() {
-    const container = document.getElementById('nst-chat-messages');
-    if (container) {
-        container.scrollTop = container.scrollHeight;
+    // Posizionamento nel DOM
+    if (position === 'prepend') {
+        // Inserisci in cima assoluta (subito sotto l'input bar)
+        if (container.firstChild) {
+            container.insertBefore(msgDiv, container.firstChild);
+        } else {
+            container.appendChild(msgDiv);
+        }
+    } else {
+        // Inserisci in fondo allo stream ma prima della barra "Carica precedenti"
+        if (loadMoreBar && loadMoreBar.parentNode === container) {
+            container.insertBefore(msgDiv, loadMoreBar);
+        } else {
+            container.appendChild(msgDiv);
+        }
     }
 }
 
@@ -906,28 +1014,35 @@ async function inviaMessaggioChat() {
 
     if (!testo && !allegato) return;
 
-    // Disabilita UI
+    // Controllo massimale caratteri (1500)
+    if (testo.length > 1500) {
+        alert("Il messaggio supera il limite massimo di 1500 caratteri.");
+        return;
+    }
+
+    // Disabilita UI e reset input
     input.value = '';
+    gestisciInputConteggio(input);
     sendBtn.disabled = true;
 
-    // Render immediato messaggio utente in chat
+    // Render immediato messaggio utente in cima alla chat
     renderMessaggioUI({
         ruolo: 'user',
         contenuto: testo || '(Foto allegata)',
         foto_url: allegato ? allegato.base64 : null,
         creato_il: new Date().toISOString()
-    });
+    }, 'prepend');
 
     rimuoviFotoAllegata();
 
-    // Placeholder di risposta in attesa
+    // Placeholder di risposta in cima (sopra il messaggio utente)
     const container = document.getElementById('nst-chat-messages');
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'nst-msg assistant';
     loadingDiv.id = 'nst-msg-loading';
     loadingDiv.innerHTML = `<div><span class="nst-loader-inline"></span> Nestore sta analizzando...</div>`;
-    container.appendChild(loadingDiv);
-    scrollChatToBottom();
+    container.insertBefore(loadingDiv, container.firstChild);
+    ancoraChatInAlto();
 
     try {
         // Chiamata all'API Serverless Vercel
@@ -955,20 +1070,23 @@ async function inviaMessaggioChat() {
                 ruolo: 'assistant',
                 contenuto: errData.error || "Si è verificato un errore di connessione con Nestore. Riprova tra poco.",
                 creato_il: new Date().toISOString()
-            });
+            }, 'prepend');
+            ancoraChatInAlto();
             return;
         }
 
         const data = await response.json();
 
-        // Render risposta
+        // Render risposta di Nestore in cima
         renderMessaggioUI({
             id: data.messaggio_id,
             ruolo: 'assistant',
             contenuto: data.reply || "Dati ricevuti!",
             metadata: data.extraction_payload ? { dati_estratti: data.extraction_payload, salvato: data.salvato_direttamente } : null,
             creato_il: new Date().toISOString()
-        });
+        }, 'prepend');
+
+        ancoraChatInAlto();
 
         // Se salvataggio diretto o estrazione completata, ricarica i KPI
         if (data.salvato_direttamente) {
@@ -984,7 +1102,8 @@ async function inviaMessaggioChat() {
             ruolo: 'assistant',
             contenuto: "Errore di comunicazione con il server. Verifica la connessione.",
             creato_il: new Date().toISOString()
-        });
+        }, 'prepend');
+        ancoraChatInAlto();
     } finally {
         sendBtn.disabled = false;
         input.focus();
@@ -1152,8 +1271,12 @@ function inizializzaRiconoscimentoVocale() {
 
             const input = document.getElementById('nst-chat-input');
             if (input) {
-                const testoCompleto = [testoBaseInputVocale, testoTrascrittoSessione].filter(Boolean).join(' ');
+                let testoCompleto = [testoBaseInputVocale, testoTrascrittoSessione].filter(Boolean).join(' ');
+                if (testoCompleto.length > 1500) {
+                    testoCompleto = testoCompleto.substring(0, 1500);
+                }
                 input.value = testoCompleto;
+                gestisciInputConteggio(input);
             }
         };
 
@@ -1171,6 +1294,7 @@ function inizializzaRiconoscimentoVocale() {
             const input = document.getElementById('nst-chat-input');
             if (input) {
                 testoBaseInputVocale = input.value.trim();
+                gestisciInputConteggio(input);
             }
         };
     } catch (e) {
@@ -1323,10 +1447,13 @@ function switchNestorePanel(panelId) {
     });
 
     if (panelId === 'chat') {
-        scrollChatToBottom();
+        ancoraChatInAlto();
     }
 }
 
 window.impostaRangeCard = impostaRangeCard;
 window.switchNestorePanel = switchNestorePanel;
 window.toggleInputVocale = toggleInputVocale;
+window.caricaMessaggiPrecedenti = caricaMessaggiPrecedenti;
+window.gestisciInputConteggio = gestisciInputConteggio;
+window.ancoraChatInAlto = ancoraChatInAlto;

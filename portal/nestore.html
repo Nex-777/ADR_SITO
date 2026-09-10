@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.23">
+    <link rel="stylesheet" href="nestore.css?v=1.05.24">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.23"></script>
+    <script src="config.js?v=1.05.24"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.23</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.24</span>
             </div>
         </div>
 
@@ -253,11 +253,6 @@
                 </div>
             </div>
 
-            <!-- Messaggi della chat -->
-            <div id="nst-chat-messages" class="nst-chat-messages">
-                <!-- Verrà popolato dinamicamente da nestore.js -->
-            </div>
-
             <!-- Barra preview immagine se selezionata -->
             <div id="nst-image-preview-bar" class="nst-preview-bar nst-hidden">
                 <img id="nst-preview-img" src="" alt="Anteprima foto" class="nst-preview-thumb">
@@ -265,7 +260,7 @@
                 <button type="button" onclick="rimuoviFotoAllegata()" style="background:transparent; border:none; color:var(--nst-danger); cursor:pointer; font-size:14px;">✕</button>
             </div>
 
-            <!-- Input bar -->
+            <!-- Input bar (In alto) -->
             <div class="nst-chat-input-bar">
                 <input type="file" id="nst-file-input" accept="image/*" class="nst-hidden" onchange="gestisciFileSelezionato(event)">
 
@@ -275,8 +270,11 @@
                         <span class="material-symbols-outlined" style="font-size: 20px;">add_a_photo</span>
                     </button>
 
-                    <!-- Textarea -->
-                    <textarea id="nst-chat-input" class="nst-textarea" rows="1" placeholder="Scrivi a Nestore, detta con la voce o allega una foto..." onkeydown="gestisciInvioTasto(event)"></textarea>
+                    <!-- Textarea con limite a 1500 caratteri -->
+                    <textarea id="nst-chat-input" class="nst-textarea" rows="1" maxlength="1500" placeholder="Scrivi a Nestore, detta con la voce o allega una foto..." onkeydown="gestisciInvioTasto(event)" oninput="gestisciInputConteggio(this)"></textarea>
+
+                    <!-- Contatore caratteri compatto -->
+                    <span id="nst-char-counter" class="nst-char-counter">0/1500</span>
 
                     <!-- Tasto Microfono -->
                     <button type="button" id="nst-mic-btn" class="nst-btn-tool" onclick="toggleInputVocale()" title="Dettatura vocale">
@@ -289,6 +287,17 @@
                     <span class="material-symbols-outlined" style="font-size: 20px;">send</span>
                 </button>
             </div>
+
+            <!-- Messaggi della chat (Scorrono verso il basso) -->
+            <div id="nst-chat-messages" class="nst-chat-messages">
+                <!-- Verrà popolato dinamicamente da nestore.js: i più recenti in cima -->
+                <div id="nst-load-more-bar" class="nst-load-more-bar nst-hidden">
+                    <button type="button" class="nst-btn-load-more" id="nst-load-more-btn" onclick="caricaMessaggiPrecedenti()">
+                        <span class="material-symbols-outlined" style="font-size: 15px;">history</span>
+                        Carica messaggi precedenti
+                    </button>
+                </div>
+            </div>
         </main>
 
     </div>
@@ -297,6 +306,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.23"></script>
+    <script src="nestore.js?v=1.05.24"></script>
 </body>
 </html>

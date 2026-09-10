@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-10] feature | Inversione Flusso Chat Nestore (Top-Down), Massimali e Paginazione Storico
+- **Frontend Chat UX (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Invertito il layout della chat in paradigma Top-Down: barra di input e anteprima allegati posizionate fisse in alto direttamente sotto l'header.
+  - Flusso messaggi invertito: i messaggi più recenti appaiono in cima subito sotto l'input, spingendo verso il basso la cronologia pregressa.
+  - Scroll ancorato stabilmente a `scrollTop = 0`, azzerando la necessità di scorrere verso il basso per digitare o leggere le nuove risposte.
+  - Implementato massimale di 1500 caratteri lato client con badge contatore dinamico `(X/1500)` e blocco invio in overflow.
+  - Integrato il limite anche nella dettatura vocale con auto-troncamento a 1500 caratteri.
+  - Implementata paginazione storico: caricamento iniziale dei 35 messaggi più recenti e pulsante in fondo alla lista (*"Carica messaggi precedenti"*) per recuperare blocchi di 20 messaggi a ritroso.
+- **Backend AI (`api/nestore-chat.js`)**:
+  - Aggiunta validazione di sicurezza sul payload `message`: rifiuto richieste superiori a 1500 caratteri con HTTP 400.
+  - Risolto bug ordinamento cronologia per Gemini LLM: la query estrae ora i 20 messaggi più recenti in ordine decrescente e li inverte cronologicamente in-memory prima di costruire i turni per l'API.
+- **Validazione & Test**: Aggiornata suite Vitest con mock Supabase e nuovi test di validazione caratteri (7/7 test passati).
+
+---
+
 ## [2026-09-10] fix | Risoluzione Troncamento Token Gemini, Ripristino Grafico Nutrienti e Header Mobile Anti-Overflow
 - **Backend AI (`api/nestore-chat.js`)**:
   - Diagnosticata e risolta la causa radice del troncamento risposte AI: con `maxOutputTokens: 1000`, il ragionamento interno (*thinking tokens*) di Gemini 2.5 Flash saturava ~889 token esaurendo il limite prima di completare il JSON di estrazione (`finishReason: MAX_TOKENS`).

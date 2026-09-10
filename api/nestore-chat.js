@@ -87,6 +87,10 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Messaggio o immagine obbligatori.' });
         }
 
+        if (message && typeof message === 'string' && message.length > 1500) {
+            return res.status(400).json({ error: 'Messaggio troppo lungo. Il limite massimo è di 1500 caratteri.' });
+        }
+
         // 6. Data Odierna e Riferimenti Temporali (Timezone Europe/Rome)
         const adesso = new Date();
         const formatterData = new Intl.DateTimeFormat('it-IT', {
@@ -128,7 +132,7 @@ export default async function handler(req, res) {
             supabaseAdmin.from('nestore_chat_messaggi')
                 .select('ruolo, contenuto, creato_il')
                 .eq('utente_id', utenteId)
-                .order('creato_il', { ascending: true })
+                .order('creato_il', { ascending: false })
                 .limit(20)
         ]);
 
@@ -243,8 +247,8 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
         const contents = [];
         let lastRole = null;
 
-        // Inserimento cronologia recente (ultimi messaggi alternati user / model)
-        const recentMsgs = historyRes.data || [];
+        // Inserimento cronologia recente (ultimi messaggi alternati user / model in ordine cronologico)
+        const recentMsgs = (historyRes.data || []).slice().reverse();
         for (const m of recentMsgs) {
             if (!m.contenuto || typeof m.contenuto !== 'string') continue;
             const geminiRole = m.ruolo === 'assistant' ? 'model' : 'user';
