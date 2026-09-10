@@ -115,7 +115,36 @@ Nestore is built as an SPA, transitioning seamlessly between Chat and Data visua
 
 ---
 
-## 6. Related Concept Pages
+## 6. Cronometro, Tabata & Floating Dock Cross-Page
+
+Aggiunto nella versione **1.05.26**:
+Nestore include un pannello sportivo interattivo ad alta precisione dedicato all'allenamento in sala pesi, rack e conditioning:
+
+### 6.1. Cronometro con Lap e Auto-Stop di Sicurezza a 3 Ore
+- **Misurazione Temporale Assoluta**: Calcolato tramite delta timestamp (`Date.now() - startTimestamp`), azzerando le derive tipiche di `setInterval` e mantenendo precisione al millisecondo anche durante cambio pagina o tab in background.
+- **Rilevazione Giri (Laps)**: Tasto dedicato per registrare parziali (Split) e totali cumulativi con indicatore visivo del giro più veloce (`⚡`) e più lento.
+- **Auto-Stop & Reset a 3 Ore**: Se l'atleta dimentica il cronometro acceso, al raggiungimento di 3 ore esatte (10.800.000 ms) il sistema esegue lo stop automatico, resetta i dati, azzera `localStorage`, emette un buzzer prolungato e mostra un toast di notifica per salvaguardare la sessione.
+
+### 6.2. Tabata & Timer a Intervalli Dinamici
+- **State Machine Multi-Fase**: Ciclo `PREP` (preparazione) $\rightarrow$ `WORK` (lavoro) $\rightarrow$ `REST` (riposo) $\rightarrow$ avanzamento `ROUND` e `SET` $\rightarrow$ `DONE`.
+- **Feedback Acustico Web Audio API**: Beep sinusoidali a 3, 2, 1 secondi prima del cambio fase, buzzer ad alta energia (1200Hz) all'avvio del Work, buzzer medio (650Hz) al riposo, e fanfara di completamento. Zero dipendenze da file audio `.mp3` esterni.
+- **Parametri Personalizzabili & Preset Rapidi**:
+  - Stepper interattivi per Prep (sec), Work (sec), Rest (sec), Rounds, Sets.
+  - Preset preimpostati con un click: *Tabata Classico (20/10 x8)*, *Cardio HIIT (30/15 x10)*, *EMOM (50/10 x5)*, *Forza (40/20 x6)*.
+- **Tasto Salta Fase**: Consente all'atleta di anticipare o saltare il tempo residuo della fase corrente.
+
+### 6.3. Persistenza Cross-Page & Floating Dock (`portal/timer-dock.js`)
+- Lo stato di cronometro e tabata viene serializzato in tempo reale su `localStorage` (`adr_stopwatch_state`, `adr_tabata_state`, `adr_timer_mode`).
+- Se l'utente esce da Nestore o naviga in [`dashboard.html`](portal_dashboard.md) mentre un timer è attivo, compare un **mini-widget fluttuante (Floating Dock)** in basso a destra con:
+  - Display del tempo in tempo reale
+  - Indicatore di fase/modalità (es. `TABATA: WORK`, `CRONOMETRO`)
+  - Tasto Pausa/Riprendi rapido
+  - Tasto Espandi a tutto schermo per riaprire istantaneamente `nestore.html#timer`.
+- Il dock globale gestisce autonomamente il loop temporale e i suoni a scadenza anche al di fuori di Nestore.
+
+---
+
+## 7. Related Concept Pages
 - [Database Schema](database_schema.md)
 - [Portal Dashboard](portal_dashboard.md)
 - [EPIKA Portal Architecture](epika_portal.md)

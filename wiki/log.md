@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-10] feature | Introduzione Cronometro, Tabata & Floating Dock Cross-Page in Nestore
+- **Frontend Timer & Tabata (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Aggiunto il quinto pulsante "TIMER & TABATA" nella sidebar desktop di Nestore e "TIMER" nella tab bar mobile.
+  - Implementato pannello dedicato a tutta larghezza con display gigante ad alta leggibilità, commutatore di modalità (Cronometro vs Tabata/Intervalli) e controlli tattili con feedback sonoro.
+  - **Cronometro**:
+    - Conteggio esatto al millisecondo basato su timestamp assoluti `Date.now()`.
+    - Rilevazione e archivio dei Giri (Laps) con indicatore del giro migliore (`⚡`) e peggiore.
+    - **Auto-Stop & Reset a 3 Ore**: Allo scadere di 3 ore (10.800.000 ms), il cronometro si ferma automaticamente, azzera i dati, emette un buzzer acustico prolungato e notifica con toast per sicurezza.
+  - **Tabata & Interval Timer**:
+    - State machine multi-fase (`PREP` $\rightarrow$ `WORK` $\rightarrow$ `REST` $\rightarrow$ cicli $\rightarrow$ `DONE`).
+    - Configurazione interattiva di tempo preparazione, lavoro, recupero, rounds e sets con preset con un click (*Tabata 20/10*, *HIIT 30/15*, *EMOM 50/10*, *Forza 40/20*).
+    - Countdown acustico con Web Audio API sintetico (beep a 3-2-1 secondi, work buzzer, rest buzzer e fanfara finale).
+    - Tasto Salta Fase per passare istantaneamente allo step successivo.
+- **Cross-Page Persistence & Mini-Widget (`portal/timer-dock.js`, `portal/dashboard.html`)**:
+  - Sincronizzazione automatica bidirezionale tramite `localStorage` e listener `storage`.
+  - Implementato modulo autonomo `timer-dock.js` incluso in `dashboard.html` che renderizza un mini-dock fluttuante in basso a destra quando un timer è attivo, consentendo di monitorare il tempo, mettere in pausa/riprendere e riaprire a tutto schermo anche navigando in altre pagine del portale.
+- **Testing & Validazione**: Creata suite di test unitari `tests/timer-tabata.test.js` (11 test dedicati per calcoli temporali, auto-stop 3h, transizioni Tabata e persistenza; 18/18 test totali superati).
+
+---
+
 ## [2026-09-10] ui_fix | Risoluzione Sbordamento Header Mobile e Rimozione Prefisso AREA (v1.05.25)
 - **Frontend Dashboard (`portal/dashboard.html`, `portal/dashboard.js`)**:
   - **Rimozione Prefisso "AREA"**: Rimossa la parola "AREA" dal menu a tendina contestuale (`#context-switcher`) e dal badge statico (`#static-context-badge`), uniformando le voci in `DIRETTIVO`, `SOCIO`, `TESSERATO`, `ISTRUTTORE` e `VOLONTARIO` sia su desktop che su mobile.

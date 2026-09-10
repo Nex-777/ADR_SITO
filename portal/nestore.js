@@ -1418,7 +1418,7 @@ function switchNestoreView(val) {
 // ---------------------------------------------------------------------------
 function switchNestorePanel(panelId) {
     // Lista pannelli
-    const panels = ['chat', 'peso', 'allenamenti', 'dieta'];
+    const panels = ['chat', 'peso', 'allenamenti', 'dieta', 'timer'];
     
     panels.forEach(p => {
         // Nascondi / Mostra Main Panel
@@ -1449,11 +1449,778 @@ function switchNestorePanel(panelId) {
     if (panelId === 'chat') {
         ancoraChatInAlto();
     }
+    
+    // Se l'utente entra nel pannello Timer, nascondi il mini-dock
+    const dockEl = document.getElementById('nst-timer-dock');
+    if (dockEl) {
+        if (panelId === 'timer') {
+            dockEl.classList.add('nst-hidden');
+        } else {
+            aggiornaVisibilitaDock();
+        }
+    }
 }
 
+// ===========================================================================
+// SEZIONE MOTORE TIMER, CRONOMETRO & TABATA
+// ===========================================================================
+
+// --- 1. Sound Engine (Web Audio API senza file MP3 esterni) ---
+const SoundEngine = {
+    ctx: null,
+    getCtx() {
+        if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+        return this.ctx;
+    },
+    beep(freq = 880, durationMs = 150, type = 'sine') {
+        try {
+            const ctx = this.getCtx();
+            if (!ctx) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (durationMs / 1000));
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + (durationMs / 1000));
+        } catch (e) {
+            console.warn('Audio non riproducibile:', e);
+        }
+    },
+    countdownBeep() { this.beep(880, 150, 'sine'); },
+    workBuzzer() { this.beep(1200, 350, 'triangle'); },
+    restBuzzer() { this.beep(650, 350, 'triangle'); },
+    longBuzzer() { this.beep(440, 1000, 'sawtooth'); },
+    finishFanfare() {
+        this.beep(587, 150, 'triangle');
+        setTimeout(() => this.beep(740, 150, 'triangle'), 150);
+        setTimeout(() => this.beep(880, 450, 'triangle'), 300);
+    }
+};
+
+// Toast di sistema per notifiche timer
+function showTimerToast(message) {
+    let toast = document.getElementById('nst-timer-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'nst-timer-toast';
+        toast.className = 'nst-timer-toast';
+        document.body.appendChild(toast);
+    }
+    toast.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;color:var(--nst-cyan);">timer</span> ${escapeHtml(message)}`;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(-10px)';
+    }, 3500);
+}
+
+// Modalità attiva: 'stopwatch' | 'tabata'
+let currentTimerMode = localStorage.getItem('adr_timer_mode') || 'stopwatch';
+
+function switchTimerMode(mode) {
+    SoundEngine.getCtx(); // sblocca audio
+    currentTimerMode = mode;
+    localStorage.setItem('adr_timer_mode', mode);
+
+    const btnStopwatch = document.getElementById('nst-mode-btn-stopwatch');
+    const btnTabata = document.getElementById('nst-mode-btn-tabata');
+    const cfgBox = document.getElementById('nst-tabata-config-box');
+    const lapsContainer = document.getElementById('nst-stopwatch-laps-container');
+    const metaRow = document.getElementById('nst-tabata-meta-row');
+    const lapBtn = document.getElementById('nst-stopwatch-lap-btn');
+    const skipBtn = document.getElementById('nst-tabata-skip-btn');
+
+    if (mode === 'stopwatch') {
+        if (btnStopwatch) btnStopwatch.classList.add('active');
+        if (btnTabata) btnTabata.classList.remove('active');
+        if (cfgBox) cfgBox.classList.add('nst-hidden');
+        if (metaRow) metaRow.classList.add('nst-hidden');
+        if (lapBtn) lapBtn.classList.remove('nst-hidden');
+        if (skipBtn) skipBtn.classList.add('nst-hidden');
+        timerEngine.updateUI();
+    } else {
+        if (btnStopwatch) btnStopwatch.classList.remove('active');
+        if (btnTabata) btnTabata.classList.add('active');
+        if (cfgBox) cfgBox.classList.remove('nst-hidden');
+        if (lapsContainer) lapsContainer.classList.add('nst-hidden');
+        if (metaRow) metaRow.classList.remove('nst-hidden');
+        if (lapBtn) lapBtn.classList.add('nst-hidden');
+        if (skipBtn) skipBtn.classList.remove('nst-hidden');
+        tabataEngine.updateUI();
+    }
+    aggiornaVisibilitaDock();
+}
+
+// --- 2. Modulo Cronometro (Stopwatch) con auto-stop a 3 ore ---
+const MAX_STOPWATCH_MS = 3 * 60 * 60 * 1000; // 3 ore esatte: 10.800.000 ms
+
+const timerEngine = {
+    state: {
+        running: false,
+        startTimestamp: null,
+        elapsedBeforePause: 0,
+        laps: []
+    },
+    loadState() {
+        try {
+            const raw = localStorage.getItem('adr_stopwatch_state');
+            if (raw) {
+                this.state = JSON.parse(raw);
+                if (!Array.isArray(this.state.laps)) this.state.laps = [];
+            }
+        } catch (e) {
+            console.error('Errore caricamento stato cronometro:', e);
+        }
+    },
+    saveState() {
+        try {
+            localStorage.setItem('adr_stopwatch_state', JSON.stringify(this.state));
+        } catch (e) {
+            console.error('Errore salvataggio cronometro:', e);
+        }
+        aggiornaVisibilitaDock();
+    },
+    getElapsedMs() {
+        if (!this.state.running || !this.state.startTimestamp) {
+            return this.state.elapsedBeforePause || 0;
+        }
+        return (Date.now() - this.state.startTimestamp) + (this.state.elapsedBeforePause || 0);
+    },
+    start() {
+        SoundEngine.getCtx();
+        if (this.state.running) return;
+        this.state.running = true;
+        this.state.startTimestamp = Date.now();
+        this.saveState();
+        this.updateUI();
+    },
+    pause() {
+        if (!this.state.running) return;
+        this.state.elapsedBeforePause = this.getElapsedMs();
+        this.state.running = false;
+        this.state.startTimestamp = null;
+        this.saveState();
+        this.updateUI();
+    },
+    toggle() {
+        if (this.state.running) {
+            this.pause();
+        } else {
+            this.start();
+        }
+    },
+    reset() {
+        this.state.running = false;
+        this.state.startTimestamp = null;
+        this.state.elapsedBeforePause = 0;
+        this.state.laps = [];
+        this.saveState();
+        this.updateUI();
+    },
+    autoStop() {
+        this.state.running = false;
+        this.state.startTimestamp = null;
+        this.state.elapsedBeforePause = 0;
+        this.saveState();
+        this.updateUI();
+        SoundEngine.longBuzzer();
+        showTimerToast("CRONOMETRO: STOP E RESET AUTOMATICO DOPO 3 ORE");
+    },
+    lap() {
+        if (!this.state.running) return;
+        const totalMs = this.getElapsedMs();
+        const lastTotal = this.state.laps.length > 0 ? this.state.laps[0].totalMs : 0;
+        const splitMs = totalMs - lastTotal;
+        const lapNumber = this.state.laps.length + 1;
+
+        this.state.laps.unshift({
+            number: lapNumber,
+            splitMs,
+            totalMs,
+            timestamp: Date.now()
+        });
+        this.saveState();
+        SoundEngine.beep(950, 100);
+        this.updateUI();
+    },
+    clearLaps() {
+        this.state.laps = [];
+        this.saveState();
+        this.updateUI();
+    },
+    formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const tenths = Math.floor((ms % 1000) / 100);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        const pM = String(minutes).padStart(2, '0');
+        const pS = String(seconds).padStart(2, '0');
+
+        if (hours > 0) {
+            const pH = String(hours).padStart(2, '0');
+            return {
+                main: `${pH}:${pM}:${pS}`,
+                sub: `.${tenths}`
+            };
+        }
+        return {
+            main: `${pM}:${pS}`,
+            sub: `.${tenths}`
+        };
+    },
+    updateUI() {
+        if (currentTimerMode !== 'stopwatch') return;
+
+        const elapsedMs = this.getElapsedMs();
+
+        // Controllo limite 3 ore
+        if (this.state.running && elapsedMs >= MAX_STOPWATCH_MS) {
+            this.autoStop();
+            return;
+        }
+
+        const formatted = this.formatTime(elapsedMs);
+        const digitsMain = document.getElementById('nst-timer-digits-main');
+        const digitsSub = document.getElementById('nst-timer-digits-sub');
+        const heroCard = document.getElementById('nst-timer-hero');
+        const phaseBadge = document.getElementById('nst-timer-phase-badge');
+        const phaseIcon = document.getElementById('nst-timer-phase-icon');
+        const phaseText = document.getElementById('nst-timer-phase-text');
+        const primaryBtn = document.getElementById('nst-timer-primary-btn');
+        const primaryIcon = document.getElementById('nst-timer-primary-icon');
+        const primaryLabel = document.getElementById('nst-timer-primary-label');
+        const lapBtn = document.getElementById('nst-stopwatch-lap-btn');
+
+        if (digitsMain) digitsMain.textContent = formatted.main;
+        if (digitsSub) digitsSub.textContent = formatted.sub;
+
+        if (heroCard) {
+            heroCard.className = 'nst-timer-hero-card' + (this.state.running ? ' phase-work' : '');
+        }
+
+        if (phaseBadge && phaseText && phaseIcon) {
+            phaseBadge.className = 'nst-phase-badge ' + (this.state.running ? 'work' : 'prep');
+            phaseIcon.textContent = this.state.running ? 'timer' : 'pause_circle';
+            phaseText.textContent = this.state.running ? 'CRONOMETRO IN CORSO' : (elapsedMs > 0 ? 'CRONOMETRO IN PAUSA' : 'CRONOMETRO PRONTO');
+        }
+
+        if (primaryBtn && primaryIcon && primaryLabel) {
+            if (this.state.running) {
+                primaryBtn.classList.add('is-running');
+                primaryIcon.textContent = 'pause';
+                primaryLabel.textContent = 'PAUSA';
+            } else {
+                primaryBtn.classList.remove('is-running');
+                primaryIcon.textContent = 'play_arrow';
+                primaryLabel.textContent = elapsedMs > 0 ? 'RIPRENDI' : 'AVVIA';
+            }
+        }
+
+        if (lapBtn) {
+            lapBtn.disabled = !this.state.running;
+        }
+
+        // Render Laps
+        const lapsContainer = document.getElementById('nst-stopwatch-laps-container');
+        const lapsBody = document.getElementById('nst-stopwatch-laps-body');
+        if (lapsContainer && lapsBody) {
+            if (this.state.laps.length > 0) {
+                lapsContainer.classList.remove('nst-hidden');
+                let fastestIndex = -1;
+                let slowestIndex = -1;
+                if (this.state.laps.length > 1) {
+                    let minSplit = Infinity;
+                    let maxSplit = -Infinity;
+                    this.state.laps.forEach((l, idx) => {
+                        if (l.splitMs < minSplit) { minSplit = l.splitMs; fastestIndex = idx; }
+                        if (l.splitMs > maxSplit) { maxSplit = l.splitMs; slowestIndex = idx; }
+                    });
+                }
+
+                lapsBody.innerHTML = this.state.laps.map((lap, idx) => {
+                    const splitFmt = this.formatTime(lap.splitMs);
+                    const totalFmt = this.formatTime(lap.totalMs);
+                    let rowClass = '';
+                    if (idx === fastestIndex) rowClass = 'lap-best';
+                    else if (idx === slowestIndex) rowClass = 'lap-worst';
+
+                    return `
+                        <tr class="${rowClass}">
+                            <td>GIRO ${lap.number} ${idx === fastestIndex ? '⚡' : ''}</td>
+                            <td>+${splitFmt.main}${splitFmt.sub}</td>
+                            <td>${totalFmt.main}${totalFmt.sub}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                lapsContainer.classList.add('nst-hidden');
+                lapsBody.innerHTML = '';
+            }
+        }
+    }
+};
+
+// --- 3. Modulo Tabata & Intervalli ---
+const tabataEngine = {
+    state: {
+        running: false,
+        phase: 'prep', // 'prep' | 'work' | 'rest' | 'done'
+        phaseStartTimestamp: null,
+        phaseElapsedBeforePause: 0,
+        phaseDurationSec: 5,
+        currentRound: 1,
+        currentSet: 1,
+        config: {
+            prep: 5,
+            work: 20,
+            rest: 10,
+            rounds: 8,
+            sets: 1
+        },
+        lastBeepSecond: -1
+    },
+    loadState() {
+        try {
+            const raw = localStorage.getItem('adr_tabata_state');
+            if (raw) {
+                this.state = { ...this.state, ...JSON.parse(raw) };
+            }
+        } catch (e) {
+            console.error('Errore caricamento tabata:', e);
+        }
+    },
+    saveState() {
+        try {
+            localStorage.setItem('adr_tabata_state', JSON.stringify(this.state));
+        } catch (e) {
+            console.error('Errore salvataggio tabata:', e);
+        }
+        aggiornaVisibilitaDock();
+    },
+    getPhaseElapsedMs() {
+        if (!this.state.running || !this.state.phaseStartTimestamp) {
+            return this.state.phaseElapsedBeforePause || 0;
+        }
+        return (Date.now() - this.state.phaseStartTimestamp) + (this.state.phaseElapsedBeforePause || 0);
+    },
+    start() {
+        SoundEngine.getCtx();
+        if (this.state.phase === 'done') {
+            this.reset();
+        }
+        this.state.running = true;
+        this.state.phaseStartTimestamp = Date.now();
+        this.state.lastBeepSecond = -1;
+        this.saveState();
+        this.updateUI();
+    },
+    pause() {
+        if (!this.state.running) return;
+        this.state.phaseElapsedBeforePause = this.getPhaseElapsedMs();
+        this.state.running = false;
+        this.state.phaseStartTimestamp = null;
+        this.saveState();
+        this.updateUI();
+    },
+    toggle() {
+        if (this.state.running) {
+            this.pause();
+        } else {
+            this.start();
+        }
+    },
+    reset() {
+        this.state.running = false;
+        this.state.phase = 'prep';
+        this.state.phaseDurationSec = this.state.config.prep > 0 ? this.state.config.prep : this.state.config.work;
+        if (this.state.config.prep === 0) this.state.phase = 'work';
+        this.state.phaseStartTimestamp = null;
+        this.state.phaseElapsedBeforePause = 0;
+        this.state.currentRound = 1;
+        this.state.currentSet = 1;
+        this.state.lastBeepSecond = -1;
+        this.saveState();
+        this.updateUI();
+    },
+    skipPhase() {
+        if (this.state.phase === 'done') return;
+        this.avanzaFase();
+    },
+    avanzaFase() {
+        this.state.phaseElapsedBeforePause = 0;
+        this.state.phaseStartTimestamp = this.state.running ? Date.now() : null;
+        this.state.lastBeepSecond = -1;
+
+        if (this.state.phase === 'prep') {
+            this.state.phase = 'work';
+            this.state.phaseDurationSec = this.state.config.work;
+            SoundEngine.workBuzzer();
+        } else if (this.state.phase === 'work') {
+            if (this.state.currentRound < this.state.config.rounds) {
+                this.state.phase = 'rest';
+                this.state.phaseDurationSec = this.state.config.rest;
+                SoundEngine.restBuzzer();
+            } else {
+                // Fine del set
+                if (this.state.currentSet < this.state.config.sets) {
+                    this.state.currentSet++;
+                    this.state.currentRound = 1;
+                    this.state.phase = 'rest';
+                    this.state.phaseDurationSec = this.state.config.rest * 2; // Recupero lungo tra set
+                    SoundEngine.restBuzzer();
+                } else {
+                    // Fine allenamento
+                    this.state.phase = 'done';
+                    this.state.running = false;
+                    this.state.phaseStartTimestamp = null;
+                    SoundEngine.finishFanfare();
+                    showTimerToast("ALLENAMENTO TABATA COMPLETATO!");
+                }
+            }
+        } else if (this.state.phase === 'rest') {
+            this.state.currentRound++;
+            this.state.phase = 'work';
+            this.state.phaseDurationSec = this.state.config.work;
+            SoundEngine.workBuzzer();
+        }
+
+        this.saveState();
+        this.updateUI();
+    },
+    tick() {
+        if (!this.state.running) return;
+
+        const elapsedMs = this.getPhaseElapsedMs();
+        const durationMs = this.state.phaseDurationSec * 1000;
+        const remainingMs = Math.max(0, durationMs - elapsedMs);
+        const remainingSec = Math.ceil(remainingMs / 1000);
+
+        // Suono acustico 3, 2, 1
+        if (remainingSec <= 3 && remainingSec > 0 && remainingSec !== this.state.lastBeepSecond) {
+            SoundEngine.countdownBeep();
+            this.state.lastBeepSecond = remainingSec;
+        }
+
+        // Transizione fase a 0
+        if (elapsedMs >= durationMs) {
+            this.avanzaFase();
+        }
+    },
+    updateUI() {
+        if (currentTimerMode !== 'tabata') return;
+
+        const elapsedMs = this.getPhaseElapsedMs();
+        const durationMs = this.state.phaseDurationSec * 1000;
+        const remainingMs = Math.max(0, durationMs - elapsedMs);
+        const totalSeconds = Math.ceil(remainingMs / 1000);
+
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        const tenths = Math.floor((remainingMs % 1000) / 100);
+
+        const digitsMain = document.getElementById('nst-timer-digits-main');
+        const digitsSub = document.getElementById('nst-timer-digits-sub');
+        const heroCard = document.getElementById('nst-timer-hero');
+        const phaseBadge = document.getElementById('nst-timer-phase-badge');
+        const phaseIcon = document.getElementById('nst-timer-phase-icon');
+        const phaseText = document.getElementById('nst-timer-phase-text');
+        const primaryBtn = document.getElementById('nst-timer-primary-btn');
+        const primaryIcon = document.getElementById('nst-timer-primary-icon');
+        const primaryLabel = document.getElementById('nst-timer-primary-label');
+        const skipBtn = document.getElementById('nst-tabata-skip-btn');
+
+        if (digitsMain) digitsMain.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        if (digitsSub) digitsSub.textContent = `.${tenths}`;
+
+        // Colorazione dinamica e stato
+        let phaseName = 'PREPARAZIONE';
+        let badgeClass = 'prep';
+        let icon = 'hourglass_top';
+
+        if (this.state.phase === 'work') {
+            phaseName = 'LAVORO (WORK)';
+            badgeClass = 'work';
+            icon = 'directions_run';
+        } else if (this.state.phase === 'rest') {
+            phaseName = 'RIPOSO (REST)';
+            badgeClass = 'rest';
+            icon = 'airline_seat_recline_extra';
+        } else if (this.state.phase === 'done') {
+            phaseName = 'COMPLETATO!';
+            badgeClass = 'done';
+            icon = 'emoji_events';
+        }
+
+        if (heroCard) {
+            heroCard.className = `nst-timer-hero-card phase-${this.state.phase}`;
+        }
+
+        if (phaseBadge && phaseText && phaseIcon) {
+            phaseBadge.className = `nst-phase-badge ${badgeClass}`;
+            phaseIcon.textContent = icon;
+            phaseText.textContent = phaseName;
+        }
+
+        if (primaryBtn && primaryIcon && primaryLabel) {
+            if (this.state.running) {
+                primaryBtn.classList.add('is-running');
+                primaryIcon.textContent = 'pause';
+                primaryLabel.textContent = 'PAUSA';
+            } else {
+                primaryBtn.classList.remove('is-running');
+                primaryIcon.textContent = 'play_arrow';
+                primaryLabel.textContent = this.state.phase === 'done' ? 'RIPETI' : (elapsedMs > 0 ? 'RIPRENDI' : 'AVVIA');
+            }
+        }
+
+        if (skipBtn) {
+            skipBtn.disabled = this.state.phase === 'done';
+        }
+
+        // Metadati round/set
+        const rEl = document.getElementById('nst-tabata-current-round');
+        const totREl = document.getElementById('nst-tabata-total-rounds');
+        const sEl = document.getElementById('nst-tabata-current-set');
+        const totSEl = document.getElementById('nst-tabata-total-sets');
+        const totTimeEl = document.getElementById('nst-tabata-total-time');
+
+        if (rEl) rEl.textContent = this.state.currentRound;
+        if (totREl) totREl.textContent = this.state.config.rounds;
+        if (sEl) sEl.textContent = this.state.currentSet;
+        if (totSEl) totSEl.textContent = this.state.config.sets;
+
+        if (totTimeEl) {
+            const singleSetSec = (this.state.config.work + this.state.config.rest) * this.state.config.rounds - this.state.config.rest;
+            const totalSec = this.state.config.prep + (singleSetSec * this.state.config.sets) + ((this.state.config.sets - 1) * this.state.config.rest);
+            const totM = Math.floor(totalSec / 60);
+            const totS = totalSec % 60;
+            totTimeEl.textContent = `${String(totM).padStart(2, '0')}:${String(totS).padStart(2, '0')}`;
+        }
+    }
+};
+
+// Handlers pulsanti UI
+function gestisciTimerPrimaryClick() {
+    if (currentTimerMode === 'stopwatch') {
+        timerEngine.toggle();
+    } else {
+        tabataEngine.toggle();
+    }
+}
+
+function gestisciTimerResetClick() {
+    if (currentTimerMode === 'stopwatch') {
+        timerEngine.reset();
+    } else {
+        tabataEngine.reset();
+    }
+}
+
+function modificaTabataParam(param, delta) {
+    const input = document.getElementById(`nst-cfg-${param}`);
+    if (!input) return;
+    let val = parseInt(input.value, 10) || 0;
+    val = Math.max(parseInt(input.min, 10) || 0, Math.min(parseInt(input.max, 10) || 300, val + delta));
+    input.value = val;
+    aggiornaConfigDaInput();
+}
+
+function aggiornaConfigDaInput() {
+    const prep = parseInt(document.getElementById('nst-cfg-prep')?.value, 10) || 5;
+    const work = parseInt(document.getElementById('nst-cfg-work')?.value, 10) || 20;
+    const rest = parseInt(document.getElementById('nst-cfg-rest')?.value, 10) || 10;
+    const rounds = parseInt(document.getElementById('nst-cfg-rounds')?.value, 10) || 8;
+    const sets = parseInt(document.getElementById('nst-cfg-sets')?.value, 10) || 1;
+
+    tabataEngine.state.config = { prep, work, rest, rounds, sets };
+    if (!tabataEngine.state.running) {
+        tabataEngine.reset();
+    } else {
+        tabataEngine.saveState();
+        tabataEngine.updateUI();
+    }
+}
+
+function tabataApplyPreset(presetName) {
+    const presets = {
+        'tabata_classic': { prep: 5, work: 20, rest: 10, rounds: 8, sets: 1 },
+        'hiit_30_15': { prep: 5, work: 30, rest: 15, rounds: 10, sets: 1 },
+        'emom_50_10': { prep: 10, work: 50, rest: 10, rounds: 5, sets: 1 },
+        'hard_40_20': { prep: 5, work: 40, rest: 20, rounds: 6, sets: 1 }
+    };
+
+    const p = presets[presetName];
+    if (!p) return;
+
+    if (document.getElementById('nst-cfg-prep')) document.getElementById('nst-cfg-prep').value = p.prep;
+    if (document.getElementById('nst-cfg-work')) document.getElementById('nst-cfg-work').value = p.work;
+    if (document.getElementById('nst-cfg-rest')) document.getElementById('nst-cfg-rest').value = p.rest;
+    if (document.getElementById('nst-cfg-rounds')) document.getElementById('nst-cfg-rounds').value = p.rounds;
+    if (document.getElementById('nst-cfg-sets')) document.getElementById('nst-cfg-sets').value = p.sets;
+
+    tabataEngine.state.config = { ...p };
+    tabataEngine.reset();
+    SoundEngine.beep(880, 150);
+}
+
+// --- 4. Floating Dock Controller (Cross-page & Mini-widget) ---
+function aggiornaVisibilitaDock() {
+    const dockEl = document.getElementById('nst-timer-dock');
+    if (!dockEl) return;
+
+    // Controlla se il pannello timer è attualmente visibile a tutto schermo
+    const timerPanel = document.getElementById('nst-timer-panel');
+    const isTimerPanelVisible = timerPanel && !timerPanel.classList.contains('nst-hidden');
+
+    const isStopwatchActive = timerEngine.state.running || timerEngine.getElapsedMs() > 0;
+    const isTabataActive = tabataEngine.state.running || (tabataEngine.state.phase !== 'prep' && tabataEngine.state.phase !== 'done');
+
+    const shouldShow = (!isTimerPanelVisible) && (isStopwatchActive || isTabataActive);
+
+    if (shouldShow) {
+        dockEl.classList.remove('nst-hidden');
+        aggiornaDatiDock();
+    } else {
+        dockEl.classList.add('nst-hidden');
+    }
+}
+
+function aggiornaDatiDock() {
+    const modeLabel = document.getElementById('nst-dock-mode-label');
+    const modeText = document.getElementById('nst-dock-mode-text');
+    const timeText = document.getElementById('nst-dock-time-text');
+    const toggleIcon = document.getElementById('nst-dock-toggle-icon');
+
+    if (!timeText || !modeText) return;
+
+    if (currentTimerMode === 'tabata') {
+        const elapsedMs = tabataEngine.getPhaseElapsedMs();
+        const durationMs = tabataEngine.state.phaseDurationSec * 1000;
+        const remainingMs = Math.max(0, durationMs - elapsedMs);
+        const sec = Math.ceil(remainingMs / 1000);
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        const tenths = Math.floor((remainingMs % 1000) / 100);
+
+        modeText.textContent = `TABATA: ${tabataEngine.state.phase.toUpperCase()} (R${tabataEngine.state.currentRound}/${tabataEngine.state.config.rounds})`;
+        timeText.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${tenths}`;
+        if (modeLabel) modeLabel.className = `nst-dock-mode ${tabataEngine.state.phase}`;
+        if (toggleIcon) toggleIcon.textContent = tabataEngine.state.running ? 'pause' : 'play_arrow';
+    } else {
+        const elapsedMs = timerEngine.getElapsedMs();
+        const fmt = timerEngine.formatTime(elapsedMs);
+        modeText.textContent = timerEngine.state.running ? 'CRONOMETRO' : 'CRONO IN PAUSA';
+        timeText.textContent = `${fmt.main}${fmt.sub}`;
+        if (modeLabel) modeLabel.className = 'nst-dock-mode';
+        if (toggleIcon) toggleIcon.textContent = timerEngine.state.running ? 'pause' : 'play_arrow';
+    }
+}
+
+function dockToggleTimer() {
+    if (currentTimerMode === 'stopwatch') {
+        timerEngine.toggle();
+    } else {
+        tabataEngine.toggle();
+    }
+    aggiornaDatiDock();
+}
+
+function dockExpandTimer() {
+    switchNestorePanel('timer');
+}
+
+// --- 5. Render Loop Master (RAF + Background Interval) ---
+function masterTimerLoop() {
+    if (timerEngine.state.running) {
+        timerEngine.updateUI();
+    }
+    if (tabataEngine.state.running) {
+        tabataEngine.tick();
+        tabataEngine.updateUI();
+    }
+    aggiornaVisibilitaDock();
+    requestAnimationFrame(masterTimerLoop);
+}
+
+// Tick di sicurezza in background ogni 250ms (se il browser riduce il RAF tab inattivo)
+setInterval(() => {
+    if (timerEngine.state.running) {
+        const elapsed = timerEngine.getElapsedMs();
+        if (elapsed >= MAX_STOPWATCH_MS) {
+            timerEngine.autoStop();
+        }
+    }
+    if (tabataEngine.state.running) {
+        tabataEngine.tick();
+    }
+}, 250);
+
+// Sincronizzazione multi-tab
+window.addEventListener('storage', (e) => {
+    if (e.key === 'adr_stopwatch_state') {
+        timerEngine.loadState();
+        timerEngine.updateUI();
+    } else if (e.key === 'adr_tabata_state') {
+        tabataEngine.loadState();
+        tabataEngine.updateUI();
+    } else if (e.key === 'adr_timer_mode') {
+        currentTimerMode = e.newValue || 'stopwatch';
+        switchTimerMode(currentTimerMode);
+    }
+    aggiornaVisibilitaDock();
+});
+
+// Inizializzazione Timer all'avvio
+document.addEventListener('DOMContentLoaded', () => {
+    timerEngine.loadState();
+    tabataEngine.loadState();
+
+    // Sincronizza i campi input con la config salvata
+    if (document.getElementById('nst-cfg-prep')) document.getElementById('nst-cfg-prep').value = tabataEngine.state.config.prep;
+    if (document.getElementById('nst-cfg-work')) document.getElementById('nst-cfg-work').value = tabataEngine.state.config.work;
+    if (document.getElementById('nst-cfg-rest')) document.getElementById('nst-cfg-rest').value = tabataEngine.state.config.rest;
+    if (document.getElementById('nst-cfg-rounds')) document.getElementById('nst-cfg-rounds').value = tabataEngine.state.config.rounds;
+    if (document.getElementById('nst-cfg-sets')) document.getElementById('nst-cfg-sets').value = tabataEngine.state.config.sets;
+
+    switchTimerMode(currentTimerMode);
+
+    // Se l'hash nell'URL è #timer o param ?panel=timer, apri subito il timer
+    const urlParams = new URLSearchParams(window.location.search);
+    if (window.location.hash === '#timer' || urlParams.get('panel') === 'timer') {
+        switchNestorePanel('timer');
+    }
+
+    requestAnimationFrame(masterTimerLoop);
+});
+
+// Window Exports
 window.impostaRangeCard = impostaRangeCard;
 window.switchNestorePanel = switchNestorePanel;
 window.toggleInputVocale = toggleInputVocale;
 window.caricaMessaggiPrecedenti = caricaMessaggiPrecedenti;
 window.gestisciInputConteggio = gestisciInputConteggio;
 window.ancoraChatInAlto = ancoraChatInAlto;
+window.switchTimerMode = switchTimerMode;
+window.timerEngine = timerEngine;
+window.tabataEngine = tabataEngine;
+window.gestisciTimerPrimaryClick = gestisciTimerPrimaryClick;
+window.gestisciTimerResetClick = gestisciTimerResetClick;
+window.modificaTabataParam = modificaTabataParam;
+window.aggiornaConfigDaInput = aggiornaConfigDaInput;
+window.tabataApplyPreset = tabataApplyPreset;
+window.dockToggleTimer = dockToggleTimer;
+window.dockExpandTimer = dockExpandTimer;
+

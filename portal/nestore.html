@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.25">
+    <link rel="stylesheet" href="nestore.css?v=1.05.26">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.25"></script>
+    <script src="config.js?v=1.05.26"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.25</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.26</span>
             </div>
         </div>
 
@@ -61,6 +61,10 @@
             <span class="material-symbols-outlined" style="font-size: 18px;">restaurant</span>
             <span>DIETA</span>
         </button>
+        <button type="button" class="nst-mobile-tab-btn" id="nst-tab-btn-timer" onclick="switchNestorePanel('timer')">
+            <span class="material-symbols-outlined" style="font-size: 18px;">timer</span>
+            <span>TIMER</span>
+        </button>
     </nav>
 
     <!-- Main Grid -->
@@ -84,6 +88,10 @@
                 <button type="button" class="nst-nav-item" id="nst-nav-dieta" onclick="switchNestorePanel('dieta')">
                     <span class="material-symbols-outlined">restaurant</span>
                     <span>DIETA & MACRO (KCAL)</span>
+                </button>
+                <button type="button" class="nst-nav-item" id="nst-nav-timer" onclick="switchNestorePanel('timer')">
+                    <span class="material-symbols-outlined">timer</span>
+                    <span>TIMER & TABATA</span>
                 </button>
             </div>
 
@@ -241,6 +249,186 @@
             </div>
         </main>
 
+        <!-- Pannello 4: Cronometro & Tabata -->
+        <main class="nst-data-panel nst-hidden" id="nst-timer-panel">
+            <div class="nst-timer-panel">
+                <!-- Header con Switcher di Modalità -->
+                <div class="nst-timer-header">
+                    <div class="nst-timer-mode-switcher">
+                        <button type="button" class="nst-timer-mode-btn active" id="nst-mode-btn-stopwatch" onclick="switchTimerMode('stopwatch')">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">timer</span>
+                            <span>CRONOMETRO</span>
+                        </button>
+                        <button type="button" class="nst-timer-mode-btn" id="nst-mode-btn-tabata" onclick="switchTimerMode('tabata')">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">fitness_center</span>
+                            <span>TABATA & INTERVALLI</span>
+                        </button>
+                    </div>
+                    <div style="font-size: 11px; color: var(--nst-text-muted); font-family: 'Orbitron', sans-serif;">
+                        <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle; color: var(--nst-cyan);">volume_up</span> AUDIO ATTIVO
+                    </div>
+                </div>
+
+                <!-- Hero Display Card -->
+                <div class="nst-timer-hero-card" id="nst-timer-hero">
+                    <!-- Badge di Fase / Stato -->
+                    <div class="nst-phase-badge prep" id="nst-timer-phase-badge">
+                        <span class="material-symbols-outlined" style="font-size: 14px;" id="nst-timer-phase-icon">timer</span>
+                        <span id="nst-timer-phase-text">CRONOMETRO PRONTO</span>
+                    </div>
+
+                    <!-- Digits Giganti -->
+                    <div class="nst-digits-wrap" id="nst-timer-digits-wrap">
+                        <span class="nst-digits-main" id="nst-timer-digits-main">00:00</span>
+                        <span class="nst-digits-sub" id="nst-timer-digits-sub">.0</span>
+                    </div>
+
+                    <!-- Metadati Tabata (Round / Set / Tempo Totale) -->
+                    <div class="nst-tabata-meta-row nst-hidden" id="nst-tabata-meta-row">
+                        <div class="nst-tabata-meta-item">
+                            ROUND: <strong id="nst-tabata-current-round">1</strong> / <span id="nst-tabata-total-rounds">8</span>
+                        </div>
+                        <div class="nst-tabata-meta-item">
+                            SET: <strong id="nst-tabata-current-set">1</strong> / <span id="nst-tabata-total-sets">1</span>
+                        </div>
+                        <div class="nst-tabata-meta-item">
+                            TOTALE: <strong id="nst-tabata-total-time">04:00</strong>
+                        </div>
+                    </div>
+
+                    <!-- Riga Pulsanti di Controllo -->
+                    <div class="nst-timer-actions-bar">
+                        <button type="button" class="nst-btn-timer-primary" id="nst-timer-primary-btn" onclick="gestisciTimerPrimaryClick()">
+                            <span class="material-symbols-outlined" id="nst-timer-primary-icon">play_arrow</span>
+                            <span id="nst-timer-primary-label">AVVIA</span>
+                        </button>
+
+                        <!-- Tasto Lap (visibile solo in Stopwatch) -->
+                        <button type="button" class="nst-btn-timer-secondary" id="nst-stopwatch-lap-btn" onclick="timerEngine.lap()" disabled title="Registra Giro">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">flag</span>
+                            <span>GIRO / LAP</span>
+                        </button>
+
+                        <!-- Tasto Salta Fase (visibile solo in Tabata quando attivo) -->
+                        <button type="button" class="nst-btn-timer-secondary nst-hidden" id="nst-tabata-skip-btn" onclick="tabataEngine.skipPhase()" title="Passa alla fase successiva">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">skip_next</span>
+                            <span>SALTA FASE</span>
+                        </button>
+
+                        <!-- Tasto Reset -->
+                        <button type="button" class="nst-btn-timer-secondary" id="nst-timer-reset-btn" onclick="gestisciTimerResetClick()" title="Azzera">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                            <span>RESET</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Configurazione Tabata (visibile quando modalità Tabata selezionata) -->
+                <div class="nst-tabata-config-box nst-hidden" id="nst-tabata-config-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; color: var(--nst-cyan); letter-spacing: 0.05em;">
+                            CONFIGURA INTERVALLI
+                        </span>
+                        <span style="font-size: 11px; color: var(--nst-text-muted);">Modifica parametri o scegli preset</span>
+                    </div>
+
+                    <div class="nst-tabata-config-grid">
+                        <div class="nst-timer-input-group">
+                            <label class="nst-timer-input-label">
+                                <span class="material-symbols-outlined" style="font-size: 14px; color: var(--nst-cyan);">hourglass_top</span>
+                                PREP (SEC)
+                            </label>
+                            <div class="nst-timer-stepper">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('prep', -5)">-</button>
+                                <input type="number" id="nst-cfg-prep" class="nst-timer-stepper-val" value="5" min="0" max="60" onchange="aggiornaConfigDaInput()">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('prep', 5)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="nst-timer-input-group">
+                            <label class="nst-timer-input-label">
+                                <span class="material-symbols-outlined" style="font-size: 14px; color: var(--nst-lime);">directions_run</span>
+                                WORK (SEC)
+                            </label>
+                            <div class="nst-timer-stepper">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('work', -5)">-</button>
+                                <input type="number" id="nst-cfg-work" class="nst-timer-stepper-val" value="20" min="5" max="300" onchange="aggiornaConfigDaInput()">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('work', 5)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="nst-timer-input-group">
+                            <label class="nst-timer-input-label">
+                                <span class="material-symbols-outlined" style="font-size: 14px; color: #f59e0b;">airline_seat_recline_extra</span>
+                                REST (SEC)
+                            </label>
+                            <div class="nst-timer-stepper">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('rest', -5)">-</button>
+                                <input type="number" id="nst-cfg-rest" class="nst-timer-stepper-val" value="10" min="0" max="300" onchange="aggiornaConfigDaInput()">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('rest', 5)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="nst-timer-input-group">
+                            <label class="nst-timer-input-label">
+                                <span class="material-symbols-outlined" style="font-size: 14px;">repeat</span>
+                                ROUNDS
+                            </label>
+                            <div class="nst-timer-stepper">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('rounds', -1)">-</button>
+                                <input type="number" id="nst-cfg-rounds" class="nst-timer-stepper-val" value="8" min="1" max="50" onchange="aggiornaConfigDaInput()">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('rounds', 1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="nst-timer-input-group">
+                            <label class="nst-timer-input-label">
+                                <span class="material-symbols-outlined" style="font-size: 14px;">layers</span>
+                                SERIE / SETS
+                            </label>
+                            <div class="nst-timer-stepper">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('sets', -1)">-</button>
+                                <input type="number" id="nst-cfg-sets" class="nst-timer-stepper-val" value="1" min="1" max="10" onchange="aggiornaConfigDaInput()">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="modificaTabataParam('sets', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preset Rapidi -->
+                    <div class="nst-presets-row">
+                        <span style="font-size: 10px; font-family: 'Orbitron', sans-serif; color: var(--nst-text-muted);">PRESET:</span>
+                        <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('tabata_classic')">TABATA 20/10 x8</button>
+                        <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('hiit_30_15')">HIIT 30/15 x10</button>
+                        <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('emom_50_10')">EMOM 50/10 x5</button>
+                        <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('hard_40_20')">FORZA 40/20 x6</button>
+                    </div>
+                </div>
+
+                <!-- Sezione Laps / Giri per Cronometro -->
+                <div class="nst-laps-container nst-hidden" id="nst-stopwatch-laps-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; color: var(--nst-cyan);">
+                            GIRI REGISTRATI (LAPS)
+                        </span>
+                        <button type="button" class="nst-btn-ghost-sm" onclick="timerEngine.clearLaps()">SVUOTA GIRI</button>
+                    </div>
+                    <div style="max-height: 220px; overflow-y: auto;">
+                        <table class="nst-laps-table">
+                            <thead>
+                                <tr>
+                                    <th>GIRO</th>
+                                    <th>PARZIALE</th>
+                                    <th>TEMPO TOTALE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nst-stopwatch-laps-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
         <!-- Colonna Destra: Chat Interattiva Multimodale con NESTORE -->
         <main class="nst-chat-panel" id="nst-chat-panel">
             <div class="nst-chat-header">
@@ -302,10 +490,29 @@
 
     </div>
 
+    <!-- Floating Mini Dock for Active Timer -->
+    <div id="nst-timer-dock" class="nst-floating-dock nst-hidden">
+        <div class="nst-dock-info">
+            <span class="nst-dock-mode" id="nst-dock-mode-label">
+                <span class="material-symbols-outlined" style="font-size: 14px;">timer</span>
+                <span id="nst-dock-mode-text">CRONOMETRO</span>
+            </span>
+            <span class="nst-dock-time" id="nst-dock-time-text">00:00.0</span>
+        </div>
+        <div class="nst-dock-actions">
+            <button type="button" class="nst-dock-btn" id="nst-dock-toggle-btn" onclick="dockToggleTimer()" title="Avvia/Pausa">
+                <span class="material-symbols-outlined" style="font-size: 18px;" id="nst-dock-toggle-icon">play_arrow</span>
+            </button>
+            <button type="button" class="nst-dock-btn expand" onclick="dockExpandTimer()" title="Apri Timer">
+                <span class="material-symbols-outlined" style="font-size: 18px;">open_in_full</span>
+            </button>
+        </div>
+    </div>
+
     <!-- Libreria Grafici Chart.js CDN (v4) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.25"></script>
+    <script src="nestore.js?v=1.05.26"></script>
 </body>
 </html>
