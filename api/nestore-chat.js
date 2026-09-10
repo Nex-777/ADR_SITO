@@ -306,7 +306,8 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
                 contents: contents,
                 generationConfig: {
                     temperature: 0.2,
-                    maxOutputTokens: 1000
+                    maxOutputTokens: 4096,
+                    thinkingConfig: { thinkingBudget: 1024 }
                 }
             })
         });
@@ -318,9 +319,15 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
         }
 
         const geminiData = await geminiResponse.json();
-        const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "Non ho potuto elaborare una risposta. Riprova.";
+        const candidate = geminiData.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+        if (finishReason && finishReason !== 'STOP') {
+            console.warn(`[nestore-chat] Gemini finishReason: ${finishReason}`);
+        }
 
-        // 10. Estrazione blocco JSON se presente
+        const rawText = candidate?.content?.parts?.[0]?.text || "Non ho potuto elaborare una risposta. Riprova.";
+
+        // 10. Estrazione blocco JSON se presente (con fallback resiliente)
         let cleanReply = rawText;
         let extractionPayload = null;
         const extractionRegex = /```json:extraction\s*([\s\S]*?)\s*```/;
@@ -333,6 +340,28 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
                 cleanReply = rawText.replace(extractionRegex, '').trim();
             } catch (jsonErr) {
                 console.warn("Errore parsing extraction JSON:", jsonErr);
+            }
+        } else if (rawText.includes('```json:extraction')) {
+            // Fallback: blocco extraction non chiuso (es. troncamento anomalo)
+            // Rimuove tassativamente la sintassi codice dal testo visibile all'utente
+            console.warn("[nestore-chat] Trovato blocco json:extraction non chiuso, pulizia testo e tentato recupero.");
+            const partialRegex = /```json:extraction[\s\S]*/;
+            const partialMatch = rawText.match(partialRegex);
+            if (partialMatch) {
+                const jsonFragment = partialMatch[0].replace('```json:extraction', '').trim();
+                try {
+                    let repairedJson = jsonFragment;
+                    const openBraces = (repairedJson.match(/\{/g) || []).length;
+                    const closeBraces = (repairedJson.match(/\}/g) || []).length;
+                    if (openBraces > closeBraces) {
+                        repairedJson = repairedJson.replace(/,\s*$/, '').trim() + '\n}'.repeat(openBraces - closeBraces);
+                        extractionPayload = JSON.parse(repairedJson);
+                        console.info("[nestore-chat] Recuperato extractionPayload da JSON parziale:", extractionPayload);
+                    }
+                } catch (repairErr) {
+                    console.warn("[nestore-chat] Impossibile recuperare JSON parziale:", repairErr.message);
+                }
+                cleanReply = rawText.replace(partialRegex, '').trim();
             }
         }
 

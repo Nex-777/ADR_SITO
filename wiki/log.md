@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-10] fix | Risoluzione Troncamento Token Gemini, Ripristino Grafico Nutrienti e Header Mobile Anti-Overflow
+- **Backend AI (`api/nestore-chat.js`)**:
+  - Diagnosticata e risolta la causa radice del troncamento risposte AI: con `maxOutputTokens: 1000`, il ragionamento interno (*thinking tokens*) di Gemini 2.5 Flash saturava ~889 token esaurendo il limite prima di completare il JSON di estrazione (`finishReason: MAX_TOKENS`).
+  - Configurato `maxOutputTokens: 4096` e `thinkingConfig: { thinkingBudget: 1024 }`: garantiti oltre 3000 token effettivi alla risposta, azzerando qualsiasi rischio di troncamento (`finishReason: STOP`).
+  - Implementato parser di estrazione resiliente con fallback di emergenza: qualsiasi blocco JSON parziale o non chiuso viene automaticamente rimosso dalla stringa visualizzata in chat (prevenendo la comparsa di codice grezzo all'utente) con algoritmo di riparazione e recupero payload.
+  - Verificato il corretto salvataggio del pasto in database e l'aggiornamento real-time del grafico *Dieta & Macro (Kcal)*.
+- **Frontend & Responsive UI (`portal/nestore.html`, `portal/nestore.css`)**:
+  - Rimosso il prefisso superfluo "VISTA " dal menu selettore ruoli (`ATLETA`, `ALLENATORE`, `AMMINISTRATORE`).
+  - Introdotto vincolo globale `overflow-x: hidden` e `max-width: 100vw` su `html, body, .nst-body, .nst-header`.
+  - Ottimizzato il layout dell'header per smartphone ($\le 1024\text{px}$ e $\le 480\text{px}$): padding ridotto a `8px 12px` (e `6px 8px` su mobile piccolo), selettore compatto (`max-width: 110px/95px`) con text ellipsis, badge utente troncato elegantemente su schermi stretti e rimozione automatica badge corso/versione su display ultra-compatti per azzerare lo sbordamento laterale.
+- **Validazione & Test**: Test Vitest 5/5 superati, test live Gemini con token usage validato empiricamente.
+
+---
+
 ## [2026-09-09] fix | Risoluzione Duplicazione e Balbuzie Input Vocale Nestore (Opzione A)
 - **Frontend Speech-to-Text (`portal/nestore.js`)**:
   - Risolto bug critico di duplicazione ricorsiva causato dal loop a indice zero su frammenti provvisori (`interimResults`).

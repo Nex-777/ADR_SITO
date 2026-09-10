@@ -31,6 +31,12 @@
     padding: 0;
 }
 
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    width: 100%;
+}
+
 body.nst-body {
     font-family: 'Inter', sans-serif;
     background-color: var(--nst-bg);
@@ -39,6 +45,8 @@ body.nst-body {
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
+    max-width: 100vw;
+    width: 100%;
     background-image: 
         radial-gradient(circle at 10% 20%, rgba(0, 229, 255, 0.05) 0%, transparent 40%),
         radial-gradient(circle at 90% 80%, rgba(118, 255, 3, 0.04) 0%, transparent 40%);
@@ -70,6 +78,8 @@ body.nst-body {
     top: 0;
     z-index: 100;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    max-width: 100vw;
+    box-sizing: border-box;
 }
 
 .nst-header-left {
@@ -246,6 +256,94 @@ body.nst-body {
        che sposteremo visivamente in coda al nst-chat-panel se usassimo JS, ma per CSS puro la mostriamo come display:flex order: 99 */
     .nst-dashboard-panel {
         display: none !important;
+    }
+
+    /* Header compatto mobile anti-overflow */
+    .nst-header {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .nst-header-left {
+        gap: 8px;
+        min-width: 0;
+        flex-shrink: 1;
+    }
+
+    .nst-logo-img {
+        height: 32px;
+        width: 32px;
+    }
+
+    .nst-header-left h1 {
+        font-size: 15px !important;
+    }
+
+    .nst-version-badge {
+        font-size: 8px;
+        padding: 1px 6px;
+    }
+
+    .nst-header-right {
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .nst-select {
+        max-width: 110px;
+        font-size: 10px;
+        padding: 5px 6px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .nst-user-badge {
+        max-width: 85px;
+        overflow: hidden;
+        text-align: right;
+    }
+
+    .nst-user-name {
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .nst-user-course {
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .nst-btn-close {
+        padding: 5px 8px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .nst-header {
+        padding: 6px 8px;
+    }
+    .nst-version-badge {
+        display: none;
+    }
+    .nst-user-course {
+        display: none;
+    }
+    .nst-select {
+        max-width: 95px;
+        font-size: 9px;
+        padding: 4px 5px;
+    }
+    .nst-user-badge {
+        max-width: 70px;
+    }
+    .nst-user-name {
+        font-size: 10px;
     }
 }
 
