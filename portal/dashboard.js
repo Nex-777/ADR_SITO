@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.24"
+                VERSION: "1.05.25"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1030,11 +1030,11 @@
                 const isVolunteer = userRoles.includes('volontario');
 
                 let optionsHTML = '';
-                if (isBoardMember) optionsHTML += '<option value="board">AREA DIRETTIVO</option>';
-                if (isSocio) optionsHTML += '<option value="member">AREA SOCIO</option>';
-                if (isAthlete) optionsHTML += '<option value="athlete">AREA TESSERATO</option>';
-                if (isInstructor) optionsHTML += '<option value="instructor">AREA ISTRUTTORE</option>';
-                if (isVolunteer) optionsHTML += '<option value="volunteer">AREA VOLONTARIO</option>';
+                if (isBoardMember) optionsHTML += '<option value="board">DIRETTIVO</option>';
+                if (isSocio) optionsHTML += '<option value="member">SOCIO</option>';
+                if (isAthlete) optionsHTML += '<option value="athlete">TESSERATO</option>';
+                if (isInstructor) optionsHTML += '<option value="instructor">ISTRUTTORE</option>';
+                if (isVolunteer) optionsHTML += '<option value="volunteer">VOLONTARIO</option>';
 
                 switcher.innerHTML = optionsHTML;
                 
@@ -1044,7 +1044,7 @@
                 } else {
                     switcher.classList.add('hidden');
                     staticBadge.classList.remove('hidden');
-                    staticBadge.textContent = switcher.options.length > 0 ? switcher.options[0].text : 'AREA TESSERATO';
+                    staticBadge.textContent = switcher.options.length > 0 ? switcher.options[0].text : 'TESSERATO';
                 }
 
                 // Initial selection

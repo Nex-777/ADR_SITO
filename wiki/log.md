@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-10] ui_fix | Risoluzione Sbordamento Header Mobile e Rimozione Prefisso AREA (v1.05.25)
+- **Frontend Dashboard (`portal/dashboard.html`, `portal/dashboard.js`)**:
+  - **Rimozione Prefisso "AREA"**: Rimossa la parola "AREA" dal menu a tendina contestuale (`#context-switcher`) e dal badge statico (`#static-context-badge`), uniformando le voci in `DIRETTIVO`, `SOCIO`, `TESSERATO`, `ISTRUTTORE` e `VOLONTARIO` sia su desktop che su mobile.
+  - **Ottimizzazione Gap Mobile**: Sostituito `gap-4` con `gap-2 sm:gap-4` nei contenitori flex sinistro e destro dell'header, recuperando oltre 20px di spazio orizzontale su schermi smartphone.
+  - **Protezione Anti-Overflow**: Aggiunte classi responsive `max-w-[100px] sm:max-w-none truncate` al `<select>` per prevenire qualsiasi sbordamento orizzontale anche su schermi stretti (≤ 360px).
+- **Versioning Globale**: Eseguito `npm run bump` con avanzamento globale a **v1.05.25** su 23 file.
+
+---
+
 ## [2026-09-10] feature | Inversione Flusso Chat Nestore (Top-Down), Massimali e Paginazione Storico
 - **Frontend Chat UX (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Invertito il layout della chat in paradigma Top-Down: barra di input e anteprima allegati posizionate fisse in alto direttamente sotto l'header.
