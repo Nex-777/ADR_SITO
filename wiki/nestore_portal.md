@@ -104,7 +104,12 @@ Nestore is built as an SPA, transitioning seamlessly between Chat and Data visua
 
 ### 5.2. Mobile Tab Switcher Layout & Top-Down Inverted Chat
 - On viewports $\le 1024\text{px}$, the desktop sidebar is hidden.
-- A sticky horizontal scrollable header bar provides 4 direct tabs: **`CHAT`**, **`PESO`**, **`ALLENAMENTI`**, **`DIETA`**.
+- **Layout Tab Mobile Multi-Riga (v1.05.27)**:
+  - Eliminato lo scorrimento orizzontale a favore di una disposizione flexbox multi-riga accessibile con un singolo tocco:
+    - **Riga 1 (100% larghezza)**: `CHAT ASSISTANT AI` (`.nst-tab-full`).
+    - **Riga 2 (50% / 50%)**: `PESO & MISURE` e `ALLENAMENTI`.
+    - **Riga 3 (50% / 50%)**: `DIETA & MACRO` e `TIMER & TABATA`.
+  - **Stile Minimal Text-Only**: Rimosse le icone grafiche dai pulsanti mobile per massimizzare la chiarezza e l'area di tocco per il testo centrato in Orbitron, con responsive breakpoint specifico sotto i 380px per smartphone compatti.
 - **Top-Down Inverted Chat Flow**: In contrast to standard bottom-anchored chats, NESTORE's input bar and photo attachment preview are pinned directly at the **top** of the chat panel. New messages (athlete and assistant) appear immediately at the top of the stream, while previous conversation turns flow downwards. The viewport stays anchored at `scrollTop = 0`, ensuring athletes never have to scroll down to interact with the input or view recent replies.
 - **Chat Length Limits & Pagination**:
   - **Client-Side Cap**: Textarea is constrained to a `maxlength="1500"` character cap with a dynamic countdown badge (`X/1500`) to prevent token-exhausting text pastes.

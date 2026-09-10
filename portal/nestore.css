@@ -196,32 +196,26 @@ body.nst-body {
 @media (max-width: 1024px) {
     .nst-mobile-tab-bar {
         display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 10px;
-        padding: 10px 14px;
+        flex-wrap: wrap;
+        align-items: stretch;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 12px;
         background: var(--nst-bg-alt);
         border-bottom: 1px solid var(--nst-border);
         position: sticky;
         top: 0;
         z-index: 30;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none;  /* IE and Edge */
-    }
-
-    .nst-mobile-tab-bar::-webkit-scrollbar {
-        display: none;
     }
 
     .nst-mobile-tab-btn {
-        flex: 0 0 auto;
+        flex: 1 1 calc(50% - 4px);
+        min-height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        padding: 9px 14px;
+        text-align: center;
+        padding: 8px 6px;
         background: var(--nst-surface);
         border: 1px solid var(--nst-border);
         border-radius: 8px;
@@ -229,8 +223,19 @@ body.nst-body {
         font-family: 'Orbitron', sans-serif;
         font-size: 11px;
         font-weight: 700;
+        letter-spacing: 0.5px;
         cursor: pointer;
         transition: all 0.2s;
+        box-sizing: border-box;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    .nst-mobile-tab-btn.nst-tab-full {
+        flex: 1 1 100%;
+        font-size: 12px;
+        letter-spacing: 0.8px;
+        padding: 10px 12px;
     }
 
     .nst-mobile-tab-btn:hover {
@@ -243,6 +248,17 @@ body.nst-body {
         border-color: var(--nst-cyan);
         color: var(--nst-cyan);
         box-shadow: 0 0 10px var(--nst-cyan-dim);
+    }
+
+    @media (max-width: 380px) {
+        .nst-mobile-tab-btn {
+            font-size: 10px;
+            letter-spacing: 0.2px;
+            padding: 7px 4px;
+        }
+        .nst-mobile-tab-btn.nst-tab-full {
+            font-size: 11px;
+        }
     }
 
     .nst-main-grid {

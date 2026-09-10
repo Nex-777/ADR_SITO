@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-10] feature | Riprogettazione Tab Mobile Nestore a Più Righe (Text-Only)
+- **Frontend Mobile UX (`portal/nestore.html`, `portal/nestore.css`)**:
+  - Rimosso lo scorrimento orizzontale della barra tab mobile su schermi $\le 1024\text{px}$.
+  - Implementato layout flexbox multi-riga senza icone grafiche:
+    - **Riga 1**: `CHAT ASSISTANT AI` a larghezza intera (100%).
+    - **Riga 2**: `PESO & MISURE` (50%) e `ALLENAMENTI` (50%).
+    - **Riga 3**: `DIETA & MACRO` (50%) e `TIMER & TABATA` (50%).
+  - Ottimizzazione responsive e padding dedicato per schermi ultra-compatti ($\le 380\text{px}$).
+- **Test & Validazione**: Creato test dedicato `tests/nestore-tabs.test.js` (21/21 test totali superati).
+
+---
+
 ## [2026-09-10] feature | Introduzione Cronometro, Tabata & Floating Dock Cross-Page in Nestore
 - **Frontend Timer & Tabata (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Aggiunto il quinto pulsante "TIMER & TABATA" nella sidebar desktop di Nestore e "TIMER" nella tab bar mobile.
