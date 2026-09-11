@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.30"
+                VERSION: "1.05.31"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6163,46 +6163,76 @@
                     // Abbonamento e Tipo Pagamento
                     const abbonamentoStr = atl.abbonamento_scelto || 'N/D';
                     
+                    let startMonth = new Date().getMonth() + 1;
+                    const dataRif = atl.data_inizio_corso || atl.data_iscrizione;
+                    if (dataRif) {
+                        const parts = dataRif.split('T')[0].split('-');
+                        if (parts.length >= 2 && !isNaN(parseInt(parts[1], 10))) {
+                            startMonth = parseInt(parts[1], 10);
+                        }
+                    }
+                    const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
+                    let headerBoxesHtml = '';
+                    let headerLabel = 'ABBONAMENTO';
                     let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
+
                     if (atl.tipo_iscrizione === 'PROMO_BUNDLE') {
                         tipoPagamentoBadge = '<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">🎁 COMPRESO CON IBRIDO</span>';
                     } else if (atl.ingressi_totali) {
                         const rimasti = Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0));
                         tipoPagamentoBadge = `<span class="bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">CARNET (${rimasti}/${atl.ingressi_totali})</span>`;
+                        headerLabel = `CARNET (${rimasti}/${atl.ingressi_totali})`;
+                        
+                        let carnetBoxes = '';
+                        const ingressiUsati = atl.ingressi_usati || 0;
+                        for (let i = 1; i <= atl.ingressi_totali; i++) {
+                            if (i <= ingressiUsati) {
+                                carnetBoxes += `
+                                    <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Utilizzato">
+                                        ✓
+                                    </div>
+                                `;
+                            } else if (i === ingressiUsati + 1) {
+                                carnetBoxes += `
+                                    <button onclick="event.stopPropagation(); scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="w-5 h-5 flex items-center justify-center bg-primary/20 border border-primary text-primary hover:bg-primary hover:text-black text-[9px] font-mono font-bold select-none cursor-pointer transition-all animate-pulse" title="Ingresso ${i}/${atl.ingressi_totali}: Clicca per scalare 1 presenza">
+                                        +
+                                    </button>
+                                `;
+                            } else {
+                                carnetBoxes += `
+                                    <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-500 text-[9px] font-mono select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Rimanente">
+                                        ${i}
+                                    </div>
+                                `;
+                            }
+                        }
+                        headerBoxesHtml = carnetBoxes;
                     } else if (atl.tipo_pagamento === 'A RATE') {
                         const totRate = atl.totale_rate || (atl.abbonamento_scelto && atl.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
                         const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
                         const statoRate = atl.stato_rate || 'IN_REGOLA';
+                        headerLabel = `A RATE (${ratePagate}/${totRate})`;
 
-                        let startMonth = new Date().getMonth() + 1;
-                        const dataRif = atl.data_inizio_corso || atl.data_iscrizione;
-                        if (dataRif) {
-                            const parts = dataRif.split('T')[0].split('-');
-                            if (parts.length >= 2 && !isNaN(parseInt(parts[1], 10))) {
-                                startMonth = parseInt(parts[1], 10);
-                            }
-                        }
-                        const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-
-                        let boxesHtml = '';
+                        let rateBoxes = '';
                         for (let i = 1; i <= totRate; i++) {
                             const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
                             const nomeMese = nomiMesi[meseNum - 1];
 
                             if (i <= ratePagate) {
-                                boxesHtml += `
+                                rateBoxes += `
                                     <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe effettuato con successo (Pagato)">
                                         ✓
                                     </div>
                                 `;
                             } else if (i === ratePagate + 1 && statoRate === 'INSOLUTO') {
-                                boxesHtml += `
+                                rateBoxes += `
                                     <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe FALLITO (Insoluto)">
                                         ✗
                                     </div>
                                 `;
                             } else {
-                                boxesHtml += `
+                                rateBoxes += `
                                     <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-400 text-[9px] font-mono select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): In attesa di addebito">
                                         ${meseNum}
                                     </div>
@@ -6215,18 +6245,43 @@
                             : (statoRate === 'ANNULLATO' ? '<span class="text-gray-500 font-bold text-[9px] uppercase tracking-wider">⚪ ANNULLATO</span>' : `<span class="text-green-500 font-mono text-[9px] font-bold">(${ratePagate}/${totRate})</span>`);
 
                         tipoPagamentoBadge = `
-                            <div class="flex flex-col gap-1.5">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>
-                                    ${statusText}
-                                </div>
-                                <div class="flex flex-wrap items-center gap-1 mt-0.5">
-                                    ${boxesHtml}
-                                </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>
+                                ${statusText}
                             </div>
                         `;
+
+                        headerBoxesHtml = rateBoxes;
                     } else if (atl.tipo_pagamento === 'UNICA RATA') {
                         tipoPagamentoBadge = '<span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">UNICA RATA</span>';
+                        headerLabel = 'UNICA RATA (SALDATO)';
+
+                        let numMesi = 1;
+                        const abb = (atl.abbonamento_scelto || '').toLowerCase();
+                        if (abb.includes('annua')) numMesi = 12;
+                        else if (abb.includes('semest')) numMesi = 6;
+                        else if (abb.includes('quadrimest')) numMesi = 4;
+                        else if (abb.includes('trimest')) numMesi = 3;
+                        else if (abb.includes('bimest')) numMesi = 2;
+                        else if (abb.includes('mese') || abb.includes('mensil')) numMesi = 1;
+                        else if (atl.totale_rate) numMesi = atl.totale_rate;
+                        else if (atl.data_inizio_corso && atl.data_scadenza_corso) {
+                            const d1 = new Date(atl.data_inizio_corso);
+                            const d2 = new Date(atl.data_scadenza_corso);
+                            numMesi = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24 * 30.4375)));
+                        }
+
+                        let unicaBoxes = '';
+                        for (let i = 1; i <= numMesi; i++) {
+                            const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
+                            const nomeMese = nomiMesi[meseNum - 1];
+                            unicaBoxes += `
+                                <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Mese ${meseNum} (${nomeMese}): Saldo unico effettuato (Pagato)">
+                                    ✓
+                                </div>
+                            `;
+                        }
+                        headerBoxesHtml = unicaBoxes;
                     } else if (atl.tipo_pagamento === 'GRATUITO') {
                         tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">GRATUITO</span>';
                     }
@@ -6251,7 +6306,15 @@
                                 </div>
                             </div>
                             
-                            <div class="flex items-center gap-4 self-end md:self-center">
+                            <div class="flex flex-wrap items-center gap-4 self-start md:self-center">
+                                ${headerBoxesHtml ? `
+                                    <div class="flex flex-col items-start md:items-end">
+                                        <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">${headerLabel}</span>
+                                        <div class="flex flex-wrap items-center gap-1 mt-0.5" onclick="event.stopPropagation()">
+                                            ${headerBoxesHtml}
+                                        </div>
+                                    </div>
+                                ` : ''}
                                 <div class="flex flex-col items-end">
                                     <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">TESSERA CSEN</span>
                                     ${badgeCsen}

@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-11] fix & feat | Fix Selezione Certificati Medici in Vista SQL e Caselle Abbonamento nell'Header Atleta (v1.05.31)
+- **Database (`public.vw_stato_atleta_corso`)**:
+  - Risolto il bug di selezione nella subquery LATERAL sui certificati medici: introdotta prioritizzazione per stato di validazione (`VERDE` non scaduto > `VERDE` > `GIALLO` > `IN_ATTESA` > `ROSSO`) con tie-breaker su `data_scadenza DESC` e `created_at DESC`.
+  - Risolto il falso positivo di allerta per Danilo Clementi e Adriano Mathlouthi, che possiedono certificati convalidati `VERDE` ma venivano erroneamente associati a vecchi record di seed o tentativi respinti.
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Spostate le caselle di controllo (`headerBoxesHtml`) direttamente nella barra principale dell'header della card atleta (`loadRegistroIscritti`), visibili a colpo d'occhio senza espandere la scheda.
+  - **A RATE**: visualizzazione mesi solari con rate pagate `✓` e rate in attesa col numero del mese.
+  - **UNICA RATA**: generazione automatica di tutte le caselle della durata del piano (1, 2, 3, 4, 6, 12 mesi) tutte spuntate verdi `✓` (saldo unico).
+  - **CARNET INGRESSI**: visualizzazione degli ingressi totali con ingressi usati `✓` e casella successiva cliccabile `+` animata per obliterare la presenza direttamente dall'header con un singolo click.
+  - La scheda espandibile conserva intatte tutte le altre informazioni (input per cambio piano abbonamento, data iscrizione, data picker scadenza con barra di avanzamento).
+
+---
+
 ## [2026-09-11] feat | Numerazione Mesi Solari su Caselle Rate Abbonamento Corsi
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Aggiornato il rendering delle caselle delle rate per i piani `A RATE` nel registro atleti corso (`loadRegistroIscritti`).
