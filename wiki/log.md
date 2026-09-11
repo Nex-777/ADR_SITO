@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-11] feat | Numerazione Mesi Solari su Caselle Rate Abbonamento Corsi
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Aggiornato il rendering delle caselle delle rate per i piani `A RATE` nel registro atleti corso (`loadRegistroIscritti`).
+  - Sostituito il numero sequenziale della rata con il **numero del mese solare reale** (calcolato con algoritmo circolare modulo 12 a partire dal mese di `data_inizio_corso` o `data_iscrizione`).
+  - Le rate pagate mantengono il badge verde con segno di spunta `✓`, mentre le rate future mostrano il mese solare (es. `8, 9, 10, 11, 12, 1` per Danilo Clementi con semestre da agosto), fornendo a colpo d'occhio il mese di conclusione dell'abbonamento.
+  - Arricchiti i tooltip al passaggio del mouse con il nome per esteso del mese (es. *"Rata 1/6 - Mese 8 (Agosto): Pagato"*, *"Rata 2/6 - Mese 9 (Settembre): In attesa di addebito"*).
+
+---
+
 ## [2026-09-11] fix | Abilitazione Eventi Sottoscrizioni su Webhook Stripe e Riallineamento Rate Arretrate
 - **Infrastruttura Stripe (`we_1TeENs7wrOk84bdxRdHZMAL4`)**:
   - Aggiornato l'endpoint webhook del portale aggiungendo gli eventi periodici di sottoscrizione mancanti: `invoice.paid`, `invoice.payment_failed` e `customer.subscription.deleted`.

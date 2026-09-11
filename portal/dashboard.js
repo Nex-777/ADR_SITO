@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.29"
+                VERSION: "1.05.30"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6174,24 +6174,37 @@
                         const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
                         const statoRate = atl.stato_rate || 'IN_REGOLA';
 
+                        let startMonth = new Date().getMonth() + 1;
+                        const dataRif = atl.data_inizio_corso || atl.data_iscrizione;
+                        if (dataRif) {
+                            const parts = dataRif.split('T')[0].split('-');
+                            if (parts.length >= 2 && !isNaN(parseInt(parts[1], 10))) {
+                                startMonth = parseInt(parts[1], 10);
+                            }
+                        }
+                        const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
                         let boxesHtml = '';
                         for (let i = 1; i <= totRate; i++) {
+                            const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
+                            const nomeMese = nomiMesi[meseNum - 1];
+
                             if (i <= ratePagate) {
                                 boxesHtml += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Mese ${i}/${totRate}: Prelievo Stripe effettuato con successo (Pagato)">
+                                    <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe effettuato con successo (Pagato)">
                                         ✓
                                     </div>
                                 `;
                             } else if (i === ratePagate + 1 && statoRate === 'INSOLUTO') {
                                 boxesHtml += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Mese ${i}/${totRate}: Prelievo Stripe FALLITO (Insoluto)">
+                                    <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe FALLITO (Insoluto)">
                                         ✗
                                     </div>
                                 `;
                             } else {
                                 boxesHtml += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-500 text-[9px] font-mono select-none cursor-default" title="Mese ${i}/${totRate}: In attesa di addebito">
-                                        ${i}
+                                    <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-400 text-[9px] font-mono select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): In attesa di addebito">
+                                        ${meseNum}
                                     </div>
                                 `;
                             }
