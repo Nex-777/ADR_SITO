@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-11] fix | Bonifica Account Duplicato e Riallineamento Email Gaia Di Matteo (v1.05.32)
+- **Database (`auth.users`, `auth.identities`, `public.utenti`, `public.vw_registrazioni_incomplete`)**:
+  - Risolto il conflitto di account duplicato per la tesserata Gaia Di Matteo:
+    - Eliminato l'account incompleto fantasma del 04/09/2026 (`c116676e-2a3f-4024-8df7-65a1da01624c`) generato da un tentativo di registrazione con errore di duplicazione CF.
+    - Riallineata l'email dell'account attivo (`f3bcc7f6-3ad6-4da2-97b1-ec01be4b4cc0`) da `agaiadm81@gmail.com` (refuso storico importazione) alla corretta `gaiadm81@gmail.com` in modo sincronizzato su `auth.users`, `auth.identities` e `public.utenti`.
+    - Rimossa la segnalazione orfana da `vw_registrazioni_incomplete`.
+- **Diagnosi Documento d'Identità**:
+  - Verificata l'assenza di documenti caricati su Supabase Storage (`tessere-sanitarie` / `documenti`).
+  - Identificata la causa del blocco percepito: il widget di upload richiede obbligatoriamente la data di scadenza del documento; in sua assenza il form non invia la richiesta al server.
+
+---
+
 ## [2026-09-11] fix & feat | Fix Selezione Certificati Medici in Vista SQL e Caselle Abbonamento nell'Header Atleta (v1.05.31)
 - **Database (`public.vw_stato_atleta_corso`)**:
   - Risolto il bug di selezione nella subquery LATERAL sui certificati medici: introdotta prioritizzazione per stato di validazione (`VERDE` non scaduto > `VERDE` > `GIALLO` > `IN_ATTESA` > `ROSSO`) con tie-breaker su `data_scadenza DESC` e `created_at DESC`.
