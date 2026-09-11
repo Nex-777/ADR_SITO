@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-11] fix | Rimozione FK Monolitica su Ricevute, Trigger Cross-Table e Regolarizzazione Iscrizione Strongman (v1.05.28)
+- **Database (`supabase/migration_fix_ricevute_evento_fk.sql`)**:
+  - Risolto il bug bloccante su `public.ricevute_pagamenti`: rimosso il vincolo FK rigido `ricevute_pagamenti_evento_id_fkey` che puntava esclusivamente ad `epika_eventi(id)` e causava il fallimento del webhook Stripe quando gli utenti acquistavano corsi societari (`public.eventi`).
+  - Implementato trigger `BEFORE INSERT OR UPDATE` (`public.validate_ricevuta_evento_id()`) che garantisce validazione cross-table su `public.eventi` ed `public.epika_eventi`, preservando l'integrità referenziale.
+  - Regolarizzata la posizione di Adriano Mathlouthi (pagamento 08/09/2026 per corso Strongman, subscription `sub_1UDOA97wrOk84bdxASDL60Sq`):
+    - Creata iscrizione ufficiale in `public.iscrizioni_eventi` (Annuale a 12 rate, 1 rata pagata, IN_REGOLA).
+    - Emessa ricevuta fiscale n. 168/2026 di €51,00 in `public.ricevute_pagamenti`.
+    - Tracciato l'intervento manuale nel registro audit (`public.registro_audit_operazioni`).
+- **Backend Webhook (`api/stripe-webhook.js`)**:
+  - Sanitizzato `eventId` in `checkout.session.completed` per garantire l'invio di stringhe UUID a 36 caratteri o `null`.
+- **Documentazione Wiki (`wiki/database_schema.md`, `wiki/log.md`)**:
+  - Documentata l'architettura del nuovo trigger cross-table e la rimozione del vincolo obsoleto.
+- **Global Bump**: Versionamento globale incrementato a `v1.05.28` tramite `npm run bump`.
+
+---
+
 ## [2026-09-10] feature | Riprogettazione Tab Mobile Nestore a Più Righe (Text-Only)
 - **Frontend Mobile UX (`portal/nestore.html`, `portal/nestore.css`)**:
   - Rimosso lo scorrimento orizzontale della barra tab mobile su schermi $\le 1024\text{px}$.

@@ -217,7 +217,7 @@ A secure function executing with `SECURITY DEFINER` privileges allowing Authoriz
 1. **Trigger `on_auth_user_created` (Sincronizzazione Auth-Utenti)**: Creato trigger `AFTER INSERT` su `auth.users` associato alla funzione `public.handle_new_user()`. Garantisce l'inserimento immediato e transazionale del record base in `public.utenti` (con ruolo `tesserato_esterno`), eliminando la possibilità di creare utenti orfani se il client si disconnette dopo la chiamata `signUp`.
 2. **Trigger sync deletion**: Removed redundant DB trigger `tr_sync_utente_to_normalized` on `public.utenti`. This trigger was conflicting with the API registration flow (which already performs the inserts manually in `/api/otp-verify.js`), causing errors like `record "new" has no field "step_registrazione"` during user signups.
 3. **OTP Verify API Upsert Fix**: Modified `api/otp-verify.js` to avoid calls to `.upsert()` on the staging table `registro_approvazioni`. Because of partial unique index constraints (`anagrafica_id, tipo WHERE stato = 'IN_ATTESA'`), `upsert` calls failed with 500 exceptions. The API now uses a safe, sequential `delete` + `insert` pattern for pending approvals.
-
+4. **Trigger `trg_validate_ricevuta_evento_id` (Validazione Cross-Table Ricevute, v1.05.28)**: Rimosso il vincolo FK rigido `ricevute_pagamenti_evento_id_fkey` (che puntava unicamente ad `epika_eventi(id)` provocando errori quando una ricevuta si riferiva ad un corso sportivo in `public.eventi`). Sostituito con un trigger `BEFORE INSERT OR UPDATE` (`public.validate_ricevuta_evento_id()`) che valida cross-table: ammette `NULL`, ammette ID appartenenti a `public.eventi` o a `public.epika_eventi`, e respinge con eccezione qualsiasi altro valore arbitrario.
 
 ---
 

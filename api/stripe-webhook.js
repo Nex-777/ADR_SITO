@@ -59,7 +59,8 @@ export default async function handler(req, res) {
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         const utenteId = session.metadata?.utenteId;
-        const eventId = session.metadata?.eventId;
+        const rawEventId = session.metadata?.eventId;
+        const eventId = (rawEventId && typeof rawEventId === 'string' && rawEventId.trim().length === 36) ? rawEventId.trim() : null;
         const importoStr = session.metadata?.importo;
         const causale = session.metadata?.causale || 'Quota associativa annuale';
         const stripePaymentId = session.payment_intent || session.subscription || session.id;
