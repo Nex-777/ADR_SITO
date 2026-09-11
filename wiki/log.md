@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-11] fix | Abilitazione Eventi Sottoscrizioni su Webhook Stripe e Riallineamento Rate Arretrate
+- **Infrastruttura Stripe (`we_1TeENs7wrOk84bdxRdHZMAL4`)**:
+  - Aggiornato l'endpoint webhook del portale aggiungendo gli eventi periodici di sottoscrizione mancanti: `invoice.paid`, `invoice.payment_failed` e `customer.subscription.deleted`.
+  - Risolto il mancato recapito dei rinnovi mensili automatici a Vercel.
+- **Database (`public.iscrizioni_eventi`, `public.ricevute_pagamenti`)**:
+  - **Fabio Morganti** (`ef907d12-f7a1-437a-93ec-1f11bc038258`):
+    - Aggiornate `rate_pagate = 2` (su 6).
+    - Emessa ricevuta fiscale n. 169/2026 di €56,10 (data pagamento reale: 29/08/2026, Invoice `in_1U9gyb7wrOk84bdx19N6Ptm1`).
+  - **Giulio De Vecchis** (`5a977105-71dd-41b4-8595-973016a0b6d9`):
+    - Aggiornate `rate_pagate = 2` (su 12).
+    - Emessa ricevuta fiscale n. 170/2026 di €51,00 (data pagamento reale: 06/09/2026, Invoice `in_1UChOq7wrOk84bdxISGJPa5k`).
+  - Tracciati entrambi gli interventi nel registro audit (`public.registro_audit_operazioni`).
+
+---
+
 ## [2026-09-11] fix | Rimozione FK Monolitica su Ricevute, Trigger Cross-Table e Regolarizzazione Iscrizione Strongman (v1.05.28)
 - **Database (`supabase/migration_fix_ricevute_evento_fk.sql`)**:
   - Risolto il bug bloccante su `public.ricevute_pagamenti`: rimosso il vincolo FK rigido `ricevute_pagamenti_evento_id_fkey` che puntava esclusivamente ad `epika_eventi(id)` e causava il fallimento del webhook Stripe quando gli utenti acquistavano corsi societari (`public.eventi`).
