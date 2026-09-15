@@ -31,7 +31,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.05.32"
+        VERSION: "1.05.33"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
@@ -137,6 +137,19 @@ if (form) {
             });
 
             if (error) throw error;
+
+            // Risolve automaticamente eventuali richieste di recupero pendenti per questo utente
+            try {
+                if (data?.user?.email) {
+                    await supabaseClient
+                        .from('richieste_recupero_password')
+                        .update({ stato: 'risolto', risolto_il: new Date().toISOString() })
+                        .ilike('email', data.user.email)
+                        .eq('stato', 'in_attesa');
+                }
+            } catch (resolveErr) {
+                console.warn("Auto-risoluzione richiesta recupero non riuscita:", resolveErr);
+            }
 
             // Rimuoviamo i parametri dall'URL per sicurezza
             window.history.replaceState({}, document.title, window.location.pathname);

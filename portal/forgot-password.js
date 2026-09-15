@@ -3,7 +3,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.05.32"
+        VERSION: "1.05.33"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
@@ -37,6 +37,17 @@ form.addEventListener('submit', async (e) => {
             if (error) throw error;
 
             success = true;
+
+            // Registra la richiesta nel database per consentire assistenza immediata al Direttivo
+            try {
+                await supabaseClient.from('richieste_recupero_password').insert({
+                    email: email.toLowerCase(),
+                    stato: 'in_attesa'
+                });
+            } catch (trackErr) {
+                console.warn("Tracciamento richiesta recupero password non riuscito:", trackErr);
+            }
+
             messageEl.textContent = "SE L'EMAIL È REGISTRATA NEL SISTEMA, RICEVERAI UN LINK. CONTROLLA ANCHE LO SPAM.";
             messageEl.className = 'text-xs text-green-500 font-bold uppercase';
             

@@ -78,3 +78,27 @@ Validates uploaded medical certificates and identity documents via Mistral AI Vi
     -   Updates `public.certificati_medici` or `public.documenti_identita` tables.
     -   Triggers email notifications to athlete based on validation outcome.
 
+---
+
+## 4. Admin Password Recovery Link Generator
+
+Generates secure single-use password recovery links on-demand for board members to assist users who experience email delivery issues.
+
+### Node/Vercel Serverless Function
+-   **File Path**: `[admin-recovery-link.js](../api/admin-recovery-link.js)`
+-   **Endpoint Route**: `POST /api/admin-recovery-link`
+-   **Headers**:
+    -   `Authorization: Bearer <Supabase_JWT>` (strictly requires board roles: `presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`)
+-   **Body JSON Parameters**:
+    ```json
+    {
+      "email": "user@example.com"
+    }
+    ```
+-   **Actions**:
+    -   Authenticates the caller via `supabase.auth.getUser()`.
+    -   Verifies board role in `public.utenti`.
+    -   Uses `supabaseAdmin.auth.admin.generateLink({ type: 'recovery', email, ... })` to generate a secure `action_link`.
+    -   Logs action in `public.registro_audit_operazioni`.
+    -   Returns `{ success: true, action_link, email }`.
+

@@ -2,6 +2,27 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-15] feat | Tracciamento Recupero Password, Generazione Link Diretti e Condivisione WhatsApp per il Direttivo (v1.05.33)
+- **Database (`public.richieste_recupero_password`)**:
+  - Creata nuova tabella dedicata al tracciamento delle procedure di "Password Dimenticata" (`id`, `email`, `stato`, `created_at`, `risolto_il`).
+  - Implementate policy RLS sicure: inserimento pubblico/anonimo consentito, consultazione e gestione riservata al Direttivo (`BOARD_ROLES`), e auto-risoluzione per l'utente al completamento del reset.
+- **Backend API (`api/admin-recovery-link.js`)**:
+  - Nuovo endpoint serverless Vercel protetto da autenticazione JWT e verifica del ruolo direttivo.
+  - Utilizza `supabaseAdmin.auth.admin.generateLink` con `type: 'recovery'` per generare un link di recovery sicuro e monouso, salvando l'azione nell'audit log.
+- **Frontend Portale**:
+  - `portal/forgot-password.js`: alla richiesta di reset password ordinaria, registra la pendenza nella tabella del database.
+  - `portal/reset-password.js`: al completamento del cambio password (`updateUser`), contrassegna automaticamente la richiesta come `risolto`, eliminandola dalla vista del Direttivo.
+  - `portal/dashboard.html` & `portal/dashboard.js`:
+    - Aggiunta nuova sezione *"RICHIESTE RECUPERO PASSWORD"* nel tab Registro Approvazioni.
+    - Mostra nome, cognome, email, telefono e orario della richiesta.
+    - Pulsanti per **Copia Link Diretto**, **Invia su WhatsApp** (con messaggio precompilato pronto all'invio) e **Cestino / Archivia**.
+    - Pulsante e campo **Link Rapido** per generare all'istante un link di accesso per qualsiasi email/tesserato.
+- **Documentazione Wiki (`wiki/api_endpoints.md`, `wiki/log.md`)**:
+  - Documentate le specifiche del nuovo endpoint e la relativa architettura di sicurezza.
+- **Global Bump**: Versionamento incrementato a `v1.05.33`.
+
+---
+
 ## [2026-09-11] fix | Bonifica Account Duplicato e Riallineamento Email Gaia Di Matteo (v1.05.32)
 - **Database (`auth.users`, `auth.identities`, `public.utenti`, `public.vw_registrazioni_incomplete`)**:
   - Risolto il conflitto di account duplicato per la tesserata Gaia Di Matteo:

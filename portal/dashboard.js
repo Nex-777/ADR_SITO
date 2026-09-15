@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.32"
+                VERSION: "1.05.33"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -2109,6 +2109,92 @@
             }
         };
 
+        async function fetchAdminRecoveryLink(email) {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session?.access_token) {
+                throw new Error("Sessione non autenticata. Effettua nuovamente il login.");
+            }
+            const apiBase = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.API_BASE_URL) ? APP_CONFIG.API_BASE_URL : window.location.origin;
+            const res = await fetch(`${apiBase}/api/admin-recovery-link`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "Impossibile generare il link di recupero.");
+            }
+            return data.action_link;
+        }
+
+        window.copiaLinkRecupero = async (email) => {
+            try {
+                showToastNotification("Generazione link di recupero in corso...", "info");
+                const actionLink = await fetchAdminRecoveryLink(email);
+                await navigator.clipboard.writeText(actionLink);
+                showToastNotification("Link di recupero generato e copiato negli appunti!", "success");
+            } catch (err) {
+                console.error("Errore generazione link:", err);
+                showToastNotification(err.message, "error");
+            }
+        };
+
+        window.inviaRecoverySuWhatsApp = async (email, telefono, nome) => {
+            try {
+                showToastNotification("Generazione link per WhatsApp...", "info");
+                const actionLink = await fetchAdminRecoveryLink(email);
+                
+                let cleanTel = telefono ? telefono.replace(/[^0-9]/g, '') : '';
+                if (!cleanTel) {
+                    const inputTel = prompt("Inserisci il numero di telefono per WhatsApp (es. 393331234567):", "");
+                    if (inputTel) cleanTel = inputTel.replace(/[^0-9]/g, '');
+                }
+
+                const saluto = nome ? `Ciao ${nome}` : 'Ciao';
+                const msg = `${saluto}, ecco il link sicuro per impostare la tua password di accesso al portale Adrenalina Club:\n\n${actionLink}\n\n(Il link è valido per una sola modifica)`;
+                
+                const waUrl = cleanTel 
+                    ? `https://wa.me/${cleanTel}?text=${encodeURIComponent(msg)}`
+                    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+                window.open(waUrl, '_blank', 'noopener,noreferrer');
+                showToastNotification("WhatsApp aperto con messaggio e link precompilato!", "success");
+            } catch (err) {
+                console.error("Errore invio WhatsApp:", err);
+                showToastNotification(err.message, "error");
+            }
+        };
+
+        window.archiviaRecupero = async (id) => {
+            if (!confirm("Vuoi archiviare e rimuovere questa richiesta dall'elenco?")) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('richieste_recupero_password')
+                    .update({ stato: 'archiviato', risolto_il: new Date().toISOString() })
+                    .eq('id', id);
+
+                if (error) throw error;
+                showToastNotification("Richiesta archiviata con successo.", "success");
+                loadApprovazioni();
+            } catch (err) {
+                console.error("Errore archiviazione richiesta:", err);
+                showToastNotification("Errore durante l'archiviazione: " + err.message, "error");
+            }
+        };
+
+        window.generaLinkRecuperoRapido = async () => {
+            const input = document.getElementById('input-recupero-rapido');
+            const email = input ? input.value.trim() : '';
+            if (!email || !email.includes('@')) {
+                showToastNotification("Inserisci un indirizzo email valido.", "error");
+                return;
+            }
+            await window.copiaLinkRecupero(email);
+        };
+
                 if (error) throw error;
                 
                 // Fetch atti_adesione per ottenere i PDF CSEN e Modulo Adesione
@@ -2537,6 +2623,101 @@
                     `;
                     incompleteBody.appendChild(row);
                 });
+            }
+
+            // Render Richieste Recupero Password
+            const recuperoBody = document.getElementById('approvazioni-recupero-pwd-list');
+            const badgeRecupero = document.getElementById('badge-recupero-pwd');
+            if (recuperoBody) {
+                recuperoBody.innerHTML = '';
+                const { data: recoveryReqs, error: recError } = await supabaseClient
+                    .from('richieste_recupero_password')
+                    .select('*')
+                    .eq('stato', 'in_attesa')
+                    .order('created_at', { ascending: false });
+
+                if (recError) {
+                    console.error("Errore recupero richieste password:", recError);
+                    recuperoBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-red-500">Errore durante il caricamento delle richieste.</td></tr>';
+                } else if (!recoveryReqs || recoveryReqs.length === 0) {
+                    recuperoBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nessuna richiesta di recupero password in attesa.</td></tr>';
+                    if (badgeRecupero) badgeRecupero.classList.add('hidden');
+                } else {
+                    if (badgeRecupero) {
+                        badgeRecupero.textContent = recoveryReqs.length;
+                        badgeRecupero.classList.remove('hidden');
+                    }
+
+                    // Recuperiamo le anagrafiche corrispondenti alle email per mostrare nome, cognome e telefono
+                    const emails = recoveryReqs.map(r => r.email.toLowerCase());
+                    const { data: matchedUsers } = await supabaseClient
+                        .from('utenti')
+                        .select('id, email, nome, cognome, cellulare, anagrafiche(id, nome, cognome, contatti)')
+                        .in('email', emails);
+
+                    const userMap = {};
+                    (matchedUsers || []).forEach(u => {
+                        if (u.email) userMap[u.email.toLowerCase()] = u;
+                    });
+
+                    recoveryReqs.forEach(reqItem => {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b border-indigo-500/10 hover:bg-indigo-900/10 transition-colors';
+
+                        const matched = userMap[reqItem.email.toLowerCase()];
+                        let nominativo = '<span class="text-gray-500 italic">Utente non censito</span>';
+                        let tel = '';
+                        let cleanName = '';
+                        if (matched) {
+                            const anag = Array.isArray(matched.anagrafiche) ? matched.anagrafiche[0] : matched.anagrafiche;
+                            const nome = matched.nome || anag?.nome || '';
+                            const cognome = matched.cognome || anag?.cognome || '';
+                            if (nome || cognome) {
+                                cleanName = `${nome} ${cognome}`.trim();
+                                nominativo = `<span class="font-bold text-white">${escapeHtml(cleanName)}</span>`;
+                            }
+                            
+                            // Telefono
+                            tel = matched.cellulare || '';
+                            if (!tel && anag?.contatti) {
+                                const conObj = Array.isArray(anag.contatti) ? anag.contatti[0] : anag.contatti;
+                                tel = conObj?.telefono || '';
+                            }
+                        }
+
+                        let contattiHtml = '<span class="text-gray-600 text-[10px]">-</span>';
+                        if (tel) {
+                            const cleanTel = tel.replace(/[^0-9+]/g, '');
+                            contattiHtml = `<div class="flex items-center gap-1.5">
+                                <a href="tel:${cleanTel}" class="text-xs text-gray-300 hover:text-white font-mono">📞 ${escapeHtml(tel)}</a>
+                                <button type="button" onclick="inviaRecoverySuWhatsApp('${escapeHtml(reqItem.email)}', '${cleanTel.replace('+', '')}', '${escapeHtml(cleanName)}')" class="text-green-400 hover:text-green-300 font-bold text-[10px] bg-green-950/40 px-1 py-0.5 border border-green-500/30 rounded" title="Invia Link su WhatsApp">💬 WA</button>
+                            </div>`;
+                        }
+
+                        const dateStr = reqItem.created_at ? new Date(reqItem.created_at).toLocaleString('it-IT') : '-';
+
+                        row.innerHTML = `
+                            <td class="p-3">${nominativo}</td>
+                            <td class="p-3 text-indigo-300 lowercase font-sans">${escapeHtml(reqItem.email)}</td>
+                            <td class="p-3">${contattiHtml}</td>
+                            <td class="p-3 text-gray-400 font-mono text-[11px]">${escapeHtml(dateStr)}</td>
+                            <td class="p-3 text-right">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <button type="button" onclick="copiaLinkRecupero('${escapeHtml(reqItem.email)}')" class="bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/30 font-headline text-[9px] font-bold px-2.5 py-1 transition-all uppercase flex items-center gap-1" title="Genera e copia negli appunti">
+                                        <span class="material-symbols-outlined text-xs">content_copy</span> COPIA LINK
+                                    </button>
+                                    <button type="button" onclick="inviaRecoverySuWhatsApp('${escapeHtml(reqItem.email)}', '${tel ? tel.replace(/[^0-9]/g, '') : ''}', '${escapeHtml(cleanName)}')" class="bg-green-600/30 hover:bg-green-600 text-green-300 hover:text-white border border-green-500/30 font-headline text-[9px] font-bold px-2 py-1 transition-all uppercase flex items-center gap-1" title="Invia link via WhatsApp">
+                                        <span class="material-symbols-outlined text-xs">chat</span> WA
+                                    </button>
+                                    <button type="button" onclick="archiviaRecupero('${reqItem.id}')" class="bg-red-950/30 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-headline text-[9px] font-bold px-1.5 py-1 transition-all" title="Elimina / Archivia richiesta">
+                                        <span class="material-symbols-outlined text-xs">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        `;
+                        recuperoBody.appendChild(row);
+                    });
+                }
             }
 
             // Render Storico
