@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { Mistral } from '@mistralai/mistralai';
-import { sendEmail } from './resend-mail.js';
+import { sendEmail } from './_utils/resend-mail.js';
 
 // ═══════════════════════════════════════════════════════════════════
 //  /api/validate  —  Endpoint unificato di validazione AI

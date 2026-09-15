@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-15] fix | Hotfix Limite Serverless Functions Vercel - Spostamento resend-mail in _utils (v1.05.34)
+- **Backend (`api/_utils/resend-mail.js`)**:
+  - Spostato `api/resend-mail.js` → `api/_utils/resend-mail.js`. Le cartelle prefissate da underscore (`_utils/`) non vengono compilate da Vercel come endpoint serverless, rispettando il limite di 12 funzioni del piano Hobby.
+  - Aggiornati tutti i file che importano `sendEmail`: `api/cron-scadenze.js`, `api/otp-verify.js`, `api/validate.js`.
+- Il conteggio delle Serverless Functions torna a **12/12** (entro il limite Hobby).
+- **Global Bump**: Versionamento incrementato a `v1.05.34`.
+
+---
+
 ## [2026-09-15] feat | Tracciamento Recupero Password, Generazione Link Diretti e Condivisione WhatsApp per il Direttivo (v1.05.33)
 - **Database (`public.richieste_recupero_password`)**:
   - Creata nuova tabella dedicata al tracciamento delle procedure di "Password Dimenticata" (`id`, `email`, `stato`, `created_at`, `risolto_il`).
