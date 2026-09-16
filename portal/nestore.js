@@ -17,6 +17,16 @@ let currentAttachedImage = null; // { base64, mimeType, name }
 let speechRecognizer = null;
 let isRecordingVoice = false;
 
+// Stato Globale Vista Allenatore & Admin (Fase 2)
+let currentNestoreView = 'athlete'; // 'athlete' | 'coach' | 'admin'
+let isIstruttore = false;
+let isAuthorizedAdmin = false;
+let isBoardMember = false;
+let coachCorsiAtleti = [];
+let selectedCoachAtleta = null; // { id, nome, corsoTitolo, corsoId }
+let selectedSchedaWordFile = null; // File object
+let coachSubpanelActive = 'schede'; // 'schede' | 'peso' | 'allenamenti' | 'dieta' | 'profilo'
+
 // Sanitizzazione HTML per sicurezza
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
@@ -36,10 +46,12 @@ function tornaAdAdrenalina() {
 }
 
 // Inizializzazione al caricamento
-document.addEventListener('DOMContentLoaded', () => {
-    initNestore();
-    inizializzaRiconoscimentoVocale();
-});
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        initNestore();
+        inizializzaRiconoscimentoVocale();
+    });
+}
 
 // Inizializzazione Principale
 async function initNestore() {
@@ -72,11 +84,11 @@ async function initNestore() {
             return;
         }
 
-        const isAuthorizedAdmin = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente'].includes(r));
-        const isBoardMember = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+        isAuthorizedAdmin = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente'].includes(r));
+        isBoardMember = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
         
-        let isIstruttore = false;
-        if (!isBoardMember && profile.anagrafiche && profile.anagrafiche.length > 0) {
+        isIstruttore = false;
+        if (profile.anagrafiche && profile.anagrafiche.length > 0) {
             try {
                 const anagId = profile.anagrafiche[0].id;
                 const { data: istrData } = await supabaseClient
@@ -106,10 +118,38 @@ async function initNestore() {
         const nomeCompleto = `${profile.nome || ''} ${profile.cognome || ''}`.trim() || 'Atleta';
         document.getElementById('nst-user-name').textContent = nomeCompleto;
 
-        // Predisposizione View Switcher per Admin / Coach (Fase 2)
-        if (hasUnconditionalAccess) {
-            const switcher = document.getElementById('nst-view-switcher');
-            if (switcher) switcher.classList.remove('nst-hidden');
+        // Configurazione Selettore Vista per Admin / Coach (Fase 2)
+        // Regola 1: sia allenatori che amministratori entrano in nestore dalla loro sezione personale Atleta,
+        // passano alle altre qualifiche tramite selettore.
+        const switcher = document.getElementById('nst-view-switcher');
+        if (switcher) {
+            if (isBoardMember || isIstruttore) {
+                switcher.innerHTML = '';
+                
+                const optAtleta = document.createElement('option');
+                optAtleta.value = 'athlete';
+                optAtleta.textContent = 'ATLETA';
+                switcher.appendChild(optAtleta);
+
+                if (isIstruttore || isBoardMember) {
+                    const optCoach = document.createElement('option');
+                    optCoach.value = 'coach';
+                    optCoach.textContent = 'ALLENATORE';
+                    switcher.appendChild(optCoach);
+                }
+
+                if (isBoardMember) {
+                    const optAdmin = document.createElement('option');
+                    optAdmin.value = 'admin';
+                    optAdmin.textContent = 'AMMINISTRATORE';
+                    switcher.appendChild(optAdmin);
+                }
+
+                switcher.value = 'athlete';
+                switcher.classList.remove('nst-hidden');
+            } else {
+                switcher.classList.add('nst-hidden');
+            }
         }
 
         // 3. Verifica Corso Continuativo Attivo
@@ -1783,17 +1823,67 @@ function formatDate(dateStr) {
     return dateStr;
 }
 
-// Predisposizione cambio visualizzazione
-function switchNestoreView(val) {
-    console.log("Switch vista Nestore a:", val);
+// ---------------------------------------------------------------------------
+// GESTIONE CAMBIO VISUALIZZAZIONE (ATLETA / ALLENATORE / AMMINISTRATORE)
+// ---------------------------------------------------------------------------
+async function switchNestoreView(val) {
+    currentNestoreView = val;
+    const athleteGrid = document.getElementById('nst-athlete-main-grid');
+    const mobileTabs = document.getElementById('nst-mobile-tabs');
+    const coachContainer = document.getElementById('nst-coach-container');
+    const rolePill = document.getElementById('nst-coach-role-pill');
+    const dashTitle = document.getElementById('nst-coach-dashboard-title');
+    const dashSubtitle = document.getElementById('nst-coach-dashboard-subtitle');
+
+    // Reset eventuale atleta in ispezione
+    selectedCoachAtleta = null;
+
+    if (val === 'athlete') {
+        if (athleteGrid) athleteGrid.classList.remove('nst-hidden');
+        if (mobileTabs) mobileTabs.classList.remove('nst-hidden');
+        if (coachContainer) coachContainer.classList.add('nst-hidden');
+    } else if (val === 'coach') {
+        if (athleteGrid) athleteGrid.classList.add('nst-hidden');
+        if (mobileTabs) mobileTabs.classList.add('nst-hidden');
+        if (coachContainer) coachContainer.classList.remove('nst-hidden');
+
+        if (rolePill) {
+            rolePill.textContent = 'ALLENATORE';
+            rolePill.className = 'nst-coach-pill';
+        }
+        if (dashTitle) dashTitle.textContent = 'I MIEI ATLETI';
+        if (dashSubtitle) dashSubtitle.textContent = 'Seleziona un atleta per monitorare i suoi parametri (peso, allenamenti, pasti, scheda AI) e assegnargli la scheda di allenamento.';
+
+        // Mostra vista lista e nascondi dettaglio
+        document.getElementById('nst-coach-list-view')?.classList.remove('nst-hidden');
+        document.getElementById('nst-coach-atleta-view')?.classList.add('nst-hidden');
+
+        await caricaCoachDashboard();
+    } else if (val === 'admin') {
+        if (athleteGrid) athleteGrid.classList.add('nst-hidden');
+        if (mobileTabs) mobileTabs.classList.add('nst-hidden');
+        if (coachContainer) coachContainer.classList.remove('nst-hidden');
+
+        if (rolePill) {
+            rolePill.textContent = 'AMMINISTRATORE';
+            rolePill.className = 'nst-coach-pill alt';
+        }
+        if (dashTitle) dashTitle.textContent = 'TUTTI GLI ATLETI (AMMINISTRATORE)';
+        if (dashSubtitle) dashSubtitle.textContent = 'Visualizzazione completa di tutti i corsi e atleti registrati ad Adrenalina Club.';
+
+        document.getElementById('nst-coach-list-view')?.classList.remove('nst-hidden');
+        document.getElementById('nst-coach-atleta-view')?.classList.add('nst-hidden');
+
+        await caricaAdminDashboard();
+    }
 }
 
 // ---------------------------------------------------------------------------
-// GESTIONE PANNELLI SPA (Desktop Sidebar / Mobile Tabs)
+// GESTIONE PANNELLI SPA ATLETA (Desktop Sidebar / Mobile Tabs)
 // ---------------------------------------------------------------------------
 function switchNestorePanel(panelId) {
-    // Lista pannelli
-    const panels = ['chat', 'peso', 'allenamenti', 'dieta', 'timer', 'profilo'];
+    // Lista pannelli atleta
+    const panels = ['chat', 'peso', 'allenamenti', 'dieta', 'timer', 'profilo', 'schede'];
     
     panels.forEach(p => {
         // Nascondi / Mostra Main Panel
@@ -1825,6 +1915,8 @@ function switchNestorePanel(panelId) {
         ancoraChatInAlto();
     } else if (panelId === 'profilo') {
         caricaSchedaAtletaUI();
+    } else if (panelId === 'schede') {
+        caricaSchedeAtleta(currentUser.id, 'nst-atleta-schede-container', false);
     }
     
     // Se l'utente entra nel pannello Timer, nascondi il mini-dock
@@ -1835,6 +1927,936 @@ function switchNestorePanel(panelId) {
         } else {
             aggiornaVisibilitaDock();
         }
+    }
+}
+
+// ===========================================================================
+// SEZIONE DASHBOARD ALLENATORE & AMMINISTRATORE (Fase 2)
+// ===========================================================================
+
+async function caricaCoachDashboard() {
+    const container = document.getElementById('nst-coach-atleti-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="nst-loading-box">
+                <span class="material-symbols-outlined nst-spin">progress_activity</span>
+                <span>Caricamento atleti dei tuoi corsi in corso...</span>
+            </div>
+        `;
+    }
+
+    try {
+        // 1. Trova i corsi assegnati all'istruttore loggato
+        const { data: assegnazioni, error: assErr } = await supabaseClient
+            .from('istruttori_eventi')
+            .select('evento_id, eventi(id, titolo, tipo, orari_settimanali)')
+            .eq('istruttore_id', currentUser.id);
+
+        if (assErr) throw assErr;
+
+        if (!assegnazioni || assegnazioni.length === 0) {
+            coachCorsiAtleti = [];
+            aggiornaSelectCorsiCoach([]);
+            if (container) {
+                container.innerHTML = `
+                    <div class="nst-card" style="text-align: center; padding: 40px 20px;">
+                        <span class="material-symbols-outlined" style="font-size: 48px; color: var(--nst-text-muted); margin-bottom: 12px;">fitness_center</span>
+                        <h3 class="nst-headline" style="font-size: 14px; color: #fff; margin-bottom: 8px;">NESSUN CORSO ASSEGNATO</h3>
+                        <p style="font-size: 12px; color: var(--nst-text-muted); max-width: 500px; margin: 0 auto;">
+                            Non risulti ancora assegnato come istruttore a nessun corso attivo. Contatta la presidenza per farti associare ai corsi nella Gestione Corsi.
+                        </p>
+                    </div>
+                `;
+            }
+            const statsPill = document.getElementById('nst-coach-stats-pill');
+            if (statsPill) statsPill.textContent = '0 ATLETI TOTALI';
+            return;
+        }
+
+        const corsi = assegnazioni.map(a => a.eventi).filter(Boolean);
+        const corsiIds = corsi.map(c => c.id);
+
+        // 2. Trova tutti gli atleti iscritti a questi corsi
+        const { data: iscrizioni, error: iscrErr } = await supabaseClient
+            .from('iscrizioni_eventi')
+            .select('id, evento_id, utente_id, data_inizio_corso, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, utenti(id, nome, cognome, email)')
+            .in('evento_id', corsiIds)
+            .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
+
+        if (iscrErr) throw iscrErr;
+
+        // 3. Trova schede attive per questi atleti
+        const atletiIds = Array.from(new Set((iscrizioni || []).map(i => i.utente_id)));
+        const schedeMap = {};
+        if (atletiIds.length > 0) {
+            const { data: schede } = await supabaseClient
+                .from('nestore_schede_allenamento')
+                .select('id, atleta_id, titolo, file_nome, creato_il')
+                .in('atleta_id', atletiIds)
+                .eq('attivo', true);
+            (schede || []).forEach(s => {
+                schedeMap[s.atleta_id] = s;
+            });
+        }
+
+        // 4. Aggrega per corso
+        coachCorsiAtleti = corsi.map(c => {
+            const iscrCorso = (iscrizioni || []).filter(i => i.evento_id === c.id && i.utenti);
+            const atleti = iscrCorso.map(isc => ({
+                id: isc.utenti.id,
+                nome: isc.utenti.nome || '',
+                cognome: isc.utenti.cognome || '',
+                email: isc.utenti.email || '',
+                dataScadenza: isc.data_scadenza_corso,
+                schedaAttiva: schedeMap[isc.utenti.id] || null
+            }));
+            return {
+                id: c.id,
+                titolo: c.titolo,
+                atleti: atleti
+            };
+        });
+
+        aggiornaSelectCorsiCoach(coachCorsiAtleti);
+        renderCoachCoursesList(coachCorsiAtleti);
+
+    } catch (err) {
+        console.error("Errore caricamento dashboard coach:", err);
+        if (container) {
+            container.innerHTML = `
+                <div class="nst-card" style="color: var(--nst-danger); padding: 20px;">
+                    Errore durante il caricamento dei corsi e atleti: ${escapeHtml(err.message)}
+                </div>
+            `;
+        }
+    }
+}
+
+async function caricaAdminDashboard() {
+    const container = document.getElementById('nst-coach-atleti-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="nst-loading-box">
+                <span class="material-symbols-outlined nst-spin">progress_activity</span>
+                <span>Caricamento di tutti i corsi e atleti del club...</span>
+            </div>
+        `;
+    }
+
+    try {
+        // 1. Prendi tutti i corsi attivi
+        const { data: corsi, error: cErr } = await supabaseClient
+            .from('eventi')
+            .select('id, titolo, tipo, orari_settimanali')
+            .eq('tipo', 'corso')
+            .order('titolo');
+
+        if (cErr) throw cErr;
+
+        if (!corsi || corsi.length === 0) {
+            coachCorsiAtleti = [];
+            aggiornaSelectCorsiCoach([]);
+            if (container) {
+                container.innerHTML = `
+                    <div class="nst-card" style="text-align: center; padding: 40px 20px;">
+                        <p style="font-size: 13px; color: var(--nst-text-muted);">Nessun corso configurato nel sistema.</p>
+                    </div>
+                `;
+            }
+            return;
+        }
+
+        const corsiIds = corsi.map(c => c.id);
+
+        // 2. Iscrizioni per tutti i corsi
+        const { data: iscrizioni, error: iscrErr } = await supabaseClient
+            .from('iscrizioni_eventi')
+            .select('id, evento_id, utente_id, data_inizio_corso, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, utenti(id, nome, cognome, email)')
+            .in('evento_id', corsiIds)
+            .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
+
+        if (iscrErr) throw iscrErr;
+
+        // 3. Schede attive
+        const atletiIds = Array.from(new Set((iscrizioni || []).map(i => i.utente_id)));
+        const schedeMap = {};
+        if (atletiIds.length > 0) {
+            const { data: schede } = await supabaseClient
+                .from('nestore_schede_allenamento')
+                .select('id, atleta_id, titolo, file_nome, creato_il')
+                .in('atleta_id', atletiIds)
+                .eq('attivo', true);
+            (schede || []).forEach(s => {
+                schedeMap[s.atleta_id] = s;
+            });
+        }
+
+        coachCorsiAtleti = corsi.map(c => {
+            const iscrCorso = (iscrizioni || []).filter(i => i.evento_id === c.id && i.utenti);
+            const atleti = iscrCorso.map(isc => ({
+                id: isc.utenti.id,
+                nome: isc.utenti.nome || '',
+                cognome: isc.utenti.cognome || '',
+                email: isc.utenti.email || '',
+                dataScadenza: isc.data_scadenza_corso,
+                schedaAttiva: schedeMap[isc.utenti.id] || null
+            }));
+            return {
+                id: c.id,
+                titolo: c.titolo,
+                atleti: atleti
+            };
+        });
+
+        aggiornaSelectCorsiCoach(coachCorsiAtleti);
+        renderCoachCoursesList(coachCorsiAtleti);
+
+    } catch (err) {
+        console.error("Errore caricamento dashboard admin:", err);
+        if (container) {
+            container.innerHTML = `
+                <div class="nst-card" style="color: var(--nst-danger); padding: 20px;">
+                    Errore durante il caricamento generale: ${escapeHtml(err.message)}
+                </div>
+            `;
+        }
+    }
+}
+
+function aggiornaSelectCorsiCoach(corsiData) {
+    const select = document.getElementById('nst-coach-course-select');
+    if (!select) return;
+    select.innerHTML = '<option value="ALL">TUTTI I CORSI</option>';
+    corsiData.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.titolo.toUpperCase()} (${c.atleti.length} ATLETI)`;
+        select.appendChild(opt);
+    });
+}
+
+function filtraCorsoCoach(val) {
+    const searchVal = document.getElementById('nst-coach-search-input')?.value || '';
+    renderCoachCoursesList(coachCorsiAtleti, val, searchVal);
+}
+
+function cercaAtletiCoach(val) {
+    const courseVal = document.getElementById('nst-coach-course-select')?.value || 'ALL';
+    renderCoachCoursesList(coachCorsiAtleti, courseVal, val);
+}
+
+function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch = '') {
+    const container = document.getElementById('nst-coach-atleti-container');
+    if (!container) return;
+
+    const term = (filterSearch || '').trim().toLowerCase();
+    let totalAtletiCount = 0;
+
+    let html = '';
+
+    corsiData.forEach(corso => {
+        if (filterCourseId !== 'ALL' && corso.id !== filterCourseId) {
+            return;
+        }
+
+        // Filtra atleti per termine di ricerca
+        const atletiFiltrati = (corso.atleti || []).filter(a => {
+            if (!term) return true;
+            const full = `${a.cognome} ${a.nome} ${a.email}`.toLowerCase();
+            return full.includes(term);
+        });
+
+        totalAtletiCount += atletiFiltrati.length;
+
+        html += `
+            <div class="nst-coach-course-card" id="nst-course-card-${corso.id}">
+                <div class="nst-coach-course-header">
+                    <span class="nst-coach-course-title">
+                        <span class="material-symbols-outlined">sports</span>
+                        ${escapeHtml(corso.titolo)}
+                    </span>
+                    <span class="nst-coach-course-count">${atletiFiltrati.length} ATLETI</span>
+                </div>
+                <div class="nst-coach-athletes-grid">
+        `;
+
+        if (atletiFiltrati.length === 0) {
+            html += `
+                <div style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--nst-text-muted); font-size: 12px;">
+                    Nessun atleta corrisponde ai criteri di ricerca in questo corso.
+                </div>
+            `;
+        } else {
+            atletiFiltrati.forEach(atleta => {
+                const initial = (atleta.cognome ? atleta.cognome[0] : (atleta.nome ? atleta.nome[0] : 'A')).toUpperCase();
+                const nomeCompleto = `${atleta.cognome} ${atleta.nome}`.trim() || 'Atleta Senza Nome';
+                const haScheda = !!atleta.schedaAttiva;
+                const badgeSchedaHtml = haScheda
+                    ? `<span class="nst-atleta-badge active-scheda" title="${escapeHtml(atleta.schedaAttiva.titolo)}">SCHEDA: ${escapeHtml(atleta.schedaAttiva.titolo.slice(0, 18))}</span>`
+                    : `<span class="nst-atleta-badge">NESSUNA SCHEDA</span>`;
+
+                html += `
+                    <div class="nst-coach-athlete-card">
+                        <div class="nst-atleta-card-header">
+                            <div class="nst-atleta-avatar">${initial}</div>
+                            <div class="nst-atleta-card-info">
+                                <div class="nst-atleta-card-name" title="${escapeHtml(nomeCompleto)}">${escapeHtml(nomeCompleto)}</div>
+                                <div class="nst-atleta-card-email">${escapeHtml(atleta.email || 'Email non registrata')}</div>
+                                <div class="nst-atleta-card-badges">
+                                    ${badgeSchedaHtml}
+                                    ${atleta.dataScadenza ? `<span class="nst-atleta-badge">SCAD: ${formatDate(atleta.dataScadenza)}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="nst-btn-open-atleta" onclick="apriAtletaPerAllenatore('${atleta.id}', '${escapeHtml(nomeCompleto.replace(/'/g, "\\'"))}', '${escapeHtml(corso.titolo.replace(/'/g, "\\'"))}', '${corso.id}')">
+                            <span>APRI SCHEDA ATLETA</span>
+                            <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    if (!html) {
+        html = `
+            <div class="nst-card" style="text-align: center; padding: 30px; color: var(--nst-text-muted); font-size: 13px;">
+                Nessun corso o atleta trovato con i filtri selezionati.
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+
+    const statsPill = document.getElementById('nst-coach-stats-pill');
+    if (statsPill) {
+        statsPill.textContent = `${totalAtletiCount} ATLETI TOTALI`;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// VISTA DETTAGLIO ATLETA PER COACH (ISPEZIONE METRICHE & GESTIONE SCHEDE)
+// ---------------------------------------------------------------------------
+
+async function apriAtletaPerAllenatore(atletaId, nomeCompleto, corsoTitolo, corsoId) {
+    selectedCoachAtleta = {
+        id: atletaId,
+        nome: nomeCompleto,
+        corsoTitolo: corsoTitolo,
+        corsoId: corsoId
+    };
+
+    // Switch UI view
+    document.getElementById('nst-coach-list-view')?.classList.add('nst-hidden');
+    document.getElementById('nst-coach-atleta-view')?.classList.remove('nst-hidden');
+
+    // Imposta info in testata
+    const nameEl = document.getElementById('nst-coach-inspect-name');
+    if (nameEl) nameEl.textContent = nomeCompleto.toUpperCase();
+    const courseEl = document.getElementById('nst-coach-inspect-course');
+    if (courseEl) courseEl.textContent = `CORSO: ${corsoTitolo.toUpperCase()}`;
+
+    // Mostra per default il subpanel schede
+    switchCoachSubpanel('schede');
+
+    // Carica schede dell'atleta
+    await caricaSchedeAtleta(atletaId, 'nst-coach-schede-history-list', true);
+
+    // Carica metriche in sola lettura dell'atleta
+    await caricaDatiAtletaPerCoach(atletaId);
+}
+
+function chiudiDettaglioAtletaPerCoach() {
+    selectedCoachAtleta = null;
+    document.getElementById('nst-coach-atleta-view')?.classList.add('nst-hidden');
+    document.getElementById('nst-coach-list-view')?.classList.remove('nst-hidden');
+}
+
+function switchCoachSubpanel(subId) {
+    coachSubpanelActive = subId;
+    const subtabs = ['schede', 'peso', 'allenamenti', 'dieta', 'profilo'];
+    subtabs.forEach(s => {
+        const btn = document.getElementById(`nst-csub-btn-${s}`);
+        const panel = document.getElementById(`nst-coach-subpanel-${s}`);
+        if (s === subId) {
+            btn?.classList.add('active');
+            panel?.classList.remove('nst-hidden');
+        } else {
+            btn?.classList.remove('active');
+            panel?.classList.add('nst-hidden');
+        }
+    });
+}
+
+async function caricaDatiAtletaPerCoach(atletaId) {
+    try {
+        // 1. Carica Peso & Misure
+        const { data: pesiData } = await supabaseClient
+            .from('nestore_pesi_misure')
+            .select('*')
+            .eq('utente_id', atletaId)
+            .eq('attivo', true)
+            .order('data_rilevazione', { ascending: false });
+
+        const pesoSummaryEl = document.getElementById('nst-coach-peso-summary');
+        const pesoTbody = document.getElementById('nst-coach-peso-tbody');
+        if (pesiData && pesiData.length > 0) {
+            const ultimo = pesiData[0];
+            const pesoKg = ultimo.peso_kg ? `${ultimo.peso_kg} kg` : '--';
+            const alt = ultimo.altezza_cm ? `${ultimo.altezza_cm} cm` : '--';
+            const vita = ultimo.vita_cm ? `${ultimo.vita_cm} cm` : '--';
+            const torace = ultimo.torace_cm ? `${ultimo.torace_cm} cm` : '--';
+            const braccio = ultimo.braccio_dx_cm ? `${ultimo.braccio_dx_cm} cm` : '--';
+
+            if (pesoSummaryEl) {
+                pesoSummaryEl.innerHTML = `
+                    <span>Peso attuale: <strong>${pesoKg}</strong></span>
+                    <span>Altezza: <strong>${alt}</strong></span>
+                    <span>Vita: <strong>${vita}</strong></span>
+                    <span>Torace: <strong>${torace}</strong></span>
+                    <span>Braccio: <strong>${braccio}</strong></span>
+                    <span style="color:var(--nst-cyan); margin-left:auto;">${pesiData.length} rilevazioni registrate</span>
+                `;
+            }
+
+            if (pesoTbody) {
+                pesoTbody.innerHTML = pesiData.map(p => `
+                    <tr>
+                        <td>${formatDate(p.data_rilevazione)}</td>
+                        <td style="color:var(--nst-cyan); font-weight:700;">${p.peso_kg || '--'}</td>
+                        <td>${p.altezza_cm || '--'}</td>
+                        <td>${p.vita_cm || '--'}</td>
+                        <td>${p.torace_cm || '--'}</td>
+                        <td>${p.braccio_dx_cm || '--'}</td>
+                        <td>${p.fianchi_cm || '--'}</td>
+                        <td style="color:var(--nst-text-muted);">${escapeHtml(p.note || '')}</td>
+                    </tr>
+                `).join('');
+            }
+        } else {
+            if (pesoSummaryEl) pesoSummaryEl.innerHTML = '<span style="color:var(--nst-text-muted);">Nessun dato di peso o circonferenze registrato dall\'atleta.</span>';
+            if (pesoTbody) pesoTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--nst-text-muted); padding:20px;">Nessuna misurazione presente.</td></tr>';
+        }
+
+        // 2. Carica Allenamenti & PR
+        const { data: allData } = await supabaseClient
+            .from('nestore_allenamenti')
+            .select('*')
+            .eq('utente_id', atletaId)
+            .eq('attivo', true)
+            .order('data_allenamento', { ascending: false });
+
+        const prGrid = document.getElementById('nst-coach-pr-grid');
+        const allTbody = document.getElementById('nst-coach-allenamenti-tbody');
+        if (allData && allData.length > 0) {
+            const records = calcolaRecordPersonali(allData);
+            if (prGrid) {
+                const keys = Object.keys(records);
+                if (keys.length > 0) {
+                    prGrid.innerHTML = keys.map(k => {
+                        const rec = records[k];
+                        const bestValStr = rec.tipo === 'carico' ? `${rec.peso} kg` : `${rec.ripetizioni} reps`;
+                        const subValStr = rec.tipo === 'carico' ? `(${rec.ripetizioni} reps)` : '(corpo libero)';
+                        return `
+                            <div class="nst-pr-card">
+                                <div class="nst-pr-exercise-name" title="${escapeHtml(k)}">${escapeHtml(k)}</div>
+                                <div class="nst-pr-card-body">
+                                    <div class="nst-pr-best-val">${bestValStr}</div>
+                                    <div class="nst-pr-sub-val">${subValStr}</div>
+                                </div>
+                                <div class="nst-pr-card-footer">
+                                    <span>${formatDate(rec.data)}</span>
+                                    <span>⚡ PR</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    prGrid.innerHTML = '<div style="color:var(--nst-text-muted); font-size:12px;">Nessun esercizio strutturato rilevato.</div>';
+                }
+            }
+
+            if (allTbody) {
+                allTbody.innerHTML = allData.map(a => `
+                    <tr>
+                        <td>${formatDate(a.data_allenamento)}</td>
+                        <td style="color:var(--nst-lime); font-weight:700;">${escapeHtml(a.corso_disciplina || '--')}</td>
+                        <td>${a.durata_minuti ? `${a.durata_minuti} min` : '--'}</td>
+                        <td>${a.rpe_fatica ? `RPE ${a.rpe_fatica}/10` : '--'}</td>
+                        <td style="max-width:300px; white-space:pre-wrap;">${escapeHtml(a.note || '--')}</td>
+                    </tr>
+                `).join('');
+            }
+        } else {
+            if (prGrid) prGrid.innerHTML = '<div style="color:var(--nst-text-muted); font-size:12px;">Nessun allenamento registrato dall\'atleta.</div>';
+            if (allTbody) allTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--nst-text-muted); padding:20px;">Nessuna sessione registrata.</td></tr>';
+        }
+
+        // 3. Carica Dieta & Pasti
+        const { data: pastiData } = await supabaseClient
+            .from('nestore_pasti')
+            .select('*')
+            .eq('utente_id', atletaId)
+            .eq('attivo', true)
+            .order('data_pasto', { ascending: false });
+
+        const dietaSummaryEl = document.getElementById('nst-coach-dieta-summary');
+        const dietaTbody = document.getElementById('nst-coach-dieta-tbody');
+        if (pastiData && pastiData.length > 0) {
+            const totKcal = pastiData.reduce((acc, p) => acc + (p.calorie_stimate || 0), 0);
+            const totPro = pastiData.reduce((acc, p) => acc + (Number(p.proteine_g) || 0), 0);
+            const totCarb = pastiData.reduce((acc, p) => acc + (Number(p.carboidrati_g) || 0), 0);
+            const totFat = pastiData.reduce((acc, p) => acc + (Number(p.grassi_g) || 0), 0);
+
+            if (dietaSummaryEl) {
+                dietaSummaryEl.innerHTML = `
+                    <span>Totale pasti registrati: <strong>${pastiData.length}</strong></span>
+                    <span>Totale kcal tracciate: <strong style="color:var(--nst-cyan);">${totKcal} kcal</strong></span>
+                    <span>Proteine: <strong>${totPro.toFixed(0)}g</strong></span>
+                    <span>Carboidrati: <strong>${totCarb.toFixed(0)}g</strong></span>
+                    <span>Grassi: <strong>${totFat.toFixed(0)}g</strong></span>
+                `;
+            }
+
+            if (dietaTbody) {
+                dietaTbody.innerHTML = pastiData.map(p => `
+                    <tr>
+                        <td>${formatDate(p.data_pasto)}</td>
+                        <td style="color:#fff; font-weight:700; text-transform:uppercase;">${escapeHtml(p.tipo_pasto || '--')}</td>
+                        <td>${escapeHtml(p.descrizione)}</td>
+                        <td style="color:var(--nst-cyan); font-weight:700;">${p.calorie_stimate || '--'}</td>
+                        <td>${p.carboidrati_g ? `${p.carboidrati_g}g` : '--'}</td>
+                        <td>${p.proteine_g ? `${p.proteine_g}g` : '--'}</td>
+                        <td>${p.grassi_g ? `${p.grassi_g}g` : '--'}</td>
+                    </tr>
+                `).join('');
+            }
+        } else {
+            if (dietaSummaryEl) dietaSummaryEl.innerHTML = '<span style="color:var(--nst-text-muted);">Nessun pasto registrato dall\'atleta.</span>';
+            if (dietaTbody) dietaTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--nst-text-muted); padding:20px;">Nessun pasto registrato.</td></tr>';
+        }
+
+        // 4. Carica Scheda AI (Wiki Karpathy)
+        const { data: schedaAi } = await supabaseClient
+            .from('nestore_scheda_atleta')
+            .select('*')
+            .eq('utente_id', atletaId)
+            .maybeSingle();
+
+        const wikiCardsEl = document.getElementById('nst-coach-wiki-cards');
+        const wikiRawEl = document.getElementById('nst-coach-wiki-raw');
+
+        if (schedaAi) {
+            const bio = schedaAi.biometria || {};
+            const all = schedaAi.allenamento || {};
+            const nut = schedaAi.nutrizione || {};
+
+            if (wikiCardsEl) {
+                wikiCardsEl.innerHTML = `
+                    <div class="nst-wiki-subcard">
+                        <h4 class="nst-wiki-subcard-title cyan">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">monitor_weight</span>
+                            BIOMETRIA &amp; METABOLISMO
+                        </h4>
+                        <div class="nst-wiki-stats-list">
+                            <div class="nst-wiki-stat-row"><span>Età stimata:</span><strong>${bio.eta ? `${bio.eta} anni` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Sesso biologico:</span><strong>${bio.sesso || '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Altezza:</span><strong>${bio.altezza_cm ? `${bio.altezza_cm} cm` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Peso attuale:</span><strong>${bio.peso_attuale_kg ? `${bio.peso_attuale_kg} kg` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>BMI:</span><strong>${bio.bmi || '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>BMR stimato:</span><strong>${bio.bmr_kcal ? `${bio.bmr_kcal} kcal` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>TDEE stimato:</span><strong>${bio.tdee_kcal ? `${bio.tdee_kcal} kcal` : '--'}</strong></div>
+                        </div>
+                    </div>
+                    <div class="nst-wiki-subcard">
+                        <h4 class="nst-wiki-subcard-title lime">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">fitness_center</span>
+                            PROFILO SPORTIVO
+                        </h4>
+                        <div class="nst-wiki-stats-list">
+                            <div class="nst-wiki-stat-row"><span>Disciplina principale:</span><strong>${escapeHtml(all.disciplina_principale || '--')}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Frequenza settimanale:</span><strong>${all.frequenza_settimanale ? `${all.frequenza_settimanale} gg/sett` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Sessioni 30gg:</span><strong>${all.sessioni_ultimi_30gg ?? '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Intensità media (RPE):</span><strong>${all.rpe_medio ? `${all.rpe_medio}/10` : '--'}</strong></div>
+                        </div>
+                    </div>
+                    <div class="nst-wiki-subcard">
+                        <h4 class="nst-wiki-subcard-title amber">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">restaurant</span>
+                            NUTRIZIONE &amp; TARGET
+                        </h4>
+                        <div class="nst-wiki-stats-list">
+                            <div class="nst-wiki-stat-row"><span>Target calorie:</span><strong>${nut.target_calorie ? `${nut.target_calorie} kcal` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Target proteine:</span><strong>${nut.target_proteine_g ? `${nut.target_proteine_g}g` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Media assunta (30gg):</span><strong>${nut.media_calorie_30gg ? `${nut.media_calorie_30gg} kcal` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Proteine medie (30gg):</span><strong>${nut.media_proteine_30gg ? `${nut.media_proteine_30gg}g` : '--'}</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Giorni tracciati:</span><strong>${nut.giorni_tracciati_30gg ?? '--'}</strong></div>
+                        </div>
+                    </div>
+                `;
+            }
+            if (wikiRawEl) {
+                wikiRawEl.textContent = schedaAi.scheda_markdown || 'Nessuna sintesi markdown generata.';
+            }
+        } else {
+            if (wikiCardsEl) wikiCardsEl.innerHTML = '<div style="color:var(--nst-text-muted); padding:16px;">Scheda AI Karpathy non ancora generata per questo atleta.</div>';
+            if (wikiRawEl) wikiRawEl.textContent = 'In attesa di rilevazioni atleta...';
+        }
+
+    } catch (e) {
+        console.error("Errore caricamento dati atleta per coach:", e);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// GESTIONE SCHEDE DI ALLENAMENTO (UPLOAD, STORICIZZAZIONE & VISUALIZZAZIONE)
+// ---------------------------------------------------------------------------
+
+function selezionaModalitaScheda(mode) {
+    const pillText = document.getElementById('nst-pill-mode-text');
+    const pillFile = document.getElementById('nst-pill-mode-file');
+    const areaText = document.getElementById('nst-scheda-input-text-area');
+    const areaFile = document.getElementById('nst-scheda-input-file-area');
+
+    if (mode === 'text') {
+        pillText?.classList.add('active');
+        pillFile?.classList.remove('active');
+        areaText?.classList.remove('nst-hidden');
+        areaFile?.classList.add('nst-hidden');
+    } else {
+        pillFile?.classList.add('active');
+        pillText?.classList.remove('active');
+        areaFile?.classList.remove('nst-hidden');
+        areaText?.classList.add('nst-hidden');
+    }
+}
+
+function aggiornaConteggioTestoScheda(textarea) {
+    const counter = document.getElementById('nst-scheda-char-count');
+    if (counter) {
+        counter.textContent = `${textarea.value.length} / 50000`;
+    }
+}
+
+function gestisciFileSchedaCoach(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Controllo estensione
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.docx') && !fileName.endsWith('.doc')) {
+        alert("Formato non supportato. Puoi caricare esclusivamente documenti Word (.docx o .doc).");
+        event.target.value = '';
+        selectedSchedaWordFile = null;
+        return;
+    }
+
+    // Controllo anti-bloat: max 5 MB
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+        alert(`Il file selezionato (${(file.size / (1024 * 1024)).toFixed(2)} MB) supera il limite massimo di 5 MB consentito per evitare sprechi di memoria.`);
+        event.target.value = '';
+        selectedSchedaWordFile = null;
+        return;
+    }
+
+    selectedSchedaWordFile = file;
+    const badge = document.getElementById('nst-scheda-selected-file-name');
+    if (badge) {
+        badge.textContent = `✓ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        badge.classList.remove('nst-hidden');
+    }
+}
+
+async function inviaNuovaSchedaCoach() {
+    if (!selectedCoachAtleta) {
+        alert("Nessun atleta selezionato.");
+        return;
+    }
+
+    const titoloInput = document.getElementById('nst-scheda-titolo');
+    const periodoInput = document.getElementById('nst-scheda-periodo');
+    const obiettivoInput = document.getElementById('nst-scheda-obiettivo');
+    const testoInput = document.getElementById('nst-scheda-testo-content');
+    const modeRadio = document.querySelector('input[name="nst-scheda-mode"]:checked');
+    const mode = modeRadio ? modeRadio.value : 'text';
+
+    const titolo = (titoloInput?.value || '').trim();
+    const periodo = (periodoInput?.value || '').trim();
+    const obiettivo = (obiettivoInput?.value || '').trim();
+    const testo = (testoInput?.value || '').trim();
+
+    if (!titolo) {
+        alert("Inserisci il titolo della scheda di allenamento.");
+        titoloInput?.focus();
+        return;
+    }
+
+    if (mode === 'text' && !testo) {
+        alert("Inserisci il programma di allenamento nel riquadro di testo (o fai copia-incolla da Word).");
+        testoInput?.focus();
+        return;
+    }
+
+    if (mode === 'file' && !selectedSchedaWordFile) {
+        alert("Seleziona un file Word (.docx o .doc) da caricare.");
+        return;
+    }
+
+    const btn = document.getElementById('nst-btn-invia-scheda');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined nst-spin">progress_activity</span> SALVATAGGIO...';
+    }
+
+    try {
+        let uploadedFilePath = null;
+        let uploadedFileName = null;
+        let uploadedFileSize = null;
+
+        // Se è stato selezionato un file, effettua l'upload in Supabase Storage
+        if (mode === 'file' && selectedSchedaWordFile) {
+            const cleanName = selectedSchedaWordFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            uploadedFilePath = `${selectedCoachAtleta.id}/${Date.now()}_${cleanName}`;
+            uploadedFileName = selectedSchedaWordFile.name;
+            uploadedFileSize = selectedSchedaWordFile.size;
+
+            const { error: upErr } = await supabaseClient.storage
+                .from('schede_allenamento')
+                .upload(uploadedFilePath, selectedSchedaWordFile, {
+                    contentType: selectedSchedaWordFile.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    upsert: false
+                });
+
+            if (upErr) throw upErr;
+        }
+
+        // Storicizzazione: archivia (soft-delete) eventuali schede attive precedenti per questo atleta
+        await supabaseClient
+            .from('nestore_schede_allenamento')
+            .update({ attivo: false, aggiornato_il: new Date().toISOString() })
+            .eq('atleta_id', selectedCoachAtleta.id)
+            .eq('attivo', true);
+
+        // Inserimento nuova scheda
+        const { error: insErr } = await supabaseClient
+            .from('nestore_schede_allenamento')
+            .insert({
+                atleta_id: selectedCoachAtleta.id,
+                allenatore_id: currentUser.id,
+                titolo: titolo,
+                periodo: periodo || null,
+                obiettivo: obiettivo || null,
+                contenuto_testo: mode === 'text' ? testo : null,
+                file_nome: uploadedFileName,
+                file_path: uploadedFilePath,
+                file_dimensione: uploadedFileSize,
+                attivo: true
+            });
+
+        if (insErr) throw insErr;
+
+        // Reset form
+        if (titoloInput) titoloInput.value = '';
+        if (periodoInput) periodoInput.value = '';
+        if (obiettivoInput) obiettivoInput.value = '';
+        if (testoInput) {
+            testoInput.value = '';
+            aggiornaConteggioTestoScheda(testoInput);
+        }
+        selectedSchedaWordFile = null;
+        const fileInput = document.getElementById('nst-scheda-word-file');
+        if (fileInput) fileInput.value = '';
+        const badge = document.getElementById('nst-scheda-selected-file-name');
+        if (badge) {
+            badge.textContent = '';
+            badge.classList.add('nst-hidden');
+        }
+
+        // Ricarica storico schede
+        await caricaSchedeAtleta(selectedCoachAtleta.id, 'nst-coach-schede-history-list', true);
+        alert("Scheda di allenamento assegnata con successo all'atleta!");
+
+    } catch (err) {
+        console.error("Errore salvataggio scheda:", err);
+        alert("Errore durante il salvataggio della scheda: " + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined">send</span><span>SALVA E ASSEGNA ALL\'ATLETA</span>';
+        }
+    }
+}
+
+async function archiviaSchedaCoach(schedaId) {
+    if (!confirm("Sei sicuro di voler archiviare questa scheda? Rimarrà nello storico consultabile dell'atleta.")) {
+        return;
+    }
+    try {
+        const { error } = await supabaseClient
+            .from('nestore_schede_allenamento')
+            .update({ attivo: false, aggiornato_il: new Date().toISOString() })
+            .eq('id', schedaId);
+
+        if (error) throw error;
+
+        if (selectedCoachAtleta) {
+            await caricaSchedeAtleta(selectedCoachAtleta.id, 'nst-coach-schede-history-list', true);
+        }
+    } catch (err) {
+        alert("Errore archiviazione scheda: " + err.message);
+    }
+}
+
+async function scaricaFileScheda(filePath, fileName) {
+    try {
+        const { data, error } = await supabaseClient.storage
+            .from('schede_allenamento')
+            .createSignedUrl(filePath, 300);
+
+        if (error) throw error;
+        if (!data || !data.signedUrl) throw new Error("URL firmato non disponibile");
+
+        const a = document.createElement('a');
+        a.href = data.signedUrl;
+        a.download = fileName || 'scheda_allenamento.docx';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch (err) {
+        alert("Errore download file scheda: " + err.message);
+    }
+}
+
+function apriModalSchedaTesto(titolo, periodo, dataStr, autore, testo) {
+    const titleEl = document.getElementById('nst-modal-scheda-title');
+    const metaEl = document.getElementById('nst-modal-scheda-meta');
+    const contentEl = document.getElementById('nst-modal-scheda-content');
+    const modalEl = document.getElementById('nst-modal-scheda-view');
+
+    if (titleEl) titleEl.textContent = titolo.toUpperCase();
+    if (metaEl) {
+        metaEl.innerHTML = `
+            <span>Coach: <strong>${escapeHtml(autore)}</strong></span> |
+            <span>Periodo: <strong>${escapeHtml(periodo || '--')}</strong></span> |
+            <span>Assegnata: <strong>${dataStr}</strong></span>
+        `;
+    }
+    if (contentEl) contentEl.textContent = testo || 'Nessun testo specificato.';
+    if (modalEl) modalEl.classList.remove('nst-hidden');
+}
+
+function chiudiModalSchedaTesto() {
+    const modalEl = document.getElementById('nst-modal-scheda-view');
+    if (modalEl) modalEl.classList.add('nst-hidden');
+}
+
+function copiaTestoSchedaModal() {
+    const contentEl = document.getElementById('nst-modal-scheda-content');
+    if (!contentEl) return;
+    navigator.clipboard.writeText(contentEl.textContent).then(() => {
+        alert("Programma di allenamento copiato negli appunti!");
+    }).catch(e => {
+        alert("Errore copia: " + e.message);
+    });
+}
+
+async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    try {
+        const { data: schede, error } = await supabaseClient
+            .from('nestore_schede_allenamento')
+            .select('*, allenatore:allenatore_id(nome, cognome)')
+            .eq('atleta_id', atletaId)
+            .order('attivo', { ascending: false })
+            .order('creato_il', { ascending: false });
+
+        if (error) throw error;
+
+        // Aggiorna contatore badge
+        const badgeId = isCoachView ? 'nst-coach-schede-count' : 'nst-atleta-schede-badge';
+        const badgeEl = document.getElementById(badgeId);
+        if (badgeEl) {
+            badgeEl.textContent = `${(schede || []).length} SCHEDE`;
+        }
+
+        if (!schede || schede.length === 0) {
+            container.innerHTML = `
+                <div class="nst-card" style="text-align: center; padding: 30px; color: var(--nst-text-muted); font-size: 12px;">
+                    <span class="material-symbols-outlined" style="font-size: 36px; margin-bottom: 8px; display: block; color: var(--nst-cyan);">assignment_late</span>
+                    ${isCoachView ? 'Nessuna scheda ancora assegnata a questo atleta. Utilizza il form in alto per caricarne una.' : 'Nessuna scheda di allenamento attualmente assegnata dal tuo allenatore.'}
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        schede.forEach(s => {
+            const isAttiva = s.attivo;
+            const autoreNome = s.allenatore ? `${s.allenatore.cognome || ''} ${s.allenatore.nome || ''}`.trim() : 'Allenatore';
+            const dataCaricamento = formatDate(s.creato_il);
+            const statusClass = isAttiva ? 'attiva' : 'archiviata';
+            const statusLabel = isAttiva ? 'SCHEDA ATTIVA' : 'ARCHIVIATA';
+
+            html += `
+                <div class="nst-scheda-card ${statusClass}">
+                    <div class="nst-scheda-card-header">
+                        <div>
+                            <div class="nst-scheda-title-text">${escapeHtml(s.titolo)}</div>
+                            <div class="nst-scheda-meta-row" style="margin-top: 4px;">
+                                ${s.periodo ? `<span class="nst-scheda-meta-item"><span class="material-symbols-outlined" style="font-size:14px;">date_range</span> ${escapeHtml(s.periodo)}</span>` : ''}
+                                <span class="nst-scheda-meta-item"><span class="material-symbols-outlined" style="font-size:14px;">person</span> Coach: ${escapeHtml(autoreNome)}</span>
+                                <span class="nst-scheda-meta-item"><span class="material-symbols-outlined" style="font-size:14px;">event</span> Assegnata il: ${dataCaricamento}</span>
+                            </div>
+                        </div>
+                        <span class="nst-scheda-status-badge ${statusClass}">${statusLabel}</span>
+                    </div>
+
+                    ${s.obiettivo ? `
+                        <div class="nst-scheda-desc">
+                            <strong>Obiettivo / Note:</strong> ${escapeHtml(s.obiettivo)}
+                        </div>
+                    ` : ''}
+
+                    <div class="nst-scheda-actions">
+                        ${s.contenuto_testo ? `
+                            <button type="button" class="nst-btn-view-text" onclick="apriModalSchedaTesto('${escapeHtml(s.titolo.replace(/'/g, "\\'"))}', '${escapeHtml((s.periodo || '').replace(/'/g, "\\'"))}', '${dataCaricamento}', '${escapeHtml(autoreNome.replace(/'/g, "\\'"))}', ${JSON.stringify(s.contenuto_testo)})">
+                                <span class="material-symbols-outlined">visibility</span>
+                                <span>VISUALIZZA PROGRAMMA</span>
+                            </button>
+                        ` : ''}
+
+                        ${s.file_path ? `
+                            <button type="button" class="nst-btn-download" onclick="scaricaFileScheda('${s.file_path}', '${escapeHtml((s.file_nome || 'scheda_allenamento.docx').replace(/'/g, "\\'"))}')">
+                                <span class="material-symbols-outlined">download</span>
+                                <span>SCARICA FILE WORD (${escapeHtml(s.file_nome || '.docx')})</span>
+                            </button>
+                        ` : ''}
+
+                        ${isCoachView && isAttiva ? `
+                            <button type="button" class="nst-btn-archive" onclick="archiviaSchedaCoach('${s.id}')" title="Archivia questa scheda (storicizzazione)">
+                                <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">archive</span>
+                                ARCHIVIA
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+    } catch (err) {
+        console.error("Errore caricamento schede atleta:", err);
+        container.innerHTML = `<div class="nst-card" style="color:var(--nst-danger);">Errore caricamento schede: ${escapeHtml(err.message)}</div>`;
     }
 }
 
@@ -2546,24 +3568,27 @@ setInterval(() => {
 }, 250);
 
 // Sincronizzazione multi-tab
-window.addEventListener('storage', (e) => {
-    if (e.key === 'adr_stopwatch_state') {
-        timerEngine.loadState();
-        timerEngine.updateUI();
-    } else if (e.key === 'adr_tabata_state') {
-        tabataEngine.loadState();
-        tabataEngine.updateUI();
-    } else if (e.key === 'adr_timer_mode') {
-        currentTimerMode = e.newValue || 'stopwatch';
-        switchTimerMode(currentTimerMode);
-    }
-    aggiornaVisibilitaDock();
-});
+if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'adr_stopwatch_state') {
+            timerEngine.loadState();
+            timerEngine.updateUI();
+        } else if (e.key === 'adr_tabata_state') {
+            tabataEngine.loadState();
+            tabataEngine.updateUI();
+        } else if (e.key === 'adr_timer_mode') {
+            currentTimerMode = e.newValue || 'stopwatch';
+            switchTimerMode(currentTimerMode);
+        }
+        aggiornaVisibilitaDock();
+    });
+}
 
 // Inizializzazione Timer all'avvio
-document.addEventListener('DOMContentLoaded', () => {
-    timerEngine.loadState();
-    tabataEngine.loadState();
+if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', () => {
+        timerEngine.loadState();
+        tabataEngine.loadState();
 
     // Sincronizza i campi input con la config salvata
     if (document.getElementById('nst-cfg-prep')) document.getElementById('nst-cfg-prep').value = tabataEngine.state.config.prep;
@@ -2581,7 +3606,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     requestAnimationFrame(masterTimerLoop);
-});
+    });
+}
 
 // Window Exports
 window.impostaRangeCard = impostaRangeCard;
@@ -2608,6 +3634,26 @@ window.salvaAltezzaRapida = salvaAltezzaRapida;
 window.modificaAltezzaPrompt = modificaAltezzaPrompt;
 window.caricaSchedaAtletaUI = caricaSchedaAtletaUI;
 window.aggiornaSchedaManuale = aggiornaSchedaManuale;
+window.switchNestoreView = switchNestoreView;
+window.switchNestorePanel = switchNestorePanel;
+window.caricaCoachDashboard = caricaCoachDashboard;
+window.caricaAdminDashboard = caricaAdminDashboard;
+window.filtraCorsoCoach = filtraCorsoCoach;
+window.cercaAtletiCoach = cercaAtletiCoach;
+window.apriAtletaPerAllenatore = apriAtletaPerAllenatore;
+window.chiudiDettaglioAtletaPerCoach = chiudiDettaglioAtletaPerCoach;
+window.switchCoachSubpanel = switchCoachSubpanel;
+window.caricaDatiAtletaPerCoach = caricaDatiAtletaPerCoach;
+window.caricaSchedeAtleta = caricaSchedeAtleta;
+window.selezionaModalitaScheda = selezionaModalitaScheda;
+window.aggiornaConteggioTestoScheda = aggiornaConteggioTestoScheda;
+window.gestisciFileSchedaCoach = gestisciFileSchedaCoach;
+window.inviaNuovaSchedaCoach = inviaNuovaSchedaCoach;
+window.archiviaSchedaCoach = archiviaSchedaCoach;
+window.scaricaFileScheda = scaricaFileScheda;
+window.apriModalSchedaTesto = apriModalSchedaTesto;
+window.chiudiModalSchedaTesto = chiudiModalSchedaTesto;
+window.copiaTestoSchedaModal = copiaTestoSchedaModal;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -2618,7 +3664,12 @@ if (typeof module !== 'undefined' && module.exports) {
         salvaAltezzaRapida,
         modificaAltezzaPrompt,
         caricaSchedaAtletaUI,
-        aggiornaSchedaManuale
+        aggiornaSchedaManuale,
+        switchNestoreView,
+        switchNestorePanel,
+        caricaCoachDashboard,
+        caricaAdminDashboard,
+        caricaSchedeAtleta
     };
 }
 

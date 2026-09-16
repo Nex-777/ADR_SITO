@@ -1957,3 +1957,925 @@ input:checked + .nst-slider:before {
     overflow-y: auto;
 }
 
+/* ===========================================================================
+   FASE 2: COACH & ADMIN DASHBOARD + SCHEDE ALLENAMENTO STYLES
+   =========================================================================== */
+
+.nst-coach-container {
+    max-width: 1440px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+@media (max-width: 1024px) {
+    .nst-coach-container {
+        padding: 12px;
+        gap: 14px;
+    }
+}
+
+.nst-coach-header-card {
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.nst-coach-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.nst-coach-pill {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--nst-cyan);
+    background: rgba(0, 229, 255, 0.12);
+    border: 1px solid var(--nst-cyan-dim);
+    padding: 3px 10px;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.nst-coach-pill.alt {
+    color: var(--nst-lime);
+    background: rgba(118, 255, 3, 0.12);
+    border-color: var(--nst-border-lime);
+}
+
+.nst-coach-title {
+    font-size: 20px;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.05em;
+}
+
+.nst-coach-subtitle {
+    font-size: 12px;
+    color: var(--nst-text-muted);
+    margin-top: 4px;
+}
+
+.nst-coach-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nst-filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nst-filter-item.flex-grow {
+    flex-grow: 1;
+    min-width: 240px;
+}
+
+.nst-filter-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--nst-cyan);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.nst-coach-select {
+    min-width: 220px;
+    height: 38px;
+    font-size: 12px;
+}
+
+.nst-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.nst-search-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 18px;
+    color: var(--nst-text-muted);
+    pointer-events: none;
+}
+
+.nst-search-input {
+    width: 100%;
+    height: 38px;
+    background: var(--nst-bg-alt);
+    border: 1px solid var(--nst-border);
+    border-radius: 6px;
+    padding: 6px 12px 6px 36px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.nst-search-input:focus {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 0 10px var(--nst-cyan-dim);
+}
+
+/* Corsi & Atleti Cards */
+.nst-coach-courses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.nst-coach-course-card {
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.nst-coach-course-header {
+    background: var(--nst-surface-elevated);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.nst-coach-course-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--nst-cyan);
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+}
+
+.nst-coach-course-count {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--nst-lime);
+    background: rgba(118, 255, 3, 0.1);
+    border: 1px solid var(--nst-border-lime);
+    padding: 2px 8px;
+    border-radius: 9999px;
+}
+
+.nst-coach-athletes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    padding: 16px;
+}
+
+@media (max-width: 640px) {
+    .nst-coach-athletes-grid {
+        grid-template-columns: 1fr;
+        padding: 10px;
+        gap: 10px;
+    }
+}
+
+.nst-coach-athlete-card {
+    background: rgba(6, 12, 24, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.nst-coach-athlete-card:hover {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 4px 16px var(--nst-cyan-dim);
+    transform: translateY(-2px);
+}
+
+.nst-atleta-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.nst-atleta-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid var(--nst-cyan-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nst-cyan);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.nst-atleta-card-info {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.nst-atleta-card-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+}
+
+.nst-atleta-card-email {
+    font-size: 11px;
+    color: var(--nst-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.nst-atleta-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.nst-atleta-badge {
+    font-size: 9px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nst-atleta-badge.active-scheda {
+    background: rgba(118, 255, 3, 0.15);
+    color: var(--nst-lime);
+    border-color: var(--nst-border-lime);
+}
+
+.nst-btn-open-atleta {
+    width: 100%;
+    background: rgba(0, 229, 255, 0.1);
+    color: var(--nst-cyan);
+    border: 1px solid var(--nst-cyan-dim);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: uppercase;
+}
+
+.nst-btn-open-atleta:hover {
+    background: var(--nst-cyan);
+    color: var(--nst-bg);
+    box-shadow: 0 0 12px var(--nst-cyan-glow);
+}
+
+/* ===========================================================================
+   VISTA ISPEZIONE ATLETA (DETTAGLIO COACH)
+   =========================================================================== */
+
+.nst-atleta-inspect-bar {
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.nst-btn-back {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nst-btn-back:hover {
+    background: rgba(0, 229, 255, 0.15);
+    color: var(--nst-cyan);
+    border-color: var(--nst-cyan);
+}
+
+.nst-atleta-info-badge {
+    text-align: center;
+    flex-grow: 1;
+}
+
+.nst-atleta-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.05em;
+}
+
+.nst-atleta-sub {
+    font-size: 11px;
+    color: var(--nst-lime);
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.04em;
+}
+
+.nst-readonly-pill {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--nst-cyan);
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid var(--nst-cyan-dim);
+    padding: 6px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Subtabs Navigazione Coach */
+.nst-coach-subtabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    margin-bottom: 16px;
+}
+
+.nst-coach-subtab-btn {
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--nst-text-muted);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 auto;
+    justify-content: center;
+}
+
+.nst-coach-subtab-btn:hover {
+    border-color: rgba(0, 229, 255, 0.4);
+    color: #fff;
+}
+
+.nst-coach-subtab-btn.active {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--nst-cyan);
+    color: var(--nst-cyan);
+    box-shadow: 0 0 12px var(--nst-cyan-dim);
+}
+
+.nst-readonly-notice {
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid var(--nst-cyan-dim);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--nst-cyan);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.nst-metrics-summary-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 14px;
+    background: rgba(6, 12, 24, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--nst-text-muted);
+}
+
+.nst-metrics-summary-bar strong {
+    color: #fff;
+    font-weight: 700;
+}
+
+/* ===========================================================================
+   FORM ASSEGNAZIONE SCHEDA DI ALLENAMENTO
+   =========================================================================== */
+
+.nst-scheda-form-card {
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border-lime);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.nst-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+    .nst-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.nst-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nst-form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.nst-form-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--nst-cyan);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.nst-form-input {
+    background: var(--nst-bg-alt);
+    border: 1px solid var(--nst-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.nst-form-input:focus {
+    border-color: var(--nst-lime);
+    box-shadow: 0 0 10px var(--nst-lime-dim);
+}
+
+.nst-scheda-mode-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+    margin-bottom: 12px;
+}
+
+.nst-radio-pill {
+    background: rgba(6, 12, 24, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--nst-text-muted);
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.nst-radio-pill input[type="radio"] {
+    display: none;
+}
+
+.nst-radio-pill:hover {
+    border-color: var(--nst-cyan);
+    color: #fff;
+}
+
+.nst-radio-pill.active {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--nst-cyan);
+    color: var(--nst-cyan);
+    box-shadow: 0 0 10px var(--nst-cyan-dim);
+}
+
+.nst-scheda-mode-area {
+    margin-top: 10px;
+}
+
+.nst-textarea-programma {
+    width: 100%;
+    background: rgba(6, 12, 24, 0.95);
+    border: 1px solid var(--nst-border);
+    border-radius: 8px;
+    padding: 14px;
+    color: #e2e8f0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    outline: none;
+    resize: vertical;
+    box-sizing: border-box;
+    transition: all 0.2s;
+}
+
+.nst-textarea-programma:focus {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 0 12px var(--nst-cyan-dim);
+}
+
+.nst-file-dropzone {
+    background: rgba(6, 12, 24, 0.8);
+    border: 2px dashed var(--nst-cyan-dim);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nst-file-dropzone:hover {
+    border-color: var(--nst-cyan);
+    background: rgba(0, 229, 255, 0.05);
+}
+
+.nst-selected-file-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(118, 255, 3, 0.15);
+    border: 1px solid var(--nst-border-lime);
+    color: var(--nst-lime);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.nst-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.nst-btn-primary {
+    background: linear-gradient(135deg, var(--nst-cyan) 0%, #0099ff 100%);
+    color: var(--nst-bg);
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.nst-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px var(--nst-cyan-glow);
+}
+
+/* ===========================================================================
+   LISTA SCHEDE (ATLETA & COACH)
+   =========================================================================== */
+
+.nst-schede-container {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.nst-scheda-card {
+    background: rgba(6, 12, 24, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s;
+}
+
+.nst-scheda-card.attiva {
+    border-color: var(--nst-border-lime);
+    border-left: 4px solid var(--nst-lime);
+    background: rgba(118, 255, 3, 0.04);
+}
+
+.nst-scheda-card.archiviata {
+    border-color: rgba(255, 255, 255, 0.06);
+    opacity: 0.75;
+}
+
+.nst-scheda-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.nst-scheda-title-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.nst-scheda-status-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.nst-scheda-status-badge.attiva {
+    background: rgba(118, 255, 3, 0.15);
+    color: var(--nst-lime);
+    border: 1px solid var(--nst-border-lime);
+}
+
+.nst-scheda-status-badge.archiviata {
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nst-scheda-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--nst-text-muted);
+}
+
+.nst-scheda-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.nst-scheda-desc {
+    font-size: 12px;
+    color: #cbd5e1;
+    background: rgba(0, 0, 0, 0.25);
+    border-left: 2px solid var(--nst-cyan);
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+}
+
+.nst-scheda-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nst-btn-download {
+    background: rgba(0, 229, 255, 0.12);
+    color: var(--nst-cyan);
+    border: 1px solid var(--nst-cyan-dim);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.nst-btn-download:hover {
+    background: var(--nst-cyan);
+    color: var(--nst-bg);
+}
+
+.nst-btn-view-text {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.nst-btn-view-text:hover {
+    border-color: #fff;
+}
+
+.nst-btn-archive {
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+}
+
+.nst-btn-archive:hover {
+    border-color: var(--nst-danger);
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* ===========================================================================
+   MODALE VISUALIZZAZIONE SCHEDA
+   =========================================================================== */
+
+.nst-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.nst-modal-card {
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border);
+    border-radius: 12px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+}
+
+.nst-modal-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nst-btn-icon-close {
+    background: transparent;
+    border: none;
+    color: var(--nst-text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.nst-btn-icon-close:hover {
+    color: #fff;
+}
+
+.nst-modal-meta {
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.3);
+    font-size: 11px;
+    color: var(--nst-text-muted);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nst-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.nst-scheda-full-text {
+    background: rgba(6, 12, 24, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    color: #f1f5f9;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.nst-modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--nst-surface-elevated);
+}
+
+.nst-loading-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px;
+    color: var(--nst-text-muted);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+}
+
+.nst-loading-text {
+    padding: 20px;
+    text-align: center;
+    color: var(--nst-text-muted);
+    font-size: 12px;
+}
+
+.nst-spin {
+    animation: nst-spin-anim 1.2s linear infinite;
+}
+
+@keyframes nst-spin-anim {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+

@@ -454,5 +454,30 @@ Memoria sintetica strutturata e distillata per l'atleta (modello Karpathy LLM Wi
 - `aggiornato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
 - `creato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
 
+### 7. `public.nestore_schede_allenamento`
+Archivio delle schede e dei programmi di allenamento assegnati dagli istruttori agli atleti (introdotta con `supabase/migration_nestore_schede_allenamento.sql`).
+- `id` (UUID PK, DEFAULT `gen_random_uuid()`)
+- `atleta_id` (UUID FK `utenti.id` ON DELETE CASCADE)
+- `allenatore_id` (UUID FK `utenti.id` ON DELETE SET NULL)
+- `titolo` (TEXT NOT NULL): Es. "Strongman Mesociclo 1 — Forza & Log Press"
+- `periodo` (TEXT): Es. "Ottobre - Dicembre 2026 (6 settimane)"
+- `obiettivo` (TEXT): Obiettivo specifico o note per l'atleta
+- `contenuto_testo` (TEXT): Programma completo copia-incollato da Word o scritto liberamente (max 50.000 caratteri)
+- `file_nome` (TEXT): Nome originale del file Word (`.docx` o `.doc`)
+- `file_path` (TEXT): Percorso all'interno del bucket Supabase Storage `schede_allenamento`
+- `file_dimensione` (INTEGER): Dimensione in bytes (controllo policy anti-bloat max 5MB)
+- `attivo` (BOOLEAN NOT NULL DEFAULT true): Flag di storicizzazione EPIKA per soft-delete
+- `creato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
+- `aggiornato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
+
+### 8. Bucket Supabase Storage: `schede_allenamento`
+- **Accesso**: Privato (`public: false`)
+- **Limite File**: 5 MB (5.242.880 bytes) per salvaguardare lo storage del club
+- **Tipi MIME ammessi**: `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/octet-stream`
+- **Policy RLS**:
+  - `SELECT`: L'atleta legge i propri file (`folder = atleta_id`), il Direttivo legge tutto, e gli istruttori assegnati al corso dell'atleta (`istruttori_eventi`) possono leggere.
+  - `INSERT`: Consentito a Direttivo e istruttori assegnati o registrati in `registro_istruttori`.
+
+
 
 

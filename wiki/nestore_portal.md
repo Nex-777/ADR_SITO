@@ -171,7 +171,59 @@ Nestore supera il pattern del dump grezzo da 90 righe di database per ogni chiam
 
 ---
 
-## 8. Related Concept Pages
+---
+
+## 8. Vista Allenatore & Amministratore (Fase 2)
+
+Introdotta con la migrazione `migration_nestore_schede_allenamento.sql`:
+Nestore introduce le modalità operative dedicate al corpo docenti e alla direzione sportiva:
+
+### 8.1. Regola di Accesso & Switcher Ruoli
+1. **Punto di Ingresso Unificato**: Tutti gli utenti (atleti, istruttori certificati e membri del Consiglio Direttivo) accedono a NESTORE visualizzando sempre per default la propria vista personale **ATLETA**.
+2. **Selettore di Ruolo (`#nst-view-switcher`)**:
+   - Visibile esclusivamente per gli utenti abilitati in `registro_istruttori` o membri del Consiglio Direttivo (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`).
+   - Consente di transitare istantaneamente tra le modalità senza ricaricare la pagina:
+     - `ATLETA`: Vista personale ordinaria di allenamento, chat e diari.
+     - `ALLENATORE`: Dashboard dei corsi assegnati all'istruttore in `public.istruttori_eventi`.
+     - `AMMINISTRATORE`: Dashboard globale di tutti i corsi attivi del club (riservata al Direttivo).
+
+### 8.2. Dashboard Allenatore (`#nst-coach-list-view`)
+- **Associazione Corsi**: L'allenatore visualizza solo ed esclusivamente i corsi a cui è assegnato tramite la tabella ponte `public.istruttori_eventi`.
+- **Filtro Corso a Tendina & Ricerca Rapida**: Menù a tendina (`#nst-coach-course-select`) per filtrare istantaneamente gli atleti per corso, affiancato da un campo di ricerca testuale in tempo reale per nome, cognome ed email.
+- **Card Atleta**: Ciascuna card riporta l'avatar con iniziale, stato tesseramento/abbonamento, badge della scheda di allenamento attiva (o indicatore di assenza scheda), e pulsante *"APRI SCHEDA ATLETA"*.
+
+### 8.3. Ispezione Atleta in Sola Lettura (`#nst-coach-atleta-view`)
+Cliccando su un atleta, l'allenatore accede al pannello di ispezione dedicato provvisto di:
+- **Barra Superiore**: Pulsante *"← TORNA ALLA LISTA ATLETI"*, nome dell'atleta e nome del corso.
+- **Sotto-Tab di Consultazione (Read-Only)**:
+  1. `PESO & MISURE`: Storico peso e circonferenze registrate dall'atleta.
+  2. `ALLENAMENTI & PR`: Bacheca massimali e sessioni completate.
+  3. `DIETA & MACRO`: Diario pasti e calorie assunte.
+  4. `SCHEDA AI`: Scheda biometria Karpathy e sintesi markdown.
+  *(Tutti i pannelli di metriche sono esposti con banner di sola lettura per impedire sovrascritture accidentali da parte del coach).*
+
+---
+
+## 9. Schede di Allenamento & Storicizzazione Anti-Bloat (`public.nestore_schede_allenamento`)
+
+La sezione **SCHEDE DI ALLENAMENTO** consente al coach di preparare e assegnare programmi di allenamento su misura per l'atleta.
+
+### 9.1. Modalità di Inserimento Flessibili
+1. **Testo Libero / Copia-Incolla da Word**:
+   - Area di testo ad alta capacità (fino a 50.000 caratteri) per incollare tabelle ed esercizi direttamente da documenti Word o note (es. schede Strongman multi-fase/giorno).
+2. **File Word (.docx / .doc)**:
+   - Caricamento diretto di file Word archiviati in modo sicuro nel bucket Supabase Storage privato `schede_allenamento`.
+   - **Policy Anti-Bloat**: Limite dimensionale rigido a **5 MB** sia a livello client che a livello storage bucket, prevenendo sprechi di storage per file ridondanti.
+
+### 9.2. Storicizzazione EPIKA & Ciclo di Vita Scheda
+- **Nessun DELETE fisico**: In ossequio alla regola cardine di storicizzazione del progetto, le schede non vengono mai eliminate fisicamente dal database.
+- **Transizione Stato**: Quando l'allenatore assegna una nuova scheda all'atleta, le schede attive precedenti per quell'atleta vengono automaticamente contrassegnate come de-attivate (`attivo = false`).
+- **Archivio Consultabile**: Sia l'atleta che l'allenatore possono consultare lo storico completo di tutte le schede passate (badge `ARCHIVIATA`), visualizzare il testo del programma o scaricare il file Word originale tramite URL firmato temporaneo.
+- **Vista Atleta**: Nella vista personale dell'atleta è presente il tab dedicato `SCHEDE` (`#nst-schede-panel`) che mostra in primo piano la scheda attiva e l'elenco dei programmi precedenti.
+
+---
+
+## 10. Related Concept Pages
 - [Database Schema](database_schema.md)
 - [Portal Dashboard](portal_dashboard.md)
 - [EPIKA Portal Architecture](epika_portal.md)

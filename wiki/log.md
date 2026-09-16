@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-16] ingest | NESTORE Fase 2 — Vista Allenatore, Vista Amministratore & Schede di Allenamento
+- **Database (`supabase/migration_nestore_schede_allenamento.sql`)**:
+  - Creata tabella `public.nestore_schede_allenamento` con storicizzazione EPIKA (soft-delete `attivo = true`), indici dedicati e RLS per atleta, allenatore e Direttivo.
+  - Aggiornate le policy SELECT su `nestore_pesi_misure`, `nestore_allenamenti`, `nestore_pasti`, `nestore_scheda_atleta` e `nestore_preferenze` per consentire la lettura in consultazione agli istruttori assegnati ai rispettivi corsi in `public.istruttori_eventi` e al Direttivo.
+  - Creato bucket Supabase Storage `schede_allenamento` (privato, limite 5MB anti-bloat per file Word `.docx`/`.doc`) con relative RLS policies per upload e lettura tramite URL firmati.
+  - Applicata ed eseguita migrazione con successo su Supabase `ADRENALINA_SERVICES`.
+- **Frontend UI & SPA (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Configurato selettore ruoli `#nst-view-switcher` nell'header: ingresso iniziale sempre su vista personale `ATLETA`; se l'utente è istruttore registrato o membro del Direttivo, può passare a `ALLENATORE` o `AMMINISTRATORE`.
+  - **Dashboard Coach (`#nst-coach-list-view`)**: elenco atleti raggruppati per corso con tendina di selezione corso (`#nst-coach-course-select`) e ricerca testuale in tempo reale per nome, cognome ed email.
+  - **Dettaglio Atleta (`#nst-coach-atleta-view`)**: pannello di consultazione con barra di navigazione (`← TORNA ALLA LISTA ATLETI`), sub-tabs per `SCHEDE DI ALLENAMENTO`, `PESO & MISURE`, `ALLENAMENTI & PR`, `DIETA & MACRO`, `SCHEDA AI` con banner di sola lettura.
+  - **Form Schede di Allenamento**: supporta sia il copia-incolla/testo libero fino a 50.000 caratteri sia il caricamento di file Word `.docx`/`.doc` con validazione client e server max 5MB.
+  - **Vista Atleta**: aggiunto tab e pannello `SCHEDE` per la consultazione e download dei programmi assegnati dal coach.
+  - Modale interattivo per la lettura completa a tutto schermo del programma e copia negli appunti.
+- **Testing & Validazione**:
+  - Creato test suite `tests/nestore-coach.test.js` con 7 test dedicati (41/41 test totali del progetto passati con successo).
+- **Documentazione**:
+  - Aggiornati `wiki/nestore_portal.md` (§8 e §9), `wiki/database_schema.md` (§7 e §8) e `wiki/log.md`.
+
+---
+
 ## [2026-09-16] ingest | Scheda Atleta & Memoria Sintetica LLM (Modello Wiki Karpathy) - NESTORE
 - **Database (`supabase/migration_nestore_v2_wiki.sql`)**:
   - Aggiunta colonna `altezza_cm` a `nestore_pesi_misure` e `nestore_preferenze`.

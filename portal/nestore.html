@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.36">
+    <link rel="stylesheet" href="nestore.css?v=1.05.37">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.36"></script>
+    <script src="config.js?v=1.05.37"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.36</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.37</span>
             </div>
         </div>
 
@@ -60,13 +60,16 @@
         <button type="button" class="nst-mobile-tab-btn" id="nst-tab-btn-timer" onclick="switchNestorePanel('timer')">
             TIMER &amp; TABATA
         </button>
+        <button type="button" class="nst-mobile-tab-btn" id="nst-tab-btn-schede" onclick="switchNestorePanel('schede')">
+            SCHEDE
+        </button>
         <button type="button" class="nst-mobile-tab-btn nst-tab-full" id="nst-tab-btn-profilo" onclick="switchNestorePanel('profilo')">
             SCHEDA AI
         </button>
     </nav>
 
     <!-- Main Grid -->
-    <div class="nst-main-grid">
+    <div class="nst-main-grid" id="nst-athlete-main-grid">
 
         <!-- Colonna Sinistra: Menu Navigazione & Preferenze -->
         <aside class="nst-dashboard-panel" id="nst-dashboard-panel">
@@ -90,6 +93,10 @@
                 <button type="button" class="nst-nav-item" id="nst-nav-timer" onclick="switchNestorePanel('timer')">
                     <span class="material-symbols-outlined">timer</span>
                     <span>TIMER & TABATA</span>
+                </button>
+                <button type="button" class="nst-nav-item" id="nst-nav-schede" onclick="switchNestorePanel('schede')">
+                    <span class="material-symbols-outlined">assignment</span>
+                    <span>SCHEDE ALLENAMENTO</span>
                 </button>
                 <button type="button" class="nst-nav-item" id="nst-nav-profilo" onclick="switchNestorePanel('profilo')">
                     <span class="material-symbols-outlined">psychology</span>
@@ -539,6 +546,25 @@
             </div>
         </main>
 
+        <!-- Pannello 6: Schede di Allenamento Assegnate (Vista Atleta) -->
+        <main class="nst-data-panel nst-hidden" id="nst-schede-panel">
+            <div class="nst-card">
+                <div class="nst-card-header">
+                    <span class="nst-card-title">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">assignment</span>
+                        SCHEDE DI ALLENAMENTO
+                    </span>
+                    <span id="nst-atleta-schede-badge" class="nst-version-badge">0 SCHEDE</span>
+                </div>
+                <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 16px;">
+                    Programmi e schede di allenamento assegnati dal tuo istruttore.
+                </p>
+                <div id="nst-atleta-schede-container" class="nst-schede-container">
+                    <div class="nst-loading-text">Caricamento schede in corso...</div>
+                </div>
+            </div>
+        </main>
+
         <!-- Colonna Destra: Chat Interattiva Multimodale con NESTORE -->
         <main class="nst-chat-panel" id="nst-chat-panel">
             <div class="nst-chat-header">
@@ -600,6 +626,325 @@
 
     </div>
 
+    <!-- =======================================================================
+         PANNELLO ALLENATORE / AMMINISTRATORE (Fase 2)
+         ======================================================================= -->
+    <div id="nst-coach-container" class="nst-coach-container nst-hidden">
+        <!-- VISTA 1: Elenco Corsi & Atleti (Dashboard) -->
+        <div id="nst-coach-list-view" class="nst-coach-list-view">
+            <!-- Barra Superiore Dashboard Coach -->
+            <div class="nst-coach-header-card">
+                <div class="nst-coach-title-group">
+                    <div class="nst-coach-badge-row">
+                        <span id="nst-coach-role-pill" class="nst-coach-pill">ALLENATORE</span>
+                        <span id="nst-coach-stats-pill" class="nst-coach-pill alt">0 ATLETI TOTALI</span>
+                    </div>
+                    <h2 id="nst-coach-dashboard-title" class="nst-headline nst-coach-title">I MIEI ATLETI</h2>
+                    <p id="nst-coach-dashboard-subtitle" class="nst-coach-subtitle">
+                        Seleziona un atleta per monitorare i suoi parametri (peso, allenamenti, pasti, scheda AI) e assegnargli la scheda di allenamento.
+                    </p>
+                </div>
+
+                <!-- Filtri: Tendina Corso & Ricerca Rapida -->
+                <div class="nst-coach-filter-bar">
+                    <div class="nst-filter-item">
+                        <label for="nst-coach-course-select" class="nst-filter-label">FILTRA PER CORSO</label>
+                        <select id="nst-coach-course-select" class="nst-select nst-coach-select" onchange="filtraCorsoCoach(this.value)">
+                            <option value="ALL">TUTTI I CORSI</option>
+                        </select>
+                    </div>
+                    <div class="nst-filter-item flex-grow">
+                        <label for="nst-coach-search-input" class="nst-filter-label">CERCA ATLETA</label>
+                        <div class="nst-search-wrapper">
+                            <span class="material-symbols-outlined nst-search-icon">search</span>
+                            <input type="text" id="nst-coach-search-input" class="nst-search-input" placeholder="Cerca per nome o cognome..." oninput="cercaAtletiCoach(this.value)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Griglia Corsi & Atleti -->
+            <div id="nst-coach-atleti-container" class="nst-coach-courses-list">
+                <div class="nst-loading-box">
+                    <span class="material-symbols-outlined nst-spin">progress_activity</span>
+                    <span>Caricamento atleti e corsi in corso...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 2: Dettaglio Atleta (Ispezione Metriche & Gestione Schede) -->
+        <div id="nst-coach-atleta-view" class="nst-coach-atleta-view nst-hidden">
+            <!-- Barra Navigazione & Info Atleta -->
+            <div class="nst-atleta-inspect-bar">
+                <button type="button" class="nst-btn-back" onclick="chiudiDettaglioAtletaPerCoach()">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span>TORNA ALLA LISTA ATLETI</span>
+                </button>
+                <div class="nst-atleta-info-badge">
+                    <div class="nst-atleta-name" id="nst-coach-inspect-name">ATLETA</div>
+                    <div class="nst-atleta-sub" id="nst-coach-inspect-course">CORSO: --</div>
+                </div>
+                <div class="nst-readonly-pill">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">visibility</span>
+                    <span>MODALITÀ ALLENATORE</span>
+                </div>
+            </div>
+
+            <!-- Sub-Tabs Navigazione Atleta -->
+            <nav class="nst-coach-subtabs">
+                <button type="button" class="nst-coach-subtab-btn active" id="nst-csub-btn-schede" onclick="switchCoachSubpanel('schede')">
+                    <span class="material-symbols-outlined">assignment</span>
+                    <span>SCHEDE DI ALLENAMENTO</span>
+                </button>
+                <button type="button" class="nst-coach-subtab-btn" id="nst-csub-btn-peso" onclick="switchCoachSubpanel('peso')">
+                    <span class="material-symbols-outlined">scale</span>
+                    <span>PESO &amp; MISURE</span>
+                </button>
+                <button type="button" class="nst-coach-subtab-btn" id="nst-csub-btn-allenamenti" onclick="switchCoachSubpanel('allenamenti')">
+                    <span class="material-symbols-outlined">fitness_center</span>
+                    <span>ALLENAMENTI &amp; PR</span>
+                </button>
+                <button type="button" class="nst-coach-subtab-btn" id="nst-csub-btn-dieta" onclick="switchCoachSubpanel('dieta')">
+                    <span class="material-symbols-outlined">restaurant</span>
+                    <span>DIETA &amp; MACRO</span>
+                </button>
+                <button type="button" class="nst-coach-subtab-btn" id="nst-csub-btn-profilo" onclick="switchCoachSubpanel('profilo')">
+                    <span class="material-symbols-outlined">psychology</span>
+                    <span>SCHEDA AI</span>
+                </button>
+            </nav>
+
+            <!-- 5 Sottopannelli di Ispezione -->
+            <!-- Subpanel 1: SCHEDE DI ALLENAMENTO (con form caricamento) -->
+            <div id="nst-coach-subpanel-schede" class="nst-coach-subpanel">
+                <!-- Form Caricamento Scheda -->
+                <div class="nst-card nst-scheda-form-card">
+                    <div class="nst-card-header">
+                        <span class="nst-card-title lime">
+                            <span class="material-symbols-outlined">add_circle</span>
+                            ASSEGNA NUOVA SCHEDA DI ALLENAMENTO
+                        </span>
+                        <span class="nst-version-badge" style="background: rgba(118, 255, 3, 0.1); color: var(--nst-lime); border-color: var(--nst-border-lime);">
+                            STORICIZZAZIONE ATTIVA
+                        </span>
+                    </div>
+
+                    <div class="nst-form-grid">
+                        <div class="nst-form-group">
+                            <label class="nst-form-label">TITOLO SCHEDA *</label>
+                            <input type="text" id="nst-scheda-titolo" class="nst-form-input" placeholder="Es. Strongman Mesociclo 1 — Forza & Log Press" maxlength="120">
+                        </div>
+                        <div class="nst-form-group">
+                            <label class="nst-form-label">PERIODO DI VALIDITÀ</label>
+                            <input type="text" id="nst-scheda-periodo" class="nst-form-input" placeholder="Es. Ottobre - Novembre 2026 (6 settimane)" maxlength="80">
+                        </div>
+                        <div class="nst-form-group full-width">
+                            <label class="nst-form-label">OBIETTIVO / NOTE PER L'ATLETA</label>
+                            <input type="text" id="nst-scheda-obiettivo" class="nst-form-input" placeholder="Es. Incremento massimale stacco, progressione squat e panca" maxlength="250">
+                        </div>
+                    </div>
+
+                    <!-- Scelta Modalità: Testo/Copia-Incolla vs File Word -->
+                    <div class="nst-scheda-mode-selector">
+                        <label class="nst-radio-pill active" id="nst-pill-mode-text" onclick="selezionaModalitaScheda('text')">
+                            <input type="radio" name="nst-scheda-mode" value="text" checked>
+                            <span class="material-symbols-outlined">edit_note</span>
+                            <span>TESTO LIBERO / COPIA-INCOLLA DA WORD</span>
+                        </label>
+                        <label class="nst-radio-pill" id="nst-pill-mode-file" onclick="selezionaModalitaScheda('file')">
+                            <input type="radio" name="nst-scheda-mode" value="file">
+                            <span class="material-symbols-outlined">description</span>
+                            <span>CARICA FILE WORD (.DOCX / .DOC)</span>
+                        </label>
+                    </div>
+
+                    <!-- Area Testo / Copia-Incolla -->
+                    <div id="nst-scheda-input-text-area" class="nst-scheda-mode-area">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:11px; color:var(--nst-text-muted);">Incolla il testo del programma o digitalo qui sotto:</span>
+                            <span id="nst-scheda-char-count" style="font-size:10px; font-family:'Orbitron', sans-serif; color:var(--nst-text-muted);">0 / 50000</span>
+                        </div>
+                        <textarea id="nst-scheda-testo-content" class="nst-textarea-programma" rows="12" maxlength="50000" placeholder="Esempio:
+GIORNO 1:
+1) PANCA PIANA: 6x6 65%...
+2) PULL UP: 4 serie al 50%...
+3) REMATORE: 2x6, 2x9...
+
+GIORNO 2:
+1) SQUAT: Week 1 3x10 50%...
+..." oninput="aggiornaConteggioTestoScheda(this)"></textarea>
+                    </div>
+
+                    <!-- Area File Word (.docx / .doc) con validazione anti-bloat max 5MB -->
+                    <div id="nst-scheda-input-file-area" class="nst-scheda-mode-area nst-hidden">
+                        <div class="nst-file-dropzone" onclick="document.getElementById('nst-scheda-word-file').click()">
+                            <span class="material-symbols-outlined" style="font-size: 36px; color: var(--nst-cyan);">upload_file</span>
+                            <div style="font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; color: #fff; margin-top: 6px;">
+                                CLICCA PER SELEZIONARE IL FILE WORD
+                            </div>
+                            <div style="font-size: 11px; color: var(--nst-text-muted); margin-top: 4px;">
+                                Formati accettati: <strong>.docx</strong>, <strong>.doc</strong> — Max <strong>5 MB</strong> (Policy Anti-Bloat)
+                            </div>
+                            <div id="nst-scheda-selected-file-name" class="nst-selected-file-tag nst-hidden"></div>
+                        </div>
+                        <input type="file" id="nst-scheda-word-file" accept=".docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" class="nst-hidden" onchange="gestisciFileSchedaCoach(event)">
+                    </div>
+
+                    <!-- Azioni Form -->
+                    <div class="nst-form-actions">
+                        <button type="button" id="nst-btn-invia-scheda" class="nst-btn-primary" onclick="inviaNuovaSchedaCoach()">
+                            <span class="material-symbols-outlined">send</span>
+                            <span>SALVA E ASSEGNA ALL'ATLETA</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista Storico Schede dell'Atleta -->
+                <div class="nst-card" style="margin-top: 20px;">
+                    <div class="nst-card-header">
+                        <span class="nst-card-title">
+                            <span class="material-symbols-outlined">history_edu</span>
+                            STORICO SCHEDE DELL'ATLETA
+                        </span>
+                        <span id="nst-coach-schede-count" class="nst-version-badge">0 SCHEDE</span>
+                    </div>
+                    <div id="nst-coach-schede-history-list" class="nst-schede-container">
+                        <div class="nst-loading-text">Caricamento schede in corso...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subpanel 2: PESO & MISURE (Read-only) -->
+            <div id="nst-coach-subpanel-peso" class="nst-coach-subpanel nst-hidden">
+                <div class="nst-card">
+                    <div class="nst-readonly-notice">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>Dati biometrici registrati dall'atleta (Visualizzazione in sola lettura)</span>
+                    </div>
+                    <div id="nst-coach-peso-summary" class="nst-metrics-summary-bar">
+                        <!-- Popolato dinamicamente -->
+                    </div>
+                    <div class="nst-history-table-container" style="margin-top: 14px;">
+                        <table class="nst-history-table">
+                            <thead>
+                                <tr>
+                                    <th>DATA</th>
+                                    <th>PESO (KG)</th>
+                                    <th>ALTEZZA</th>
+                                    <th>VITA</th>
+                                    <th>TORACE</th>
+                                    <th>BRACCIO</th>
+                                    <th>FIANCHI</th>
+                                    <th>NOTE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nst-coach-peso-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subpanel 3: ALLENAMENTI & PR (Read-only) -->
+            <div id="nst-coach-subpanel-allenamenti" class="nst-coach-subpanel nst-hidden">
+                <div class="nst-card">
+                    <div class="nst-readonly-notice">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>Bacheca Massimali e Registro Sessioni (Visualizzazione in sola lettura)</span>
+                    </div>
+                    <div class="nst-pr-section">
+                        <div class="nst-pr-section-header">
+                            <span class="nst-pr-section-title">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">military_tech</span>
+                                RECORD PERSONALI (ALL-TIME BEST)
+                            </span>
+                        </div>
+                        <div id="nst-coach-pr-grid" class="nst-pr-grid"></div>
+                    </div>
+                    <div class="nst-history-table-container" style="margin-top: 16px;">
+                        <table class="nst-history-table">
+                            <thead>
+                                <tr>
+                                    <th>DATA</th>
+                                    <th>DISCIPLINA</th>
+                                    <th>DURATA</th>
+                                    <th>RPE FATICA</th>
+                                    <th>DETTAGLIO SESSIONE / NOTE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nst-coach-allenamenti-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subpanel 4: DIETA & MACRO (Read-only) -->
+            <div id="nst-coach-subpanel-dieta" class="nst-coach-subpanel nst-hidden">
+                <div class="nst-card">
+                    <div class="nst-readonly-notice">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>Diario Alimentare e Macronutrienti registrati (Visualizzazione in sola lettura)</span>
+                    </div>
+                    <div id="nst-coach-dieta-summary" class="nst-metrics-summary-bar">
+                        <!-- Popolato dinamicamente -->
+                    </div>
+                    <div class="nst-history-table-container" style="margin-top: 14px;">
+                        <table class="nst-history-table">
+                            <thead>
+                                <tr>
+                                    <th>DATA</th>
+                                    <th>PASTO</th>
+                                    <th>DESCRIZIONE ALIMENTARE</th>
+                                    <th>KCAL</th>
+                                    <th>CARBO</th>
+                                    <th>PROTEINE</th>
+                                    <th>GRASSI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nst-coach-dieta-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subpanel 5: SCHEDA AI WIKI (Read-only) -->
+            <div id="nst-coach-subpanel-profilo" class="nst-coach-subpanel nst-hidden">
+                <div class="nst-card">
+                    <div class="nst-readonly-notice">
+                        <span class="material-symbols-outlined">info</span>
+                        <span>Scheda Sintetica AI elaborata dal modello Karpathy (Visualizzazione in sola lettura)</span>
+                    </div>
+                    <div class="nst-wiki-grid" id="nst-coach-wiki-cards">
+                        <!-- Popolato dinamicamente -->
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--nst-cyan); font-weight: 700; margin-bottom: 8px;">
+                            SINTESI RAW MARKDOWN INVIATA A GEMINI
+                        </div>
+                        <pre id="nst-coach-wiki-raw" class="nst-wiki-pre"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Visualizzazione Testo Scheda Completo -->
+    <div id="nst-modal-scheda-view" class="nst-modal-overlay nst-hidden" onclick="if(event.target === this) chiudiModalSchedaTesto()">
+        <div class="nst-modal-card">
+            <div class="nst-modal-header">
+                <span id="nst-modal-scheda-title" class="nst-headline" style="font-size: 14px; color: var(--nst-cyan);">DETTAGLIO SCHEDA</span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiModalSchedaTesto()">✕</button>
+            </div>
+            <div id="nst-modal-scheda-meta" class="nst-modal-meta"></div>
+            <div class="nst-modal-body">
+                <pre id="nst-modal-scheda-content" class="nst-scheda-full-text"></pre>
+            </div>
+            <div class="nst-modal-footer">
+                <button type="button" class="nst-btn-sm" onclick="copiaTestoSchedaModal()">COPIA TESTO</button>
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiModalSchedaTesto()">CHIUDI</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Floating Mini Dock for Active Timer -->
     <div id="nst-timer-dock" class="nst-floating-dock nst-hidden">
         <div class="nst-dock-info">
@@ -623,6 +968,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.36"></script>
+    <script src="nestore.js?v=1.05.37"></script>
 </body>
 </html>
