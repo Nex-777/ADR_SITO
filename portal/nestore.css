@@ -439,6 +439,105 @@ body.nst-body {
     margin: 6px 0 16px 0;
 }
 
+/* Sezione Record Personali (PR) */
+.nst-pr-section {
+    margin: 6px 0 20px 0;
+}
+
+.nst-pr-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.nst-pr-section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--nst-lime);
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nst-pr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 480px) {
+    .nst-pr-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+}
+
+.nst-pr-card {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(118, 255, 3, 0.15);
+    border-left: 3px solid var(--nst-lime);
+    border-radius: 8px;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.nst-pr-card:hover {
+    border-color: rgba(118, 255, 3, 0.45);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(118, 255, 3, 0.12);
+}
+
+.nst-pr-exercise-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    line-height: 1.25;
+    word-break: break-word;
+    margin-bottom: 6px;
+}
+
+.nst-pr-card-body {
+    margin: 4px 0 6px 0;
+}
+
+.nst-pr-best-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--nst-lime);
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+}
+
+.nst-pr-sub-val {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nst-pr-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--nst-text-muted);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 6px;
+    margin-top: 6px;
+}
+
 /* Tabelle Storico */
 .nst-history-table-container {
     width: 100%;

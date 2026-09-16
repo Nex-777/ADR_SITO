@@ -95,12 +95,11 @@ Chat history between athlete and NESTORE assistant.
 ### 5.1. Single Page Application (SPA) Panels & History
 Nestore is built as an SPA, transitioning seamlessly between Chat and Data visualizations:
 - **Desktop**: A persistent left-side navigation menu enables switching between Chat, Weight, Workouts, and Diet.
-- **Dedicated Data Panels**: Each metric has a dedicated full-width panel containing an expanded Chart.js visualization (350px height) and a detailed History Table with raw tracking data.
-- **Interactive Chart.js Visualizations** (integrated via CDN):
+- **Dedicated Data Panels**: Each metric has a dedicated full-width panel containing visual tracking and a detailed History Table with raw tracking data:
   1. **Weight & Body Dimensions (Multi-Line Chart)**: Dual Y-Axis (Weight vs Circumferences).
-  2. **Workouts Timeline (Line Chart)**: Tracks training duration and RPE over time.
+  2. **Workouts & Personal Records (PR Grid)**: Rimosso il grafico della durata in favore di una bacheca a card dei **Record Personali (All-Time)** per ciascun esercizio svolto. Per gli esercizi con carico vince il peso massimo (a parità di peso, le ripetizioni maggiori), mentre per gli esercizi a corpo libero vince il numero massimo di ripetizioni. Supporta sia i dati strutturati `scheda_dati` che il parsing retroattivo intelligente delle note libere. Lo Storico Sessioni sottostante resta filtrabile per periodo (`7G`, `14G`, `30G`, `ALL`).
   3. **Daily Nutrition (Stacked Bar Chart)**: Stacks daily Carbs, Protein, and Fats (in kcal).
-- **Time Horizon Filter Chips**: `7G`, `14G`, `30G`, `ALL` selectors for all charts.
+- **Time Horizon Filter Chips**: `7G`, `14G`, `30G`, `ALL` selectors per filtrare i dati di periodo.
 
 ### 5.2. Mobile Tab Switcher Layout & Top-Down Inverted Chat
 - On viewports $\le 1024\text{px}$, the desktop sidebar is hidden.

@@ -3,9 +3,11 @@
 // Assistente AI Sportivo & Nutrizionale per Atleti Corsi Adrenalina
 // ===========================================================================
 
-const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
-const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_URL : '';
+const SUPABASE_KEY = typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.SUPABASE_KEY : '';
+const supabaseClient = (typeof window !== 'undefined' && window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
 
 let currentUser = null;
 let currentSession = null;
@@ -491,135 +493,300 @@ async function renderGraficoPesiMisure() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// PARSER & CALCOLO RECORD PERSONALI (PR) ALLENAMENTI
+// ---------------------------------------------------------------------------
+
+function normalizeExerciseName(rawName) {
+    if (!rawName) return 'Esercizio';
+    const clean = rawName.trim().replace(/^[-*•\s]+/, '').replace(/[:;,.]+$/, '').trim();
+    const lower = clean.toLowerCase();
+
+    if (lower === 'pull' || lower === 'pull up' || lower === 'pull-up' || lower === 'pullup' || lower === 'trazioni') return 'Pull-up';
+    if (lower === 'push' || lower === 'push up' || lower === 'push-up' || lower === 'pushup' || lower === 'piegamenti') return 'Push-up';
+    if (lower === 'panca' || lower === 'panca piana' || lower === 'bench' || lower === 'bench press') return 'Panca Piana';
+    if (lower === 'squat' || lower === 'back squat') return 'Squat';
+    if (lower === 'leg press' || lower === 'pressa' || lower === 'legpress') return 'Leg Press';
+    if (lower === 'addominali' || lower === 'crunch' || lower === 'sit-up' || lower === 'situp' || lower === 'abs') return 'Addominali';
+    if (lower === 'stacco' || lower === 'stacco da terra' || lower === 'deadlift') return 'Stacco da Terra';
+    if (lower === 'military' || lower === 'military press' || lower === 'lento avanti' || lower === 'overhead press' || lower === 'ohp') return 'Military Press';
+    if (lower === 'dip' || lower === 'dips') return 'Dip';
+    if (lower === 'affondi' || lower === 'lunges') return 'Affondi';
+    if (lower === 'rematore' || lower === 'barbell row') return 'Rematore';
+
+    return clean.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
+function isBetterPerformance(candidate, currentBest) {
+    if (!currentBest) return true;
+    const candPeso = candidate.peso_kg || 0;
+    const bestPeso = currentBest.peso_kg || 0;
+    const candReps = candidate.ripetizioni || candidate.reps || 0;
+    const bestReps = currentBest.ripetizioni || currentBest.reps || 0;
+
+    // Se almeno uno dei due ha un sovraccarico (> 0 kg)
+    if (candPeso > 0 || bestPeso > 0) {
+        // Criterio 1: Vince il peso più alto
+        if (candPeso > bestPeso) return true;
+        // Criterio 2: A parità di peso, vince chi ha più ripetizioni
+        if (candPeso === bestPeso && candReps > bestReps) return true;
+        return false;
+    }
+
+    // Entrambi a corpo libero (peso === 0): vince chi ha più ripetizioni
+    return candReps > bestReps;
+}
+
+function parseExercisesFromWorkout(workout) {
+    const results = [];
+    const date = workout.data_allenamento || '';
+
+    // 1. Dati strutturati (scheda_dati JSONB)
+    if (Array.isArray(workout.scheda_dati) && workout.scheda_dati.length > 0) {
+        for (const ex of workout.scheda_dati) {
+            if (!ex || !ex.nome) continue;
+            results.push({
+                nome: normalizeExerciseName(ex.nome),
+                peso_kg: parseFloat(ex.peso_kg) || 0,
+                ripetizioni: parseInt(ex.ripetizioni || ex.reps, 10) || 1,
+                serie: parseInt(ex.serie, 10) || 1,
+                data: date,
+                note: ex.note || ''
+            });
+        }
+        return results;
+    }
+
+    // 2. Parser Intelligente Retroattivo da campo note (Legacy)
+    const note = workout.note || '';
+    if (!note || typeof note !== 'string') return results;
+
+    const sentences = note.split(/[.;\n]+/).map(s => s.trim()).filter(Boolean);
+
+    for (const sentence of sentences) {
+        const colonIdx = sentence.indexOf(':');
+        if (colonIdx > 0) {
+            const potentialName = sentence.slice(0, colonIdx).trim();
+            const rest = sentence.slice(colonIdx + 1).trim();
+            const isGenericKey = /^(totale|note|sessione|workout|disciplina|invictus)$/i.test(potentialName);
+
+            if (!isGenericKey && potentialName.length > 1) {
+                const exName = normalizeExerciseName(potentialName);
+                const sets = rest.split(',').map(s => s.trim()).filter(Boolean);
+                for (const setStr of sets) {
+                    // Ignora le serie fallite
+                    if (/(fallit|fail|non\s*chius)/i.test(setStr)) continue;
+
+                    // Match 3x10x180kg (serie x reps x peso)
+                    const m3 = setStr.match(/(\d+)\s*[xX*]\s*(\d+)\s*[xX*]\s*(\d+(?:[.,]\d+)?)\s*(?:kg)?/i);
+                    if (m3) {
+                        results.push({
+                            nome: exName,
+                            serie: parseInt(m3[1], 10),
+                            ripetizioni: parseInt(m3[2], 10),
+                            peso_kg: parseFloat(m3[3].replace(',', '.')),
+                            data: date
+                        });
+                        continue;
+                    }
+
+                    // Match 10x90kg (reps x peso)
+                    const m2 = setStr.match(/(\d+)\s*[xX*]\s*(\d+(?:[.,]\d+)?)\s*(?:kg)?/i);
+                    if (m2) {
+                        results.push({
+                            nome: exName,
+                            serie: 1,
+                            ripetizioni: parseInt(m2[1], 10),
+                            peso_kg: parseFloat(m2[2].replace(',', '.')),
+                            data: date
+                        });
+                        continue;
+                    }
+
+                    // Match solo kg (es. 100kg)
+                    const mKg = setStr.match(/(\d+(?:[.,]\d+)?)\s*kg/i);
+                    if (mKg) {
+                        results.push({
+                            nome: exName,
+                            serie: 1,
+                            ripetizioni: 1,
+                            peso_kg: parseFloat(mKg[1].replace(',', '.')),
+                            data: date
+                        });
+                        continue;
+                    }
+
+                    // Match solo ripetizioni (es. 15 rip, 20 reps)
+                    const mRep = setStr.match(/^(\d+)\s*(?:reps?|rip|ripetizioni)?$/i);
+                    if (mRep) {
+                        results.push({
+                            nome: exName,
+                            serie: 1,
+                            ripetizioni: parseInt(mRep[1], 10),
+                            peso_kg: 0,
+                            data: date
+                        });
+                        continue;
+                    }
+                }
+                continue;
+            }
+        }
+
+        // Se non ha i due punti, cerca pattern per corpo libero o serie singole
+        const commaParts = sentence.split(',').map(s => s.trim()).filter(Boolean);
+        for (const part of commaParts) {
+            const mBw = part.match(/(?:totale\s*:?\s*)?(\d+)\s+([a-zA-Z\s\-]+)/i);
+            if (mBw) {
+                const count = parseInt(mBw[1], 10);
+                const rawName = mBw[2].trim();
+                if (/^(min|minuti|sec|secondi|ore|h|kg|calorie|kcal)$/i.test(rawName)) continue;
+                results.push({
+                    nome: normalizeExerciseName(rawName),
+                    serie: 1,
+                    ripetizioni: count,
+                    peso_kg: 0,
+                    data: date
+                });
+            }
+        }
+    }
+
+    return results;
+}
+
+function calcolaRecordPersonali(allWorkouts) {
+    const prMap = {};
+
+    for (const w of allWorkouts) {
+        const exercises = parseExercisesFromWorkout(w);
+        for (const ex of exercises) {
+            const key = ex.nome;
+            if (!prMap[key]) {
+                prMap[key] = ex;
+            } else {
+                if (isBetterPerformance(ex, prMap[key])) {
+                    prMap[key] = ex;
+                }
+            }
+        }
+    }
+
+    const prList = Object.values(prMap);
+    prList.sort((a, b) => a.nome.localeCompare(b.nome));
+    return prList;
+}
+
+function renderPrGrid(prList) {
+    const container = document.getElementById('nst-pr-container');
+    const prCountEl = document.getElementById('nst-pr-count');
+    if (prCountEl) {
+        prCountEl.textContent = `${prList.length} eserciz${prList.length === 1 ? 'io' : 'i'}`;
+    }
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (prList.length === 0) {
+        container.innerHTML = `<div class="nst-pr-empty" style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--nst-text-muted); font-size: 11px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">Nessun esercizio rilevato nello storico sessioni.</div>`;
+        return;
+    }
+
+    for (const pr of prList) {
+        const card = document.createElement('div');
+        card.className = 'nst-pr-card';
+
+        let bestValHtml = '';
+        let subValHtml = '';
+
+        if (pr.peso_kg > 0) {
+            bestValHtml = `${pr.peso_kg} <span style="font-size:11px;">KG</span>`;
+            subValHtml = `${pr.ripetizioni} rep${pr.ripetizioni > 1 ? 's' : ''}${pr.serie > 1 ? ` (${pr.serie} serie)` : ''}`;
+        } else {
+            bestValHtml = `${pr.ripetizioni} <span style="font-size:11px;">REP</span>`;
+            subValHtml = `Corpo libero`;
+        }
+
+        card.innerHTML = `
+            <div class="nst-pr-exercise-name" title="${escapeHtml(pr.nome)}">${escapeHtml(pr.nome)}</div>
+            <div class="nst-pr-card-body">
+                <div class="nst-pr-best-val">${bestValHtml}</div>
+                <div class="nst-pr-sub-val">${escapeHtml(subValHtml)}</div>
+            </div>
+            <div class="nst-pr-card-footer">
+                <span>RECORD</span>
+                <span style="color:#cbd5e1; font-weight:600;">${formatDateShort(pr.data)}</span>
+            </div>
+        `;
+        container.appendChild(card);
+    }
+}
+
 async function renderGraficoAllenamenti() {
     try {
-        let query = supabaseClient
+        // Query ALL-TIME per calcolare i Record Personali di tutti gli allenamenti registrati
+        const { data: allData, error } = await supabaseClient
             .from('nestore_allenamenti')
             .select('*')
             .eq('utente_id', currentUser.id)
-            .eq('attivo', true);
-
-        const dataInizio = calcolaDataInizio(rangeFiltri.allenamenti);
-        if (dataInizio) {
-            query = query.gte('data_allenamento', dataInizio);
-        }
-
-        const { data, error } = await query
+            .eq('attivo', true)
             .order('data_allenamento', { ascending: true });
 
         const emptyMsg = document.getElementById('nst-empty-allenamenti');
 
-        if (error || !data || data.length === 0) {
+        if (error || !allData || allData.length === 0) {
             if (emptyMsg) emptyMsg.classList.remove('nst-hidden');
-            if (chartAllenamentiInstance) {
-                chartAllenamentiInstance.destroy();
-                chartAllenamentiInstance = null;
-            }
+            const prContainer = document.getElementById('nst-pr-container');
+            if (prContainer) prContainer.innerHTML = '';
+            const prCountEl = document.getElementById('nst-pr-count');
+            if (prCountEl) prCountEl.textContent = '0 esercizi';
             document.getElementById('nst-training-count').textContent = '0 sessioni nel periodo';
             document.getElementById('nst-last-workout-name').textContent = 'Nessuna sessione';
+            const tbody = document.getElementById('nst-tbody-allenamenti');
+            if (tbody) tbody.innerHTML = '';
             return;
         }
 
         if (emptyMsg) emptyMsg.classList.add('nst-hidden');
 
-        // Aggiorna riassunto
-        document.getElementById('nst-training-count').textContent = `${data.length} session${data.length === 1 ? 'e' : 'i'} registrat${data.length === 1 ? 'a' : 'e'}`;
-        const ultimo = data[data.length - 1];
-        document.getElementById('nst-last-workout-name').textContent = `${formatDateShort(ultimo.data_allenamento)}: ${(ultimo.corso_disciplina || 'Workout').toUpperCase()}`;
+        // 1. Calcola e renderizza i Record Personali ALL-TIME
+        const prList = calcolaRecordPersonali(allData);
+        renderPrGrid(prList);
 
-        // Prepara serie temporale (data e presenza/durata)
-        const labels = data.map(a => formatDateShort(a.data_allenamento));
-        const durate = data.map(a => a.durata_minuti ? Number(a.durata_minuti) : 60);
+        // 2. Filtra i dati per il periodo selezionato (7G / 14G / 30G / ALL) per lo Storico Sessioni in basso
+        const dataInizio = calcolaDataInizio(rangeFiltri.allenamenti);
+        const filteredData = dataInizio
+            ? allData.filter(a => a.data_allenamento >= dataInizio)
+            : allData;
 
-        const canvas = document.getElementById('nst-chart-allenamenti');
-        if (!canvas || typeof Chart === 'undefined') return;
-
-        if (chartAllenamentiInstance) {
-            chartAllenamentiInstance.destroy();
+        // Aggiorna riassunto sessioni nel periodo
+        document.getElementById('nst-training-count').textContent = `${filteredData.length} session${filteredData.length === 1 ? 'e' : 'i'} nel periodo`;
+        const ultimo = filteredData.length > 0 ? filteredData[filteredData.length - 1] : allData[allData.length - 1];
+        if (ultimo) {
+            document.getElementById('nst-last-workout-name').textContent = `${formatDateShort(ultimo.data_allenamento)}: ${(ultimo.corso_disciplina || 'Workout').toUpperCase()}`;
+        } else {
+            document.getElementById('nst-last-workout-name').textContent = 'Nessuna sessione nel periodo';
         }
 
-        chartAllenamentiInstance = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Sessione Svolta (min)',
-                    data: durate,
-                    borderColor: '#76ff03',
-                    backgroundColor: 'rgba(118, 255, 3, 0.12)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 5,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: '#76ff03',
-                    pointBorderColor: '#060c18',
-                    pointBorderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(6, 12, 24, 0.95)',
-                        titleColor: '#76ff03',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(118, 255, 3, 0.3)',
-                        borderWidth: 1,
-                        padding: 8,
-                        titleFont: { family: "'Orbitron', sans-serif", size: 10 },
-                        bodyFont: { size: 10 },
-                        callbacks: {
-                            label: function(ctx) {
-                                const item = data[ctx.dataIndex];
-                                const disc = item.corso_disciplina || 'Workout';
-                                const dur = item.durata_minuti ? `${item.durata_minuti} min` : '';
-                                const rpe = item.rpe_fatica ? `RPE ${item.rpe_fatica}/10` : '';
-                                return [disc, [dur, rpe].filter(Boolean).join(' • ')].filter(Boolean);
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
-                        ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }
-                    },
-                    y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.04)' },
-                        ticks: {
-                            color: '#76ff03',
-                            font: { size: 9 },
-                            callback: v => v + 'm'
-                        },
-                        suggestedMin: 0
-                    }
-                }
-            }
-        });
-
-        // Genera Tabella Storico Allenamenti
+        // Genera Tabella Storico Sessioni
         const tbody = document.getElementById('nst-tbody-allenamenti');
         if (tbody) {
             tbody.innerHTML = '';
-            for (let i = data.length - 1; i >= 0; i--) {
-                const item = data[i];
+            for (let i = filteredData.length - 1; i >= 0; i--) {
+                const item = filteredData[i];
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${formatDateShort(item.data_allenamento)}</td>
                     <td style="color: var(--nst-lime); font-weight: 600;">${(item.corso_disciplina || 'Workout').toUpperCase()}</td>
                     <td>${item.durata_minuti || '-'}</td>
                     <td>${item.rpe_fatica ? item.rpe_fatica + '/10' : '-'}</td>
-                    <td style="max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.note || '')}">${escapeHtml(item.note || '')}</td>
+                    <td style="max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.note || '')}">${escapeHtml(item.note || '')}</td>
                 `;
                 tbody.appendChild(tr);
             }
         }
 
     } catch (e) {
-        console.error("Errore grafico allenamenti:", e);
+        console.error("Errore bacheca allenamenti e record:", e);
     }
 }
 
@@ -2223,4 +2390,17 @@ window.aggiornaConfigDaInput = aggiornaConfigDaInput;
 window.tabataApplyPreset = tabataApplyPreset;
 window.dockToggleTimer = dockToggleTimer;
 window.dockExpandTimer = dockExpandTimer;
+window.normalizeExerciseName = normalizeExerciseName;
+window.isBetterPerformance = isBetterPerformance;
+window.parseExercisesFromWorkout = parseExercisesFromWorkout;
+window.calcolaRecordPersonali = calcolaRecordPersonali;
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        normalizeExerciseName,
+        isBetterPerformance,
+        parseExercisesFromWorkout,
+        calcolaRecordPersonali
+    };
+}
 

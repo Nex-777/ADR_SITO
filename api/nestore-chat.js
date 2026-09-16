@@ -236,9 +236,18 @@ Quando tutti i dati necessari sono presenti, ALLA FINE del tuo messaggio di risp
   "disciplina": "Ibrido" | "SCAB" | "Strongman" | "Altro",
   "durata_minuti": 60,
   "rpe": 8,
-  "note": "eventuali note"
+  "note": "eventuali note",
+  "esercizi": [
+    { "nome": "Panca Piana", "peso_kg": 110, "ripetizioni": 1, "serie": 1 },
+    { "nome": "Pull-up", "peso_kg": 0, "ripetizioni": 50, "serie": 1 }
+  ]
 }
 \`\`\`
+Per gli allenamenti con esercizi indicati, popola SEMPRE l'array "esercizi" estraendo ogni esercizio completato con:
+- "nome": nome dell'esercizio (es. "Panca Piana", "Leg Press", "Squat", "Pull-up", "Push-up", "Addominali");
+- "peso_kg": carico utilizzato in kg (0 o null per esercizi a corpo libero / calisthenics). Ignora serie fallite/non chiuse;
+- "ripetizioni": ripetizioni completate con successo nella serie migliore o target;
+- "serie": numero di serie svolte (default 1).
 Inserisci nel JSON solo i campi pertinenti.
 Il campo "data" DEVE SEMPRE ESSERE PRESENTE in formato YYYY-MM-DD (usando "${oggiIso}" per oggi o "${ieriIso}" per ieri o la data calcolata).
 Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INSERIRE IL BLOCCO json:extraction.`;

@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-16] feature | Bacheca Record Personali (PR) All-Time e Rimozione Grafico Durata Allenamenti
+- **Frontend UI & Layout (`portal/nestore.html`, `portal/nestore.css`)**:
+  - Rimosso il grafico Chart.js a linee della durata delle sessioni dal pannello Allenamenti.
+  - Aggiunta la sezione responsiva `.nst-pr-section` con griglia di card moderne `.nst-pr-grid` per i **Record Personali (All-Time)**.
+  - Ciascuna card mostra il nome dell'esercizio normalizzato, il valore record in verde lime Orbitron (es. `110 KG`, `200 REP`), le serie/ripetizioni o l'indicazione di corpo libero, e la data del record.
+  - I pulsanti di filtro temporale (`7G`, `14G`, `30G`, `ALL`) filtrano puntualmente la tabella "Storico Sessioni" sottostante, lasciando i Record Personali stabili su base All-Time.
+- **Logica & Algoritmo PR (`portal/nestore.js`)**:
+  - Implementata funzione `isBetterPerformance(candidate, currentBest)`: per esercizi con sovraccarico vince il peso maggiore (in caso di parità, le ripetizioni maggiori); per corpo libero vince il numero massimo di ripetizioni.
+  - Implementato parser retroattivo `parseExercisesFromWorkout()` che supporta sia il JSON strutturato in `scheda_dati`, sia il parsing da note testuali libere (es. serie con carico `10x90kg`, multi-serie `3x10x180kg`, esclusioni serie fallite, elenchi corpo libero `50 pull, 100 push, 200 squat`).
+  - Aggregatore all-time `calcolaRecordPersonali()` per raggruppare ed estrarre i massimali assoluti dell'atleta.
+- **Backend Prompt AI (`api/nestore-chat.js`)**:
+  - Aggiornato il system prompt e il template `json:extraction` affinché Google Gemini Flash popoli esplicitamente l'array `esercizi` (nome, peso_kg, ripetizioni, serie) nel campo `scheda_dati` ad ogni registrazione di allenamento.
+- **Test & Validazione**: Creata suite `tests/workout-pr.test.js` (9 test) con esito 30/30 test totali superati.
+
+---
+
 ## [2026-09-15] fix | Hotfix Limite Serverless Functions Vercel - Spostamento resend-mail in _utils (v1.05.34)
 - **Backend (`api/_utils/resend-mail.js`)**:
   - Spostato `api/resend-mail.js` → `api/_utils/resend-mail.js`. Le cartelle prefissate da underscore (`_utils/`) non vengono compilate da Vercel come endpoint serverless, rispettando il limite di 12 funzioni del piano Hobby.
