@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-16] ingest | NESTORE — Fix Grafico Dieta (Stacked Bars, Layer Order & Edge-to-Edge Target Lines)
+- **Frontend & Visual Analytics (`portal/nestore.js`)**:
+  - **Stacking Asse Y**: Abilitato `options.scales.y.stacked: true` in `renderGraficoDieta()`, correggendo la precedente sovrapposizione visiva delle barre che partivano tutte da Y=0.
+  - **Ordinamento Layer Bottom-to-Top**: Riordinati i dataset dei macronutrienti con Proteine (Cyan `#00e5ff`) alla base (indice 0), Grassi (Lime `#76ff03`) al centro (indice 1), e Carboidrati (Amber `#ffb300`) in cima (indice 2).
+  - **Border Radius Selettivo**: Impostato `borderRadius: 0` per Proteine e Grassi, e `borderRadius: 4` unicamente per i Carboidrati in cima, conferendo un aspetto compatto e solido alla colonna di consumo calorico.
+  - **Custom Plugin Linee a Tutta Ampiezza (`fullWidthTargetLinesPlugin`)**: Introdotto plugin inline di Chart.js che traccia le linee orizzontali TDEE (rossa tratteggiata) e Target Atleta (verde tratteggiata) da `chartArea.left` a `chartArea.right`, estendendole per l'intera larghezza della griglia anche in presenza di una sola data o spazi di padding laterale.
+  - **Preservazione Legenda**: Mantenuti i dataset nativi con `showLine: false` e `pointRadius: 0` per garantire l'esposizione in legenda e l'interazione senza duplicazione dei tratti tratteggiati.
+- **Testing (`tests/diet-chart-target.test.js`)**:
+  - Aggiunti unit test per validare la presenza di `stacked: true`, l'ordine dei macronutrienti, il `borderRadius` selettivo, e la registrazione del plugin full-width. Test suite complessiva: 49/49 passati.
+
+---
+
 ## [2026-09-16] ingest | NESTORE — Multi-Event Extraction, Diet Chart TDEE/Target Lines & Inline Target Editor
 - **Backend (`api/nestore-chat.js`)**:
   - Risolto bug di estrazione singola: `extractionRegexAll` ora itera su tutti i blocchi ````json:extraction```` presenti nella risposta di Gemini, persistendo simultaneamente tutti i pasti o eventi (es. colazione + pranzo) senza omissioni.

@@ -65,4 +65,39 @@ Registrato: Pranzo — 200g pesce fritto (~1015 kcal).
         expect(extractions[0].tipo).toBe('preferenze');
         expect(extractions[0].calorie_target).toBe(2400);
     });
+
+    it('verifica configurazione del grafico dieta in portal/nestore.js', async () => {
+        const fs = await import('fs');
+        const path = await import('path');
+        const jsPath = path.resolve(__dirname, '../portal/nestore.js');
+        const content = fs.readFileSync(jsPath, 'utf8');
+
+        // 1. Verifica stacking asse Y
+        expect(content).toContain('stacked: true');
+
+        // 2. Verifica ordine macro: Proteine (0), Grassi (1), Carboidrati (2)
+        const proIdx = content.indexOf("label: 'Proteine (kcal)'");
+        const fatIdx = content.indexOf("label: 'Grassi (kcal)'");
+        const carbIdx = content.indexOf("label: 'Carboidrati (kcal)'");
+
+        expect(proIdx).toBeGreaterThan(0);
+        expect(fatIdx).toBeGreaterThan(proIdx);
+        expect(carbIdx).toBeGreaterThan(fatIdx);
+
+        // 3. Verifica borderRadius: solo carboidrati ha 4, proteine e grassi hanno 0
+        expect(content).toMatch(/label:\s*'Proteine \(kcal\)'[\s\S]*?borderRadius:\s*0/);
+        expect(content).toMatch(/label:\s*'Grassi \(kcal\)'[\s\S]*?borderRadius:\s*0/);
+        expect(content).toMatch(/label:\s*'Carboidrati \(kcal\)'[\s\S]*?borderRadius:\s*4/);
+
+        // 4. Verifica plugin per linee a tutta ampiezza (fullWidthTargetLinesPlugin)
+        expect(content).toContain('fullWidthTargetLinesPlugin');
+        expect(content).toContain('ctx.moveTo(chartArea.left, yPos)');
+        expect(content).toContain('ctx.lineTo(chartArea.right, yPos)');
+        expect(content).toContain('plugins: [fullWidthTargetLinesPlugin]');
+
+        // 5. Verifica che le linee TDEE e Target abbiano showLine: false per evitare sovrapposizioni parziali
+        expect(content).toMatch(/label:\s*`TDEE Salute[\s\S]*?showLine:\s*false/);
+        expect(content).toMatch(/label:\s*`Target[\s\S]*?showLine:\s*false/);
+    });
 });
+

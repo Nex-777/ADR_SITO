@@ -1188,35 +1188,39 @@ async function renderGraficoDieta() {
         const datasets = [
             {
                 type: 'bar',
-                label: 'Carboidrati (kcal)',
-                data: serieCarb,
-                backgroundColor: '#ffb300', // Amber
-                stack: 'macro',
-                borderRadius: 2,
-                order: 2
-            },
-            {
-                type: 'bar',
                 label: 'Proteine (kcal)',
                 data: seriePro,
-                backgroundColor: '#00e5ff', // Cyan
+                backgroundColor: '#00e5ff', // Cyan (base)
                 stack: 'macro',
-                borderRadius: 2,
+                borderRadius: 0,
                 order: 2
             },
             {
                 type: 'bar',
                 label: 'Grassi (kcal)',
                 data: serieFat,
-                backgroundColor: '#76ff03', // Lime
+                backgroundColor: '#76ff03', // Lime (centro)
+                stack: 'macro',
+                borderRadius: 0,
+                order: 2
+            },
+            {
+                type: 'bar',
+                label: 'Carboidrati (kcal)',
+                data: serieCarb,
+                backgroundColor: '#ffb300', // Amber (cima)
                 stack: 'macro',
                 borderRadius: 4,
                 order: 2
             }
         ];
 
+        let tdeeDatasetIndex = -1;
+        let targetDatasetIndex = -1;
+
         if (labels.length > 0) {
             // Linea Rossa: TDEE Linee Guida Salute
+            tdeeDatasetIndex = datasets.length;
             datasets.push({
                 type: 'line',
                 label: `TDEE Salute (${Math.round(tdeeVal)} kcal)`,
@@ -1227,11 +1231,13 @@ async function renderGraficoDieta() {
                 borderDash: [6, 4],
                 pointRadius: 0,
                 pointHoverRadius: 4,
+                showLine: false,
                 fill: false,
                 order: 1
             });
 
             // Linea Verde: Target Calorie Atleta
+            targetDatasetIndex = datasets.length;
             datasets.push({
                 type: 'line',
                 label: `Target (${Math.round(targetVal)} kcal)`,
@@ -1242,10 +1248,57 @@ async function renderGraficoDieta() {
                 borderDash: [3, 3],
                 pointRadius: 0,
                 pointHoverRadius: 4,
+                showLine: false,
                 fill: false,
                 order: 1
             });
         }
+
+        const fullWidthTargetLinesPlugin = {
+            id: 'fullWidthTargetLines',
+            afterDatasetsDraw(chart) {
+                const { ctx, chartArea, scales } = chart;
+                const y = scales?.y;
+                if (!chartArea || !y) return;
+
+                // TDEE Line (Rossa a tutta ampiezza)
+                if (tdeeDatasetIndex !== -1 && (!chart.isDatasetVisible || chart.isDatasetVisible(tdeeDatasetIndex))) {
+                    const yPos = y.getPixelForValue(tdeeVal);
+                    if (yPos >= chartArea.top - 5 && yPos <= chartArea.bottom + 5) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([6, 4]);
+                        ctx.moveTo(chartArea.left, yPos);
+                        ctx.lineTo(chartArea.right, yPos);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#ff1744';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+
+                // Target Line (Verde a tutta ampiezza)
+                if (targetDatasetIndex !== -1 && (!chart.isDatasetVisible || chart.isDatasetVisible(targetDatasetIndex))) {
+                    const yPos = y.getPixelForValue(targetVal);
+                    if (yPos >= chartArea.top - 5 && yPos <= chartArea.bottom + 5) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([3, 3]);
+                        ctx.moveTo(chartArea.left, yPos);
+                        ctx.lineTo(chartArea.right, yPos);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#00e676';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            }
+        };
+
+        const maxMacroDaily = dateOrdinate.length > 0 
+            ? Math.max(...dateOrdinate.map(d => (aggregati[d]?.proKcal || 0) + (aggregati[d]?.carbKcal || 0) + (aggregati[d]?.fatKcal || 0)))
+            : 0;
+        const suggestedMaxKcal = Math.round(Math.max(tdeeVal, targetVal, maxMacroDaily, 1000) * 1.15);
 
         chartDietaInstance = new Chart(canvas, {
             type: 'bar',
@@ -1253,6 +1306,7 @@ async function renderGraficoDieta() {
                 labels: labels,
                 datasets: datasets
             },
+            plugins: [fullWidthTargetLinesPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1296,7 +1350,8 @@ async function renderGraficoDieta() {
                         ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }
                     },
                     y: {
-                        stacked: false,
+                        stacked: true,
+                        suggestedMax: suggestedMaxKcal,
                         grid: { color: 'rgba(255, 255, 255, 0.04)' },
                         ticks: {
                             color: '#94a3b8',
