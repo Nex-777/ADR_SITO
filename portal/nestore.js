@@ -13,6 +13,7 @@ let currentUser = null;
 let currentSession = null;
 let currentUserProfile = null;
 let userPreferenze = { conferma_preventiva: true, calorie_target: 2200 };
+let currentSchedaAtleta = null;
 let currentAttachedImage = null; // { base64, mimeType, name }
 let speechRecognizer = null;
 let isRecordingVoice = false;
@@ -256,8 +257,50 @@ async function caricaPreferenze() {
             if (altValEl) altValEl.textContent = '--';
             if (heightBanner) heightBanner.classList.remove('nst-hidden');
         }
+
+        // Aggiorna indicatore calorie target
+        const targetValEl = document.getElementById('nst-target-val');
+        if (targetValEl) {
+            targetValEl.textContent = userPreferenze.calorie_target || 2200;
+        }
     } catch (e) {
         console.error("Eccezione preferenze:", e);
+    }
+}
+
+async function modificaTargetCalorie() {
+    const curr = userPreferenze?.calorie_target || 2200;
+    const nuovo = prompt("Imposta il tuo obiettivo calorico giornaliero (kcal):", curr);
+    if (nuovo === null) return;
+    const val = parseInt(nuovo, 10);
+    if (!val || isNaN(val) || val < 800 || val > 6000) {
+        alert("Inserisci un valore valido compreso tra 800 e 6000 kcal.");
+        return;
+    }
+
+    try {
+        userPreferenze.calorie_target = val;
+        const targetEl = document.getElementById('nst-target-val');
+        if (targetEl) targetEl.textContent = val;
+
+        await supabaseClient
+            .from('nestore_preferenze')
+            .upsert({
+                utente_id: currentUser.id,
+                calorie_target: val,
+                aggiornato_il: new Date().toISOString()
+            });
+
+        // Ricarica il grafico per aggiornare la linea verde del target
+        await renderGraficoDieta();
+
+        // Notifica o ricalcola scheda atleta per sincronizzare i target
+        if (typeof aggiornaSchedaManuale === 'function') {
+            aggiornaSchedaManuale().catch(() => {});
+        }
+    } catch (e) {
+        console.error("Errore salvataggio target calorie:", e);
+        alert("Errore durante il salvataggio del target calorico.");
     }
 }
 
@@ -344,6 +387,8 @@ async function caricaSchedaAtletaUI() {
             await aggiornaSchedaManuale();
             return;
         }
+
+        currentSchedaAtleta = data;
 
         // Aggiorna Badge Versione & Data
         const vBadge = document.getElementById('nst-scheda-version-badge');
@@ -1108,6 +1153,31 @@ async function renderGraficoDieta() {
         const seriePro = dateOrdinate.map(d => Math.round(aggregati[d].proKcal));
         const serieFat = dateOrdinate.map(d => Math.round(aggregati[d].fatKcal));
 
+        // Calcolo o recupero TDEE e Calorie Target
+        const targetVal = Number(userPreferenze?.calorie_target || currentSchedaAtleta?.nutrizione?.calorie_target || 2200);
+        const targetValEl = document.getElementById('nst-target-val');
+        if (targetValEl) targetValEl.textContent = Math.round(targetVal);
+
+        let tdeeVal = Number(currentSchedaAtleta?.biometria?.tdee_stimato || 0);
+        if (!tdeeVal) {
+            try {
+                const { data: sch } = await supabaseClient
+                    .from('nestore_scheda_atleta')
+                    .select('biometria, nutrizione')
+                    .eq('utente_id', currentUser.id)
+                    .maybeSingle();
+                if (sch) {
+                    currentSchedaAtleta = sch;
+                    tdeeVal = Number(sch.biometria?.tdee_stimato || 0);
+                }
+            } catch (e) {
+                console.warn("Errore recupero tdee per grafico:", e);
+            }
+        }
+        if (!tdeeVal) {
+            tdeeVal = 2000; // Riferimento medio standard
+        }
+
         const canvas = document.getElementById('nst-chart-dieta');
         if (!canvas || typeof Chart === 'undefined') return;
 
@@ -1115,33 +1185,73 @@ async function renderGraficoDieta() {
             chartDietaInstance.destroy();
         }
 
+        const datasets = [
+            {
+                type: 'bar',
+                label: 'Carboidrati (kcal)',
+                data: serieCarb,
+                backgroundColor: '#ffb300', // Amber
+                stack: 'macro',
+                borderRadius: 2,
+                order: 2
+            },
+            {
+                type: 'bar',
+                label: 'Proteine (kcal)',
+                data: seriePro,
+                backgroundColor: '#00e5ff', // Cyan
+                stack: 'macro',
+                borderRadius: 2,
+                order: 2
+            },
+            {
+                type: 'bar',
+                label: 'Grassi (kcal)',
+                data: serieFat,
+                backgroundColor: '#76ff03', // Lime
+                stack: 'macro',
+                borderRadius: 4,
+                order: 2
+            }
+        ];
+
+        if (labels.length > 0) {
+            // Linea Rossa: TDEE Linee Guida Salute
+            datasets.push({
+                type: 'line',
+                label: `TDEE Salute (${Math.round(tdeeVal)} kcal)`,
+                data: labels.map(() => Math.round(tdeeVal)),
+                borderColor: '#ff1744', // Red
+                backgroundColor: '#ff1744',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                order: 1
+            });
+
+            // Linea Verde: Target Calorie Atleta
+            datasets.push({
+                type: 'line',
+                label: `Target (${Math.round(targetVal)} kcal)`,
+                data: labels.map(() => Math.round(targetVal)),
+                borderColor: '#00e676', // Green
+                backgroundColor: '#00e676',
+                borderWidth: 2,
+                borderDash: [3, 3],
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                fill: false,
+                order: 1
+            });
+        }
+
         chartDietaInstance = new Chart(canvas, {
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [
-                    {
-                        label: 'Carboidrati (kcal)',
-                        data: serieCarb,
-                        backgroundColor: '#ffb300', // Amber
-                        stack: 'macro',
-                        borderRadius: 2
-                    },
-                    {
-                        label: 'Proteine (kcal)',
-                        data: seriePro,
-                        backgroundColor: '#00e5ff', // Cyan
-                        stack: 'macro',
-                        borderRadius: 2
-                    },
-                    {
-                        label: 'Grassi (kcal)',
-                        data: serieFat,
-                        backgroundColor: '#76ff03', // Lime
-                        stack: 'macro',
-                        borderRadius: 4
-                    }
-                ]
+                datasets: datasets
             },
             options: {
                 responsive: true,
@@ -1169,8 +1279,12 @@ async function renderGraficoDieta() {
                         callbacks: {
                             footer: function(tooltipItems) {
                                 let sum = 0;
-                                tooltipItems.forEach(ti => { sum += ti.parsed.y; });
-                                return `Totale: ${sum} kcal`;
+                                tooltipItems.forEach(ti => {
+                                    if (ti.dataset.stack === 'macro') {
+                                        sum += ti.parsed.y;
+                                    }
+                                });
+                                return sum > 0 ? `Totale pasti: ${sum} kcal` : '';
                             }
                         }
                     }
@@ -1182,7 +1296,7 @@ async function renderGraficoDieta() {
                         ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }
                     },
                     y: {
-                        stacked: true,
+                        stacked: false,
                         grid: { color: 'rgba(255, 255, 255, 0.04)' },
                         ticks: {
                             color: '#94a3b8',
@@ -3732,6 +3846,8 @@ window.scaricaFileScheda = scaricaFileScheda;
 window.apriModalSchedaTesto = apriModalSchedaTesto;
 window.chiudiModalSchedaTesto = chiudiModalSchedaTesto;
 window.copiaTestoSchedaModal = copiaTestoSchedaModal;
+window.modificaTargetCalorie = modificaTargetCalorie;
+window.renderGraficoDieta = renderGraficoDieta;
 window.escapeHtml = escapeHtml;
 window.isIscrizioneAttiva = isIscrizioneAttiva;
 
@@ -3745,6 +3861,8 @@ if (typeof module !== 'undefined' && module.exports) {
         calcolaRecordPersonali,
         salvaAltezzaRapida,
         modificaAltezzaPrompt,
+        modificaTargetCalorie,
+        renderGraficoDieta,
         caricaSchedaAtletaUI,
         aggiornaSchedaManuale,
         switchNestoreView,

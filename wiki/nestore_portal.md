@@ -87,6 +87,8 @@ Chat history between athlete and NESTORE assistant.
 - **Mandatory Date Field in Extraction**: The extraction JSON block requires `"data": "YYYY-MM-DD"`, which allows retroactive tracking without overwriting today's date.
 - **Multi-Turn Chat Memory**: Recent chat history is formatted as alternating `user` and `model` turns, providing the model with conversational awareness.
 - **Full Database Context Feed**: Historical weigh-ins, recent workouts, and nutritional intake logs are synthesized into the system prompt, allowing athletes to ask retrospective analytical questions directly (e.g., *"quanto pesavo la scorsa settimana?"*).
+- **Multi-Event Extraction**: Supporta l'estrazione parallela di molteplici blocchi ````json:extraction```` in un singolo turno di conversazione (es. registrazione contestuale di colazione + pranzo, oppure pasto + allenamento), garantendo la persistenza integrale di ciascun evento senza perdite di dati.
+- **Preference Tuning via Chat & Action API**: Permette all'atleta di aggiornare i propri target (es. `calorie_target`) tramite linguaggio naturale o via endpoint `action: 'save_target'`.
 
 ---
 
@@ -98,7 +100,9 @@ Nestore is built as an SPA, transitioning seamlessly between Chat and Data visua
 - **Dedicated Data Panels**: Each metric has a dedicated full-width panel containing visual tracking and a detailed History Table with raw tracking data:
   1. **Weight & Body Dimensions (Multi-Line Chart)**: Dual Y-Axis (Weight vs Circumferences).
   2. **Workouts & Personal Records (PR Grid)**: Rimosso il grafico della durata in favore di una bacheca a card dei **Record Personali (All-Time)** per ciascun esercizio svolto. Per gli esercizi con carico vince il peso massimo (a parità di peso, le ripetizioni maggiori), mentre per gli esercizi a corpo libero vince il numero massimo di ripetizioni. Supporta sia i dati strutturati `scheda_dati` che il parsing retroattivo intelligente delle note libere. Lo Storico Sessioni sottostante resta filtrabile per periodo (`7G`, `14G`, `30G`, `ALL`).
-  3. **Daily Nutrition (Stacked Bar Chart)**: Stacks daily Carbs, Protein, and Fats (in kcal).
+  3. **Daily Nutrition (Stacked Bar Chart with TDEE & Target Overlays)**: Stacks daily Carbs, Protein, and Fats (in kcal), integrando due linee orizzontali di riferimento comparativo immediato:
+     - **Linea Rossa Tratteggiata (TDEE Salute)**: Rappresenta il fabbisogno calorico stimato scientificamente (Formula Mifflin-St Jeor) aggregato nella Wiki Atleta.
+     - **Linea Verde Tratteggiata (Target Atleta)**: Rappresenta l'obiettivo calorico giornaliero personalizzato dell'atleta (impostabile sia via chat sia tramite l'editor rapido inline `Target: [X] kcal ✏️` nel pannello dieta).
 - **Time Horizon Filter Chips**: `7G`, `14G`, `30G`, `ALL` selectors per filtrare i dati di periodo.
 
 ### 5.2. Mobile Tab Switcher Layout & Top-Down Inverted Chat

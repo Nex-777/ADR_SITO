@@ -169,6 +169,37 @@ describe('POST /api/nestore-chat', () => {
         expect(responseData.success).toBe(true);
         expect(responseData.scheda).toBeDefined();
     });
+
+    it('handles action: save_target and validates calorie range', async () => {
+        req = {
+            method: 'POST',
+            headers: {
+                authorization: 'Bearer valid-token',
+                origin: 'https://adrenalinaclub.it'
+            },
+            body: { action: 'save_target', calorie_target: 2400 }
+        };
+
+        await nestoreChatHandler(req, res);
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(responseData.success).toBe(true);
+        expect(responseData.calorie_target).toBe(2400);
+    });
+
+    it('rejects invalid calorie_target in save_target with 400', async () => {
+        req = {
+            method: 'POST',
+            headers: {
+                authorization: 'Bearer valid-token',
+                origin: 'https://adrenalinaclub.it'
+            },
+            body: { action: 'save_target', calorie_target: 100 }
+        };
+
+        await nestoreChatHandler(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(responseData.error).toContain('Target calorico non valido');
+    });
 });
 
 describe('calcolaSchedaAtleta()', () => {

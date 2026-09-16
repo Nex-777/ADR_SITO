@@ -342,8 +342,8 @@ export default async function handler(req, res) {
             return res.status(429).json({ error: 'Hai raggiunto il limite orario di messaggi per Nestore. Riprova più tardi.' });
         }
 
-        // 5. Azioni speciali (recalculate_wiki, save_height)
-        const { action, message, image_base64, image_mime, conferma_preventiva, altezza_cm } = req.body || {};
+        // 5. Azioni speciali (recalculate_wiki, save_height, save_target)
+        const { action, message, image_base64, image_mime, conferma_preventiva, altezza_cm, calorie_target } = req.body || {};
 
         if (action === 'recalculate_wiki') {
             const schedaData = await calcolaSchedaAtleta(supabaseAdmin, utenteId);
@@ -362,6 +362,20 @@ export default async function handler(req, res) {
             });
             const schedaData = await calcolaSchedaAtleta(supabaseAdmin, utenteId);
             return res.status(200).json({ success: true, altezza_cm: altNum, scheda: schedaData });
+        }
+
+        if (action === 'save_target') {
+            const calNum = parseInt(calorie_target, 10);
+            if (!calNum || isNaN(calNum) || calNum < 800 || calNum > 6000) {
+                return res.status(400).json({ error: 'Target calorico non valido. Inserisci un valore tra 800 e 6000 kcal.' });
+            }
+            await supabaseAdmin.from('nestore_preferenze').upsert({
+                utente_id: utenteId,
+                calorie_target: calNum,
+                aggiornato_il: new Date().toISOString()
+            });
+            const schedaData = await calcolaSchedaAtleta(supabaseAdmin, utenteId);
+            return res.status(200).json({ success: true, calorie_target: calNum, scheda: schedaData });
         }
 
         // 6. Validazione parametri per messaggio standard
@@ -517,7 +531,7 @@ Calcola le stime basandoti su questi standard nutrizionali realistici:
 Quando tutti i dati necessari sono presenti, ALLA FINE del tuo messaggio di risposta (dopo la riga "Registrato: ...") aggiungi OBBLIGATORIAMENTE il blocco:
 \`\`\`json:extraction
 {
-  "tipo": "peso_misure" | "pasto" | "allenamento",
+  "tipo": "peso_misure" | "pasto" | "allenamento" | "preferenze",
   "data": "YYYY-MM-DD",
   "peso_kg": 75.9,
   "altezza_cm": 178.0,
@@ -532,9 +546,23 @@ Quando tutti i dati necessari sono presenti, ALLA FINE del tuo messaggio di risp
   "disciplina": "Ibrido" | "SCAB" | "Strongman" | "Altro",
   "durata_minuti": 60,
   "rpe": 8,
-  "note": "eventuali note"
+  "note": "eventuali note",
+  "calorie_target": 2200
 }
 \`\`\`
+REGOLA CRUCIALE SUGLI EVENTI MULTIPLI:
+Se l'utente registra PIÙ PASTI o PIÙ ATTIVITÀ nello stesso messaggio (es. colazione e pranzo insieme, oppure un pasto e un allenamento), DEVI generare UN BLOCCO \`\`\`json:extraction SEPARATO PER CIASCUN EVENTO.
+Ad esempio:
+Registrato: Colazione — ...
+Registrato: Pranzo — ...
+\`\`\`json:extraction
+{ "tipo": "pasto", "tipo_pasto": "colazione", "descrizione": "...", "calorie": 390, ... }
+\`\`\`
+\`\`\`json:extraction
+{ "tipo": "pasto", "tipo_pasto": "pranzo", "descrizione": "...", "calorie": 1015, ... }
+\`\`\`
+Non unire né tralasciare mai i pasti!
+Inoltre, se l'utente chiede di impostare o modificare il proprio target calorico (es. "imposta il mio target a 2400 calorie"), conferma la variazione e genera un blocco con "tipo": "preferenze" e "calorie_target": 2400.
 Inserisci nel JSON solo i campi pertinenti.
 Il campo "data" DEVE SEMPRE ESSERE PRESENTE in formato YYYY-MM-DD (usando "${oggiIso}" per oggi o "${ieriIso}" per ieri o la data calcolata).
 Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INSERIRE IL BLOCCO json:extraction.`;
@@ -622,23 +650,35 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
 
         const rawText = candidate?.content?.parts?.[0]?.text || "Non ho potuto elaborare una risposta. Riprova.";
 
-        // 12. Estrazione blocco JSON se presente (con fallback resiliente)
+        // 12. Estrazione blocchi JSON se presenti (supporta eventi ed estrazioni multiple)
         let cleanReply = rawText;
-        let extractionPayload = null;
-        const extractionRegex = /```json:extraction\s*([\s\S]*?)\s*```/;
-        const match = rawText.match(extractionRegex);
+        const extractions = [];
+        const extractionRegexAll = /```json:extraction\s*([\s\S]*?)\s*```/g;
+        let match;
 
-        if (match && match[1]) {
-            try {
-                extractionPayload = JSON.parse(match[1]);
-                cleanReply = rawText.replace(extractionRegex, '').trim();
-            } catch (jsonErr) {
-                console.warn("Errore parsing extraction JSON:", jsonErr);
+        while ((match = extractionRegexAll.exec(rawText)) !== null) {
+            if (match[1]) {
+                try {
+                    const parsed = JSON.parse(match[1]);
+                    if (Array.isArray(parsed)) {
+                        extractions.push(...parsed);
+                    } else if (parsed && typeof parsed === 'object') {
+                        extractions.push(parsed);
+                    }
+                } catch (jsonErr) {
+                    console.warn("[nestore-chat] Errore parsing extraction JSON:", jsonErr.message);
+                }
             }
-        } else if (rawText.includes('```json:extraction')) {
+        }
+
+        // Rimuove tutti i blocchi json:extraction completi dal testo della risposta
+        cleanReply = cleanReply.replace(extractionRegexAll, '').trim();
+
+        // Fallback resiliente per blocco json:extraction non chiuso alla fine
+        if (cleanReply.includes('```json:extraction')) {
             console.warn("[nestore-chat] Trovato blocco json:extraction non chiuso, pulizia testo e tentato recupero.");
             const partialRegex = /```json:extraction[\s\S]*/;
-            const partialMatch = rawText.match(partialRegex);
+            const partialMatch = cleanReply.match(partialRegex);
             if (partialMatch) {
                 const jsonFragment = partialMatch[0].replace('```json:extraction', '').trim();
                 try {
@@ -647,70 +687,90 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
                     const closeBraces = (repairedJson.match(/\}/g) || []).length;
                     if (openBraces > closeBraces) {
                         repairedJson = repairedJson.replace(/,\s*$/, '').trim() + '\n}'.repeat(openBraces - closeBraces);
-                        extractionPayload = JSON.parse(repairedJson);
-                        console.info("[nestore-chat] Recuperato extractionPayload da JSON parziale:", extractionPayload);
+                        const repairedPayload = JSON.parse(repairedJson);
+                        if (repairedPayload && typeof repairedPayload === 'object') {
+                            extractions.push(repairedPayload);
+                            console.info("[nestore-chat] Recuperato extractionPayload da JSON parziale:", repairedPayload);
+                        }
                     }
                 } catch (repairErr) {
                     console.warn("[nestore-chat] Impossibile recuperare JSON parziale:", repairErr.message);
                 }
-                cleanReply = rawText.replace(partialRegex, '').trim();
+                cleanReply = cleanReply.replace(partialRegex, '').trim();
             }
         }
 
-        // 13. Gestione Salvataggio Diretto vs Controllo Preventivo
+        const extractionPayload = extractions.length === 1 ? extractions[0] : (extractions.length > 1 ? extractions : null);
+
+        // 13. Gestione Salvataggio Diretto vs Controllo Preventivo (per tutti i blocchi estratti)
         let salvatoDirettamente = false;
         const richiedeConferma = conferma_preventiva !== false;
 
-        if (extractionPayload && !richiedeConferma) {
+        if (extractions.length > 0 && !richiedeConferma) {
             const oggi = new Date().toISOString().split('T')[0];
             try {
-                if (extractionPayload.tipo === 'peso_misure') {
-                    await supabaseAdmin.from('nestore_pesi_misure').insert({
-                        utente_id: utenteId,
-                        data_rilevazione: extractionPayload.data || oggi,
-                        peso_kg: extractionPayload.peso_kg || null,
-                        altezza_cm: extractionPayload.altezza_cm || null,
-                        vita_cm: extractionPayload.vita_cm || null,
-                        torace_cm: extractionPayload.torace_cm || null,
-                        collo_cm: extractionPayload.collo_cm || null,
-                        fianchi_cm: extractionPayload.fianchi_cm || null,
-                        braccio_dx_cm: extractionPayload.braccio_dx_cm || null,
-                        braccio_sx_cm: extractionPayload.braccio_sx_cm || null,
-                        coscia_dx_cm: extractionPayload.coscia_dx_cm || null,
-                        coscia_sx_cm: extractionPayload.coscia_sx_cm || null,
-                        note: extractionPayload.note || null
-                    });
-                    if (extractionPayload.altezza_cm) {
-                        await supabaseAdmin.from('nestore_preferenze').upsert({
+                for (const item of extractions) {
+                    if (!item || !item.tipo) continue;
+
+                    if (item.tipo === 'peso_misure') {
+                        await supabaseAdmin.from('nestore_pesi_misure').insert({
                             utente_id: utenteId,
-                            altezza_cm: extractionPayload.altezza_cm,
-                            aggiornato_il: new Date().toISOString()
+                            data_rilevazione: item.data || oggi,
+                            peso_kg: item.peso_kg || null,
+                            altezza_cm: item.altezza_cm || null,
+                            vita_cm: item.vita_cm || null,
+                            torace_cm: item.torace_cm || null,
+                            collo_cm: item.collo_cm || null,
+                            fianchi_cm: item.fianchi_cm || null,
+                            braccio_dx_cm: item.braccio_dx_cm || null,
+                            braccio_sx_cm: item.braccio_sx_cm || null,
+                            coscia_dx_cm: item.coscia_dx_cm || null,
+                            coscia_sx_cm: item.coscia_sx_cm || null,
+                            note: item.note || null
                         });
+                        if (item.altezza_cm) {
+                            await supabaseAdmin.from('nestore_preferenze').upsert({
+                                utente_id: utenteId,
+                                altezza_cm: item.altezza_cm,
+                                aggiornato_il: new Date().toISOString()
+                            });
+                        }
+                        salvatoDirettamente = true;
+                    } else if (item.tipo === 'pasto') {
+                        await supabaseAdmin.from('nestore_pasti').insert({
+                            utente_id: utenteId,
+                            data_pasto: item.data || oggi,
+                            tipo_pasto: item.tipo_pasto || 'pranzo',
+                            descrizione: item.descrizione || 'Pasto',
+                            calorie_stimate: item.calorie || null,
+                            proteine_g: item.proteine || null,
+                            carboidrati_g: item.carboidrati || null,
+                            grassi_g: item.grassi || null
+                        });
+                        salvatoDirettamente = true;
+                    } else if (item.tipo === 'allenamento') {
+                        await supabaseAdmin.from('nestore_allenamenti').insert({
+                            utente_id: utenteId,
+                            data_allenamento: item.data || oggi,
+                            corso_disciplina: item.disciplina || 'Generale',
+                            durata_minuti: item.durata_minuti || null,
+                            scheda_dati: item.esercizi || [],
+                            rpe_fatica: item.rpe || null,
+                            note: item.note || null
+                        });
+                        salvatoDirettamente = true;
+                    } else if (item.tipo === 'preferenze') {
+                        const prefUpdate = {
+                            utente_id: utenteId,
+                            aggiornato_il: new Date().toISOString()
+                        };
+                        if (item.calorie_target !== undefined) prefUpdate.calorie_target = item.calorie_target;
+                        if (item.proteine_target_g !== undefined) prefUpdate.proteine_target_g = item.proteine_target_g;
+                        if (item.peso_target_kg !== undefined) prefUpdate.peso_target_kg = item.peso_target_kg;
+                        if (item.altezza_cm !== undefined) prefUpdate.altezza_cm = item.altezza_cm;
+                        await supabaseAdmin.from('nestore_preferenze').upsert(prefUpdate);
+                        salvatoDirettamente = true;
                     }
-                    salvatoDirettamente = true;
-                } else if (extractionPayload.tipo === 'pasto') {
-                    await supabaseAdmin.from('nestore_pasti').insert({
-                        utente_id: utenteId,
-                        data_pasto: extractionPayload.data || oggi,
-                        tipo_pasto: extractionPayload.tipo_pasto || 'pranzo',
-                        descrizione: extractionPayload.descrizione || 'Pasto',
-                        calorie_stimate: extractionPayload.calorie || null,
-                        proteine_g: extractionPayload.proteine || null,
-                        carboidrati_g: extractionPayload.carboidrati || null,
-                        grassi_g: extractionPayload.grassi || null
-                    });
-                    salvatoDirettamente = true;
-                } else if (extractionPayload.tipo === 'allenamento') {
-                    await supabaseAdmin.from('nestore_allenamenti').insert({
-                        utente_id: utenteId,
-                        data_allenamento: extractionPayload.data || oggi,
-                        corso_disciplina: extractionPayload.disciplina || 'Generale',
-                        durata_minuti: extractionPayload.durata_minuti || null,
-                        scheda_dati: extractionPayload.esercizi || [],
-                        rpe_fatica: extractionPayload.rpe || null,
-                        note: extractionPayload.note || null
-                    });
-                    salvatoDirettamente = true;
                 }
 
                 // Trigger silente di ricalcolo Wiki Atleta (post salvataggio diretto)

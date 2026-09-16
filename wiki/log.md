@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-16] ingest | NESTORE — Multi-Event Extraction, Diet Chart TDEE/Target Lines & Inline Target Editor
+- **Backend (`api/nestore-chat.js`)**:
+  - Risolto bug di estrazione singola: `extractionRegexAll` ora itera su tutti i blocchi ````json:extraction```` presenti nella risposta di Gemini, persistendo simultaneamente tutti i pasti o eventi (es. colazione + pranzo) senza omissioni.
+  - Aggiornato il system prompt per istruire Gemini a emettere blocchi `json:extraction` multipli distinti per ogni pasto/evento e a supportare l'aggiornamento preferenze (`tipo: "preferenze"`, `calorie_target`).
+  - Introdotta action `save_target` per l'aggiornamento diretto del target calorico con validazione del range 800-6000 kcal.
+- **Frontend & Visual Analytics (`portal/nestore.html`, `portal/nestore.js`)**:
+  - Aggiunte due linee di riferimento nel grafico Chart.js di Dieta & Macro:
+    - **Linea Rossa Tratteggiata (TDEE Salute)**: Mostra il fabbisogno calorico stimato scientificamente (Formula Mifflin-St Jeor) da Wiki Atleta.
+    - **Linea Verde Tratteggiata (Target Atleta)**: Mostra l'obiettivo calorico giornaliero personalizzato dell'atleta.
+  - Asse Y configurato con `stacked: false` per consentire ai macro in barre di sommarsi tramite `stack: 'macro'` mentre le linee rimangono al loro livello assoluto. Tooltip aggiornato per mostrare sia i macro che le calorie di riferimento senza falsare il totale pasti.
+  - Aggiunto widget/container `Target: [X] kcal ✏️` con funzione `modificaTargetCalorie()` per consentire la modifica istantanea del target con re-render in tempo reale.
+- **Data Recovery (Supabase Live)**:
+  - Recuperato e inserito via SQL il record mancante del pranzo del 2026-09-16 per l'atleta (`utente_id: afb93c7b-a75d-42fb-b005-13d09fb6834d`, 1015 kcal, P 37g, C 88g, F 54g).
+- **Testing & Documentazione**:
+  - Creato `tests/diet-chart-target.test.js` e aggiunti unit test in `tests/nestore-chat.test.js` (48/48 test superati).
+  - Aggiornati `wiki/nestore_portal.md` e `wiki/log.md`.
+
+---
+
 ## [2026-09-16] ingest | NESTORE — Audit WFTEST, Hardening XSS & Refactoring Schede/Coach
 - **Database (`supabase/migration_nestore_schede_fk_fix.sql`)**:
   - Applicata migrazione correttiva FK su Supabase live: `allenatore_id` reso nullable per compatibilità con vincolo `ON DELETE SET NULL`.
