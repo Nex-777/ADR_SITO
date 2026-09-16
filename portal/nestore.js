@@ -30,9 +30,24 @@ let coachSubpanelActive = 'schede'; // 'schede' | 'peso' | 'allenamenti' | 'diet
 // Sanitizzazione HTML per sicurezza
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Cache in memoria per le schede (evita injection XSS tramite attributi HTML onclick)
+const schedeCacheMap = new Map();
+
+// Helper per verifica validità iscrizione corso
+function isIscrizioneAttiva(isc, dataRif) {
+    if (!isc) return false;
+    const oggi = dataRif || new Date().toISOString().split('T')[0];
+    if (isc.data_scadenza_corso) return isc.data_scadenza_corso >= oggi;
+    if (isc.ingressi_totali) return (isc.ingressi_usati || 0) < isc.ingressi_totali;
+    return false;
 }
 
 // Navigazione: torna alla dashboard principale
@@ -165,11 +180,7 @@ async function initNestore() {
             console.error("Errore verifica iscrizioni:", iscrErr);
         }
 
-        const corsiValidi = (iscrizioni || []).filter(isc => {
-            if (isc.data_scadenza_corso) return isc.data_scadenza_corso >= oggi;
-            if (isc.ingressi_totali) return (isc.ingressi_usati || 0) < isc.ingressi_totali;
-            return false;
-        });
+        const corsiValidi = (iscrizioni || []).filter(isc => isIscrizioneAttiva(isc, oggi));
 
         // Se non ha accesso incondizionato e non ha corsi validi, blocca l'accesso
         if (!hasUnconditionalAccess && corsiValidi.length === 0) {
@@ -1985,8 +1996,12 @@ async function caricaCoachDashboard() {
 
         if (iscrErr) throw iscrErr;
 
-        // 3. Trova schede attive per questi atleti
-        const atletiIds = Array.from(new Set((iscrizioni || []).map(i => i.utente_id)));
+        // 3. Filtra solo iscrizioni attive (non scadute / ingressi rimanenti)
+        const oggi = new Date().toISOString().split('T')[0];
+        const iscrizioniAttive = (iscrizioni || []).filter(i => isIscrizioneAttiva(i, oggi));
+
+        // 4. Trova schede attive per questi atleti
+        const atletiIds = Array.from(new Set(iscrizioniAttive.map(i => i.utente_id)));
         const schedeMap = {};
         if (atletiIds.length > 0) {
             const { data: schede } = await supabaseClient
@@ -1999,9 +2014,9 @@ async function caricaCoachDashboard() {
             });
         }
 
-        // 4. Aggrega per corso
+        // 5. Aggrega per corso
         coachCorsiAtleti = corsi.map(c => {
-            const iscrCorso = (iscrizioni || []).filter(i => i.evento_id === c.id && i.utenti);
+            const iscrCorso = iscrizioniAttive.filter(i => i.evento_id === c.id && i.utenti);
             const atleti = iscrCorso.map(isc => ({
                 id: isc.utenti.id,
                 nome: isc.utenti.nome || '',
@@ -2068,17 +2083,22 @@ async function caricaAdminDashboard() {
 
         const corsiIds = corsi.map(c => c.id);
 
-        // 2. Iscrizioni per tutti i corsi
+        // 2. Iscrizioni per tutti i corsi (con limite anti-bloat a 500 record)
         const { data: iscrizioni, error: iscrErr } = await supabaseClient
             .from('iscrizioni_eventi')
             .select('id, evento_id, utente_id, data_inizio_corso, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, utenti(id, nome, cognome, email)')
             .in('evento_id', corsiIds)
-            .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
+            .in('stato_pagamento', ['PAGATO', 'GRATUITO'])
+            .limit(500);
 
         if (iscrErr) throw iscrErr;
 
-        // 3. Schede attive
-        const atletiIds = Array.from(new Set((iscrizioni || []).map(i => i.utente_id)));
+        // 3. Filtra solo iscrizioni attive (non scadute / ingressi rimanenti)
+        const oggi = new Date().toISOString().split('T')[0];
+        const iscrizioniAttive = (iscrizioni || []).filter(i => isIscrizioneAttiva(i, oggi));
+
+        // 4. Schede attive
+        const atletiIds = Array.from(new Set(iscrizioniAttive.map(i => i.utente_id)));
         const schedeMap = {};
         if (atletiIds.length > 0) {
             const { data: schede } = await supabaseClient
@@ -2092,7 +2112,7 @@ async function caricaAdminDashboard() {
         }
 
         coachCorsiAtleti = corsi.map(c => {
-            const iscrCorso = (iscrizioni || []).filter(i => i.evento_id === c.id && i.utenti);
+            const iscrCorso = iscrizioniAttive.filter(i => i.evento_id === c.id && i.utenti);
             const atleti = iscrCorso.map(isc => ({
                 id: isc.utenti.id,
                 nome: isc.utenti.nome || '',
@@ -2110,6 +2130,14 @@ async function caricaAdminDashboard() {
 
         aggiornaSelectCorsiCoach(coachCorsiAtleti);
         renderCoachCoursesList(coachCorsiAtleti);
+
+        if (iscrizioni && iscrizioni.length >= 500) {
+            const statsPill = document.getElementById('nst-coach-stats-pill');
+            if (statsPill) {
+                statsPill.textContent += ' (LIMITE 500)';
+                statsPill.title = 'Attenzione: visualizzazione limitata a 500 iscrizioni. Utilizza i filtri per affinare la ricerca.';
+            }
+        }
 
     } catch (err) {
         console.error("Errore caricamento dashboard admin:", err);
@@ -2208,7 +2236,7 @@ function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch 
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="nst-btn-open-atleta" onclick="apriAtletaPerAllenatore('${atleta.id}', '${escapeHtml(nomeCompleto.replace(/'/g, "\\'"))}', '${escapeHtml(corso.titolo.replace(/'/g, "\\'"))}', '${corso.id}')">
+                        <button type="button" class="nst-btn-open-atleta" data-atleta-id="${escapeHtml(atleta.id)}" data-atleta-nome="${escapeHtml(nomeCompleto)}" data-corso-titolo="${escapeHtml(corso.titolo)}" data-corso-id="${escapeHtml(corso.id)}">
                             <span>APRI SCHEDA ATLETA</span>
                             <span class="material-symbols-outlined" style="font-size: 16px;">arrow_forward</span>
                         </button>
@@ -2232,6 +2260,20 @@ function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch 
     }
 
     container.innerHTML = html;
+
+    // Event delegation per apertura scheda atleta senza inline onclick handlers
+    if (!container._hasAthleteClickListener) {
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('.nst-btn-open-atleta');
+            if (btn) {
+                const { atletaId, atletaNome, corsoTitolo, corsoId } = btn.dataset;
+                if (atletaId) {
+                    apriAtletaPerAllenatore(atletaId, atletaNome || 'Atleta', corsoTitolo || '', corsoId || '');
+                }
+            }
+        });
+        container._hasAthleteClickListener = true;
+    }
 
     const statsPill = document.getElementById('nst-coach-stats-pill');
     if (statsPill) {
@@ -2683,6 +2725,14 @@ async function inviaNuovaSchedaCoach() {
         alert("Scheda di allenamento assegnata con successo all'atleta!");
 
     } catch (err) {
+        // Rollback: se il file è stato caricato su Storage ma l'insert a DB fallisce, rimuovi il file orfano
+        if (uploadedFilePath) {
+            try {
+                await supabaseClient.storage.from('schede_allenamento').remove([uploadedFilePath]);
+            } catch (cleanupErr) {
+                console.warn("Impossibile rimuovere file Storage orfano:", cleanupErr);
+            }
+        }
         console.error("Errore salvataggio scheda:", err);
         alert("Errore durante il salvataggio della scheda: " + err.message);
     } finally {
@@ -2800,6 +2850,7 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
 
         let html = '';
         schede.forEach(s => {
+            schedeCacheMap.set(s.id, s);
             const isAttiva = s.attivo;
             const autoreNome = s.allenatore ? `${s.allenatore.cognome || ''} ${s.allenatore.nome || ''}`.trim() : 'Allenatore';
             const dataCaricamento = formatDate(s.creato_il);
@@ -2828,21 +2879,21 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
 
                     <div class="nst-scheda-actions">
                         ${s.contenuto_testo ? `
-                            <button type="button" class="nst-btn-view-text" onclick="apriModalSchedaTesto('${escapeHtml(s.titolo.replace(/'/g, "\\'"))}', '${escapeHtml((s.periodo || '').replace(/'/g, "\\'"))}', '${dataCaricamento}', '${escapeHtml(autoreNome.replace(/'/g, "\\'"))}', ${JSON.stringify(s.contenuto_testo)})">
+                            <button type="button" class="nst-btn-view-text" data-scheda-id="${escapeHtml(s.id)}">
                                 <span class="material-symbols-outlined">visibility</span>
                                 <span>VISUALIZZA PROGRAMMA</span>
                             </button>
                         ` : ''}
 
                         ${s.file_path ? `
-                            <button type="button" class="nst-btn-download" onclick="scaricaFileScheda('${s.file_path}', '${escapeHtml((s.file_nome || 'scheda_allenamento.docx').replace(/'/g, "\\'"))}')">
+                            <button type="button" class="nst-btn-download" data-file-path="${escapeHtml(s.file_path)}" data-file-nome="${escapeHtml(s.file_nome || 'scheda_allenamento.docx')}">
                                 <span class="material-symbols-outlined">download</span>
                                 <span>SCARICA FILE WORD (${escapeHtml(s.file_nome || '.docx')})</span>
                             </button>
                         ` : ''}
 
                         ${isCoachView && isAttiva ? `
-                            <button type="button" class="nst-btn-archive" onclick="archiviaSchedaCoach('${s.id}')" title="Archivia questa scheda (storicizzazione)">
+                            <button type="button" class="nst-btn-archive" data-scheda-id="${escapeHtml(s.id)}" title="Archivia questa scheda (storicizzazione)">
                                 <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">archive</span>
                                 ARCHIVIA
                             </button>
@@ -2853,6 +2904,33 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
         });
 
         container.innerHTML = html;
+
+        // Event delegation per schede actions (visualizza, scarica, archivia)
+        if (!container._hasSchedeClickListener) {
+            container.addEventListener('click', (e) => {
+                const viewBtn = e.target.closest('.nst-btn-view-text');
+                if (viewBtn) {
+                    const s = schedeCacheMap.get(viewBtn.dataset.schedaId);
+                    if (s) {
+                        const autoreNome = s.allenatore ? `${s.allenatore.cognome || ''} ${s.allenatore.nome || ''}`.trim() : 'Allenatore';
+                        const dataCaricamento = formatDate(s.creato_il);
+                        apriModalSchedaTesto(s.titolo, s.periodo || '', dataCaricamento, autoreNome, s.contenuto_testo || '');
+                    }
+                    return;
+                }
+                const dlBtn = e.target.closest('.nst-btn-download');
+                if (dlBtn) {
+                    scaricaFileScheda(dlBtn.dataset.filePath, dlBtn.dataset.fileNome);
+                    return;
+                }
+                const archBtn = e.target.closest('.nst-btn-archive');
+                if (archBtn) {
+                    archiviaSchedaCoach(archBtn.dataset.schedaId);
+                    return;
+                }
+            });
+            container._hasSchedeClickListener = true;
+        }
 
     } catch (err) {
         console.error("Errore caricamento schede atleta:", err);
@@ -3654,9 +3732,13 @@ window.scaricaFileScheda = scaricaFileScheda;
 window.apriModalSchedaTesto = apriModalSchedaTesto;
 window.chiudiModalSchedaTesto = chiudiModalSchedaTesto;
 window.copiaTestoSchedaModal = copiaTestoSchedaModal;
+window.escapeHtml = escapeHtml;
+window.isIscrizioneAttiva = isIscrizioneAttiva;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        escapeHtml,
+        isIscrizioneAttiva,
         normalizeExerciseName,
         isBetterPerformance,
         parseExercisesFromWorkout,

@@ -220,6 +220,11 @@ La sezione **SCHEDE DI ALLENAMENTO** consente al coach di preparare e assegnare 
 - **Transizione Stato**: Quando l'allenatore assegna una nuova scheda all'atleta, le schede attive precedenti per quell'atleta vengono automaticamente contrassegnate come de-attivate (`attivo = false`).
 - **Archivio Consultabile**: Sia l'atleta che l'allenatore possono consultare lo storico completo di tutte le schede passate (badge `ARCHIVIATA`), visualizzare il testo del programma o scaricare il file Word originale tramite URL firmato temporaneo.
 - **Vista Atleta**: Nella vista personale dell'atleta è presente il tab dedicato `SCHEDE` (`#nst-schede-panel`) che mostra in primo piano la scheda attiva e l'elenco dei programmi precedenti.
+- **Sicurezza & Hardening (WFTEST Audit)**:
+  - **Filtro Iscrizioni Attive**: Le dashboard Coach e Amministratore visualizzano unicamente gli atleti con iscrizione in corso di validità (scadenza o carnet ingressi residui) tramite l'helper `isIscrizioneAttiva`.
+  - **Protezione XSS & Event Delegation**: Rimossi tutti gli attributi `onclick` inline con concatenazione di parametri utente/testo; implementata architettura event delegation su container con `data-*` attributes e sanitizzazione universale tramite `escapeHtml`.
+  - **Rollback File Storage**: Se l'upload del file Word su Supabase Storage ha successo ma l'inserimento del record a database fallisce, il sistema tenta automaticamente la cancellazione compensativa del file per evitare sprechi di storage.
+  - **Anti-Bloat Admin Query**: Query globale iscrizioni limitata a 500 record con avviso visuale se la soglia viene saturata.
 
 ---
 

@@ -2,6 +2,21 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
+// Mock browser globals before requiring nestore.js in Node
+global.APP_CONFIG = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_KEY: 'test-key' };
+global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {}, clear: () => {} };
+global.window = global.window || {
+    supabase: { createClient: () => ({ from: () => ({ select: () => ({}) }) }) },
+    addEventListener: () => {},
+    location: { search: '', hash: '' },
+    requestAnimationFrame: () => {}
+};
+global.document = global.document || {
+    addEventListener: () => {},
+    getElementById: () => null,
+    createElement: () => ({ setAttribute: () => {}, appendChild: () => {}, textContent: '', innerHTML: '' })
+};
+
 describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
     const htmlPath = path.resolve(__dirname, '../portal/nestore.html');
     const cssPath = path.resolve(__dirname, '../portal/nestore.css');
@@ -61,26 +76,49 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
     });
 
     it('exports coach and schede functions in nestore.js', () => {
-        global.APP_CONFIG = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_KEY: 'test-key' };
-        global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {}, clear: () => {} };
-        global.window = global.window || {
-            supabase: { createClient: () => ({ from: () => ({ select: () => ({}) }) }) },
-            addEventListener: () => {},
-            location: { search: '', hash: '' },
-            requestAnimationFrame: () => {}
-        };
-        global.document = global.document || {
-            addEventListener: () => {},
-            getElementById: () => null,
-            createElement: () => ({ setAttribute: () => {}, appendChild: () => {}, textContent: '', innerHTML: '' })
-        };
-
         require('../portal/nestore.js');
-        const target = global.window || require('../portal/nestore.js');
+        const target = global.window;
         expect(typeof target.switchNestoreView).toBe('function');
         expect(typeof target.switchNestorePanel).toBe('function');
         expect(typeof target.caricaCoachDashboard).toBe('function');
         expect(typeof target.caricaAdminDashboard).toBe('function');
         expect(typeof target.caricaSchedeAtleta).toBe('function');
+        expect(typeof target.escapeHtml).toBe('function');
+        expect(typeof target.isIscrizioneAttiva).toBe('function');
+    });
+
+    it('escapeHtml safely sanitizes strings in Node without relying on DOM', () => {
+        require('../portal/nestore.js');
+        const escapeHtml = global.window.escapeHtml;
+        expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+        expect(escapeHtml("Mario O'Connor & Sons")).toBe('Mario O&#39;Connor &amp; Sons');
+        expect(escapeHtml(null)).toBe('');
+        expect(escapeHtml(undefined)).toBe('');
+    });
+
+    it('isIscrizioneAttiva correctly evaluates course expiration and remaining entries', () => {
+        require('../portal/nestore.js');
+        const isIscrizioneAttiva = global.window.isIscrizioneAttiva;
+        const today = '2026-09-16';
+
+        // Course with expiration date
+        expect(isIscrizioneAttiva({ data_scadenza_corso: '2026-09-20' }, today)).toBe(true);
+        expect(isIscrizioneAttiva({ data_scadenza_corso: '2026-09-16' }, today)).toBe(true);
+        expect(isIscrizioneAttiva({ data_scadenza_corso: '2026-09-15' }, today)).toBe(false);
+
+        // Course with entries (carnet ingressi)
+        expect(isIscrizioneAttiva({ ingressi_totali: 10, ingressi_usati: 5 }, today)).toBe(true);
+        expect(isIscrizioneAttiva({ ingressi_totali: 10, ingressi_usati: 10 }, today)).toBe(false);
+        expect(isIscrizioneAttiva({ ingressi_totali: 10, ingressi_usati: 11 }, today)).toBe(false);
+
+        // Invalid / null
+        expect(isIscrizioneAttiva(null, today)).toBe(false);
+    });
+
+    it('prevents XSS by avoiding inline onclick for athlete opening and schede modal in dynamic HTML', () => {
+        expect(js).not.toContain('onclick="apriModalSchedaTesto(');
+        expect(js).not.toContain('onclick="apriAtletaPerAllenatore(');
+        expect(js).toContain('data-atleta-id');
+        expect(js).toContain('data-scheda-id');
     });
 });

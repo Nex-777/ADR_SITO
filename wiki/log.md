@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-16] ingest | NESTORE — Audit WFTEST, Hardening XSS & Refactoring Schede/Coach
+- **Database (`supabase/migration_nestore_schede_fk_fix.sql`)**:
+  - Applicata migrazione correttiva FK su Supabase live: `allenatore_id` reso nullable per compatibilità con vincolo `ON DELETE SET NULL`.
+  - Vincolo FK `atleta_id` modificato da `ON DELETE CASCADE` a `ON DELETE RESTRICT` per conformità alla regola di storicizzazione EPIKA.
+- **Frontend & Sicurezza (`portal/nestore.js`)**:
+  - **Prevenzione XSS & Event Delegation**: Eliminata concatenazione di parametri utente negli attributi `onclick` inline in `renderCoachCoursesList` e `caricaSchedeAtleta`. Introdotti attributi `data-*` e event delegation sui container principali con cache in memoria `schedeCacheMap`.
+  - **Universal Sanitization**: `escapeHtml` reimplementata come funzione pura di sostituzione caratteri (&, <, >, ", '), operativa senza dipendenza da DOM sia in browser che in Node.js.
+  - **Filtro Iscrizioni Scadute**: Introdotto helper `isIscrizioneAttiva(isc, dataRif)` utilizzato in `initNestore`, `caricaCoachDashboard` e `caricaAdminDashboard` per escludere atleti con abbonamento/corso scaduto o ingressi esauriti.
+  - **Limit Anti-Bloat Admin**: Query iscrizioni per l'amministratore limitata a 500 record con avviso visuale.
+  - **Rollback File Storage**: Gestione di pulizia automatica in `inviaNuovaSchedaCoach` se il salvataggio a DB fallisce dopo l'upload del file Word.
+- **Testing & Documentazione**:
+  - Aggiornato `tests/nestore-coach.test.js` con 10 test (44/44 test complessivi del repository superati con successo).
+  - Aggiornati `wiki/database_schema.md` (§7), `wiki/nestore_portal.md` (§9) e `wiki/log.md`.
+
+---
+
 ## [2026-09-16] ingest | NESTORE Fase 2 — Vista Allenatore, Vista Amministratore & Schede di Allenamento
 - **Database (`supabase/migration_nestore_schede_allenamento.sql`)**:
   - Creata tabella `public.nestore_schede_allenamento` con storicizzazione EPIKA (soft-delete `attivo = true`), indici dedicati e RLS per atleta, allenatore e Direttivo.

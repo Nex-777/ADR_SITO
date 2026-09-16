@@ -457,8 +457,8 @@ Memoria sintetica strutturata e distillata per l'atleta (modello Karpathy LLM Wi
 ### 7. `public.nestore_schede_allenamento`
 Archivio delle schede e dei programmi di allenamento assegnati dagli istruttori agli atleti (introdotta con `supabase/migration_nestore_schede_allenamento.sql`).
 - `id` (UUID PK, DEFAULT `gen_random_uuid()`)
-- `atleta_id` (UUID FK `utenti.id` ON DELETE CASCADE)
-- `allenatore_id` (UUID FK `utenti.id` ON DELETE SET NULL)
+- `atleta_id` (UUID NOT NULL, FK `utenti.id` ON DELETE RESTRICT): Vincolo EPIKA per impedire cancellazioni fisiche a cascata.
+- `allenatore_id` (UUID NULLABLE, FK `utenti.id` ON DELETE SET NULL): Nullable per compatibilità con disattivazione account.
 - `titolo` (TEXT NOT NULL): Es. "Strongman Mesociclo 1 — Forza & Log Press"
 - `periodo` (TEXT): Es. "Ottobre - Dicembre 2026 (6 settimane)"
 - `obiettivo` (TEXT): Obiettivo specifico o note per l'atleta

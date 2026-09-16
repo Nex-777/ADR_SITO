@@ -1,12 +1,12 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- MIGRATION: NESTORE FASE 2 — Vista Allenatore & Schede di Allenamento
 -- ==============================================================================
 
 -- 1. Tabella Schede di Allenamento
 CREATE TABLE IF NOT EXISTS public.nestore_schede_allenamento (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    atleta_id       UUID NOT NULL REFERENCES public.utenti(id) ON DELETE CASCADE,
-    allenatore_id   UUID NOT NULL REFERENCES public.utenti(id) ON DELETE SET NULL,
+    atleta_id       UUID NOT NULL REFERENCES public.utenti(id) ON DELETE RESTRICT,
+    allenatore_id   UUID REFERENCES public.utenti(id) ON DELETE SET NULL,
     titolo          TEXT NOT NULL,
     periodo         TEXT,                -- es. "Ottobre - Dicembre 2026"
     obiettivo       TEXT,                -- es. "Ipertrofia / Forza Massima / Conditioning"
