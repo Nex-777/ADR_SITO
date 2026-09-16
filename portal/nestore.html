@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.35">
+    <link rel="stylesheet" href="nestore.css?v=1.05.36">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.35"></script>
+    <script src="config.js?v=1.05.36"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.35</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.36</span>
             </div>
         </div>
 
@@ -60,6 +60,9 @@
         <button type="button" class="nst-mobile-tab-btn" id="nst-tab-btn-timer" onclick="switchNestorePanel('timer')">
             TIMER &amp; TABATA
         </button>
+        <button type="button" class="nst-mobile-tab-btn nst-tab-full" id="nst-tab-btn-profilo" onclick="switchNestorePanel('profilo')">
+            SCHEDA AI
+        </button>
     </nav>
 
     <!-- Main Grid -->
@@ -87,6 +90,10 @@
                 <button type="button" class="nst-nav-item" id="nst-nav-timer" onclick="switchNestorePanel('timer')">
                     <span class="material-symbols-outlined">timer</span>
                     <span>TIMER & TABATA</span>
+                </button>
+                <button type="button" class="nst-nav-item" id="nst-nav-profilo" onclick="switchNestorePanel('profilo')">
+                    <span class="material-symbols-outlined">psychology</span>
+                    <span>SCHEDA AI</span>
                 </button>
             </div>
 
@@ -124,8 +131,19 @@
                         <button type="button" class="nst-time-chip" data-range="ALL" onclick="impostaRangeCard('peso', 'ALL')">ALL</button>
                     </div>
                 </div>
-                <div id="nst-misure-summary" style="padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; color: var(--nst-text-muted); display: flex; justify-content: space-between; align-items: center;">
+                <div id="nst-missing-height-banner" class="nst-height-banner nst-hidden">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined" style="color: var(--nst-cyan); font-size: 18px;">straighten</span>
+                        <span>Imposta la tua altezza per calcolare BMI, BMR e TDEE:</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="number" id="nst-input-altezza-quick" class="nst-input-sm" placeholder="cm (es. 178)" min="100" max="250">
+                        <button type="button" class="nst-btn-sm" onclick="salvaAltezzaRapida()">SALVA</button>
+                    </div>
+                </div>
+                <div id="nst-misure-summary" style="padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; color: var(--nst-text-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span>Peso: <strong id="nst-current-weight" style="color: var(--nst-cyan);">--</strong> kg (<span id="nst-peso-delta">--</span>)</span>
+                    <span>Altezza: <strong id="nst-altezza-val" style="color: #fff;">--</strong> cm</span>
                     <span>Vita: <strong id="nst-vita-val" style="color:#fff;">--</strong></span>
                     <span>Torace: <strong id="nst-torace-val" style="color:#fff;">--</strong></span>
                     <span>Braccio: <strong id="nst-braccio-val" style="color:#fff;">--</strong></span>
@@ -433,6 +451,94 @@
             </div>
         </main>
 
+        <!-- Pannello 5: Scheda Atleta & Memoria AI (Wiki Karpathy) -->
+        <main class="nst-data-panel nst-hidden" id="nst-profilo-panel">
+            <div class="nst-card">
+                <div class="nst-card-header">
+                    <span class="nst-card-title">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">psychology</span>
+                        SCHEDA ATLETA &amp; MEMORIA AI
+                    </span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span id="nst-scheda-version-badge" class="nst-version-badge" style="background: rgba(0, 229, 255, 0.15); color: var(--nst-cyan); border-color: var(--nst-cyan);">V1</span>
+                        <button type="button" class="nst-btn-ghost-sm" onclick="aggiornaSchedaManuale()" title="Ricalcola la scheda sintetica ora">
+                            <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">sync</span> AGGIORNA
+                        </button>
+                    </div>
+                </div>
+
+                <div class="nst-privacy-banner">
+                    <span class="material-symbols-outlined" style="color: var(--nst-lime); font-size: 18px;">verified_user</span>
+                    <span><strong>Zero Dati Sensibili:</strong> Nessun nome, cognome o recapito personale viene condiviso con Gemini. Questa scheda memorizza esclusivamente parametri biometrici e sportivi anonimizzati.</span>
+                </div>
+
+                <div class="nst-wiki-grid">
+                    <!-- Card Biometria -->
+                    <div class="nst-wiki-subcard">
+                        <h4 class="nst-wiki-subcard-title cyan">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">monitor_weight</span>
+                            BIOMETRIA &amp; METABOLISMO
+                        </h4>
+                        <div class="nst-wiki-stats-list">
+                            <div class="nst-wiki-stat-row"><span>Età stimata:</span><strong id="nst-wiki-eta">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Sesso biologico:</span><strong id="nst-wiki-sesso">--</strong></div>
+                            <div class="nst-wiki-stat-row">
+                                <span>Altezza:</span>
+                                <span style="display: inline-flex; align-items: center; gap: 6px;">
+                                    <strong id="nst-wiki-altezza">--</strong>
+                                    <button type="button" class="nst-btn-icon-sm" onclick="modificaAltezzaPrompt()" title="Modifica altezza">✎</button>
+                                </span>
+                            </div>
+                            <div class="nst-wiki-stat-row"><span>Peso attuale:</span><strong id="nst-wiki-peso">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>BMI:</span><strong id="nst-wiki-bmi">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>BMR stimato:</span><strong id="nst-wiki-bmr">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>TDEE stimato:</span><strong id="nst-wiki-tdee">--</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Card Allenamento -->
+                    <div class="nst-wiki-subcard">
+                        <h4 class="nst-wiki-subcard-title lime">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">fitness_center</span>
+                            PROFILO SPORTIVO
+                        </h4>
+                        <div class="nst-wiki-stats-list">
+                            <div class="nst-wiki-stat-row"><span>Disciplina principale:</span><strong id="nst-wiki-disciplina">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Frequenza settimanale:</span><strong id="nst-wiki-frequenza">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Sessioni 30gg:</span><strong id="nst-wiki-sessioni">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Intensità media (RPE):</span><strong id="nst-wiki-rpe">--</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Card Nutrizione -->
+                    <div class="nst-wiki-subcard">
+                        <h4 class="nst-wiki-subcard-title amber">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">restaurant</span>
+                            NUTRIZIONE &amp; TARGET
+                        </h4>
+                        <div class="nst-wiki-stats-list">
+                            <div class="nst-wiki-stat-row"><span>Target calorie:</span><strong id="nst-wiki-target-kcal">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Target proteine:</span><strong id="nst-wiki-target-pro">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Media assunta (30gg):</span><strong id="nst-wiki-media-kcal">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Proteine medie (30gg):</span><strong id="nst-wiki-media-pro">--</strong></div>
+                            <div class="nst-wiki-stat-row"><span>Giorni tracciati:</span><strong id="nst-wiki-giorni-pasti">--</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vista Raw Markdown per i più precisi -->
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--nst-cyan); font-weight: 700; letter-spacing: 0.05em;">
+                            SINTESI RAW MARKDOWN INVIATA A GEMINI
+                        </span>
+                        <span id="nst-wiki-updated-at" style="font-size: 11px; color: var(--nst-text-muted);">Aggiornato: --</span>
+                    </div>
+                    <pre id="nst-wiki-raw-code" class="nst-wiki-pre"></pre>
+                </div>
+            </div>
+        </main>
+
         <!-- Colonna Destra: Chat Interattiva Multimodale con NESTORE -->
         <main class="nst-chat-panel" id="nst-chat-panel">
             <div class="nst-chat-header">
@@ -517,6 +623,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.35"></script>
+    <script src="nestore.js?v=1.05.36"></script>
 </body>
 </html>

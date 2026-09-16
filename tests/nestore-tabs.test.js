@@ -39,6 +39,9 @@ describe('Nestore Mobile Tabs Redesign', () => {
 
         expect(navContent).toContain('id="nst-tab-btn-timer"');
         expect(navContent).toContain('TIMER &amp; TABATA');
+
+        expect(navContent).toContain('id="nst-tab-btn-profilo"');
+        expect(navContent).toContain('SCHEDA AI');
     });
 
     it('includes flex-wrap and multi-row layout rules in nestore.css', () => {

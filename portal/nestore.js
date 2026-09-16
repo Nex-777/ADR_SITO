@@ -152,8 +152,9 @@ async function initNestore() {
         // 4. Carica Preferenze Utente
         await caricaPreferenze();
 
-        // 5. Carica KPI Dashboard
+        // 5. Carica KPI Dashboard & Scheda Atleta
         await caricaKpiDashboard();
+        await caricaSchedaAtletaUI();
 
         // 6. Carica Cronologia Chat
         await caricaCronologiaChat();
@@ -193,6 +194,17 @@ async function caricaPreferenze() {
             await supabaseClient.from('nestore_preferenze').insert(defaultPref);
             userPreferenze = defaultPref;
         }
+
+        // Aggiorna indicatore altezza e banner
+        const altValEl = document.getElementById('nst-altezza-val');
+        const heightBanner = document.getElementById('nst-missing-height-banner');
+        if (userPreferenze.altezza_cm) {
+            if (altValEl) altValEl.textContent = userPreferenze.altezza_cm;
+            if (heightBanner) heightBanner.classList.add('nst-hidden');
+        } else {
+            if (altValEl) altValEl.textContent = '--';
+            if (heightBanner) heightBanner.classList.remove('nst-hidden');
+        }
     } catch (e) {
         console.error("Eccezione preferenze:", e);
     }
@@ -210,6 +222,175 @@ async function aggiornaPreferenzaConferma(valore) {
             });
     } catch (e) {
         console.error("Errore salvataggio preferenza:", e);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// GESTIONE ALTEZZA & SCHEDA ATLETA WIKI (Karpathy Style)
+// ---------------------------------------------------------------------------
+async function salvaAltezzaRapida() {
+    const input = document.getElementById('nst-input-altezza-quick');
+    const altVal = parseFloat(input?.value);
+    if (!altVal || isNaN(altVal) || altVal < 100 || altVal > 250) {
+        alert("Inserisci un'altezza valida in cm (compresa tra 100 e 250 cm).");
+        return;
+    }
+    try {
+        const response = await fetch('/api/nestore-chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentSession.access_token}`
+            },
+            body: JSON.stringify({ action: 'save_height', altezza_cm: altVal })
+        });
+        if (response.ok) {
+            userPreferenze.altezza_cm = altVal;
+            const altEl = document.getElementById('nst-altezza-val');
+            if (altEl) altEl.textContent = altVal;
+            const banner = document.getElementById('nst-missing-height-banner');
+            if (banner) banner.classList.add('nst-hidden');
+            await caricaSchedaAtletaUI();
+        } else {
+            const err = await response.json().catch(() => ({}));
+            alert(err.error || "Errore nel salvataggio dell'altezza.");
+        }
+    } catch (e) {
+        console.error("Errore salvataggio altezza:", e);
+        alert("Errore di connessione. Riprova.");
+    }
+}
+
+async function modificaAltezzaPrompt() {
+    const curr = userPreferenze.altezza_cm || '';
+    const val = prompt("Modifica la tua altezza in cm (es. 178):", curr);
+    if (!val) return;
+    const num = parseFloat(val);
+    if (!num || isNaN(num) || num < 100 || num > 250) {
+        alert("Altezza non valida. Inserisci un numero tra 100 e 250.");
+        return;
+    }
+    const input = document.getElementById('nst-input-altezza-quick');
+    if (input) input.value = num;
+    await salvaAltezzaRapida();
+}
+
+async function caricaSchedaAtletaUI() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('nestore_scheda_atleta')
+            .select('*')
+            .eq('utente_id', currentUser.id)
+            .maybeSingle();
+
+        if (error) {
+            console.warn("Errore recupero scheda atleta:", error);
+            return;
+        }
+
+        if (!data) {
+            // Se ancora non esiste, richiedi ricalcolo iniziale
+            await aggiornaSchedaManuale();
+            return;
+        }
+
+        // Aggiorna Badge Versione & Data
+        const vBadge = document.getElementById('nst-scheda-version-badge');
+        if (vBadge) vBadge.textContent = `V${data.versione || 1}`;
+
+        const upAt = document.getElementById('nst-wiki-updated-at');
+        if (upAt && data.aggiornato_il) {
+            const dt = new Date(data.aggiornato_il);
+            upAt.textContent = `Aggiornato: ${dt.toLocaleDateString('it-IT')} ${dt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        // 1. Biometria
+        const bio = data.biometria || {};
+        const etaEl = document.getElementById('nst-wiki-eta');
+        if (etaEl) etaEl.textContent = bio.eta ? `${bio.eta} anni` : 'Non specificata';
+
+        const sessoEl = document.getElementById('nst-wiki-sesso');
+        if (sessoEl) sessoEl.textContent = bio.sesso || 'Non specificato';
+
+        const altEl = document.getElementById('nst-wiki-altezza');
+        if (altEl) altEl.textContent = bio.altezza_cm ? `${bio.altezza_cm} cm` : 'Non inserita';
+
+        const pesoEl = document.getElementById('nst-wiki-peso');
+        if (pesoEl) {
+            let pTxt = bio.peso_kg ? `${bio.peso_kg} kg` : 'Nessuna pesata';
+            if (bio.delta_30gg !== null && bio.delta_30gg !== undefined) {
+                const sign = bio.delta_30gg > 0 ? `+${bio.delta_30gg}` : `${bio.delta_30gg}`;
+                pTxt += ` (${sign} kg/30gg)`;
+            }
+            pesoEl.textContent = pTxt;
+        }
+
+        const bmiEl = document.getElementById('nst-wiki-bmi');
+        if (bmiEl) bmiEl.textContent = bio.bmi ? `${bio.bmi} (${bio.bmi_categoria || ''})` : '--';
+
+        const bmrEl = document.getElementById('nst-wiki-bmr');
+        if (bmrEl) bmrEl.textContent = bio.bmr ? `~${bio.bmr} kcal/die` : '--';
+
+        const tdeeEl = document.getElementById('nst-wiki-tdee');
+        if (tdeeEl) tdeeEl.textContent = bio.tdee_stimato ? `~${bio.tdee_stimato} kcal/die` : '--';
+
+        // 2. Allenamento
+        const all = data.allenamento || {};
+        const discEl = document.getElementById('nst-wiki-disciplina');
+        if (discEl) discEl.textContent = all.disciplina_principale || 'Nessuna sessione';
+
+        const freqEl = document.getElementById('nst-wiki-frequenza');
+        if (freqEl) freqEl.textContent = all.sessioni_settimana !== undefined ? `${all.sessioni_settimana} sess/sett` : '--';
+
+        const sessEl = document.getElementById('nst-wiki-sessioni');
+        if (sessEl) sessEl.textContent = all.totale_sessioni_30gg !== undefined ? `${all.totale_sessioni_30gg}` : '0';
+
+        const rpeEl = document.getElementById('nst-wiki-rpe');
+        if (rpeEl) rpeEl.textContent = all.rpe_medio ? `${all.rpe_medio} / 10` : '--';
+
+        // 3. Nutrizione
+        const nut = data.nutrizione || {};
+        const tgtKcalEl = document.getElementById('nst-wiki-target-kcal');
+        if (tgtKcalEl) tgtKcalEl.textContent = nut.calorie_target ? `${nut.calorie_target} kcal` : '--';
+
+        const tgtProEl = document.getElementById('nst-wiki-target-pro');
+        if (tgtProEl) tgtProEl.textContent = nut.proteine_target_g ? `${nut.proteine_target_g}g` : '--';
+
+        const medKcalEl = document.getElementById('nst-wiki-media-kcal');
+        if (medKcalEl) medKcalEl.textContent = nut.media_kcal ? `~${nut.media_kcal} kcal/die` : '--';
+
+        const medProEl = document.getElementById('nst-wiki-media-pro');
+        if (medProEl) medProEl.textContent = nut.media_pro_g ? `~${nut.media_pro_g}g/die` : '--';
+
+        const ggTracciatiEl = document.getElementById('nst-wiki-giorni-pasti');
+        if (ggTracciatiEl) ggTracciatiEl.textContent = `${nut.giorni_tracciati_30gg || 0} giorni`;
+
+        // 4. Raw Markdown
+        const rawCode = document.getElementById('nst-wiki-raw-code');
+        if (rawCode) {
+            rawCode.textContent = data.scheda_markdown || '(Scheda in fase di consolidamento dati)';
+        }
+
+    } catch (e) {
+        console.error("Errore render scheda atleta UI:", e);
+    }
+}
+
+async function aggiornaSchedaManuale() {
+    try {
+        const response = await fetch('/api/nestore-chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentSession.access_token}`
+            },
+            body: JSON.stringify({ action: 'recalculate_wiki' })
+        });
+        if (response.ok) {
+            await caricaSchedaAtletaUI();
+        }
+    } catch (e) {
+        console.error("Errore aggiornamento manuale scheda:", e);
     }
 }
 
@@ -297,6 +478,8 @@ async function renderGraficoPesiMisure() {
             }
             document.getElementById('nst-current-weight').textContent = '--';
             document.getElementById('nst-peso-delta').textContent = 'N/D';
+            const altElEmpty = document.getElementById('nst-altezza-val');
+            if (altElEmpty) altElEmpty.textContent = userPreferenze.altezza_cm || '--';
             document.getElementById('nst-vita-val').textContent = '--';
             document.getElementById('nst-torace-val').textContent = '--';
             document.getElementById('nst-braccio-val').textContent = '--';
@@ -308,6 +491,8 @@ async function renderGraficoPesiMisure() {
         // Aggiorna riassunto ultimo peso & delta
         const ultimo = data[data.length - 1];
         document.getElementById('nst-current-weight').textContent = ultimo.peso_kg ? Number(ultimo.peso_kg).toFixed(1) : '--';
+        const altEl = document.getElementById('nst-altezza-val');
+        if (altEl) altEl.textContent = userPreferenze.altezza_cm || ultimo.altezza_cm || '--';
         document.getElementById('nst-vita-val').textContent = ultimo.vita_cm ? `${ultimo.vita_cm}cm` : '--';
         document.getElementById('nst-torace-val').textContent = ultimo.torace_cm ? `${ultimo.torace_cm}cm` : '--';
         document.getElementById('nst-braccio-val').textContent = ultimo.braccio_dx_cm ? `${ultimo.braccio_dx_cm}cm` : '--';
@@ -1255,9 +1440,10 @@ async function inviaMessaggioChat() {
 
         ancoraChatInAlto();
 
-        // Se salvataggio diretto o estrazione completata, ricarica i KPI
+        // Se salvataggio diretto o estrazione completata, ricarica i KPI e la scheda
         if (data.salvato_direttamente) {
             await caricaKpiDashboard();
+            await caricaSchedaAtletaUI();
         }
 
     } catch (err) {
@@ -1297,6 +1483,7 @@ function renderCardConfermaInMessage(msgDiv, payload, messaggioId) {
     if (payload.tipo === 'peso_misure') {
         titolo = '⚖️ RILEVAZIONE PESO E MISURE';
         if (payload.peso_kg) dettagliHtml += `<div class="nst-confirm-row"><span>Peso:</span><strong>${payload.peso_kg} kg</strong></div>`;
+        if (payload.altezza_cm) dettagliHtml += `<div class="nst-confirm-row"><span>Altezza:</span><strong>${payload.altezza_cm} cm</strong></div>`;
         if (payload.vita_cm) dettagliHtml += `<div class="nst-confirm-row"><span>Vita:</span><strong>${payload.vita_cm} cm</strong></div>`;
         if (payload.torace_cm) dettagliHtml += `<div class="nst-confirm-row"><span>Torace:</span><strong>${payload.torace_cm} cm</strong></div>`;
         if (payload.braccio_dx_cm) dettagliHtml += `<div class="nst-confirm-row"><span>Braccio:</span><strong>${payload.braccio_dx_cm} cm</strong></div>`;
@@ -1336,6 +1523,7 @@ async function confermaESalvaDati(btn, payload, messaggioId) {
                 utente_id: currentUser.id,
                 data_rilevazione: payload.data || oggi,
                 peso_kg: payload.peso_kg || null,
+                altezza_cm: payload.altezza_cm || userPreferenze.altezza_cm || null,
                 vita_cm: payload.vita_cm || null,
                 torace_cm: payload.torace_cm || null,
                 collo_cm: payload.collo_cm || null,
@@ -1346,6 +1534,14 @@ async function confermaESalvaDati(btn, payload, messaggioId) {
                 coscia_sx_cm: payload.coscia_sx_cm || null,
                 note: payload.note || null
             });
+            if (payload.altezza_cm) {
+                await supabaseClient.from('nestore_preferenze').upsert({
+                    utente_id: currentUser.id,
+                    altezza_cm: payload.altezza_cm,
+                    aggiornato_il: new Date().toISOString()
+                });
+                userPreferenze.altezza_cm = payload.altezza_cm;
+            }
         } else if (payload.tipo === 'pasto') {
             await supabaseClient.from('nestore_pasti').insert({
                 utente_id: currentUser.id,
@@ -1379,6 +1575,18 @@ async function confermaESalvaDati(btn, payload, messaggioId) {
 
         btn.parentElement.innerHTML = `<span style="font-size:10px; color:var(--nst-lime); font-weight:bold; font-family:'Orbitron', sans-serif;">✓ DATI SALVATI CON SUCCESSO</span>`;
         await caricaKpiDashboard();
+
+        // Ricalcolo asincrono scheda atleta
+        fetch('/api/nestore-chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentSession.access_token}`
+            },
+            body: JSON.stringify({ action: 'recalculate_wiki' })
+        }).then(() => {
+            caricaSchedaAtletaUI();
+        }).catch(() => {});
 
     } catch (err) {
         console.error("Errore salvataggio dati estratti:", err);
@@ -1585,7 +1793,7 @@ function switchNestoreView(val) {
 // ---------------------------------------------------------------------------
 function switchNestorePanel(panelId) {
     // Lista pannelli
-    const panels = ['chat', 'peso', 'allenamenti', 'dieta', 'timer'];
+    const panels = ['chat', 'peso', 'allenamenti', 'dieta', 'timer', 'profilo'];
     
     panels.forEach(p => {
         // Nascondi / Mostra Main Panel
@@ -1615,6 +1823,8 @@ function switchNestorePanel(panelId) {
 
     if (panelId === 'chat') {
         ancoraChatInAlto();
+    } else if (panelId === 'profilo') {
+        caricaSchedaAtletaUI();
     }
     
     // Se l'utente entra nel pannello Timer, nascondi il mini-dock
@@ -2394,13 +2604,21 @@ window.normalizeExerciseName = normalizeExerciseName;
 window.isBetterPerformance = isBetterPerformance;
 window.parseExercisesFromWorkout = parseExercisesFromWorkout;
 window.calcolaRecordPersonali = calcolaRecordPersonali;
+window.salvaAltezzaRapida = salvaAltezzaRapida;
+window.modificaAltezzaPrompt = modificaAltezzaPrompt;
+window.caricaSchedaAtletaUI = caricaSchedaAtletaUI;
+window.aggiornaSchedaManuale = aggiornaSchedaManuale;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         normalizeExerciseName,
         isBetterPerformance,
         parseExercisesFromWorkout,
-        calcolaRecordPersonali
+        calcolaRecordPersonali,
+        salvaAltezzaRapida,
+        modificaAltezzaPrompt,
+        caricaSchedaAtletaUI,
+        aggiornaSchedaManuale
     };
 }
 

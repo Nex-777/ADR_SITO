@@ -148,8 +148,32 @@ Nestore include un pannello sportivo interattivo ad alta precisione dedicato all
 
 ---
 
-## 7. Related Concept Pages
+## 7. Scheda Atleta & Memoria Sintetica LLM (Modello Wiki Karpathy)
+
+Aggiunto nella versione **1.05.35** (`supabase/migration_nestore_v2_wiki.sql`, [`api/nestore-chat.js`](../api/nestore-chat.js)):
+Nestore supera il pattern del dump grezzo da 90 righe di database per ogni chiamata LLM, adottando l'architettura **LLM Wiki** teorizzata da Andrej Karpathy:
+1. **Zero PII (Massima Protezione Privacy)**:
+   - Dati anagrafici identificativi (`nome`, `cognome`, `codice_fiscale`, `indirizzo`, `telefono`, `email`) sono tassativamente esclusi dal System Prompt di Gemini. L'assistente dialoga in seconda persona ("tu") o con il ruolo anonimo di *"Atleta"*.
+2. **Aggregazione Biometrica e Metabolica**:
+   - `altezza_cm`: Gestita come costante fisiologica in `nestore_preferenze` e rilevabile storicamente in `nestore_pesi_misure`.
+   - Età (calcolata dall'anno di nascita) e sesso biologico (desunto dal CF) utilizzati per la formula **Mifflin-St Jeor** per il Metabolismo Basale (BMR).
+   - Indice di Massa Corporea (BMI) con classificazione OMS.
+   - Fabbisogno Energetico Stimato (TDEE) moltiplicando il BMR per il coefficiente di attività basato sulla frequenza reale degli allenamenti negli ultimi 30 giorni.
+3. **Profilo Sportivo e Nutrizionale Compresso**:
+   - Disciplina dominante (frequenza più alta tra *Ibrido*, *Strongman*, *SCAB*).
+   - Frequenza settimanale media (sessioni/settimana) e RPE medio degli ultimi allenamenti.
+   - Medie intake calorico e macronutrienti su 30 giorni tracciati vs target prefissati.
+4. **Trigger di Ricalcolo Incrementale e Silente**:
+   - Ogni salvataggio diretto o confermato di nuovi dati scatena in background la funzione `calcolaSchedaAtleta(supabaseAdmin, utenteId)`.
+   - Possibilità di ricalcolo esplicito tramite `POST /api/nestore-chat` con `{ action: 'recalculate_wiki' }`.
+5. **Trasparenza Utente nel Portale**:
+   - Nuovo pannello SPA **"SCHEDA AI"** (`#nst-profilo-panel`) con card visive intuitive (Biometria, Allenamento, Nutrizione) e visualizzazione del testo **Raw Markdown** trasmesso a Gemini.
+
+---
+
+## 8. Related Concept Pages
 - [Database Schema](database_schema.md)
 - [Portal Dashboard](portal_dashboard.md)
 - [EPIKA Portal Architecture](epika_portal.md)
 - [API Endpoints](api_endpoints.md)
+

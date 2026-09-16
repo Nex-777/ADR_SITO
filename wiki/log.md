@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-16] ingest | Scheda Atleta & Memoria Sintetica LLM (Modello Wiki Karpathy) - NESTORE
+- **Database (`supabase/migration_nestore_v2_wiki.sql`)**:
+  - Aggiunta colonna `altezza_cm` a `nestore_pesi_misure` e `nestore_preferenze`.
+  - Creata tabella `public.nestore_scheda_atleta` con RLS abilitata (lettura propria e direttivo) e colonne `scheda_markdown`, `biometria`, `allenamento`, `nutrizione`, `versione`, `aggiornato_il`.
+- **Backend AI Serverless (`api/nestore-chat.js`)**:
+  - Implementata funzione esportata `calcolaSchedaAtleta(supabaseClient, utenteId)` che calcola età, sesso biologico (da CF), altezza, peso attuale, delta 30gg, BMI, BMR (Mifflin-St Jeor), TDEE stimato su frequenza settimanale, disciplina dominante, RPE medio e intake nutrizionale 30gg.
+  - Sostituito il dump grezzo di 90 righe DB nel system prompt con la sola scheda sintetica Markdown e la working memory odierna (Zero PII: esclusione totale di nome, cognome, codice fiscale, indirizzo e recapiti).
+  - Supportate azioni serverless dedicate: `save_height` e `recalculate_wiki`.
+  - Trigger automatico e silente di ricalcolo scheda ad ogni salvataggio dati.
+- **Frontend UI Portale (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Aggiunto tab e pannello SPA "SCHEDA AI" (`#nst-profilo-panel`) sia su desktop che su mobile tabs.
+  - Mostrate card intuitive per Biometria & Metabolismo, Profilo Sportivo, Nutrizione & Target, con visualizzazione trasparente del Raw Markdown.
+  - Banner discreto e modifica rapida per l'altezza in "PESO & MISURE" e nella scheda.
+- **Testing & Documentazione**:
+  - Aggiornati test in `tests/nestore-chat.test.js` e `tests/nestore-tabs.test.js` (34/34 test passati).
+  - Documentato in `wiki/nestore_portal.md` (§7) e `wiki/database_schema.md` (§6).
+
+---
+
 ## [2026-09-16] feature | Bacheca Record Personali (PR) All-Time e Rimozione Grafico Durata Allenamenti
 - **Frontend UI & Layout (`portal/nestore.html`, `portal/nestore.css`)**:
   - Rimosso il grafico Chart.js a linee della durata delle sessioni dal pannello Allenamenti.

@@ -401,6 +401,7 @@ Introdotte con `supabase/migration_nestore_v1.sql` e protette da Row Level Secur
 Configurazione individuale dell'atleta e modalità operative di Nestore.
 - `utente_id` (UUID PK, FK `utenti.id` ON DELETE CASCADE)
 - `conferma_preventiva` (BOOLEAN DEFAULT true): Attiva la richiesta di conferma interattiva prima del salvataggio nel database.
+- `altezza_cm` (NUMERIC(5,1)): Costante biometrica dell'atleta per calcolo BMI/BMR/TDEE.
 - `calorie_target`, `proteine_target_g`, `peso_target_kg`
 - `creato_il`, `aggiornato_il`
 
@@ -409,6 +410,7 @@ Registro append-only per il monitoraggio di peso e circonferenze.
 - `id` (UUID PK), `utente_id` (UUID FK `utenti.id`)
 - `data_rilevazione` (DATE NOT NULL)
 - `peso_kg` (NUMERIC(5,2))
+- `altezza_cm` (NUMERIC(5,1)): Rilevazione dell'altezza (cm).
 - `collo_cm`, `torace_cm`, `vita_cm`, `fianchi_cm`, `braccio_dx_cm`, `braccio_sx_cm`, `coscia_dx_cm`, `coscia_sx_cm`
 - `note` (TEXT), `attivo` (BOOLEAN DEFAULT true), `creato_il` (TIMESTAMPTZ)
 
@@ -440,5 +442,17 @@ Archivio cronologico della conversazione multimodale con Nestore.
 - `foto_url` (TEXT)
 - `metadata` (JSONB): Traccia `dati_estratti` e flag `salvato`.
 - `creato_il` (TIMESTAMPTZ)
+
+### 6. `public.nestore_scheda_atleta`
+Memoria sintetica strutturata e distillata per l'atleta (modello Karpathy LLM Wiki, introdotta con `supabase/migration_nestore_v2_wiki.sql`). Iniettata nel system prompt di Gemini al posto del dump raw delle tabelle, garantendo Zero PII.
+- `utente_id` (UUID PK, FK `utenti.id` ON DELETE CASCADE)
+- `scheda_markdown` (TEXT NOT NULL): Sintesi testuale per il prompt AI e per il portale atleta.
+- `biometria` (JSONB): Età, sesso, altezza, peso, trend, BMI, BMR, TDEE stimato.
+- `allenamento` (JSONB): Disciplina principale, frequenza settimanale, sessioni 30gg, RPE medio.
+- `nutrizione` (JSONB): Target calorie/proteine, medie 30gg kcal e macro, giorni tracciati.
+- `versione` (INTEGER NOT NULL DEFAULT 1): Contatore incrementale delle revisioni della scheda.
+- `aggiornato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
+- `creato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
+
 
 

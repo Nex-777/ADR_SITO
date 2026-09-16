@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // ==============================================================================
 // /api/nestore-chat — Assistente AI per atleti corsi Adrenalina Club
-// Supporto multimodale (testo + foto), estrazione strutturata dati sport/nutrizione
+// Supporto multimodale (testo + foto), estrazione strutturata sport/nutrizione,
+// e gestione Memoria Sintetica "Wiki Atleta" (modello Karpathy, Zero PII)
 // ==============================================================================
 
 const ALLOWED_ORIGINS = [
@@ -18,6 +19,266 @@ const ALLOWED_ORIGINS = [
 
 let supabaseAdmin = null;
 
+// ==============================================================================
+// FUNZIONE CORE: Ricalcolo Wiki Atleta Sintetica (Modello Karpathy)
+// Estrae ed aggrega biometria, allenamento e nutrizione SENZA dati sensibili PII
+// ==============================================================================
+export async function calcolaSchedaAtleta(supabaseClient, utenteId) {
+    try {
+        const adesso = new Date();
+        const formatterIso = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' });
+        const oggiIso = formatterIso.format(adesso);
+        const trentaGiorniFa = new Date(adesso.getTime() - 30 * 86400000).toISOString().split('T')[0];
+
+        // Query aggregata dati atleta
+        const [userRes, prefRes, pesiRes, allRes, pastiRes, schedaRes] = await Promise.all([
+            supabaseClient.from('utenti').select('data_nascita, codice_fiscale').eq('id', utenteId).maybeSingle(),
+            supabaseClient.from('nestore_preferenze').select('altezza_cm, calorie_target, proteine_target_g, peso_target_kg').eq('utente_id', utenteId).maybeSingle(),
+            supabaseClient.from('nestore_pesi_misure')
+                .select('data_rilevazione, peso_kg, altezza_cm, vita_cm, torace_cm, braccio_dx_cm')
+                .eq('utente_id', utenteId)
+                .eq('attivo', true)
+                .order('data_rilevazione', { ascending: false })
+                .limit(60),
+            supabaseClient.from('nestore_allenamenti')
+                .select('data_allenamento, corso_disciplina, durata_minuti, rpe_fatica')
+                .eq('utente_id', utenteId)
+                .eq('attivo', true)
+                .order('data_allenamento', { ascending: false })
+                .limit(60),
+            supabaseClient.from('nestore_pasti')
+                .select('data_pasto, calorie_stimate, proteine_g, carboidrati_g, grassi_g')
+                .eq('utente_id', utenteId)
+                .eq('attivo', true)
+                .order('data_pasto', { ascending: false })
+                .limit(60),
+            supabaseClient.from('nestore_scheda_atleta').select('versione').eq('utente_id', utenteId).maybeSingle()
+        ]);
+
+        // 1. Biometria Base
+        let eta = null;
+        if (userRes.data?.data_nascita) {
+            const nascita = new Date(userRes.data.data_nascita);
+            if (!isNaN(nascita.getTime())) {
+                const diffMs = adesso.getTime() - nascita.getTime();
+                eta = Math.floor(diffMs / (365.25 * 24 * 3600 * 1000));
+            }
+        }
+
+        let sesso = 'Non specificato';
+        const cf = (userRes.data?.codice_fiscale || '').toUpperCase();
+        if (cf.length >= 11) {
+            const giorno = parseInt(cf.substring(9, 11), 10);
+            if (!isNaN(giorno)) {
+                sesso = giorno > 40 ? 'Donna' : 'Uomo';
+            }
+        }
+
+        // Altezza
+        const pesiList = pesiRes.data || [];
+        const ultimoConAltezza = pesiList.find(p => p.altezza_cm != null);
+        const altezza = prefRes.data?.altezza_cm ? Number(prefRes.data.altezza_cm) : (ultimoConAltezza?.altezza_cm ? Number(ultimoConAltezza.altezza_cm) : null);
+
+        // Peso attuale
+        const ultimoPeso = pesiList.find(p => p.peso_kg != null);
+        const pesoKg = ultimoPeso ? Number(ultimoPeso.peso_kg) : null;
+        const dataUltimoPeso = ultimoPeso ? ultimoPeso.data_rilevazione : null;
+
+        // Trend peso ultimi 30 giorni
+        const pesi30gg = pesiList.filter(p => p.data_rilevazione >= trentaGiorniFa && p.peso_kg != null);
+        let delta30gg = null;
+        if (pesi30gg.length > 1) {
+            const primoDelPeriodo = Number(pesi30gg[pesi30gg.length - 1].peso_kg);
+            delta30gg = Number((pesoKg - primoDelPeriodo).toFixed(1));
+        }
+
+        // BMI
+        let bmi = null;
+        let bmiCat = 'N/D';
+        if (pesoKg && altezza) {
+            const hMetri = altezza / 100;
+            bmi = Number((pesoKg / (hMetri * hMetri)).toFixed(1));
+            if (bmi < 18.5) bmiCat = 'Sottopeso';
+            else if (bmi < 25) bmiCat = 'Normopeso';
+            else if (bmi < 30) bmiCat = 'Sovrappeso';
+            else bmiCat = 'Obesità';
+        }
+
+        // BMR (Formula Mifflin-St Jeor)
+        let bmr = null;
+        if (pesoKg && altezza && eta) {
+            const sessoOffset = (sesso === 'Donna') ? -161 : 5;
+            bmr = Math.round(10 * pesoKg + 6.25 * altezza - 5 * eta + sessoOffset);
+        }
+
+        // 2. Profilo Sportivo & Allenamento (ultimi 30gg)
+        const allList = allRes.data || [];
+        const all30gg = allList.filter(a => a.data_allenamento >= trentaGiorniFa);
+        const sessioniSettimana = Number(((all30gg.length / 30) * 7).toFixed(1));
+
+        // Disciplina più frequente
+        const disciplineCount = {};
+        for (const a of all30gg) {
+            const disc = (a.corso_disciplina || 'Workout generale').trim();
+            disciplineCount[disc] = (disciplineCount[disc] || 0) + 1;
+        }
+        let topDisciplina = 'Nessuna registrazione recente';
+        let maxCount = 0;
+        for (const [disc, count] of Object.entries(disciplineCount)) {
+            if (count > maxCount) {
+                maxCount = count;
+                topDisciplina = disc;
+            }
+        }
+
+        // RPE medio delle ultime sessioni
+        const rpeArr = allList.filter(a => a.rpe_fatica != null).slice(0, 10);
+        const rpeMedio = rpeArr.length ? Number((rpeArr.reduce((s, a) => s + a.rpe_fatica, 0) / rpeArr.length).toFixed(1)) : null;
+
+        // TDEE stimato
+        let tdee = null;
+        if (bmr) {
+            let fattore = 1.2;
+            if (sessioniSettimana >= 5) fattore = 1.65;
+            else if (sessioniSettimana >= 3) fattore = 1.5;
+            else if (sessioniSettimana >= 1.5) fattore = 1.35;
+            tdee = Math.round(bmr * fattore);
+        }
+
+        // 3. Profilo Nutrizionale (ultimi 30gg)
+        const pastiList = pastiRes.data || [];
+        const pasti30gg = pastiList.filter(p => p.data_pasto >= trentaGiorniFa);
+        const giorniPasti = {};
+        for (const p of pasti30gg) {
+            if (!giorniPasti[p.data_pasto]) {
+                giorniPasti[p.data_pasto] = { kcal: 0, pro: 0, carb: 0, fat: 0 };
+            }
+            giorniPasti[p.data_pasto].kcal += Number(p.calorie_stimate || 0);
+            giorniPasti[p.data_pasto].pro += Number(p.proteine_g || 0);
+            giorniPasti[p.data_pasto].carb += Number(p.carboidrati_g || 0);
+            giorniPasti[p.data_pasto].fat += Number(p.grassi_g || 0);
+        }
+        const numGiorniTracciati = Object.keys(giorniPasti).length;
+        let avgKcal = 0, avgPro = 0, avgCarb = 0, avgFat = 0;
+        if (numGiorniTracciati > 0) {
+            const sommaTot = Object.values(giorniPasti).reduce((acc, g) => {
+                acc.kcal += g.kcal;
+                acc.pro += g.pro;
+                acc.carb += g.carb;
+                acc.fat += g.fat;
+                return acc;
+            }, { kcal: 0, pro: 0, carb: 0, fat: 0 });
+            avgKcal = Math.round(sommaTot.kcal / numGiorniTracciati);
+            avgPro = Math.round(sommaTot.pro / numGiorniTracciati);
+            avgCarb = Math.round(sommaTot.carb / numGiorniTracciati);
+            avgFat = Math.round(sommaTot.fat / numGiorniTracciati);
+        }
+
+        // 4. Composizione Markdown Sintetico (Karpathy Wiki Style)
+        let bioMd = `- Età: ${eta ? eta + ' anni' : 'Non specificata'} | Sesso biologico: ${sesso}\n`;
+        bioMd += `- Altezza: ${altezza ? altezza + ' cm' : 'Non ancora inserita'}\n`;
+        bioMd += `- Peso attuale: ${pesoKg ? pesoKg + ' kg (al ' + dataUltimoPeso + ')' : 'Nessuna pesata registrata'}`;
+        if (prefRes.data?.peso_target_kg) bioMd += ` | Target peso: ${prefRes.data.peso_target_kg} kg`;
+        bioMd += '\n';
+        if (delta30gg !== null) {
+            const freccia = delta30gg > 0 ? `+${delta30gg} kg ▲` : `${delta30gg} kg ▼`;
+            bioMd += `- Variazione peso (ultimi 30gg): ${freccia}\n`;
+        }
+        if (bmi) bioMd += `- Indice Massa Corporea (BMI): ${bmi} (${bmiCat})\n`;
+        if (bmr) bioMd += `- Metabolismo Basale (BMR stimato): ~${bmr} kcal/die\n`;
+        if (tdee) bioMd += `- Fabbisogno Energetico (TDEE stimato): ~${tdee} kcal/die\n`;
+
+        let allMd = `- Disciplina dominante: ${topDisciplina}\n`;
+        allMd += `- Frequenza allenamenti: ${sessioniSettimana} sessioni/settimana (${all30gg.length} sessioni negli ultimi 30gg)\n`;
+        if (rpeMedio) allMd += `- Intensità media percepita (RPE): ${rpeMedio} / 10\n`;
+
+        let nutMd = '';
+        if (prefRes.data?.calorie_target || prefRes.data?.proteine_target_g) {
+            nutMd += `- Target stabiliti: ${prefRes.data.calorie_target ? prefRes.data.calorie_target + ' kcal/die' : ''}${prefRes.data.proteine_target_g ? ' | ' + prefRes.data.proteine_target_g + 'g proteine' : ''}\n`;
+        }
+        if (numGiorniTracciati > 0) {
+            nutMd += `- Intake medio 30gg (${numGiorniTracciati} gg tracciati): ~${avgKcal} kcal/die (Proteine: ${avgPro}g, Carboidrati: ${avgCarb}g, Grassi: ${avgFat}g)\n`;
+        } else {
+            nutMd += `- Nessun pasto registrato negli ultimi 30 giorni.\n`;
+        }
+
+        const dataOraAggiornamento = new Intl.DateTimeFormat('it-IT', {
+            timeZone: 'Europe/Rome',
+            dateStyle: 'medium',
+            timeStyle: 'short'
+        }).format(adesso);
+
+        const schedaMarkdown = `SCHEDA WIKI ATLETA (Aggiornata al ${dataOraAggiornamento})
+--------------------------------------------------
+[BIOMETRIA & PARAMETRI CORPOREI]
+${bioMd.trim()}
+
+[PROFILO ALLENAMENTO & PERFORMANCE]
+${allMd.trim()}
+
+[NUTRIZIONE & OBIETTIVI ENERGETICI]
+${nutMd.trim()}`;
+
+        const biometriaObj = {
+            eta,
+            sesso,
+            altezza_cm: altezza,
+            peso_kg: pesoKg,
+            peso_target_kg: prefRes.data?.peso_target_kg || null,
+            data_ultimo_peso: dataUltimoPeso,
+            delta_30gg: delta30gg,
+            bmi,
+            bmi_categoria: bmiCat,
+            bmr,
+            tdee_stimato: tdee
+        };
+
+        const allenamentoObj = {
+            sessioni_settimana: sessioniSettimana,
+            totale_sessioni_30gg: all30gg.length,
+            disciplina_principale: topDisciplina,
+            rpe_medio: rpeMedio
+        };
+
+        const nutrizioneObj = {
+            calorie_target: prefRes.data?.calorie_target || null,
+            proteine_target_g: prefRes.data?.proteine_target_g || null,
+            media_kcal: avgKcal,
+            media_pro_g: avgPro,
+            media_carb_g: avgCarb,
+            media_fat_g: avgFat,
+            giorni_tracciati_30gg: numGiorniTracciati
+        };
+
+        const nuovaVersione = (schedaRes.data?.versione || 0) + 1;
+
+        await supabaseClient.from('nestore_scheda_atleta').upsert({
+            utente_id: utenteId,
+            scheda_markdown: schedaMarkdown,
+            biometria: biometriaObj,
+            allenamento: allenamentoObj,
+            nutrizione: nutrizioneObj,
+            versione: nuovaVersione,
+            aggiornato_il: adesso.toISOString()
+        });
+
+        return {
+            scheda_markdown: schedaMarkdown,
+            biometria: biometriaObj,
+            allenamento: allenamentoObj,
+            nutrizione: nutrizioneObj,
+            versione: nuovaVersione,
+            aggiornato_il: adesso.toISOString()
+        };
+    } catch (err) {
+        console.error("Errore in calcolaSchedaAtleta:", err);
+        return null;
+    }
+}
+
+// ==============================================================================
+// HANDLER PRINCIPALE
+// ==============================================================================
 export default async function handler(req, res) {
     // 1. CORS
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -81,8 +342,29 @@ export default async function handler(req, res) {
             return res.status(429).json({ error: 'Hai raggiunto il limite orario di messaggi per Nestore. Riprova più tardi.' });
         }
 
-        // 5. Parametri Body
-        const { message, image_base64, image_mime, conferma_preventiva } = req.body || {};
+        // 5. Azioni speciali (recalculate_wiki, save_height)
+        const { action, message, image_base64, image_mime, conferma_preventiva, altezza_cm } = req.body || {};
+
+        if (action === 'recalculate_wiki') {
+            const schedaData = await calcolaSchedaAtleta(supabaseAdmin, utenteId);
+            return res.status(200).json({ success: true, scheda: schedaData });
+        }
+
+        if (action === 'save_height') {
+            const altNum = parseFloat(altezza_cm);
+            if (!altNum || isNaN(altNum) || altNum < 100 || altNum > 250) {
+                return res.status(400).json({ error: 'Altezza non valida. Inserisci un valore in cm (es. 175).' });
+            }
+            await supabaseAdmin.from('nestore_preferenze').upsert({
+                utente_id: utenteId,
+                altezza_cm: altNum,
+                aggiornato_il: new Date().toISOString()
+            });
+            const schedaData = await calcolaSchedaAtleta(supabaseAdmin, utenteId);
+            return res.status(200).json({ success: true, altezza_cm: altNum, scheda: schedaData });
+        }
+
+        // 6. Validazione parametri per messaggio standard
         if (!message && !image_base64) {
             return res.status(400).json({ error: 'Messaggio o immagine obbligatori.' });
         }
@@ -91,7 +373,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Messaggio troppo lungo. Il limite massimo è di 1500 caratteri.' });
         }
 
-        // 6. Data Odierna e Riferimenti Temporali (Timezone Europe/Rome)
+        // 7. Riferimenti Temporali (Timezone Europe/Rome)
         const adesso = new Date();
         const formatterData = new Intl.DateTimeFormat('it-IT', {
             timeZone: 'Europe/Rome',
@@ -103,32 +385,35 @@ export default async function handler(req, res) {
         const formatterIso = new Intl.DateTimeFormat('sv-SE', {
             timeZone: 'Europe/Rome'
         });
-        const oggiIso = formatterIso.format(adesso); // es. "2026-09-08"
-        const oggiDesc = formatterData.format(adesso); // es. "martedì 8 settembre 2026"
+        const oggiIso = formatterIso.format(adesso);
+        const oggiDesc = formatterData.format(adesso);
         const ieriDate = new Date(adesso.getTime() - 86400000);
-        const ieriIso = formatterIso.format(ieriDate); // es. "2026-09-07"
+        const ieriIso = formatterIso.format(ieriDate);
 
-        // 7. Recupera Contesto Utente (Anagrafica + Storico Pesi + Storico Allenamenti + Storico Pasti + Chat History)
-        const [userRes, pesiRes, allenamentiRes, pastiRes, historyRes] = await Promise.all([
-            supabaseAdmin.from('utenti').select('nome, cognome').eq('id', utenteId).maybeSingle(),
+        // 8. Recupera Scheda Atleta (Wiki Karpathy) + Working Memory odierna + Chat History
+        // ZERO PII: Non chiediamo né esponiamo nome, cognome, codice fiscale o indirizzo
+        let [schedaRes, pastiOggiRes, pesiRecentiRes, allRecentiRes, historyRes] = await Promise.all([
+            supabaseAdmin.from('nestore_scheda_atleta')
+                .select('*')
+                .eq('utente_id', utenteId)
+                .maybeSingle(),
+            supabaseAdmin.from('nestore_pasti')
+                .select('tipo_pasto, descrizione, calorie_stimate')
+                .eq('utente_id', utenteId)
+                .eq('data_pasto', oggiIso)
+                .eq('attivo', true),
             supabaseAdmin.from('nestore_pesi_misure')
-                .select('data_rilevazione, peso_kg, vita_cm, torace_cm, braccio_dx_cm, note')
+                .select('data_rilevazione, peso_kg, altezza_cm, vita_cm')
                 .eq('utente_id', utenteId)
                 .eq('attivo', true)
                 .order('data_rilevazione', { ascending: false })
-                .limit(30),
+                .limit(2),
             supabaseAdmin.from('nestore_allenamenti')
-                .select('data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, note')
+                .select('data_allenamento, corso_disciplina, durata_minuti, rpe_fatica')
                 .eq('utente_id', utenteId)
                 .eq('attivo', true)
                 .order('data_allenamento', { ascending: false })
-                .limit(30),
-            supabaseAdmin.from('nestore_pasti')
-                .select('data_pasto, tipo_pasto, descrizione, calorie_stimate, proteine_g, carboidrati_g, grassi_g')
-                .eq('utente_id', utenteId)
-                .eq('attivo', true)
-                .order('data_pasto', { ascending: false })
-                .limit(30),
+                .limit(2),
             supabaseAdmin.from('nestore_chat_messaggi')
                 .select('ruolo, contenuto, creato_il')
                 .eq('utente_id', utenteId)
@@ -136,38 +421,47 @@ export default async function handler(req, res) {
                 .limit(20)
         ]);
 
-        const nomeAtleta = userRes.data?.nome || 'Atleta';
+        let schedaAtleta = schedaRes?.data;
+        if (!schedaAtleta || !schedaAtleta.scheda_markdown) {
+            schedaAtleta = await calcolaSchedaAtleta(supabaseAdmin, utenteId);
+        }
 
-        // Formattazione elenchi storici per il System Prompt
-        const pesiList = (pesiRes.data || []).map(p => 
-            `- Data ${p.data_rilevazione}: ${p.peso_kg ? p.peso_kg + ' kg' : ''}${p.vita_cm ? ', vita ' + p.vita_cm + 'cm' : ''}${p.torace_cm ? ', torace ' + p.torace_cm + 'cm' : ''}${p.note ? ' (' + p.note + ')' : ''}`
-        ).join('\n') || '- Nessun peso ancora registrato';
+        const schedaMarkdown = schedaAtleta?.scheda_markdown || 'Nessun dato biometrico o sportivo ancora consolidato.';
 
-        const allenamentiList = (allenamentiRes.data || []).map(a =>
-            `- Data ${a.data_allenamento}: ${a.corso_disciplina || 'Workout'}${a.durata_minuti ? ' (' + a.durata_minuti + ' min)' : ''}${a.rpe_fatica ? ' RPE ' + a.rpe_fatica + '/10' : ''}${a.note ? ' - ' + a.note : ''}`
-        ).join('\n') || '- Nessun allenamento ancora registrato';
+        // Working memory di oggi / recentissima (per domande in tempo reale)
+        const pastiOggiList = (pastiOggiRes?.data || []).map(p => 
+            `- [${p.tipo_pasto || 'pasto'}]: ${p.descrizione} (~${p.calorie_stimate || 0} kcal)`
+        ).join('\n') || '- Nessun pasto ancora registrato oggi.';
 
-        const pastiList = (pastiRes.data || []).map(p =>
-            `- Data ${p.data_pasto} [${p.tipo_pasto || 'pasto'}]: ${p.descrizione}${p.calorie_stimate ? ' (~' + p.calorie_stimate + ' kcal)' : ''}`
-        ).join('\n') || '- Nessun pasto ancora registrato';
+        const pesiRecentiList = (pesiRecentiRes?.data || []).map(p =>
+            `- Data ${p.data_rilevazione}: ${p.peso_kg ? p.peso_kg + ' kg' : ''}${p.altezza_cm ? ', altezza ' + p.altezza_cm + 'cm' : ''}`
+        ).join('\n') || '- Nessuna pesata recente registrata.';
 
-        // 8. System Prompt Specializzato e Contestualizzato
+        const allRecentiList = (allRecentiRes?.data || []).map(a =>
+            `- Data ${a.data_allenamento}: ${a.corso_disciplina || 'Workout'} (${a.durata_minuti || 0} min)`
+        ).join('\n') || '- Nessun allenamento recente registrato.';
+
+        // 9. System Prompt Specializzato e Contestualizzato (Zero PII)
         const systemPrompt = `Sei NESTORE, l'assistente virtuale di fitness, preparazione atletica e nutrizione del club sportivo Adrenalina Club.
-Parli direttamente con l'atleta ${nomeAtleta}.
+Ti rivolgi all'atleta in modo diretto, secco e professionale (usando il "tu").
+DIRETTIVA PRIVACY ASSOLUTA: NON utilizzare MAI nome, cognome, indirizzi o recapiti personali dell'atleta.
 
 CALENDARIO & DATA DI RIFERIMENTO:
 - Oggi è: ${oggiDesc} (Data ISO: ${oggiIso}).
 - Ieri era: ${ieriIso}.
 
-STORICO REGISTRAZIONI RECENTI DELL'ATLETA NEL DATABASE:
---- PESO E CIRCONFERENZE ---
-${pesiList}
+--- SCHEDA ATLETA SINTETICA (MEMORIA WIKI DI RIFERIMENTO) ---
+${schedaMarkdown}
 
---- ALLENAMENTI E WORKOUT ---
-${allenamentiList}
+--- ATTIVITÀ E REGISTRAZIONI RECENTI (WORKING MEMORY) ---
+PASTI REGISTRATI OGGI (${oggiIso}):
+${pastiOggiList}
 
---- PASTI E NUTRIZIONE ---
-${pastiList}
+ULTIME RILEVAZIONI PESO:
+${pesiRecentiList}
+
+ULTIMI ALLENAMENTI:
+${allRecentiList}
 
 LINEE GUIDA E COMPORTAMENTO:
 1. TONO E STILE DI RISPOSTA:
@@ -176,9 +470,9 @@ LINEE GUIDA E COMPORTAMENTO:
   "Registrato: [riepilogo sintetico del dato]."
   Esempi:
   - Pasto: "Registrato: Pranzo — 100g zucchine, 2 uova, 80g pane (~375 kcal)."
-  - Peso: "Registrato: 75.9 kg." oppure "Registrato: Peso 75.9 kg — 7 settembre 2026."
+  - Peso/Misure: "Registrato: 75.9 kg." oppure "Registrato: Peso 75.9 kg, Altezza 178 cm."
   - Allenamento: "Registrato: Strongman — 60 min, RPE 8/10."
-- Quando rispondi a domande informative o storiche dell'atleta (es. "quanto pesavo ieri?", "che allenamenti ho fatto?"), rispondi in modo asciutto e diretto fornendo i dati numerici e fattuali senza fronzoli.
+- Quando rispondi a domande informative o storiche dell'atleta (es. "qual è il mio BMI?", "quanto peso?", "qual è il mio fabbisogno?"), consulta la Scheda Atleta e rispondi in modo asciutto e diretto fornendo i dati numerici e fattuali senza fronzoli.
 
 2. PROTOCOLLO DATI INCOMPLETI & ACCUMULO PASTI (FONDAMENTALE):
 A) PASTI & NUTRIZIONE:
@@ -198,13 +492,14 @@ B) ALLENAMENTI:
   NON emettere il blocco json:extraction. Chiedi in modo secco: "Che allenamento hai fatto e per quanto tempo?"
 - Appena fornisce i dettagli, registra ed emetti json:extraction.
 
-C) PESO E MISURE:
+C) PESO E MISURE / ALTEZZA:
 - Se l'atleta dice "mi sono pesato" senza indicare il valore in kg:
   NON emettere il blocco json:extraction. Chiedi: "Qual è il tuo peso in kg?"
 - Se l'atleta fornisce il peso (es. "75.9 kg", "pesavo 76"), emetti subito il blocco json:extraction.
+- Se l'atleta indica la propria altezza (es. "sono alto 180cm", "altezza 175"), includila nel blocco extraction come "altezza_cm": 180.0.
 
 3. TABELLA DI RIFERIMENTO PER CALCOLO CALORIE E MACRONUTRIENTI:
-Calcola le stime basandoti su questi standard nutrizionali realistici (MAI stimare 10-20 kcal per pasti completi):
+Calcola le stime basandoti su questi standard nutrizionali realistici:
 - Verdure comuni / zucchine / pomodori / insalata: ~15-25 kcal / 100g (P 1-2g, C 3g, G 0.2g)
 - Uovo intero medio: ~75-80 kcal ciascuno (P 6.5-7g, C 0.4g, G 5.5g) -> 2 uova = ~150 kcal
 - Pane comune (bianco / comune / integrale): ~260-270 kcal / 100g (P 8-9g, C 50-54g, G 1-1.5g) -> 80g pane = ~210 kcal
@@ -225,6 +520,7 @@ Quando tutti i dati necessari sono presenti, ALLA FINE del tuo messaggio di risp
   "tipo": "peso_misure" | "pasto" | "allenamento",
   "data": "YYYY-MM-DD",
   "peso_kg": 75.9,
+  "altezza_cm": 178.0,
   "vita_cm": 84.0,
   "torace_cm": 102.0,
   "tipo_pasto": "colazione" | "pranzo" | "cena" | "snack",
@@ -236,33 +532,22 @@ Quando tutti i dati necessari sono presenti, ALLA FINE del tuo messaggio di risp
   "disciplina": "Ibrido" | "SCAB" | "Strongman" | "Altro",
   "durata_minuti": 60,
   "rpe": 8,
-  "note": "eventuali note",
-  "esercizi": [
-    { "nome": "Panca Piana", "peso_kg": 110, "ripetizioni": 1, "serie": 1 },
-    { "nome": "Pull-up", "peso_kg": 0, "ripetizioni": 50, "serie": 1 }
-  ]
+  "note": "eventuali note"
 }
 \`\`\`
-Per gli allenamenti con esercizi indicati, popola SEMPRE l'array "esercizi" estraendo ogni esercizio completato con:
-- "nome": nome dell'esercizio (es. "Panca Piana", "Leg Press", "Squat", "Pull-up", "Push-up", "Addominali");
-- "peso_kg": carico utilizzato in kg (0 o null per esercizi a corpo libero / calisthenics). Ignora serie fallite/non chiuse;
-- "ripetizioni": ripetizioni completate con successo nella serie migliore o target;
-- "serie": numero di serie svolte (default 1).
 Inserisci nel JSON solo i campi pertinenti.
 Il campo "data" DEVE SEMPRE ESSERE PRESENTE in formato YYYY-MM-DD (usando "${oggiIso}" per oggi o "${ieriIso}" per ieri o la data calcolata).
 Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INSERIRE IL BLOCCO json:extraction.`;
 
-        // 9. Costruzione Payload Conversazionale Multi-Turn per Google Gemini API
+        // 10. Costruzione Payload Conversazionale Multi-Turn per Google Gemini API
         const contents = [];
         let lastRole = null;
 
-        // Inserimento cronologia recente (ultimi messaggi alternati user / model in ordine cronologico)
-        const recentMsgs = (historyRes.data || []).slice().reverse();
+        const recentMsgs = (historyRes?.data || []).slice().reverse();
         for (const m of recentMsgs) {
             if (!m.contenuto || typeof m.contenuto !== 'string') continue;
             const geminiRole = m.ruolo === 'assistant' ? 'model' : 'user';
 
-            // Gemini richiede che il primo turno sia sempre 'user'
             if (contents.length === 0 && geminiRole !== 'user') continue;
 
             if (geminiRole === lastRole) {
@@ -276,7 +561,6 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
             }
         }
 
-        // Preparazione messaggio corrente dell'utente
         const currentParts = [];
         if (image_base64) {
             const rawBase64 = image_base64.replace(/^data:image\/\w+;base64,/, '');
@@ -292,7 +576,6 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
             text: message || "Analizza questa foto e aiutami a registrarla."
         });
 
-        // Se l'ultimo messaggio nella cronologia era già 'user', aggiungiamo un placeholder model per rispettare l'alternanza
         if (lastRole === 'user') {
             contents.push({
                 role: 'model',
@@ -300,13 +583,12 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
             });
         }
 
-        // Aggiungi il messaggio utente corrente
         contents.push({
             role: 'user',
             parts: currentParts
         });
 
-        // 10. Invocazione API Gemini (modello gemini-2.5-flash)
+        // 11. Invocazione API Gemini (modello gemini-2.5-flash)
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
 
         const geminiResponse = await fetch(geminiUrl, {
@@ -340,7 +622,7 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
 
         const rawText = candidate?.content?.parts?.[0]?.text || "Non ho potuto elaborare una risposta. Riprova.";
 
-        // 10. Estrazione blocco JSON se presente (con fallback resiliente)
+        // 12. Estrazione blocco JSON se presente (con fallback resiliente)
         let cleanReply = rawText;
         let extractionPayload = null;
         const extractionRegex = /```json:extraction\s*([\s\S]*?)\s*```/;
@@ -349,14 +631,11 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
         if (match && match[1]) {
             try {
                 extractionPayload = JSON.parse(match[1]);
-                // Rimuovi il blocco JSON dal testo mostrato all'utente
                 cleanReply = rawText.replace(extractionRegex, '').trim();
             } catch (jsonErr) {
                 console.warn("Errore parsing extraction JSON:", jsonErr);
             }
         } else if (rawText.includes('```json:extraction')) {
-            // Fallback: blocco extraction non chiuso (es. troncamento anomalo)
-            // Rimuove tassativamente la sintassi codice dal testo visibile all'utente
             console.warn("[nestore-chat] Trovato blocco json:extraction non chiuso, pulizia testo e tentato recupero.");
             const partialRegex = /```json:extraction[\s\S]*/;
             const partialMatch = rawText.match(partialRegex);
@@ -378,7 +657,7 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
             }
         }
 
-        // 11. Gestione Salvataggio Diretto vs Controllo Preventivo
+        // 13. Gestione Salvataggio Diretto vs Controllo Preventivo
         let salvatoDirettamente = false;
         const richiedeConferma = conferma_preventiva !== false;
 
@@ -390,6 +669,7 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
                         utente_id: utenteId,
                         data_rilevazione: extractionPayload.data || oggi,
                         peso_kg: extractionPayload.peso_kg || null,
+                        altezza_cm: extractionPayload.altezza_cm || null,
                         vita_cm: extractionPayload.vita_cm || null,
                         torace_cm: extractionPayload.torace_cm || null,
                         collo_cm: extractionPayload.collo_cm || null,
@@ -400,6 +680,13 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
                         coscia_sx_cm: extractionPayload.coscia_sx_cm || null,
                         note: extractionPayload.note || null
                     });
+                    if (extractionPayload.altezza_cm) {
+                        await supabaseAdmin.from('nestore_preferenze').upsert({
+                            utente_id: utenteId,
+                            altezza_cm: extractionPayload.altezza_cm,
+                            aggiornato_il: new Date().toISOString()
+                        });
+                    }
                     salvatoDirettamente = true;
                 } else if (extractionPayload.tipo === 'pasto') {
                     await supabaseAdmin.from('nestore_pasti').insert({
@@ -425,13 +712,19 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
                     });
                     salvatoDirettamente = true;
                 }
+
+                // Trigger silente di ricalcolo Wiki Atleta (post salvataggio diretto)
+                if (salvatoDirettamente) {
+                    await calcolaSchedaAtleta(supabaseAdmin, utenteId).catch(err => {
+                        console.error("[nestore-chat] Errore ricalcolo scheda post-save diretto:", err);
+                    });
+                }
             } catch (saveErr) {
                 console.error("Errore salvataggio diretto dati:", saveErr);
             }
         }
 
-        // 12. Salvataggio Messaggi in nestore_chat_messaggi
-        // Salva messaggio utente
+        // 14. Salvataggio Messaggi in nestore_chat_messaggi
         await supabaseAdmin.from('nestore_chat_messaggi').insert({
             utente_id: utenteId,
             ruolo: 'user',
@@ -439,7 +732,6 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
             metadata: image_base64 ? { has_image: true } : {}
         });
 
-        // Salva risposta assistente
         const { data: assistantMsg } = await supabaseAdmin
             .from('nestore_chat_messaggi')
             .insert({
@@ -454,12 +746,13 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
             .select('id')
             .maybeSingle();
 
-        // 13. Risposta JSON
+        // 15. Risposta JSON
         return res.status(200).json({
             reply: cleanReply,
             extraction_payload: extractionPayload,
             salvato_direttamente: salvatoDirettamente,
-            messaggio_id: assistantMsg?.id || null
+            messaggio_id: assistantMsg?.id || null,
+            scheda_aggiornata: salvatoDirettamente
         });
 
     } catch (err) {

@@ -1791,3 +1791,169 @@ input:checked + .nst-slider:before {
     pointer-events: none;
     transition: opacity 0.3s, transform 0.3s;
 }
+
+/* ===========================================================================
+   SCHEDA ATLETA & MEMORIA AI (WIKI KARPATHY)
+   =========================================================================== */
+
+/* Banner richiesta altezza rapida */
+.nst-height-banner {
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    color: #e2e8f0;
+}
+
+.nst-input-sm {
+    background: rgba(6, 12, 24, 0.9);
+    border: 1px solid var(--nst-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    width: 100px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.nst-input-sm:focus {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 0 8px var(--nst-cyan-dim);
+}
+
+.nst-btn-sm {
+    background: var(--nst-cyan);
+    color: #060c18;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nst-btn-sm:hover {
+    box-shadow: 0 0 10px var(--nst-cyan);
+    transform: translateY(-1px);
+}
+
+/* Banner privacy zero PII */
+.nst-privacy-banner {
+    background: rgba(118, 255, 3, 0.06);
+    border: 1px solid rgba(118, 255, 3, 0.25);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #cbd5e1;
+}
+
+.nst-privacy-banner strong {
+    color: var(--nst-lime);
+}
+
+/* Grid per le subcard della wiki */
+.nst-wiki-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.nst-wiki-subcard {
+    background: var(--nst-surface-elevated);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nst-wiki-subcard-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nst-wiki-subcard-title.cyan { color: var(--nst-cyan); }
+.nst-wiki-subcard-title.lime { color: var(--nst-lime); }
+.nst-wiki-subcard-title.amber { color: #f59e0b; }
+
+.nst-wiki-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nst-wiki-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--nst-text-muted);
+}
+
+.nst-wiki-stat-row strong {
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+}
+
+.nst-btn-icon-sm {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--nst-cyan);
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nst-btn-icon-sm:hover {
+    border-color: var(--nst-cyan);
+    background: rgba(0, 229, 255, 0.15);
+}
+
+/* Raw code block display */
+.nst-wiki-pre {
+    background: rgba(6, 12, 24, 0.95);
+    border: 1px solid var(--nst-border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    color: #94a3b8;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
