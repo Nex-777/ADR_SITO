@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-16] ingest | NESTORE — Allenamenti Standard & Benchmark WOD (INVICTUS) con Modale Timer Attivo
+- **Frontend & UI Schede (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Aggiunta la sezione **"ALLENAMENTI STANDARD & BENCHMARK"** nel pannello `#nst-schede-panel` con card dedicata al benchmark **INVICTUS** (sequenza Pull $\rightarrow$ Push $\rightarrow$ Squat con ratio fisso 1 : 2 : 4).
+  - Implementato stepper interattivo reattivo per impostare il numero base di Pull-up (default 5), con calcolo istantaneo delle ripetizioni di Push-up e Air Squat.
+  - Creata la modale overlay a tutto schermo **`#nst-active-workout-modal`** attivata da *"AVVIA PROGRAMMA"*, provvista di display cronometro gigante, indicatore di stato pulsante, target checklist, registrazione intertempi (Giro/Lap) e pulsanti di Pausa/Riprendi.
+  - Sincronizzazione a 60fps con il modulo nativo **`timerEngine`** (stopwatch ad alta precisione con persistenza `localStorage`, auto-stop a 3 ore e supporto al floating dock cross-page).
+  - Flusso di completamento *"TERMINA E SALVA"* con finestra di riepilogo tempo e ripetizioni, campo note opzionale per l'atleta, e persistenza automatica su Supabase `nestore_allenamenti` con `scheda_dati` standardizzata (`Pull-up`, `Push-up`, `Air Squat`, `peso_kg: 0`).
+  - Integrazione con il calcolo dei Record Personali (`calcolaRecordPersonali`) per aggiornare la bacheca massimali a corpo libero in tempo reale.
+- **Testing (`tests/standard-workouts.test.js`)**:
+  - Creati 6 unit test a copertura di: presenza card e modale in HTML, regole CSS, calcolo del ratio 1:2:4, composizione del payload `scheda_dati` ed export delle funzioni JavaScript. Suite complessiva: 55/55 test superati.
+
+---
+
 ## [2026-09-16] ingest | NESTORE — Fix Grafico Dieta (Stacked Bars, Layer Order & Edge-to-Edge Target Lines)
 - **Frontend & Visual Analytics (`portal/nestore.js`)**:
   - **Stacking Asse Y**: Abilitato `options.scales.y.stacked: true` in `renderGraficoDieta()`, correggendo la precedente sovrapposizione visiva delle barre che partivano tutte da Y=0.

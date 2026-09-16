@@ -3797,6 +3797,7 @@ function masterTimerLoop() {
         tabataEngine.tick();
         tabataEngine.updateUI();
     }
+    aggiornaModalWorkoutAttivo();
     aggiornaVisibilitaDock();
     requestAnimationFrame(masterTimerLoop);
 }
@@ -3866,6 +3867,236 @@ window.ancoraChatInAlto = ancoraChatInAlto;
 window.switchTimerMode = switchTimerMode;
 window.timerEngine = timerEngine;
 window.tabataEngine = tabataEngine;
+// ===========================================================================
+// SEZIONE ALLENAMENTI STANDARD & BENCHMARK (INVICTUS)
+// ===========================================================================
+
+let invictusPullBase = 5;
+
+function modificaInvictusPull(delta) {
+    invictusPullBase = Math.max(1, Math.min(100, invictusPullBase + delta));
+    const pullEl = document.getElementById('nst-invictus-pull-val');
+    const targetPullEl = document.getElementById('nst-invictus-target-pull');
+    const targetPushEl = document.getElementById('nst-invictus-target-push');
+    const targetSquatEl = document.getElementById('nst-invictus-target-squat');
+
+    if (pullEl) pullEl.textContent = invictusPullBase;
+    if (targetPullEl) targetPullEl.textContent = invictusPullBase;
+    if (targetPushEl) targetPushEl.textContent = invictusPullBase * 2;
+    if (targetSquatEl) targetSquatEl.textContent = invictusPullBase * 4;
+}
+
+function avviaAllenamentoInvictus() {
+    // 1. Configura target nella modale
+    const pullReps = invictusPullBase;
+    const pushReps = invictusPullBase * 2;
+    const squatReps = invictusPullBase * 4;
+
+    const pullEl = document.getElementById('nst-modal-pull-reps');
+    const pushEl = document.getElementById('nst-modal-push-reps');
+    const squatEl = document.getElementById('nst-modal-squat-reps');
+    if (pullEl) pullEl.textContent = pullReps;
+    if (pushEl) pushEl.textContent = pushReps;
+    if (squatEl) squatEl.textContent = squatReps;
+
+    // 2. Ripristina vista running e nasconde vista save
+    const runningView = document.getElementById('nst-workout-running-view');
+    const saveView = document.getElementById('nst-workout-save-view');
+    if (runningView) runningView.classList.remove('nst-hidden');
+    if (saveView) saveView.classList.add('nst-hidden');
+
+    const noteInput = document.getElementById('nst-workout-note-input');
+    if (noteInput) noteInput.value = '';
+
+    // 3. Resetta e avvia cronometro nativo
+    currentTimerMode = 'stopwatch';
+    timerEngine.reset();
+    renderModalLapsList();
+    timerEngine.start();
+
+    // 4. Mostra modale overlay
+    const modal = document.getElementById('nst-active-workout-modal');
+    if (modal) modal.classList.remove('nst-hidden');
+
+    aggiornaModalWorkoutAttivo();
+}
+
+function renderModalLapsList() {
+    const listEl = document.getElementById('nst-modal-laps-list');
+    const countEl = document.getElementById('nst-modal-laps-count');
+    if (!listEl) return;
+
+    const laps = timerEngine.state.laps || [];
+    if (countEl) countEl.textContent = `${laps.length} Lap`;
+
+    if (laps.length === 0) {
+        listEl.innerHTML = `<div class="nst-modal-laps-empty">Nessun intertempo registrato. Premi "GIRO (LAP)" durante l'esercizio.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = laps.map(l => {
+        const splitF = timerEngine.formatTime(l.splitMs);
+        const totalF = timerEngine.formatTime(l.totalMs);
+        return `
+            <div class="nst-modal-lap-row">
+                <span class="lap-num">LAP ${l.number}</span>
+                <span class="lap-split">+${splitF.main}${splitF.sub}</span>
+                <span class="lap-total">${totalF.main}${totalF.sub}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function gestisciWorkoutModalPausa() {
+    timerEngine.toggle();
+    aggiornaModalWorkoutAttivo();
+}
+
+function gestisciWorkoutModalLap() {
+    if (!timerEngine.state.running) return;
+    timerEngine.lap();
+    renderModalLapsList();
+}
+
+function aggiornaModalWorkoutAttivo() {
+    const modal = document.getElementById('nst-active-workout-modal');
+    if (!modal || modal.classList.contains('nst-hidden')) return;
+
+    const elapsedMs = timerEngine.getElapsedMs();
+    const formatted = timerEngine.formatTime(elapsedMs);
+    const textEl = document.getElementById('nst-modal-timer-text');
+    if (textEl) textEl.textContent = `${formatted.main}${formatted.sub}`;
+
+    const statusEl = document.getElementById('nst-modal-timer-status');
+    const dotEl = document.getElementById('nst-modal-status-dot');
+    const pauseIcon = document.getElementById('nst-modal-pause-icon');
+    const pauseText = document.getElementById('nst-modal-pause-text');
+
+    if (timerEngine.state.running) {
+        if (statusEl) statusEl.textContent = 'CRONOMETRO IN CORSO';
+        if (dotEl) {
+            dotEl.style.backgroundColor = 'var(--nst-lime)';
+            dotEl.classList.add('pulse');
+        }
+        if (pauseIcon) pauseIcon.textContent = 'pause';
+        if (pauseText) pauseText.textContent = 'PAUSA';
+    } else {
+        if (statusEl) statusEl.textContent = 'CRONOMETRO IN PAUSA';
+        if (dotEl) {
+            dotEl.style.backgroundColor = 'var(--nst-amber)';
+            dotEl.classList.remove('pulse');
+        }
+        if (pauseIcon) pauseIcon.textContent = 'play_arrow';
+        if (pauseText) pauseText.textContent = 'RIPRENDI';
+    }
+}
+
+function terminaAllenamentoAttivo() {
+    // 1. Pausa il cronometro
+    timerEngine.pause();
+
+    // 2. Prepara riepilogo
+    const elapsedMs = timerEngine.getElapsedMs();
+    const formatted = timerEngine.formatTime(elapsedMs);
+    const timeFinalEl = document.getElementById('nst-save-final-time');
+    if (timeFinalEl) timeFinalEl.textContent = `${formatted.main}${formatted.sub}`;
+
+    const repsFinalEl = document.getElementById('nst-save-final-reps');
+    if (repsFinalEl) repsFinalEl.textContent = `${invictusPullBase} Pull-up / ${invictusPullBase * 2} Push-up / ${invictusPullBase * 4} Air Squat`;
+
+    // 3. Commuta vista modale
+    const runningView = document.getElementById('nst-workout-running-view');
+    const saveView = document.getElementById('nst-workout-save-view');
+    if (runningView) runningView.classList.add('nst-hidden');
+    if (saveView) saveView.classList.remove('nst-hidden');
+}
+
+function annullaSalvataggioWorkout() {
+    const runningView = document.getElementById('nst-workout-running-view');
+    const saveView = document.getElementById('nst-workout-save-view');
+    if (runningView) runningView.classList.remove('nst-hidden');
+    if (saveView) saveView.classList.add('nst-hidden');
+}
+
+async function confermaSalvaAllenamentoStandard() {
+    const saveBtn = document.getElementById('nst-btn-confirm-save-workout');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<span class="material-symbols-outlined nst-spin">progress_activity</span><span>SALVATAGGIO...</span>`;
+    }
+
+    try {
+        const elapsedMs = timerEngine.getElapsedMs();
+        const durataMinuti = Math.max(1, Math.round(elapsedMs / 60000));
+        const oggi = new Date().toISOString().split('T')[0];
+
+        const pullReps = invictusPullBase;
+        const pushReps = invictusPullBase * 2;
+        const squatReps = invictusPullBase * 4;
+
+        const schedaDati = [
+            { nome: 'Pull-up', ripetizioni: pullReps, serie: 1, peso_kg: 0 },
+            { nome: 'Push-up', ripetizioni: pushReps, serie: 1, peso_kg: 0 },
+            { nome: 'Air Squat', ripetizioni: squatReps, serie: 1, peso_kg: 0 }
+        ];
+
+        const noteInput = document.getElementById('nst-workout-note-input');
+        const userNote = noteInput ? noteInput.value.trim() : '';
+        const noteFinale = userNote || 'Benchmark Workout INVICTUS completato.';
+
+        const { error } = await supabaseClient.from('nestore_allenamenti').insert({
+            utente_id: currentUser.id,
+            data_allenamento: oggi,
+            corso_disciplina: 'Invictus',
+            durata_minuti: durataMinuti,
+            scheda_dati: schedaDati,
+            note: noteFinale
+        });
+
+        if (error) throw error;
+
+        // Feedback successo
+        timerEngine.reset();
+        const modal = document.getElementById('nst-active-workout-modal');
+        if (modal) modal.classList.add('nst-hidden');
+
+        showTimerToast("✓ ALLENAMENTO INVICTUS SALVATO CON SUCCESSO!");
+        await caricaKpiDashboard();
+
+        // Se ci troviamo sul pannello allenamenti, aggiorna la griglia PR
+        if (typeof renderGraficoAllenamenti === 'function') {
+            await renderGraficoAllenamenti();
+        }
+
+        // Ricalcolo asincrono scheda atleta
+        fetch('/api/nestore-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'recalculate_wiki' })
+        }).catch(err => console.warn('Ricalcolo asincrono non critico:', err));
+
+    } catch (e) {
+        console.error("Errore salvataggio allenamento standard:", e);
+        alert("Errore durante il salvataggio: " + e.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = `<span class="material-symbols-outlined">save</span><span>CONFERMA E SALVA ALLENAMENTO</span>`;
+        }
+    }
+}
+
+function chiudiModalWorkoutAttivo() {
+    if (timerEngine.state.running) {
+        if (!confirm("L'allenamento è ancora in corso. Vuoi interromperlo e annullare il cronometro?")) {
+            return;
+        }
+    }
+    timerEngine.reset();
+    const modal = document.getElementById('nst-active-workout-modal');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
 window.gestisciTimerPrimaryClick = gestisciTimerPrimaryClick;
 window.gestisciTimerResetClick = gestisciTimerResetClick;
 window.modificaTabataParam = modificaTabataParam;
@@ -3903,6 +4134,14 @@ window.chiudiModalSchedaTesto = chiudiModalSchedaTesto;
 window.copiaTestoSchedaModal = copiaTestoSchedaModal;
 window.modificaTargetCalorie = modificaTargetCalorie;
 window.renderGraficoDieta = renderGraficoDieta;
+window.modificaInvictusPull = modificaInvictusPull;
+window.avviaAllenamentoInvictus = avviaAllenamentoInvictus;
+window.gestisciWorkoutModalPausa = gestisciWorkoutModalPausa;
+window.gestisciWorkoutModalLap = gestisciWorkoutModalLap;
+window.terminaAllenamentoAttivo = terminaAllenamentoAttivo;
+window.annullaSalvataggioWorkout = annullaSalvataggioWorkout;
+window.confermaSalvaAllenamentoStandard = confermaSalvaAllenamentoStandard;
+window.chiudiModalWorkoutAttivo = chiudiModalWorkoutAttivo;
 window.escapeHtml = escapeHtml;
 window.isIscrizioneAttiva = isIscrizioneAttiva;
 
@@ -3924,7 +4163,15 @@ if (typeof module !== 'undefined' && module.exports) {
         switchNestorePanel,
         caricaCoachDashboard,
         caricaAdminDashboard,
-        caricaSchedeAtleta
+        caricaSchedeAtleta,
+        modificaInvictusPull,
+        avviaAllenamentoInvictus,
+        gestisciWorkoutModalPausa,
+        gestisciWorkoutModalLap,
+        terminaAllenamentoAttivo,
+        annullaSalvataggioWorkout,
+        confermaSalvaAllenamentoStandard,
+        chiudiModalWorkoutAttivo
     };
 }
 

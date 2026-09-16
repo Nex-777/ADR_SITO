@@ -2878,4 +2878,351 @@ input:checked + .nst-slider:before {
     to { transform: rotate(360deg); }
 }
 
+/* ===========================================================================
+   ALLENAMENTI STANDARD & BENCHMARK WOD (INVICTUS)
+   =========================================================================== */
+
+.nst-standard-workout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.nst-standard-card {
+    background: rgba(6, 12, 24, 0.85);
+    border: 1px solid var(--nst-border-amber);
+    border-left: 4px solid var(--nst-amber);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.nst-standard-card:hover {
+    box-shadow: 0 6px 24px var(--nst-amber-glow);
+}
+
+.nst-standard-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.nst-standard-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.nst-pill-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: rgba(255, 179, 0, 0.15);
+    color: var(--nst-amber);
+    border: 1px solid rgba(255, 179, 0, 0.3);
+    letter-spacing: 0.05em;
+}
+
+.nst-standard-seq {
+    font-size: 11px;
+    color: var(--nst-text-muted);
+    margin-top: 4px;
+}
+
+.nst-standard-seq strong {
+    color: #f1f5f9;
+}
+
+.nst-standard-desc {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
+.nst-stepper-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 8px 14px;
+    margin-bottom: 14px;
+}
+
+.nst-stepper-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--nst-cyan);
+    letter-spacing: 0.05em;
+}
+
+.nst-stepper-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nst-stepper-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.nst-stepper-btn:hover {
+    background: var(--nst-amber);
+    color: #000;
+    border-color: var(--nst-amber);
+}
+
+.nst-stepper-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    min-width: 28px;
+    text-align: center;
+}
+
+.nst-target-pills-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.nst-target-pill {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 8px 6px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nst-target-pill.pull { border-color: rgba(0, 229, 255, 0.3); }
+.nst-target-pill.push { border-color: rgba(118, 255, 3, 0.3); }
+.nst-target-pill.squat { border-color: rgba(255, 179, 0, 0.3); }
+
+.nst-target-pill .label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--nst-text-muted);
+    letter-spacing: 0.05em;
+}
+
+.nst-target-pill .val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.nst-target-pill.pull .val { color: var(--nst-cyan); }
+.nst-target-pill.push .val { color: var(--nst-lime); }
+.nst-target-pill.squat .val { color: var(--nst-amber); }
+
+/* ===========================================================================
+   MODALE ALLENAMENTO ATTIVO (OVERLAY TIMER GIGANTE)
+   =========================================================================== */
+
+.nst-active-workout-card {
+    max-width: 600px;
+    border-color: rgba(255, 179, 0, 0.4);
+    box-shadow: 0 12px 50px rgba(0, 0, 0, 0.9), 0 0 30px var(--nst-amber-glow);
+}
+
+.nst-big-timer-container {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+}
+
+.nst-big-timer-display {
+    font-family: 'Orbitron', monospace;
+    font-size: 52px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 20px var(--nst-amber-glow);
+}
+
+.nst-big-timer-sub {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: var(--nst-lime);
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+}
+
+.nst-modal-targets-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 18px;
+}
+
+.nst-modal-targets-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: var(--nst-text-muted);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.nst-modal-targets-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.nst-modal-target-item {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nst-modal-target-item.pull { border-color: rgba(0, 229, 255, 0.4); }
+.nst-modal-target-item.push { border-color: rgba(118, 255, 3, 0.4); }
+.nst-modal-target-item.squat { border-color: rgba(255, 179, 0, 0.4); }
+
+.nst-modal-target-item .rep {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    display: block;
+}
+
+.nst-modal-target-item.pull .rep { color: var(--nst-cyan); }
+.nst-modal-target-item.push .rep { color: var(--nst-lime); }
+.nst-modal-target-item.squat .rep { color: var(--nst-amber); }
+
+.nst-modal-target-item .name {
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-top: 2px;
+    display: block;
+}
+
+.nst-modal-laps-wrapper {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+}
+
+.nst-modal-laps-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    color: var(--nst-text-muted);
+    margin-bottom: 8px;
+}
+
+.nst-modal-laps-list {
+    max-height: 120px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nst-modal-laps-empty {
+    font-size: 11px;
+    color: #64748b;
+    text-align: center;
+    padding: 12px 0;
+    font-style: italic;
+}
+
+.nst-modal-lap-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+}
+
+.nst-modal-lap-row .lap-num { color: #94a3b8; }
+.nst-modal-lap-row .lap-split { color: var(--nst-lime); font-weight: 700; }
+.nst-modal-lap-row .lap-total { color: #f1f5f9; }
+
+.nst-workout-actions-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.4fr;
+    gap: 10px;
+}
+
+.nst-save-summary-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.nst-save-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nst-save-stat .label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--nst-text-muted);
+    letter-spacing: 0.05em;
+}
+
+.nst-save-stat .val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--nst-lime);
+}
+
+
 

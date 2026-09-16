@@ -230,6 +230,21 @@ La sezione **SCHEDE DI ALLENAMENTO** consente al coach di preparare e assegnare 
   - **Rollback File Storage**: Se l'upload del file Word su Supabase Storage ha successo ma l'inserimento del record a database fallisce, il sistema tenta automaticamente la cancellazione compensativa del file per evitare sprechi di storage.
   - **Anti-Bloat Admin Query**: Query globale iscrizioni limitata a 500 record con avviso visuale se la soglia viene saturata.
 
+### 9.3. Allenamenti Standard & Benchmark WOD (INVICTUS)
+Aggiunto nella versione **1.05.41**:
+Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione dedicata agli **Allenamenti Standard & Benchmark WOD**:
+- **WOD INVICTUS**:
+  - Sequenza strutturata: **Pull-up** $\rightarrow$ **Push-up** $\rightarrow$ **Air Squat** con proporzione fissa **1 : 2 : 4**.
+  - **Stepper Interattivo**: L'atleta imposta il numero base di Pull-up (default 5); il sistema calcola istantaneamente i target correlati (es. 5 Pull $\rightarrow$ 10 Push $\rightarrow$ 20 Squat).
+- **Modale Esecuzione Attiva (`#nst-active-workout-modal`)**:
+  - Premendo *"AVVIA PROGRAMMA"*, si apre una modale focalizzata con display cronometro gigante, checklist dei target da chiudere e controlli di corsa:
+    - **Pausa / Riprendi**: Sincronizzato con il `timerEngine` nativo di Nestore.
+    - **Giro (Lap)**: Registrazione degli intertempi con split parziale e totale progressivo.
+    - **Termina e Salva**: Arresta il cronometro e apre il form di completamento.
+- **Salvataggio Persistente & Alimentazione Record Personali**:
+  - Inserimento diretto in `public.nestore_allenamenti` con disciplina `'Invictus'`, durata in minuti, campo note libero e payload strutturato in `scheda_dati` con gli esercizi svolti (`Pull-up`, `Push-up`, `Air Squat`, `peso_kg: 0`).
+  - Questo aggiorna istantaneamente la bacheca dei **Record Personali (PR Grid)** dell'atleta nel tab Allenamenti.
+
 ---
 
 ## 10. Related Concept Pages

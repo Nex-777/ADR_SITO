@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.40">
+    <link rel="stylesheet" href="nestore.css?v=1.05.41">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.40"></script>
+    <script src="config.js?v=1.05.41"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.40</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.41</span>
             </div>
         </div>
 
@@ -554,18 +554,92 @@
             </div>
         </main>
 
-        <!-- Pannello 6: Schede di Allenamento Assegnate (Vista Atleta) -->
+        <!-- Pannello 6: Schede di Allenamento & WOD Standard (Vista Atleta) -->
         <main class="nst-data-panel nst-hidden" id="nst-schede-panel">
+            <!-- Sezione: Allenamenti Standard & Benchmark WOD -->
+            <div class="nst-card" style="margin-bottom: 20px;">
+                <div class="nst-card-header">
+                    <span class="nst-card-title">
+                        <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-amber);">bolt</span>
+                        ALLENAMENTI STANDARD &amp; BENCHMARK
+                    </span>
+                    <span class="nst-version-badge" style="border-color: var(--nst-amber); color: var(--nst-amber);">BENCHMARK WOD</span>
+                </div>
+                <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 16px;">
+                    Programmi standard ad alta intensità con tracciamento automatico del tempo e registrazione dei massimali.
+                </p>
+
+                <!-- Grid Workout Standard -->
+                <div class="nst-standard-workout-grid">
+                    <!-- Card Workout INVICTUS -->
+                    <div class="nst-standard-card">
+                        <div class="nst-standard-card-header">
+                            <div>
+                                <div class="nst-standard-title">
+                                    INVICTUS
+                                    <span class="nst-pill-badge">RAPPORTO 1 : 2 : 4</span>
+                                </div>
+                                <div class="nst-standard-seq">
+                                    Sequenza: <strong>Pull</strong> → <strong>Push</strong> → <strong>Squat</strong>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 32px;">fitness_center</span>
+                        </div>
+
+                        <div class="nst-standard-card-body">
+                            <p class="nst-standard-desc">
+                                Per ogni <strong>1 Pull-up</strong> devi eseguire <strong>2 Push-up</strong> e <strong>4 Air Squat</strong>.
+                                Imposta il numero base di Pull per calcolare l'obiettivo completo della sessione.
+                            </p>
+
+                            <!-- Stepper Configurazione Base Pull -->
+                            <div class="nst-stepper-container">
+                                <span class="nst-stepper-label">PULL-UP BASE:</span>
+                                <div class="nst-stepper-control">
+                                    <button type="button" class="nst-stepper-btn" onclick="modificaInvictusPull(-1)" title="Diminuisci">-</button>
+                                    <span id="nst-invictus-pull-val" class="nst-stepper-val">5</span>
+                                    <button type="button" class="nst-stepper-btn" onclick="modificaInvictusPull(1)" title="Aumenta">+</button>
+                                </div>
+                            </div>
+
+                            <!-- Target Calcolati in Tempo Reale -->
+                            <div class="nst-target-pills-row">
+                                <div class="nst-target-pill pull">
+                                    <span class="label">PULL-UP</span>
+                                    <span id="nst-invictus-target-pull" class="val">5</span>
+                                </div>
+                                <div class="nst-target-pill push">
+                                    <span class="label">PUSH-UP</span>
+                                    <span id="nst-invictus-target-push" class="val">10</span>
+                                </div>
+                                <div class="nst-target-pill squat">
+                                    <span class="label">AIR SQUAT</span>
+                                    <span id="nst-invictus-target-squat" class="val">20</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="nst-standard-card-footer">
+                            <button type="button" class="nst-btn-primary nst-btn-full" onclick="avviaAllenamentoInvictus()">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">play_arrow</span>
+                                <span>AVVIA PROGRAMMA</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sezione: Schede Assegnate dal Coach -->
             <div class="nst-card">
                 <div class="nst-card-header">
                     <span class="nst-card-title">
                         <span class="material-symbols-outlined" style="font-size: 18px;">assignment</span>
-                        SCHEDE DI ALLENAMENTO
+                        SCHEDE DI ALLENAMENTO ASSEGNATE
                     </span>
                     <span id="nst-atleta-schede-badge" class="nst-version-badge">0 SCHEDE</span>
                 </div>
                 <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 16px;">
-                    Programmi e schede di allenamento assegnati dal tuo istruttore.
+                    Programmi e schede di allenamento personalizzati assegnati dal tuo istruttore.
                 </p>
                 <div id="nst-atleta-schede-container" class="nst-schede-container">
                     <div class="nst-loading-text">Caricamento schede in corso...</div>
@@ -972,10 +1046,115 @@ GIORNO 2:
         </div>
     </div>
 
+    <!-- Modale Allenamento Attivo in Corso (INVICTUS & Benchmark WOD) -->
+    <div id="nst-active-workout-modal" class="nst-modal-overlay nst-hidden">
+        <div class="nst-modal-card nst-active-workout-card">
+            <!-- Header -->
+            <div class="nst-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="nst-status-dot pulse" id="nst-modal-status-dot"></span>
+                    <span id="nst-modal-workout-title" class="nst-headline" style="font-size: 14px; color: var(--nst-amber);">INVICTUS — IN CORSO</span>
+                </div>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiModalWorkoutAttivo()" title="Chiudi / Annulla">✕</button>
+            </div>
+
+            <!-- Vista 1: Esecuzione in Corso (Timer + Checklist + Laps) -->
+            <div id="nst-workout-running-view" class="nst-modal-body" style="padding: 20px;">
+                <!-- Display Cronometro Gigante -->
+                <div class="nst-big-timer-container">
+                    <div class="nst-big-timer-display" id="nst-modal-timer-text">00:00.0</div>
+                    <div class="nst-big-timer-sub" id="nst-modal-timer-status">CRONOMETRO IN CORSO</div>
+                </div>
+
+                <!-- Target Checklist -->
+                <div class="nst-modal-targets-box">
+                    <div class="nst-modal-targets-title">OBIETTIVO SESSIONE:</div>
+                    <div class="nst-modal-targets-grid">
+                        <div class="nst-modal-target-item pull">
+                            <span class="rep" id="nst-modal-pull-reps">5</span>
+                            <span class="name">PULL-UP</span>
+                        </div>
+                        <div class="nst-modal-target-item push">
+                            <span class="rep" id="nst-modal-push-reps">10</span>
+                            <span class="name">PUSH-UP</span>
+                        </div>
+                        <div class="nst-modal-target-item squat">
+                            <span class="rep" id="nst-modal-squat-reps">20</span>
+                            <span class="name">AIR SQUAT</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Laps / Intertempi List -->
+                <div class="nst-modal-laps-wrapper">
+                    <div class="nst-modal-laps-header">
+                        <span>GIRI &amp; INTERTEMPI (LAP)</span>
+                        <span id="nst-modal-laps-count">0 Lap</span>
+                    </div>
+                    <div id="nst-modal-laps-list" class="nst-modal-laps-list">
+                        <div class="nst-modal-laps-empty">Nessun intertempo registrato. Premi "GIRO (LAP)" durante l'esercizio.</div>
+                    </div>
+                </div>
+
+                <!-- Barra Azioni In Corsa -->
+                <div class="nst-workout-actions-row">
+                    <button type="button" class="nst-btn-ghost-sm" id="nst-modal-lap-btn" onclick="gestisciWorkoutModalLap()">
+                        <span class="material-symbols-outlined">flag</span>
+                        <span>GIRO (LAP)</span>
+                    </button>
+                    <button type="button" class="nst-btn-sm" id="nst-modal-pause-btn" onclick="gestisciWorkoutModalPausa()">
+                        <span class="material-symbols-outlined" id="nst-modal-pause-icon">pause</span>
+                        <span id="nst-modal-pause-text">PAUSA</span>
+                    </button>
+                    <button type="button" class="nst-btn-primary" id="nst-modal-finish-btn" onclick="terminaAllenamentoAttivo()">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        <span>TERMINA E SALVA</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista 2: Form Salvataggio (Note & Conferma) -->
+            <div id="nst-workout-save-view" class="nst-modal-body nst-hidden" style="padding: 24px;">
+                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--nst-lime); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">emoji_events</span>
+                    SESSIONE COMPLETATA!
+                </h4>
+
+                <div class="nst-save-summary-box">
+                    <div class="nst-save-stat">
+                        <span class="label">TEMPO TOTALE</span>
+                        <span class="val" id="nst-save-final-time">00:00</span>
+                    </div>
+                    <div class="nst-save-stat">
+                        <span class="label">ESERCIZI ESEGUITI</span>
+                        <span class="val" id="nst-save-final-reps">5 Pull / 10 Push / 20 Squat</span>
+                    </div>
+                </div>
+
+                <div class="nst-form-group" style="margin-top: 18px;">
+                    <label for="nst-workout-note-input" style="font-size: 11px; color: var(--nst-cyan); font-family: 'Orbitron', sans-serif; font-weight: 600; display: block; margin-bottom: 8px;">
+                        NOTE SESSIONE (OPZIONALI):
+                    </label>
+                    <textarea id="nst-workout-note-input" class="nst-scheda-full-text" style="width: 100%; min-height: 80px; resize: vertical;" rows="3" placeholder="Es. Ottime sensazioni su pull-up, squat chiusi a ritmo costante..."></textarea>
+                </div>
+
+                <div class="nst-modal-footer" style="margin-top: 20px; padding: 14px 0 0 0; display: flex; justify-content: space-between; gap: 12px;">
+                    <button type="button" class="nst-btn-ghost-sm" onclick="annullaSalvataggioWorkout()">
+                        ← TORNA AL CRONOMETRO
+                    </button>
+                    <button type="button" class="nst-btn-primary" id="nst-btn-confirm-save-workout" onclick="confermaSalvaAllenamentoStandard()">
+                        <span class="material-symbols-outlined">save</span>
+                        <span>CONFERMA E SALVA ALLENAMENTO</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Libreria Grafici Chart.js CDN (v4) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.40"></script>
+    <script src="nestore.js?v=1.05.41"></script>
 </body>
 </html>
