@@ -3659,6 +3659,35 @@ input:checked + .nst-slider:before {
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.nst-btn-launch-workout {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(118, 255, 3, 0.15));
+    border: 1px solid var(--nst-cyan);
+    color: var(--nst-cyan);
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.04em;
+    transition: all 0.2s ease;
+}
+
+.nst-btn-launch-workout:hover {
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(118, 255, 3, 0.3));
+    border-color: var(--nst-lime);
+    color: var(--nst-lime);
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+.nst-scheda-card.has-program {
+    border-color: rgba(0, 229, 255, 0.3);
+}
+
+
 
 
 

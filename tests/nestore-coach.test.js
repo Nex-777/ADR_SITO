@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -247,7 +247,7 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         expect(html).toContain('salvaProgrammaLibreriaDaModal()');
     });
 
-    it('exports all coach library CRUD and navigation functions', () => {
+    it('exports all coach library CRUD, duplicate, and assignment functions', () => {
         require('../portal/nestore.js');
         const target = global.window;
         expect(typeof target.switchCoachMainTab).toBe('function');
@@ -261,13 +261,116 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         expect(typeof target.aggiungiRigaEsercizioModal).toBe('function');
         expect(typeof target.salvaProgrammaLibreriaDaModal).toBe('function');
         expect(typeof target.disattivaProgrammaLibreria).toBe('function');
+        expect(typeof target.duplicaProgrammaLibreria).toBe('function');
+        expect(typeof target.apriModalAssegnaProgramma).toBe('function');
+        expect(typeof target.chiudiModalAssegnaProgramma).toBe('function');
+        expect(typeof target.confermaAssegnazioneProgrammaDaModal).toBe('function');
+        expect(typeof target.popolaSelectProgrammiLibreriaPerScheda).toBe('function');
+        expect(typeof target.gestisciSelezioneProgrammaPerScheda).toBe('function');
     });
 
     it('enforces EPIKA soft-delete rule in disattivaProgrammaLibreria (attivo = false, no DELETE)', () => {
         expect(js).toContain("update({ attivo: false");
         expect(js).not.toContain(".from('nestore_programmi_libreria').delete()");
     });
+
+    it('contains UI components for program duplication and assignment', () => {
+        // Modal for assigning directly from library
+        expect(html).toContain('id="nst-modal-assegna-programma"');
+        expect(html).toContain('id="nst-assegna-modal-prog-id"');
+        expect(html).toContain('id="nst-assegna-modal-atleta-select"');
+        expect(html).toContain('id="nst-btn-conferma-assegna-modal"');
+
+        // Third mode pill in coach subpanel schede
+        expect(html).toContain('id="nst-pill-mode-lib"');
+        expect(html).toContain('id="nst-scheda-input-library-area"');
+        expect(html).toContain('id="nst-scheda-select-programma-lib"');
+        expect(html).toContain('id="nst-scheda-programma-lib-preview"');
+
+        // Library cards actions include DUPLICA and ASSEGNA
+        expect(js).toContain("duplicaProgrammaLibreria('${p.id}')");
+        expect(js).toContain("apriModalAssegnaProgramma('${p.id}')");
+
+        // Styling for athlete launch workout button
+        expect(css).toContain('.nst-btn-launch-workout');
+        expect(css).toContain('.nst-scheda-card.has-program');
+    });
+
+    it('duplicaProgrammaLibreria correctly sets up a duplicate with blank ID and (Copia) in name', () => {
+        const nestore = require('../portal/nestore.js');
+        global.window.libreriaProgrammiTotali = [
+            {
+                id: 'prog-test-123',
+                nome: 'Forza 1: Heavy Deadlift',
+                tipo: 'ibrido',
+                categoria: 'forza',
+                timer_mode: 'stopwatch',
+                ordine: 5,
+                descrizione: 'Test workout',
+                esercizi: [{ nome: 'Stacco', target: '4x5' }]
+            }
+        ];
+
+        // Mock DOM elements
+        const idInput = { value: 'prog-test-123' };
+        const nomeInput = { value: '' };
+        const titleText = { textContent: '' };
+        const ordineInput = { value: '0' };
+        const modal = { classList: { remove: vi.fn(), add: vi.fn() } };
+
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-prog-edit-id') return idInput;
+            if (id === 'nst-prog-edit-nome') return nomeInput;
+            if (id === 'nst-prog-modal-title-text') return titleText;
+            if (id === 'nst-prog-edit-ordine') return ordineInput;
+            if (id === 'nst-coach-programma-modal') return modal;
+            if (id === 'nst-prog-edit-esercizi-container') return { innerHTML: '', appendChild: vi.fn() };
+            return { value: '', classList: { remove: vi.fn(), add: vi.fn() } };
+        });
+
+        global.window.duplicaProgrammaLibreria('prog-test-123');
+
+        // ID must be blank to ensure INSERT instead of UPDATE
+        expect(idInput.value).toBe('');
+        // Name must append (Copia)
+        expect(nomeInput.value).toBe('Forza 1: Heavy Deadlift (Copia)');
+        // Title must show DUPLICA
+        expect(titleText.textContent).toContain('DUPLICA: FORZA 1: HEAVY DEADLIFT (COPIA)');
+        // Order must increment
+        expect(Number(ordineInput.value)).toBe(6);
+    });
+
+    it('caricaSchedeAtleta renders AVVIA PROGRAMMA button when sheet has linked library program', () => {
+        expect(js).toContain(".select('*, allenatore:allenatore_id(nome, cognome), programma:programma_libreria_id(*)')");
+        expect(js).toContain("class=\"nst-btn-launch-workout\"");
+        expect(js).toContain("<span>AVVIA PROGRAMMA</span>");
+        expect(js).toContain("apriAnteprimaIbrido(progId)");
+    });
+
+    it('popolaSelectProgrammiLibreriaPerScheda correctly populates options from active library programs', () => {
+        const selectMock = {
+            value: '',
+            innerHTML: '',
+            appendChild: vi.fn()
+        };
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-scheda-select-programma-lib') return selectMock;
+            return null;
+        });
+
+        global.window.libreriaProgrammiTotali = [
+            { id: 'prog-1', nome: 'Programma 1', attivo: true, categoria: 'metcon' },
+            { id: 'prog-2', nome: 'Programma Archiviato', attivo: false, categoria: 'forza' },
+            { id: 'prog-3', nome: 'Programma 3', attivo: true, categoria: 'standard' }
+        ];
+
+        global.window.popolaSelectProgrammiLibreriaPerScheda();
+
+        // Should append only active programs (prog-1 and prog-3)
+        expect(selectMock.appendChild).toHaveBeenCalledTimes(2);
+    });
 });
+
 
 
 

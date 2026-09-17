@@ -2798,21 +2798,106 @@ async function caricaDatiAtletaPerCoach(atletaId) {
 function selezionaModalitaScheda(mode) {
     const pillText = document.getElementById('nst-pill-mode-text');
     const pillFile = document.getElementById('nst-pill-mode-file');
+    const pillLib = document.getElementById('nst-pill-mode-lib');
     const areaText = document.getElementById('nst-scheda-input-text-area');
     const areaFile = document.getElementById('nst-scheda-input-file-area');
+    const areaLib = document.getElementById('nst-scheda-input-library-area');
+
+    pillText?.classList.toggle('active', mode === 'text');
+    pillFile?.classList.toggle('active', mode === 'file');
+    pillLib?.classList.toggle('active', mode === 'library');
+
+    const radio = document.querySelector(`input[name="nst-scheda-mode"][value="${mode}"]`);
+    if (radio) radio.checked = true;
 
     if (mode === 'text') {
-        pillText?.classList.add('active');
-        pillFile?.classList.remove('active');
         areaText?.classList.remove('nst-hidden');
         areaFile?.classList.add('nst-hidden');
-    } else {
-        pillFile?.classList.add('active');
-        pillText?.classList.remove('active');
+        areaLib?.classList.add('nst-hidden');
+    } else if (mode === 'file') {
         areaFile?.classList.remove('nst-hidden');
         areaText?.classList.add('nst-hidden');
+        areaLib?.classList.add('nst-hidden');
+    } else if (mode === 'library') {
+        areaLib?.classList.remove('nst-hidden');
+        areaText?.classList.add('nst-hidden');
+        areaFile?.classList.add('nst-hidden');
+        popolaSelectProgrammiLibreriaPerScheda();
     }
 }
+
+function popolaSelectProgrammiLibreriaPerScheda() {
+    const select = document.getElementById('nst-scheda-select-programma-lib');
+    if (!select) return;
+    
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">-- Seleziona un programma di allenamento --</option>';
+
+    const list = (typeof window !== 'undefined' && window.libreriaProgrammiTotali && window.libreriaProgrammiTotali.length > 0)
+        ? window.libreriaProgrammiTotali
+        : libreriaProgrammiTotali;
+    const attivi = (list || []).filter(p => p.attivo !== false);
+    attivi.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        const tipoLabel = p.categoria === 'metcon' ? 'Metcon' : p.categoria === 'forza' ? 'Forza' : (p.tipo || 'Standard');
+        opt.textContent = `${p.nome} [${tipoLabel.toUpperCase()}]`;
+        select.appendChild(opt);
+    });
+
+    if (currentVal) select.value = currentVal;
+}
+
+function gestisciSelezioneProgrammaPerScheda(progId) {
+    const previewBox = document.getElementById('nst-scheda-programma-lib-preview');
+    const titoloInput = document.getElementById('nst-scheda-titolo');
+    const obiettivoInput = document.getElementById('nst-scheda-obiettivo');
+
+    if (!progId) {
+        if (previewBox) {
+            previewBox.innerHTML = '';
+            previewBox.style.display = 'none';
+        }
+        return;
+    }
+
+    const p = (libreriaProgrammiTotali || []).find(item => item.id === progId);
+    if (!p) return;
+
+    if (titoloInput && !titoloInput.value.trim()) {
+        titoloInput.value = p.nome;
+    }
+    if (obiettivoInput && !obiettivoInput.value.trim() && p.descrizione) {
+        obiettivoInput.value = p.descrizione;
+    }
+
+    if (previewBox) {
+        let timerMeta = p.timer_mode === 'tabata' 
+            ? `Tabata Timer: ${p.work_default || 30}" work / ${p.rest_default || 30}" rest • ${p.rounds_default || 8} rounds`
+            : `Cronometro: Lap & Pausa${p.giri_target ? ` • Target: ${p.giri_target} giri` : ''}`;
+        
+        const exPreview = Array.isArray(p.esercizi) && p.esercizi.length > 0
+            ? p.esercizi.map(ex => `<div style="padding: 2px 0;">• <strong>${escapeHtml(ex.nome)}</strong>: <span style="color:var(--nst-lime); font-family: 'Orbitron', monospace;">${escapeHtml(ex.target || '')}</span></div>`).join('')
+            : '<div style="font-style: italic; color: var(--nst-text-muted);">Nessun esercizio specificato</div>';
+
+        previewBox.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; color: #fff;">${escapeHtml(p.nome)}</span>
+                <span class="nst-ibrido-badge ${p.categoria || 'standard'}" style="font-size: 9px;">${(p.categoria || p.tipo || 'STANDARD').toUpperCase()}</span>
+            </div>
+            <div style="font-size: 11px; color: var(--nst-cyan); margin-bottom: 8px; font-family: 'Orbitron', monospace;">
+                <span class="material-symbols-outlined" style="font-size: 13px; vertical-align: middle;">timer</span> ${timerMeta}
+            </div>
+            ${p.descrizione ? `<div style="font-size: 11px; color: var(--nst-text-muted); margin-bottom: 10px;">${escapeHtml(p.descrizione)}</div>` : ''}
+            <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px 10px; font-size: 11px;">
+                <div style="font-size: 10px; color: var(--nst-text-muted); margin-bottom: 4px; font-weight: 700;">SCHEMA ESERCIZI:</div>
+                ${exPreview}
+            </div>
+        `;
+        previewBox.style.display = 'block';
+    }
+}
+
 
 function aggiornaConteggioTestoScheda(textarea) {
     const counter = document.getElementById('nst-scheda-char-count');
@@ -2886,6 +2971,17 @@ async function inviaNuovaSchedaCoach() {
         return;
     }
 
+    let selectedProgrammaLibreriaId = null;
+    if (mode === 'library') {
+        const progSelect = document.getElementById('nst-scheda-select-programma-lib');
+        selectedProgrammaLibreriaId = progSelect?.value;
+        if (!selectedProgrammaLibreriaId) {
+            alert("Seleziona un programma dalla libreria da assegnare all'atleta.");
+            progSelect?.focus();
+            return;
+        }
+    }
+
     const btn = document.getElementById('nst-btn-invia-scheda');
     if (btn) {
         btn.disabled = true;
@@ -2926,7 +3022,7 @@ async function inviaNuovaSchedaCoach() {
             .from('nestore_schede_allenamento')
             .insert({
                 atleta_id: selectedCoachAtleta.id,
-                allenatore_id: currentUser.id,
+                allenatore_id: currentUser ? currentUser.id : null,
                 titolo: titolo,
                 periodo: periodo || null,
                 obiettivo: obiettivo || null,
@@ -2934,6 +3030,7 @@ async function inviaNuovaSchedaCoach() {
                 file_nome: uploadedFileName,
                 file_path: uploadedFilePath,
                 file_dimensione: uploadedFileSize,
+                programma_libreria_id: mode === 'library' ? selectedProgrammaLibreriaId : null,
                 attivo: true
             });
 
@@ -2954,6 +3051,13 @@ async function inviaNuovaSchedaCoach() {
         if (badge) {
             badge.textContent = '';
             badge.classList.add('nst-hidden');
+        }
+        const libSelect = document.getElementById('nst-scheda-select-programma-lib');
+        if (libSelect) libSelect.value = '';
+        const libPreview = document.getElementById('nst-scheda-programma-lib-preview');
+        if (libPreview) {
+            libPreview.innerHTML = '';
+            libPreview.style.display = 'none';
         }
 
         // Ricarica storico schede
@@ -3060,7 +3164,7 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
     try {
         const { data: schede, error } = await supabaseClient
             .from('nestore_schede_allenamento')
-            .select('*, allenatore:allenatore_id(nome, cognome)')
+            .select('*, allenatore:allenatore_id(nome, cognome), programma:programma_libreria_id(*)')
             .eq('atleta_id', atletaId)
             .order('attivo', { ascending: false })
             .order('creato_il', { ascending: false });
@@ -3087,14 +3191,40 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
         let html = '';
         schede.forEach(s => {
             schedeCacheMap.set(s.id, s);
+            if (s.programma && !libreriaProgrammiTotali.some(p => p.id === s.programma.id)) {
+                libreriaProgrammiTotali.push(s.programma);
+            }
             const isAttiva = s.attivo;
             const autoreNome = s.allenatore ? `${s.allenatore.cognome || ''} ${s.allenatore.nome || ''}`.trim() : 'Allenatore';
             const dataCaricamento = formatDate(s.creato_il);
             const statusClass = isAttiva ? 'attiva' : 'archiviata';
             const statusLabel = isAttiva ? 'SCHEDA ATTIVA' : 'ARCHIVIATA';
+            const cardExtraClass = s.programma_libreria_id ? 'has-program' : '';
+
+            // Se è collegato un programma della libreria, prepariamo la preview leggibile degli esercizi e del timer
+            let progPreviewHtml = '';
+            if (s.programma && Array.isArray(s.programma.esercizi) && s.programma.esercizi.length > 0) {
+                const timerDesc = s.programma.timer_mode === 'tabata'
+                    ? `Tabata: ${s.programma.work_default || 30}"w / ${s.programma.rest_default || 30}"r • ${s.programma.rounds_default || 8} giri`
+                    : `Cronometro con Lap & Pausa${s.programma.giri_target ? ` • ${s.programma.giri_target} giri` : ''}`;
+                
+                progPreviewHtml = `
+                    <div class="nst-coach-lib-ex-preview" style="margin-top: 10px; margin-bottom: 8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <span style="font-size: 10px; color: var(--nst-cyan); font-family: 'Orbitron', sans-serif; font-weight: 700;">
+                                <span class="material-symbols-outlined" style="font-size: 12px; vertical-align: middle;">timer</span> ${timerDesc}
+                            </span>
+                            <span class="nst-ibrido-badge ${s.programma.categoria || 'standard'}" style="font-size: 9px;">${(s.programma.categoria || s.programma.tipo || 'PROGRAMMA').toUpperCase()}</span>
+                        </div>
+                        <div style="font-size: 11px; color: #94a3b8;">
+                            ${s.programma.esercizi.map(ex => `<div>• <strong>${escapeHtml(ex.nome)}</strong>: <span style="color:var(--nst-lime); font-family: 'Orbitron', monospace;">${escapeHtml(ex.target || (ex.rip_target ? `${ex.serie_target || 4}x${ex.rip_target}` : ''))}</span></div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
 
             html += `
-                <div class="nst-scheda-card ${statusClass}">
+                <div class="nst-scheda-card ${statusClass} ${cardExtraClass}">
                     <div class="nst-scheda-card-header">
                         <div>
                             <div class="nst-scheda-title-text">${escapeHtml(s.titolo)}</div>
@@ -3113,7 +3243,16 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
                         </div>
                     ` : ''}
 
+                    ${progPreviewHtml}
+
                     <div class="nst-scheda-actions">
+                        ${s.programma_libreria_id ? `
+                            <button type="button" class="nst-btn-launch-workout" data-prog-id="${escapeHtml(s.programma_libreria_id)}" data-scheda-id="${escapeHtml(s.id)}" title="Apri e avvia il programma con il timer">
+                                <span class="material-symbols-outlined">play_circle</span>
+                                <span>AVVIA PROGRAMMA</span>
+                            </button>
+                        ` : ''}
+
                         ${s.contenuto_testo ? `
                             <button type="button" class="nst-btn-view-text" data-scheda-id="${escapeHtml(s.id)}">
                                 <span class="material-symbols-outlined">visibility</span>
@@ -3141,9 +3280,17 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
 
         container.innerHTML = html;
 
-        // Event delegation per schede actions (visualizza, scarica, archivia)
+        // Event delegation per schede actions (visualizza, scarica, archivia, avvia programma)
         if (!container._hasSchedeClickListener) {
             container.addEventListener('click', (e) => {
+                const launchBtn = e.target.closest('.nst-btn-launch-workout');
+                if (launchBtn) {
+                    const progId = launchBtn.dataset.progId;
+                    if (progId) {
+                        apriAnteprimaIbrido(progId);
+                    }
+                    return;
+                }
                 const viewBtn = e.target.closest('.nst-btn-view-text');
                 if (viewBtn) {
                     const s = schedeCacheMap.get(viewBtn.dataset.schedaId);
@@ -5025,6 +5172,14 @@ function filtraProgrammiLibreriaCoach() {
                 </div>
 
                 <div class="nst-coach-lib-card-actions">
+                    <button type="button" class="nst-btn-ghost-sm" style="color: var(--nst-cyan); border-color: rgba(6, 182, 212, 0.3);" onclick="apriModalAssegnaProgramma('${p.id}')" title="Assegna direttamente ad un atleta seguito">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">person_add</span>
+                        <span>ASSEGNA</span>
+                    </button>
+                    <button type="button" class="nst-btn-ghost-sm" onclick="duplicaProgrammaLibreria('${p.id}')" title="Crea una copia modificabile di questo programma">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span>
+                        <span>DUPLICA</span>
+                    </button>
                     <button type="button" class="nst-btn-ghost-sm" onclick="apriModalEditorProgramma('${p.id}')" title="Modifica programma">
                         <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
                         <span>MODIFICA</span>
@@ -5060,7 +5215,10 @@ function apriModalEditorProgramma(progId = null) {
     if (exContainer) exContainer.innerHTML = '';
 
     if (progId) {
-        const prog = libreriaProgrammiTotali.find(p => p.id === progId);
+        const list = (typeof window !== 'undefined' && window.libreriaProgrammiTotali && window.libreriaProgrammiTotali.length > 0)
+            ? window.libreriaProgrammiTotali
+            : libreriaProgrammiTotali;
+        const prog = list.find(p => p.id === progId);
         if (titleText) titleText.textContent = `MODIFICA: ${prog ? prog.nome.toUpperCase() : 'PROGRAMMA'}`;
         if (idInput) idInput.value = progId;
         if (nomeInput) nomeInput.value = prog ? prog.nome : '';
@@ -5252,6 +5410,184 @@ async function disattivaProgrammaLibreria(progId) {
     }
 }
 
+function duplicaProgrammaLibreria(progId) {
+    const list = (typeof window !== 'undefined' && window.libreriaProgrammiTotali && window.libreriaProgrammiTotali.length > 0)
+        ? window.libreriaProgrammiTotali
+        : libreriaProgrammiTotali;
+    const prog = (list || []).find(p => p.id === progId);
+    if (!prog) {
+        if (typeof alert === 'function') alert("Programma non trovato per la duplicazione.");
+        return;
+    }
+
+    apriModalEditorProgramma(progId);
+
+    // Modalità duplicazione: svuota l'ID per forzare un nuovo insert
+    currentEditingProgramId = null;
+    const idInput = document.getElementById('nst-prog-edit-id');
+    if (idInput) idInput.value = '';
+
+    const titleText = document.getElementById('nst-prog-modal-title-text');
+    if (titleText) titleText.textContent = `DUPLICA: ${prog.nome.toUpperCase()} (COPIA)`;
+
+    const nomeInput = document.getElementById('nst-prog-edit-nome');
+    if (nomeInput) nomeInput.value = `${prog.nome} (Copia)`;
+
+    const ordineInput = document.getElementById('nst-prog-edit-ordine');
+    if (ordineInput) ordineInput.value = (prog.ordine || 10) + 1;
+}
+
+async function garantisciAtletiCoachCaricati() {
+    if (coachCorsiAtleti && coachCorsiAtleti.length > 0) return coachCorsiAtleti;
+    if (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin) {
+        await caricaAdminDashboard();
+    } else if (typeof caricaCoachDashboard === 'function') {
+        await caricaCoachDashboard();
+    }
+    return coachCorsiAtleti || [];
+}
+
+async function apriModalAssegnaProgramma(progId) {
+    const modal = document.getElementById('nst-modal-assegna-programma');
+    if (!modal) return;
+
+    const prog = (libreriaProgrammiTotali || []).find(p => p.id === progId);
+    if (!prog) {
+        alert("Programma non trovato.");
+        return;
+    }
+
+    const progIdInput = document.getElementById('nst-assegna-modal-prog-id');
+    if (progIdInput) progIdInput.value = prog.id;
+
+    const nomeEl = document.getElementById('nst-assegna-modal-prog-nome');
+    if (nomeEl) nomeEl.textContent = prog.nome.toUpperCase();
+
+    const metaEl = document.getElementById('nst-assegna-modal-prog-meta');
+    if (metaEl) {
+        const timerDesc = prog.timer_mode === 'tabata'
+            ? `Tabata (${prog.work_default || 30}"w / ${prog.rest_default || 30}"r • ${prog.rounds_default || 8} rounds)`
+            : 'Cronometro con Lap e Pausa';
+        const exCount = Array.isArray(prog.esercizi) ? prog.esercizi.length : 0;
+        metaEl.textContent = `${(prog.categoria || prog.tipo || 'Standard').toUpperCase()} • ${timerDesc} • ${exCount} esercizi`;
+    }
+
+    const periodoInput = document.getElementById('nst-assegna-modal-periodo');
+    if (periodoInput) periodoInput.value = '';
+
+    const noteInput = document.getElementById('nst-assegna-modal-note');
+    if (noteInput) noteInput.value = prog.descrizione || '';
+
+    // Popola select atleti
+    const atletaSelect = document.getElementById('nst-assegna-modal-atleta-select');
+    if (atletaSelect) {
+        atletaSelect.innerHTML = '<option value="">Caricamento atleti in corso...</option>';
+        try {
+            await garantisciAtletiCoachCaricati();
+            atletaSelect.innerHTML = '<option value="">-- Seleziona atleta --</option>';
+
+            const uniqueAtleti = new Map();
+            (coachCorsiAtleti || []).forEach(corso => {
+                (corso.atleti || []).forEach(a => {
+                    if (!uniqueAtleti.has(a.id)) {
+                        uniqueAtleti.set(a.id, { ...a, corsoTitolo: corso.titolo });
+                    }
+                });
+            });
+
+            if (uniqueAtleti.size === 0) {
+                atletaSelect.innerHTML = '<option value="">Nessun atleta attivo nei tuoi corsi</option>';
+            } else {
+                uniqueAtleti.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.id;
+                    opt.textContent = `${a.cognome || ''} ${a.nome || ''} (${a.corsoTitolo || 'Corso'})`.trim();
+                    atletaSelect.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error("Errore popolamento atleti modale:", e);
+            atletaSelect.innerHTML = '<option value="">Errore caricamento atleti</option>';
+        }
+    }
+
+    modal.classList.remove('nst-hidden');
+}
+
+function chiudiModalAssegnaProgramma() {
+    const modal = document.getElementById('nst-modal-assegna-programma');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+async function confermaAssegnazioneProgrammaDaModal() {
+    const progId = document.getElementById('nst-assegna-modal-prog-id')?.value;
+    const atletaId = document.getElementById('nst-assegna-modal-atleta-select')?.value;
+    const periodo = document.getElementById('nst-assegna-modal-periodo')?.value.trim();
+    const note = document.getElementById('nst-assegna-modal-note')?.value.trim();
+
+    if (!progId) {
+        alert("Nessun programma selezionato.");
+        return;
+    }
+    if (!atletaId) {
+        alert("Seleziona un atleta a cui assegnare il programma.");
+        document.getElementById('nst-assegna-modal-atleta-select')?.focus();
+        return;
+    }
+
+    const prog = (libreriaProgrammiTotali || []).find(p => p.id === progId);
+    const progNome = prog ? prog.nome : 'Programma';
+
+    const btn = document.getElementById('nst-btn-conferma-assegna-modal');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined nst-spin">progress_activity</span><span>ASSEGNAZIONE...</span>';
+    }
+
+    try {
+        if (!supabaseClient) throw new Error("Client Supabase non inizializzato.");
+
+        // Storicizzazione EPIKA: soft-delete schede attive precedenti per questo atleta
+        await supabaseClient
+            .from('nestore_schede_allenamento')
+            .update({ attivo: false, aggiornato_il: new Date().toISOString() })
+            .eq('atleta_id', atletaId)
+            .eq('attivo', true);
+
+        // Inserimento nuova scheda con foreign key programma_libreria_id
+        const { error: insErr } = await supabaseClient
+            .from('nestore_schede_allenamento')
+            .insert({
+                atleta_id: atletaId,
+                allenatore_id: currentUser ? currentUser.id : null,
+                titolo: progNome,
+                periodo: periodo || null,
+                obiettivo: note || (prog ? prog.descrizione : null),
+                programma_libreria_id: progId,
+                attivo: true
+            });
+
+        if (insErr) throw insErr;
+
+        chiudiModalAssegnaProgramma();
+        showTimerToast(`✓ Programma "${progNome}" assegnato con successo!`);
+
+        // Se l'atleta era attualmente aperto nell'ispezione coach, aggiorna le schede
+        if (selectedCoachAtleta && selectedCoachAtleta.id === atletaId) {
+            await caricaSchedeAtleta(selectedCoachAtleta.id, 'nst-coach-schede-history-list', true);
+        }
+
+    } catch (err) {
+        console.error("Errore assegnazione programma da libreria:", err);
+        alert("Errore durante l'assegnazione del programma: " + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-symbols-outlined">send</span><span>CONFERMA ASSEGNAZIONE</span>';
+        }
+    }
+}
+
 window.libreriaProgrammiTotali = libreriaProgrammiTotali;
 window.switchCoachMainTab = switchCoachMainTab;
 window.caricaLibreriaProgrammi = caricaLibreriaProgrammi;
@@ -5264,6 +5600,12 @@ window.gestisciCambioTipoProgramma = gestisciCambioTipoProgramma;
 window.aggiungiRigaEsercizioModal = aggiungiRigaEsercizioModal;
 window.salvaProgrammaLibreriaDaModal = salvaProgrammaLibreriaDaModal;
 window.disattivaProgrammaLibreria = disattivaProgrammaLibreria;
+window.duplicaProgrammaLibreria = duplicaProgrammaLibreria;
+window.apriModalAssegnaProgramma = apriModalAssegnaProgramma;
+window.chiudiModalAssegnaProgramma = chiudiModalAssegnaProgramma;
+window.confermaAssegnazioneProgrammaDaModal = confermaAssegnazioneProgrammaDaModal;
+window.popolaSelectProgrammiLibreriaPerScheda = popolaSelectProgrammiLibreriaPerScheda;
+window.gestisciSelezioneProgrammaPerScheda = gestisciSelezioneProgrammaPerScheda;
 
 window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
 window.renderCatalogoIbrido = renderCatalogoIbrido;
@@ -5382,7 +5724,13 @@ if (typeof module !== 'undefined' && module.exports) {
         gestisciCambioTipoProgramma,
         aggiungiRigaEsercizioModal,
         salvaProgrammaLibreriaDaModal,
-        disattivaProgrammaLibreria
+        disattivaProgrammaLibreria,
+        duplicaProgrammaLibreria,
+        apriModalAssegnaProgramma,
+        chiudiModalAssegnaProgramma,
+        confermaAssegnazioneProgrammaDaModal,
+        popolaSelectProgrammiLibreriaPerScheda,
+        gestisciSelezioneProgrammaPerScheda
     };
 }
 

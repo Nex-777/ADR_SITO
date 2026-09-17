@@ -466,6 +466,7 @@ Archivio delle schede e dei programmi di allenamento assegnati dagli istruttori 
 - `file_nome` (TEXT): Nome originale del file Word (`.docx` o `.doc`)
 - `file_path` (TEXT): Percorso all'interno del bucket Supabase Storage `schede_allenamento`
 - `file_dimensione` (INTEGER): Dimensione in bytes (controllo policy anti-bloat max 5MB)
+- `programma_libreria_id` (UUID NULLABLE, FK `nestore_programmi_libreria.id` ON DELETE SET NULL): Collegamento opzionale al programma della libreria ufficiale. Se presente, abilita l'avvio del timer interattivo (Tabata o cronometro) e la visualizzazione dello schema esercizi per l'atleta.
 - `attivo` (BOOLEAN NOT NULL DEFAULT true): Flag di storicizzazione EPIKA per soft-delete
 - `creato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
 - `aggiornato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())

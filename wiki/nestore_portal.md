@@ -285,6 +285,24 @@ Consente agli allenatori (Istruttori) e agli Amministratori di gestire in modo d
 - **Sincronizzazione Real-Time con la Vista Atleta**:
   - Le modifiche o i nuovi programmi salvati nella tabella Supabase `nestore_programmi_libreria` si riflettono istantaneamente nelle schede visualizzate dagli atleti (`#nst-schede-panel`).
 
+### 9.6. Duplicazione e Assegnazione Diretta Programmi ad Atleti
+Introdotta nella versione **1.05.47**:
+- **Tasto DUPLICA Programma (`duplicaProgrammaLibreria`)**:
+  - Presente su ogni card nella libreria coach.
+  - Apre istantaneamente l'editor precompilato con tutti i campi del programma di origine, incrementando l'ordine, azzerando l'ID e aggiungendo `(Copia)` al nome. Il salvataggio genera un nuovo record indipendente nel database (`INSERT`).
+- **Doppio Flusso di Assegnazione ad Atleta (Opzione A)**:
+  1. **Dalla Card in Libreria (`apriModalAssegnaProgramma`)**:
+     - Pulsante `ASSEGNA` con icona `person_add` sulla card.
+     - Modale dedicata `#nst-modal-assegna-programma` che visualizza il riassunto del programma e un menu a discesa degli atleti attivi seguiti dall'istruttore nei suoi corsi (con corso di appartenenza).
+     - Possibilità di specificare periodo di validità e note personalizzate per l'atleta.
+     - Alla conferma, esegue il soft-archive della scheda attiva precedente dell'atleta e inserisce la nuova scheda collegata tramite `programma_libreria_id`.
+  2. **Dall'Ispezione Atleta (`#nst-coach-subpanel-schede`)**:
+     - Aggiunta terza modalità nel selettore a pillole: `IMPORTA DA LIBRERIA` (`#nst-pill-mode-lib`).
+     - Menu a tendina `#nst-scheda-select-programma-lib` con tutti i programmi attivi in libreria e anteprima live in tempo reale (`#nst-scheda-programma-lib-preview`) di esercizi e timer.
+- **Esperienza Atleta & Timer Integrato**:
+  - Quando un atleta riceve una scheda collegata a un programma di libreria (`programma_libreria_id`), la sua card mostra la preview completa e leggibile dello schema esercizi e il pulsante **`AVVIA PROGRAMMA`** (`.nst-btn-launch-workout`).
+  - Il click apre direttamente il modale di anteprima e timer (`apriAnteprimaIbrido`), permettendo all'atleta di avviare il workout, configurare il Tabata o registrare i lap col cronometro nativo e salvare la sessione nei propri registri.
+
 ---
 
 ## 10. Related Concept Pages

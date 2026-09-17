@@ -2,6 +2,23 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] ingest | NESTORE — Duplicazione e Assegnazione Programmi ad Atleti (Opzione A & Timer Integrato)
+- **Database & Storicizzazione EPIKA (`supabase/migration_nestore_assegnazione_libreria.sql`)**:
+  - Aggiunta colonna `programma_libreria_id` (UUID NULLABLE, FK `public.nestore_programmi_libreria(id)`) su `public.nestore_schede_allenamento`.
+  - Creata policy RLS che assicura che gli atleti possano sempre accedere in lettura ai programmi della libreria collegati alle loro schede (anche qualora vengano archiviati successivamente dal coach).
+- **Tasto Duplica Programma (`duplicaProgrammaLibreria`)**:
+  - Aggiunto tasto `DUPLICA` su ciascuna card della libreria programmi del coach.
+  - Apre istantaneamente la modale di modifica precompilata con tutti i campi originari, azzera l'ID (per forzare `INSERT`), incrementa l'ordine e aggiunge `(Copia)` al nome.
+- **Doppio Flusso di Assegnazione ad Atleta (Opzione A)**:
+  - **Dalla Card in Libreria (`apriModalAssegnaProgramma`)**: pulsante `ASSEGNA` con modale dedicata `#nst-modal-assegna-programma`, menu a discesa degli atleti attivi nei corsi dell'istruttore, campi periodo e note personalizzate. Soft-archive automatico della scheda precedente e inserimento a database.
+  - **Dall'Ispezione Atleta (`#nst-coach-subpanel-schede`)**: terza opzione `IMPORTA DA LIBRERIA` nel selettore a pillole (`#nst-pill-mode-lib`), menu a tendina programmi e preview live dinamica di esercizi e timer (`#nst-scheda-programma-lib-preview`).
+- **Esperienza Atleta con Timer Integrato (`caricaSchedeAtleta`)**:
+  - Le schede assegnate collegate a un programma di libreria mostrano il box leggibile degli esercizi con i relativi target e il pulsante **`AVVIA PROGRAMMA`** (`.nst-btn-launch-workout`).
+  - Il click apre l'anteprima e il timer interattivo (Tabata o cronometro), permettendo all'atleta di eseguire il workout registrando giri, serie e carichi.
+- **Testing & Quality Assurance (`tests/nestore-coach.test.js`)**:
+  - Aggiunti unit test per la duplicazione con azzeramento ID, l'assegnazione, la popolazione selettiva da libreria e il rendering del pulsante di avvio.
+  - Vitest suite: 71/71 test superati con successo (8 test files).
+
 ## [2026-09-17] ingest | NESTORE — Gestione Libreria Programmi per Allenatore (Supabase & 2-Tab Coach UI)
 - **Database & Storicizzazione EPIKA (`supabase/migration_nestore_libreria_programmi.sql`)**:
   - Creata la tabella `public.nestore_programmi_libreria` con RLS (lettura per tutti gli autenticati su programmi attivi, gestione per Istruttori e Admin).

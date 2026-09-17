@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.46">
+    <link rel="stylesheet" href="nestore.css?v=1.05.47">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.46"></script>
+    <script src="config.js?v=1.05.47"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.46</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.47</span>
             </div>
         </div>
 
@@ -831,17 +831,22 @@
                         </div>
                     </div>
 
-                    <!-- Scelta Modalità: Testo/Copia-Incolla vs File Word -->
+                    <!-- Scelta Modalità: Testo/Copia-Incolla vs File Word vs Libreria -->
                     <div class="nst-scheda-mode-selector">
                         <label class="nst-radio-pill active" id="nst-pill-mode-text" onclick="selezionaModalitaScheda('text')">
                             <input type="radio" name="nst-scheda-mode" value="text" checked>
                             <span class="material-symbols-outlined">edit_note</span>
-                            <span>TESTO LIBERO / COPIA-INCOLLA DA WORD</span>
+                            <span>TESTO / COPIA-INCOLLA</span>
                         </label>
                         <label class="nst-radio-pill" id="nst-pill-mode-file" onclick="selezionaModalitaScheda('file')">
                             <input type="radio" name="nst-scheda-mode" value="file">
                             <span class="material-symbols-outlined">description</span>
-                            <span>CARICA FILE WORD (.DOCX / .DOC)</span>
+                            <span>FILE WORD (.DOCX)</span>
+                        </label>
+                        <label class="nst-radio-pill" id="nst-pill-mode-lib" onclick="selezionaModalitaScheda('library')">
+                            <input type="radio" name="nst-scheda-mode" value="library">
+                            <span class="material-symbols-outlined">library_books</span>
+                            <span>IMPORTA DA LIBRERIA</span>
                         </label>
                     </div>
 
@@ -875,6 +880,19 @@ GIORNO 2:
                             <div id="nst-scheda-selected-file-name" class="nst-selected-file-tag nst-hidden"></div>
                         </div>
                         <input type="file" id="nst-scheda-word-file" accept=".docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" class="nst-hidden" onchange="gestisciFileSchedaCoach(event)">
+                    </div>
+
+                    <!-- Area Importa da Libreria Programmi -->
+                    <div id="nst-scheda-input-library-area" class="nst-scheda-mode-area nst-hidden">
+                        <div class="nst-form-group">
+                            <label class="nst-form-label">SELEZIONA PROGRAMMA DALLA LIBRERIA *</label>
+                            <select id="nst-scheda-select-programma-lib" class="nst-form-input" onchange="gestisciSelezioneProgrammaPerScheda(this.value)">
+                                <option value="">-- Seleziona un programma di allenamento --</option>
+                            </select>
+                        </div>
+                        <div id="nst-scheda-programma-lib-preview" style="display: none; margin-top: 12px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--nst-border-cyan); border-radius: 8px; padding: 14px;">
+                            <!-- Preview popolata dinamicamente con esercizi e timer -->
+                        </div>
                     </div>
 
                     <!-- Azioni Form -->
@@ -1558,10 +1576,56 @@ GIORNO 2:
         </div>
     </div>
 
+    <!-- Modale Coach: Assegna Programma Libreria ad un Atleta -->
+    <div id="nst-modal-assegna-programma" class="nst-modal-overlay nst-hidden">
+        <div class="nst-modal-content nst-card" style="max-width: 520px; width: 92%;">
+            <div class="nst-card-header">
+                <span class="nst-card-title cyan">
+                    <span class="material-symbols-outlined">person_add</span>
+                    ASSEGNA PROGRAMMA AD ATLETA
+                </span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiModalAssegnaProgramma()">✕</button>
+            </div>
+            <div class="nst-modal-body" style="padding: 16px 20px;">
+                <input type="hidden" id="nst-assegna-modal-prog-id" value="">
+                
+                <!-- Box Programma Selezionato -->
+                <div id="nst-assegna-modal-prog-info" style="background: rgba(0, 229, 255, 0.05); border: 1px solid var(--nst-border-cyan); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <div id="nst-assegna-modal-prog-nome" style="font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; color: #fff;"></div>
+                    <div id="nst-assegna-modal-prog-meta" style="font-size: 11px; color: var(--nst-text-muted); margin-top: 4px;"></div>
+                </div>
+
+                <div class="nst-form-group" style="margin-bottom: 12px;">
+                    <label class="nst-form-label">SELEZIONA ATLETA DESTINATARIO *</label>
+                    <select id="nst-assegna-modal-atleta-select" class="nst-form-input">
+                        <option value="">-- Seleziona atleta --</option>
+                    </select>
+                </div>
+
+                <div class="nst-form-group" style="margin-bottom: 12px;">
+                    <label class="nst-form-label">PERIODO DI VALIDITÀ</label>
+                    <input type="text" id="nst-assegna-modal-periodo" class="nst-form-input" placeholder="Es. Ottobre - Dicembre 2026">
+                </div>
+
+                <div class="nst-form-group" style="margin-bottom: 12px;">
+                    <label class="nst-form-label">OBIETTIVO / NOTE PERSONALIZZATE</label>
+                    <input type="text" id="nst-assegna-modal-note" class="nst-form-input" placeholder="Note specifiche per l'atleta...">
+                </div>
+            </div>
+            <div class="nst-modal-footer" style="padding: 14px 20px; display: flex; justify-content: space-between; gap: 12px;">
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiModalAssegnaProgramma()">ANNULLA</button>
+                <button type="button" class="nst-btn-primary" id="nst-btn-conferma-assegna-modal" onclick="confermaAssegnazioneProgrammaDaModal()">
+                    <span class="material-symbols-outlined">send</span>
+                    <span>CONFERMA ASSEGNAZIONE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Libreria Grafici Chart.js CDN (v4) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.46"></script>
+    <script src="nestore.js?v=1.05.47"></script>
 </body>
 </html>
