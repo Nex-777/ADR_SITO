@@ -100,7 +100,7 @@ async function initNestore() {
             return;
         }
 
-        isAuthorizedAdmin = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente'].includes(r));
+        isAuthorizedAdmin = Array.isArray(profile.ruolo) && profile.ruolo.includes('presidente');
         isBoardMember = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
         
         isIstruttore = false;
@@ -134,34 +134,37 @@ async function initNestore() {
         const nomeCompleto = `${profile.nome || ''} ${profile.cognome || ''}`.trim() || 'Atleta';
         document.getElementById('nst-user-name').textContent = nomeCompleto;
 
-        // Configurazione Selettore Vista per Admin / Coach (Fase 2)
-        // Regola 1: sia allenatori che amministratori entrano in nestore dalla loro sezione personale Atleta,
-        // passano alle altre qualifiche tramite selettore.
+        // Configurazione Selettore Vista per Admin / Coach
+        // Regola: sia allenatori che amministratori entrano in nestore dalla loro sezione personale Atleta,
+        // e passano alle altre qualifiche tramite selettore.
+        // - Atleta: visibile a tutti
+        // - Allenatore: SOLO a chi è registrato in registro_istruttori
+        // - Amministratore: SOLO al presidente
         const switcher = document.getElementById('nst-view-switcher');
         if (switcher) {
-            if (isBoardMember || isIstruttore) {
-                switcher.innerHTML = '';
-                
-                const optAtleta = document.createElement('option');
-                optAtleta.value = 'athlete';
-                optAtleta.textContent = 'ATLETA';
-                switcher.appendChild(optAtleta);
+            switcher.innerHTML = '';
+            
+            const optAtleta = document.createElement('option');
+            optAtleta.value = 'athlete';
+            optAtleta.textContent = 'ATLETA';
+            switcher.appendChild(optAtleta);
 
-                if (isIstruttore || isBoardMember) {
-                    const optCoach = document.createElement('option');
-                    optCoach.value = 'coach';
-                    optCoach.textContent = 'ALLENATORE';
-                    switcher.appendChild(optCoach);
-                }
+            if (isIstruttore) {
+                const optCoach = document.createElement('option');
+                optCoach.value = 'coach';
+                optCoach.textContent = 'ALLENATORE';
+                switcher.appendChild(optCoach);
+            }
 
-                if (isBoardMember) {
-                    const optAdmin = document.createElement('option');
-                    optAdmin.value = 'admin';
-                    optAdmin.textContent = 'AMMINISTRATORE';
-                    switcher.appendChild(optAdmin);
-                }
+            if (isAuthorizedAdmin) {
+                const optAdmin = document.createElement('option');
+                optAdmin.value = 'admin';
+                optAdmin.textContent = 'AMMINISTRATORE';
+                switcher.appendChild(optAdmin);
+            }
 
-                switcher.value = 'athlete';
+            switcher.value = 'athlete';
+            if (switcher.options.length > 1) {
                 switcher.classList.remove('nst-hidden');
             } else {
                 switcher.classList.add('nst-hidden');
@@ -2007,6 +2010,18 @@ function formatDate(dateStr) {
 // GESTIONE CAMBIO VISUALIZZAZIONE (ATLETA / ALLENATORE / AMMINISTRATORE)
 // ---------------------------------------------------------------------------
 async function switchNestoreView(val) {
+    if (val === 'admin' && !isAuthorizedAdmin) {
+        console.warn("Accesso negato: la vista AMMINISTRATORE è riservata al Presidente.");
+        const switcher = document.getElementById('nst-view-switcher');
+        if (switcher) switcher.value = 'athlete';
+        val = 'athlete';
+    } else if (val === 'coach' && !isIstruttore) {
+        console.warn("Accesso negato: la vista ALLENATORE è riservata agli Istruttori.");
+        const switcher = document.getElementById('nst-view-switcher');
+        if (switcher) switcher.value = 'athlete';
+        val = 'athlete';
+    }
+
     currentNestoreView = val;
     const athleteGrid = document.getElementById('nst-athlete-main-grid');
     const mobileTabs = document.getElementById('nst-mobile-tabs');
@@ -2115,6 +2130,11 @@ function switchNestorePanel(panelId) {
 // ===========================================================================
 
 async function caricaCoachDashboard() {
+    if (!isIstruttore && !isAuthorizedAdmin) {
+        console.warn("Accesso negato: la vista ALLENATORE è riservata agli Istruttori.");
+        return;
+    }
+
     const container = document.getElementById('nst-coach-atleti-container');
     if (container) {
         container.innerHTML = `
@@ -2217,6 +2237,11 @@ async function caricaCoachDashboard() {
 }
 
 async function caricaAdminDashboard() {
+    if (!isAuthorizedAdmin) {
+        console.warn("Accesso negato: la vista AMMINISTRATORE è riservata al Presidente.");
+        return;
+    }
+
     const container = document.getElementById('nst-coach-atleti-container');
     if (container) {
         container.innerHTML = `

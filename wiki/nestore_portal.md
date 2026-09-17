@@ -184,12 +184,15 @@ Nestore introduce le modalità operative dedicate al corpo docenti e alla direzi
 
 ### 8.1. Regola di Accesso & Switcher Ruoli
 1. **Punto di Ingresso Unificato**: Tutti gli utenti (atleti, istruttori certificati e membri del Consiglio Direttivo) accedono a NESTORE visualizzando sempre per default la propria vista personale **ATLETA**.
-2. **Selettore di Ruolo (`#nst-view-switcher`)**:
-   - Visibile esclusivamente per gli utenti abilitati in `registro_istruttori` o membri del Consiglio Direttivo (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`).
-   - Consente di transitare istantaneamente tra le modalità senza ricaricare la pagina:
-     - `ATLETA`: Vista personale ordinaria di allenamento, chat e diari.
-     - `ALLENATORE`: Dashboard dei corsi assegnati all'istruttore in `public.istruttori_eventi`.
-     - `AMMINISTRATORE`: Dashboard globale di tutti i corsi attivi del club (riservata al Direttivo).
+2. **Accesso Incondizionato (v1.05.15 & v1.05.42)**: Tutti i componenti del Consiglio Direttivo (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`) e gli istruttori in `registro_istruttori` hanno accesso incondizionato a NESTORE (senza necessità di corso attivo a pagamento).
+3. **Selettore di Ruolo (`#nst-view-switcher`) & Principio del Minimo Privilegio**:
+   - Se l'utente dispone solo della vista Atleta (es. consigliere/segretario/tesoriere che non è istruttore, o atleta comune), il selettore resta **nascosto**.
+   - Se l'utente dispone di ruoli aggiuntivi, il selettore compare permettendo di passare tra le viste autorizzate:
+     - `ATLETA`: Vista personale ordinaria di allenamento, chat e diari (disponibile per tutti).
+     - `ALLENATORE`: Riservata **esclusivamente** a chi è registrato nel `registro_istruttori` (es. Ciaralli, Mannocchi). Mostra i soli corsi assegnati all'istruttore in `public.istruttori_eventi`.
+     - `AMMINISTRATORE`: Riservata **rigorosamente ed esclusivamente al `presidente`** (`nexglg@gmail.com`). Mostra la dashboard globale di tutti i corsi e atleti di Adrenalina Club.
+4. **Hardening Database RLS (`supabase/migration_nestore_admin_strict.sql`)**:
+   - Tutte le policy SELECT/INSERT/UPDATE sulle tabelle `nestore_schede_allenamento`, `nestore_pesi_misure`, `nestore_allenamenti`, `nestore_pasti`, `nestore_scheda_atleta`, `nestore_preferenze` e sul bucket Storage `schede_allenamento` sono state ristrette per consentire la lettura/gestione globale unicamente a `ARRAY['presidente'::public.ruolo_utente]`. I membri generici del direttivo non possono effettuare query su atleti altrui a livello database.
 
 ### 8.2. Dashboard Allenatore (`#nst-coach-list-view`)
 - **Associazione Corsi**: L'allenatore visualizza solo ed esclusivamente i corsi a cui è assegnato tramite la tabella ponte `public.istruttori_eventi`.

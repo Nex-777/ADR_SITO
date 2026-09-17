@@ -2,6 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] ingest | NESTORE — Restrizione Vista Amministratore (Solo Presidente) e Hardening RLS
+- **Frontend & Access Control (`portal/nestore.js`)**:
+  - Ristretto `isAuthorizedAdmin` rigorosamente al ruolo `'presidente'` (`Array.isArray(profile.ruolo) && profile.ruolo.includes('presidente')`), rimuovendo i consiglieri e altri membri del Direttivo dall'accesso globale admin.
+  - Aggiornato il selettore `#nst-view-switcher`: l'opzione `AMMINISTRATORE` viene mostrata unicamente se `isAuthorizedAdmin === true`, mentre l'opzione `ALLENATORE` viene mostrata unicamente se `isIstruttore === true` (presenza in `registro_istruttori`).
+  - Se un utente del direttivo non è istruttore (es. Sergio Paoletti), vede unicamente la vista `ATLETA` e il selettore rimane nascosto. Se un consigliere è istruttore (es. Ciaralli, Mannocchi), vede `ATLETA` e `ALLENATORE`. Solo il presidente vede `AMMINISTRATORE`.
+  - Introdotti controlli di guardia e validazione ruoli all'inizio di `switchNestoreView`, `caricaCoachDashboard` e `caricaAdminDashboard` per bloccare tentativi di accesso anomali.
+- **Database & Security RLS (`supabase/migration_nestore_admin_strict.sql`)**:
+  - Applicata migrazione DDL in produzione (`zpategmkelqmexetpaot`).
+  - Ristrette tutte le policy RLS di lettura e gestione globale (`nst_schede_select`, `nst_schede_insert`, `nst_schede_update`, `nst_pm_select_own`, `nst_all_select_own`, `nst_pasti_select_own`, `nst_scheda_select_own`, `nst_pref_select_own`) rimuovendo i membri generici del direttivo e consentendo l'accesso globale esclusivamente a `ARRAY['presidente'::public.ruolo_utente]`.
+  - Ristrette le policy di lettura e upload sul bucket Supabase Storage `schede_allenamento`.
+- **Testing (`tests/nestore-coach.test.js`)**:
+  - Aggiunti unit test specifici per verificare la restrizione di `isAuthorizedAdmin` e la logica di generazione del selettore viste. Test suite complessiva: 57/57 passati.
+
 ## [2026-09-16] ingest | NESTORE — Allenamenti Standard & Benchmark WOD (INVICTUS) con Modale Timer Attivo
 - **Frontend & UI Schede (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Aggiunta la sezione **"ALLENAMENTI STANDARD & BENCHMARK"** nel pannello `#nst-schede-panel` con card dedicata al benchmark **INVICTUS** (sequenza Pull $\rightarrow$ Push $\rightarrow$ Squat con ratio fisso 1 : 2 : 4).

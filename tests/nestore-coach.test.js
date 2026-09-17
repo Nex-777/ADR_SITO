@@ -121,4 +121,20 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         expect(js).toContain('data-atleta-id');
         expect(js).toContain('data-scheda-id');
     });
+
+    it('enforces strict admin check only for presidente', () => {
+        // Checking JS source logic to ensure only presidente gets isAuthorizedAdmin
+        expect(js).toContain("isAuthorizedAdmin = Array.isArray(profile.ruolo) && profile.ruolo.includes('presidente')");
+        expect(js).not.toContain("['presidente', 'vice_presidente'].includes(r)");
+    });
+
+    it('switcher only displays options according to specific roles', () => {
+        // Verification of switcher generation logic
+        expect(js).toContain("if (isIstruttore) {");
+        expect(js).toContain("optCoach.value = 'coach'");
+        expect(js).toContain("if (isAuthorizedAdmin) {");
+        expect(js).toContain("optAdmin.value = 'admin'");
+        expect(js).toContain("if (switcher.options.length > 1)");
+    });
 });
+
