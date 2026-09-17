@@ -3224,5 +3224,261 @@ input:checked + .nst-slider:before {
     color: var(--nst-lime);
 }
 
+/* ===========================================================================
+   PROGRAMMI IBRIDO BASE (METCON & FORZA)
+   =========================================================================== */
+
+.nst-ibrido-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.nst-ibrido-card {
+    background: var(--nst-surface);
+    border: 1px solid var(--nst-border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.nst-ibrido-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.nst-ibrido-card.metcon {
+    border-color: rgba(0, 229, 255, 0.3);
+}
+
+.nst-ibrido-card.metcon:hover {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 8px 25px var(--nst-cyan-dim);
+}
+
+.nst-ibrido-card.forza {
+    border-color: rgba(255, 179, 0, 0.3);
+}
+
+.nst-ibrido-card.forza:hover {
+    border-color: var(--nst-amber);
+    box-shadow: 0 8px 25px var(--nst-amber-glow);
+}
+
+.nst-ibrido-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.nst-ibrido-card-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #fff;
+}
+
+.nst-ibrido-card.metcon .nst-ibrido-card-title {
+    color: var(--nst-cyan);
+}
+
+.nst-ibrido-card.forza .nst-ibrido-card-title {
+    color: var(--nst-amber);
+}
+
+.nst-ibrido-badge-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.nst-ibrido-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.nst-ibrido-badge.metcon {
+    background: rgba(0, 229, 255, 0.15);
+    color: var(--nst-cyan);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+}
+
+.nst-ibrido-badge.forza {
+    background: rgba(255, 179, 0, 0.15);
+    color: var(--nst-amber);
+    border: 1px solid rgba(255, 179, 0, 0.35);
+}
+
+.nst-ibrido-badge.timer {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--nst-text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nst-ibrido-card-desc {
+    font-size: 11px;
+    color: var(--nst-text-muted);
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.nst-ibrido-ex-preview {
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+    font-size: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.nst-ibrido-ex-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.nst-ibrido-ex-item:last-child {
+    border-bottom: none;
+}
+
+.nst-ibrido-ex-name {
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.nst-ibrido-ex-target {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--nst-lime);
+    font-weight: 600;
+}
+
+.nst-ibrido-card-footer {
+    display: flex;
+    gap: 8px;
+}
+
+/* Modale Anteprima Ibrido */
+.nst-ibrido-preview-card {
+    max-width: 650px;
+    border-color: rgba(0, 229, 255, 0.4);
+    box-shadow: 0 12px 50px rgba(0, 0, 0, 0.9), 0 0 30px var(--nst-cyan-dim);
+}
+
+.nst-ibrido-preview-card.forza {
+    border-color: rgba(255, 179, 0, 0.4);
+    box-shadow: 0 12px 50px rgba(0, 0, 0, 0.9), 0 0 30px var(--nst-amber-glow);
+}
+
+.nst-ibrido-config-box {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 10px;
+    padding: 14px;
+    margin: 16px 0;
+}
+
+.nst-ibrido-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 12px;
+    align-items: center;
+}
+
+.nst-ibrido-config-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: center;
+}
+
+.nst-ibrido-config-label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--nst-cyan);
+    letter-spacing: 0.06em;
+}
+
+.nst-timer-warning-box {
+    background: rgba(255, 179, 0, 0.15);
+    border: 1px solid var(--nst-amber);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ffecb3;
+    font-size: 11px;
+    line-height: 1.4;
+    animation: nstPulseWarning 2s infinite ease-in-out;
+}
+
+@keyframes nstPulseWarning {
+    0%, 100% { border-color: rgba(255, 179, 0, 0.4); }
+    50% { border-color: rgba(255, 179, 0, 1); box-shadow: 0 0 12px rgba(255, 179, 0, 0.35); }
+}
+
+.nst-ex-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 11px;
+}
+
+.nst-ex-table th {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    color: var(--nst-text-muted);
+    letter-spacing: 0.05em;
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nst-ex-table td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+.nst-ex-input {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 8px;
+    width: 65px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.nst-ex-input:focus {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 0 8px var(--nst-cyan-dim);
+    outline: none;
+}
+
+
 
 

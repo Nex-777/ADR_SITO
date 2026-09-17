@@ -252,6 +252,21 @@ Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione d
   - Inserimento diretto in `public.nestore_allenamenti` con disciplina `'Invictus'`, durata in minuti, campo note libero e payload strutturato in `scheda_dati` con gli esercizi svolti (`Pull-up`, `Push-up`, `Air Squat`, `peso_kg: 0`).
   - Questo aggiorna istantaneamente la bacheca dei **Record Personali (PR Grid)** dell'atleta nel tab Allenamenti.
 
+### 9.4. Programmi Ufficiali Corso Ibrido Base (Metcon 1-4 & Forza 1-4)
+Aggiunto nella versione **1.05.44**:
+Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione `#nst-ibrido-programmi-section` con il catalogo dei **8 Programmi Ufficiali Ibrido Base**:
+- **Metcon 1-4 (Conditioning Metabolico)**:
+  - **Metcon 1, 2, 4**: integrano il motore `tabataEngine` con intervalli lavoro/riposo preimpostati (es. 30" work + 30" rest o 25" work + 35" rest), con possibilità per l'atleta di modificare i parametri di work, rest e rounds prima dell'avvio.
+  - **Metcon 3**: programma Unbroken a 20 giri no time limit (tempo target 40'), integrato con il cronometro `timerEngine` (supporto a pause e lap).
+- **Forza 1-4 (Progressione Carichi & Ramping)**:
+  - Tabelle di progressione per esercizi multiarticolari fondamentali (Panca Piana, Squat, Stacco da terra, Trazioni Pesate, Lento Avanti, Rematore Bilanciere).
+  - Gestiti tramite `timerEngine` stopwatch con intertempi (Lap) e tabella interattiva per inserire carichi (kg) e ripetizioni effettive per serie.
+- **Workflow Esecuzione e Prevenzione Timer Dimenticato**:
+  - **Modale Anteprima (`#nst-ibrido-preview-modal`)**: esposizione dello schema completo degli esercizi e configurazione parametri timer.
+  - **Modale Esecuzione Attiva (`#nst-ibrido-active-modal`)**: timer gigante a 60fps sincronizzato con il render loop master, tabella inserimento carichi live e pulsante *"TERMINA E SALVA"*.
+  - **Schermata di Conferma Dati & Prevenzione Errori**: durata calcolata esposta in un input numerico modificabile dall'atleta, alert visuale giallo se il timer supera 90 minuti (`#nst-timer-warning-box`), riepilogo carichi confermati e campo note.
+  - **Persistenza & Storicizzazione**: registrazione automatica in `public.nestore_allenamenti` con `corso_disciplina = 'Ibrido — ' + nome_programma` e `scheda_dati` JSONB strutturato.
+
 ---
 
 ## 10. Related Concept Pages

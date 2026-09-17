@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.43">
+    <link rel="stylesheet" href="nestore.css?v=1.05.44">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.43"></script>
+    <script src="config.js?v=1.05.44"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.43</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.44</span>
             </div>
         </div>
 
@@ -565,6 +565,25 @@
 
         <!-- Pannello 6: Schede di Allenamento & WOD Standard (Vista Atleta) -->
         <main class="nst-data-panel nst-hidden" id="nst-schede-panel">
+            <!-- Sezione: Programmi Ufficiali Corso IBRIDO BASE -->
+            <div class="nst-card" id="nst-ibrido-programmi-section" style="margin-bottom: 20px;">
+                <div class="nst-card-header">
+                    <span class="nst-card-title">
+                        <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-cyan);">model_training</span>
+                        PROGRAMMI IBRIDO BASE
+                    </span>
+                    <span class="nst-version-badge" style="border-color: var(--nst-cyan); color: var(--nst-cyan);">8 PROGRAMMI UFFICIALI</span>
+                </div>
+                <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 14px;">
+                    Programmi ufficiali Ibrido (Metcon 1-4 e Forza 1-4). Seleziona una scheda per consultare i carichi, avviare il timer dedicato (Tabata configurabile o Cronometro con Lap) e registrare i risultati.
+                </p>
+
+                <!-- Grid dei Programmi Ibrido Base -->
+                <div id="nst-ibrido-programmi-grid" class="nst-ibrido-grid">
+                    <!-- Popolato dinamicamente via JS -->
+                </div>
+            </div>
+
             <!-- Sezione: Allenamenti Standard & Benchmark WOD -->
             <div class="nst-card" style="margin-bottom: 20px;">
                 <div class="nst-card-header">
@@ -1160,10 +1179,193 @@ GIORNO 2:
         </div>
     </div>
 
+    <!-- Modale Anteprima & Setup Programma Ibrido -->
+    <div id="nst-ibrido-preview-modal" class="nst-modal-overlay nst-hidden">
+        <div class="nst-modal-card nst-ibrido-preview-card" id="nst-ibrido-preview-card">
+            <div class="nst-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" id="nst-ibrido-preview-icon" style="color: var(--nst-cyan); font-size: 20px;">fitness_center</span>
+                    <span id="nst-ibrido-preview-title" class="nst-headline" style="font-size: 14px;">IBRIDO — ANTEPRIMA</span>
+                </div>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiAnteprimaIbrido()" title="Chiudi">✕</button>
+            </div>
+            <div class="nst-modal-body" style="padding: 20px;">
+                <p id="nst-ibrido-preview-desc" style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 12px;"></p>
+                
+                <!-- Box Configurazione Timer se Metcon Tabata -->
+                <div id="nst-ibrido-tabata-config-box" class="nst-ibrido-config-box nst-hidden">
+                    <div style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--nst-cyan); font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">
+                        PARAMETRI TIMER TABATA (MODIFICABILI PRIMA DELL'AVVIO)
+                    </div>
+                    <div class="nst-ibrido-config-grid">
+                        <div class="nst-ibrido-config-item">
+                            <span class="nst-ibrido-config-label">LAVORO (SEC)</span>
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('work', -5)">-</button>
+                                <input type="number" id="nst-ibrido-cfg-work" class="nst-ex-input" value="30" min="5" max="300" onchange="aggiornaIbridoParamDaInput()">
+                                <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('work', 5)">+</button>
+                            </div>
+                        </div>
+                        <div class="nst-ibrido-config-item">
+                            <span class="nst-ibrido-config-label">RIPOSO (SEC)</span>
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('rest', -5)">-</button>
+                                <input type="number" id="nst-ibrido-cfg-rest" class="nst-ex-input" value="30" min="0" max="300" onchange="aggiornaIbridoParamDaInput()">
+                                <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('rest', 5)">+</button>
+                            </div>
+                        </div>
+                        <div class="nst-ibrido-config-item">
+                            <span class="nst-ibrido-config-label">GIRI / ROUNDS</span>
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('rounds', -1)">-</button>
+                                <input type="number" id="nst-ibrido-cfg-rounds" class="nst-ex-input" value="40" min="1" max="100" onchange="aggiornaIbridoParamDaInput()">
+                                <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('rounds', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Box Esercizi del Programma -->
+                <div style="font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--nst-text-muted); font-weight: 700; margin: 12px 0 6px 0; text-transform: uppercase;">
+                    SCHEMA ESERCIZI &amp; TARGET
+                </div>
+                <div id="nst-ibrido-preview-ex-list" class="nst-ex-preview-container">
+                    <!-- Tabella o lista esercizi generata via JS -->
+                </div>
+            </div>
+            <div class="nst-modal-footer" style="padding: 14px 20px; display: flex; justify-content: space-between;">
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiAnteprimaIbrido()">ANNULLA</button>
+                <button type="button" class="nst-btn-primary" id="nst-btn-avvia-ibrido" onclick="avviaIbridoSeduta()">
+                    <span class="material-symbols-outlined">play_arrow</span>
+                    <span>INIZIA SEDUTA</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Esecuzione Attiva Programma Ibrido -->
+    <div id="nst-ibrido-active-modal" class="nst-modal-overlay nst-hidden">
+        <div class="nst-modal-card nst-active-workout-card" id="nst-ibrido-active-card" style="max-width: 680px;">
+            <!-- Header Modale -->
+            <div class="nst-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="nst-status-dot pulse" id="nst-ibrido-status-dot"></span>
+                    <span id="nst-ibrido-active-title" class="nst-headline" style="font-size: 13px; color: var(--nst-cyan);">IBRIDO — IN CORSO</span>
+                </div>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiIbridoActiveModal()" title="Chiudi / Annulla">✕</button>
+            </div>
+
+            <!-- Vista 1: Esecuzione in Corso -->
+            <div id="nst-ibrido-running-view" class="nst-modal-body" style="padding: 20px;">
+                <!-- Display Timer Gigante -->
+                <div class="nst-big-timer-container" id="nst-ibrido-timer-container">
+                    <div class="nst-big-timer-display" id="nst-ibrido-timer-display">00:00.0</div>
+                    <div class="nst-big-timer-sub" id="nst-ibrido-timer-sub">IN CORSO</div>
+                </div>
+
+                <!-- Sezione Registrazione Risultati In-Sessione -->
+                <div class="nst-modal-targets-box" style="margin-bottom: 14px;">
+                    <div class="nst-modal-targets-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>REGISTRAZIONE ESERCIZI &amp; CARICHI</span>
+                        <span style="color: var(--nst-lime); font-size: 9px;">COMPILA I DATI DURANTE O A FINE SESSIONE</span>
+                    </div>
+                    <div id="nst-ibrido-active-ex-table-container" style="max-height: 200px; overflow-y: auto;">
+                        <!-- Tabella interattiva esercizi -->
+                    </div>
+                </div>
+
+                <!-- Laps per stopwatch (se Metcon 3 o Forza) -->
+                <div id="nst-ibrido-laps-wrapper" class="nst-modal-laps-wrapper nst-hidden">
+                    <div class="nst-modal-laps-header">
+                        <span>GIRI &amp; INTERTEMPI (LAP)</span>
+                        <span id="nst-ibrido-laps-count">0 Lap</span>
+                    </div>
+                    <div id="nst-ibrido-laps-list" class="nst-modal-laps-list">
+                        <div class="nst-modal-laps-empty">Nessun intertempo registrato. Premi "GIRO (LAP)".</div>
+                    </div>
+                </div>
+
+                <!-- Controlli In Corsa -->
+                <div class="nst-workout-actions-row">
+                    <button type="button" class="nst-btn-ghost-sm" id="nst-ibrido-action-secondary" onclick="gestisciIbridoActionSecondary()">
+                        <span class="material-symbols-outlined" id="nst-ibrido-action-sec-icon">flag</span>
+                        <span id="nst-ibrido-action-sec-text">GIRO (LAP)</span>
+                    </button>
+                    <button type="button" class="nst-btn-sm" id="nst-ibrido-action-pause" onclick="gestisciIbridoActionPause()">
+                        <span class="material-symbols-outlined" id="nst-ibrido-pause-icon">pause</span>
+                        <span id="nst-ibrido-pause-text">PAUSA</span>
+                    </button>
+                    <button type="button" class="nst-btn-primary" onclick="terminaIbridoSeduta()">
+                        <span class="material-symbols-outlined">check_circle</span>
+                        <span>TERMINA E SALVA</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vista 2: Riepilogo & Salvataggio con Conferma (Prevenzione Timer Dimenticato) -->
+            <div id="nst-ibrido-save-view" class="nst-modal-body nst-hidden" style="padding: 24px;">
+                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 14px; color: var(--nst-lime); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">emoji_events</span>
+                    SESSIONE IBRIDO COMPLETATA!
+                </h4>
+
+                <!-- Alert se timer anomalo (> 90 min) -->
+                <div id="nst-ibrido-timer-warning" class="nst-timer-warning-box nst-hidden">
+                    <span class="material-symbols-outlined" style="font-size: 24px; color: var(--nst-amber);">warning</span>
+                    <div>
+                        <strong>ATTENZIONE AL TIMER:</strong> La sessione risulta attiva da oltre 90 minuti. Se ti sei dimenticato di fermare il cronometro, rettifica i minuti effettivi nel campo sottostante.
+                    </div>
+                </div>
+
+                <div class="nst-save-summary-box" style="grid-template-columns: 1fr 1fr; align-items: center;">
+                    <div class="nst-save-stat">
+                        <span class="label">DURATA EFFETTIVA SEDUTA</span>
+                        <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                            <input type="number" id="nst-ibrido-final-duration-input" class="nst-ex-input" style="width: 80px; font-size: 15px;" min="1" max="600" value="40">
+                            <span style="font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--nst-lime);">MINUTI</span>
+                        </div>
+                    </div>
+                    <div class="nst-save-stat">
+                        <span class="label">PROGRAMMA SVOLTO</span>
+                        <span class="val" id="nst-ibrido-save-prog-name">Metcon 1</span>
+                    </div>
+                </div>
+
+                <!-- Riepilogo Tabella Esercizi Finali -->
+                <div style="margin-top: 16px;">
+                    <label style="font-size: 11px; color: var(--nst-cyan); font-family: 'Orbitron', sans-serif; font-weight: 600; display: block; margin-bottom: 6px;">
+                        RISULTATI &amp; CARICHI REGISTRATI:
+                    </label>
+                    <div id="nst-ibrido-save-ex-summary" style="max-height: 180px; overflow-y: auto;">
+                        <!-- Tabella o riepilogo dati -->
+                    </div>
+                </div>
+
+                <!-- Note / RPE -->
+                <div class="nst-form-group" style="margin-top: 14px;">
+                    <label for="nst-ibrido-workout-note" style="font-size: 11px; color: var(--nst-cyan); font-family: 'Orbitron', sans-serif; font-weight: 600; display: block; margin-bottom: 6px;">
+                        NOTE SULLA SEDUTA / SENSAZIONI (OPZIONALI):
+                    </label>
+                    <textarea id="nst-ibrido-workout-note" class="nst-scheda-full-text" style="width: 100%; min-height: 60px; resize: vertical;" rows="2" placeholder="Es. Carichi chiusi con facilità, recupero rispettato..."></textarea>
+                </div>
+
+                <div class="nst-modal-footer" style="margin-top: 18px; padding-top: 14px; display: flex; justify-content: space-between; gap: 12px;">
+                    <button type="button" class="nst-btn-ghost-sm" onclick="annullaSalvataggioIbrido()">
+                        ← TORNA AL TIMER
+                    </button>
+                    <button type="button" class="nst-btn-primary" id="nst-btn-confirm-save-ibrido" onclick="confermaSalvaIbridoSeduta()">
+                        <span class="material-symbols-outlined">save</span>
+                        <span>CONFERMA E SALVA ALLENAMENTO</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Libreria Grafici Chart.js CDN (v4) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.43"></script>
+    <script src="nestore.js?v=1.05.44"></script>
 </body>
 </html>

@@ -243,8 +243,9 @@ async function initNestore() {
         await caricaKpiDashboard();
         await caricaSchedaAtletaUI();
 
-        // 6. Carica Cronologia Chat
+        // 6. Carica Cronologia Chat & Catalogo Programmi Ibrido
         await caricaCronologiaChat();
+        renderCatalogoIbrido();
 
     } catch (err) {
         console.error("Errore inizializzazione Nestore:", err);
@@ -2143,6 +2144,7 @@ function switchNestorePanel(panelId) {
     } else if (panelId === 'profilo') {
         caricaSchedaAtletaUI();
     } else if (panelId === 'schede') {
+        renderCatalogoIbrido();
         caricaSchedeAtleta(currentUser.id, 'nst-atleta-schede-container', false);
     }
     
@@ -3855,6 +3857,7 @@ function masterTimerLoop() {
         tabataEngine.updateUI();
     }
     aggiornaModalWorkoutAttivo();
+    aggiornaIbridoModalAttivo();
     aggiornaVisibilitaDock();
     requestAnimationFrame(masterTimerLoop);
 }
@@ -4154,6 +4157,721 @@ function chiudiModalWorkoutAttivo() {
     if (modal) modal.classList.add('nst-hidden');
 }
 
+// ===========================================================================
+// SEZIONE PROGRAMMI UFFICIALI CORSO IBRIDO BASE (METCON 1-4 & FORZA 1-4)
+// ===========================================================================
+
+const IBRIDO_PROGRAMMI_CATALOGO = [
+    {
+        id: 'ibrido_metcon_1',
+        nome: 'Metcon 1',
+        tipo: 'metcon',
+        timer_mode: 'tabata',
+        work_default: 30,
+        rest_default: 30,
+        rounds_default: 40,
+        descrizione: '30" work + 30" rest (Giro 60"), 40 giri tot. Riscaldamento dinamico 10\'.',
+        esercizi: [
+            { nome: 'PULL', target: '15 rip' },
+            { nome: 'Assault Bike', target: '60 cal/rpm' },
+            { nome: 'Swing 16kg', target: '15 rip' },
+            { nome: 'Vogatore', target: '20 cal/m' },
+            { nome: 'Stacchi 90kg', target: '4 rip' },
+            { nome: 'C+J Manubrio 20kg', target: '3+3 rip' }
+        ]
+    },
+    {
+        id: 'ibrido_forza_1',
+        nome: 'Forza 1',
+        tipo: 'forza',
+        timer_mode: 'stopwatch',
+        descrizione: 'Panca Piana, Squat, Jump Max, Trazioni Pesate. Rispettare i riposi lunghi e non fuggire dal peso.',
+        esercizi: [
+            { nome: 'Panca Piana', target: 'Risc. 1x10@90kg, salita (100, 110, 120, 125) → Target: 4x5 @ 105kg', serie_target: 4, rip_target: 5, peso_target: 105 },
+            { nome: 'Squat', target: 'Risc. 1x10@100kg, salita (110, 120) → Target: 4x4 @ 130kg', serie_target: 4, rip_target: 4, peso_target: 130 },
+            { nome: 'Jump Max', target: '5 salti massimali', serie_target: 1, rip_target: 5, peso_target: 0 },
+            { nome: 'Trazioni Pesate', target: 'Risc. 1x21@0kg → Target: 4x6 @ +20kg', serie_target: 4, rip_target: 6, peso_target: 20 }
+        ]
+    },
+    {
+        id: 'ibrido_metcon_2',
+        nome: 'Metcon 2',
+        tipo: 'metcon',
+        timer_mode: 'tabata',
+        work_default: 30,
+        rest_default: 30,
+        rounds_default: 7,
+        tempo_target: '42 min',
+        descrizione: '30" work + 30" rest (Giro 60"), 7 giri tot, tempo target 42\'. Riscaldamento dinamico 10\'.',
+        esercizi: [
+            { nome: 'Pull', target: '15 rip' },
+            { nome: 'Burpees', target: '8 rip' },
+            { nome: 'Push', target: '20 rip' },
+            { nome: 'Swing', target: '15 rip' },
+            { nome: 'Dip', target: '10 rip' },
+            { nome: 'Box Jump', target: '10 rip' }
+        ]
+    },
+    {
+        id: 'ibrido_forza_2',
+        nome: 'Forza 2',
+        tipo: 'forza',
+        timer_mode: 'stopwatch',
+        descrizione: 'Spinte Manubri 15°, Stacco da terra, Jump Max, Rematore Bilanciere.',
+        esercizi: [
+            { nome: 'Spinte Manubri 15°', target: 'Salita con manubri (30, 35kg) → Target: 4x4 @ 42kg', serie_target: 4, rip_target: 4, peso_target: 42 },
+            { nome: 'Stacco da terra', target: 'Risc. 1x10@140kg, salita (160, 180, 200kg) → Target: 4x5 @ 160kg', serie_target: 4, rip_target: 5, peso_target: 160 },
+            { nome: 'Jump Max', target: '5 salti massimali', serie_target: 1, rip_target: 5, peso_target: 0 },
+            { nome: 'Rematore Bilanciere', target: 'Risc. 1x10@55kg, salita (65, 75, 85, 95kg) → Target: 4x4 @ 85kg', serie_target: 4, rip_target: 4, peso_target: 85 }
+        ]
+    },
+    {
+        id: 'ibrido_metcon_3',
+        nome: 'Metcon 3',
+        tipo: 'metcon',
+        timer_mode: 'stopwatch',
+        tempo_target: '40 min',
+        giri_target: 20,
+        descrizione: 'Unbroken, Giro no Time, 20 giri tot, tempo target 40\'. Riscaldamento dinamico 10\'.',
+        esercizi: [
+            { nome: 'Muscle Up', target: '1 rip' },
+            { nome: 'Pull', target: '2 rip' },
+            { nome: 'Push', target: '5 rip' },
+            { nome: 'Burpee to Bar', target: '5 rip' },
+            { nome: 'Air Squat', target: '10 rip' }
+        ]
+    },
+    {
+        id: 'ibrido_forza_3',
+        nome: 'Forza 3',
+        tipo: 'forza',
+        timer_mode: 'stopwatch',
+        descrizione: 'Panca Piana, Squat, Jump Max, Trazioni Pesate con sovraccarico.',
+        esercizi: [
+            { nome: 'Panca Piana', target: 'Risc. 1x10@90kg, salita (100, 110, 120, 125) → Target: 4x4 @ 105kg', serie_target: 4, rip_target: 4, peso_target: 105 },
+            { nome: 'Squat', target: 'Risc. 1x10@100kg, salita (110, 120) → Target: 4x4 @ 120kg', serie_target: 4, rip_target: 4, peso_target: 120 },
+            { nome: 'Jump Max', target: '5 salti massimali', serie_target: 1, rip_target: 5, peso_target: 0 },
+            { nome: 'Trazioni Pesate', target: 'Risc. 1x22@0kg → Target: 4x6 @ +22kg', serie_target: 4, rip_target: 6, peso_target: 22 }
+        ]
+    },
+    {
+        id: 'ibrido_metcon_4',
+        nome: 'Metcon 4',
+        tipo: 'metcon',
+        timer_mode: 'tabata',
+        work_default: 25,
+        rest_default: 35,
+        rounds_default: 7,
+        tempo_target: '42 min',
+        descrizione: 'Isometrico, 25" work + 35" rest (Giro 60"), 7 giri tot, tempo target 42\'. Riscaldamento dinamico 10\'.',
+        esercizi: [
+            { nome: 'Pull', target: 'max rep' },
+            { nome: 'Affondi SX + OH', target: 'max rep' },
+            { nome: 'Push', target: 'max rep' },
+            { nome: 'Affondi DX + OH', target: 'max rep' },
+            { nome: 'DIP', target: 'max rep' },
+            { nome: 'Good Morning KET 16kg', target: 'max rep' }
+        ]
+    },
+    {
+        id: 'ibrido_forza_4',
+        nome: 'Forza 4',
+        tipo: 'forza',
+        timer_mode: 'stopwatch',
+        descrizione: 'Lento Avanti, Stacco da terra, Jump Max, Rematore Bilanciere.',
+        esercizi: [
+            { nome: 'Lento Avanti', target: 'Risc. 1x10@50kg, salita (60, 80kg) → Target: 4x5 @ 65kg', serie_target: 4, rip_target: 5, peso_target: 65 },
+            { nome: 'Stacco da terra', target: 'Risc. 1x10@140kg, salita (160, 180, 190kg) → Target: 4x4 @ 160kg', serie_target: 4, rip_target: 4, peso_target: 160 },
+            { nome: 'Jump Max', target: '5 salti massimali', serie_target: 1, rip_target: 5, peso_target: 0 },
+            { nome: 'Rematore Bilanciere', target: 'Salita serie → Target: 4x10 @ 70kg', serie_target: 4, rip_target: 10, peso_target: 70 }
+        ]
+    }
+];
+
+let ibridoSelezionato = null;
+let ibridoWorkSec = 30;
+let ibridoRestSec = 30;
+let ibridoRounds = 40;
+let ibridoSessionStartMs = 0;
+
+function renderCatalogoIbrido() {
+    const grid = document.getElementById('nst-ibrido-programmi-grid');
+    if (!grid) return;
+
+    grid.innerHTML = IBRIDO_PROGRAMMI_CATALOGO.map(p => {
+        const isMetcon = p.tipo === 'metcon';
+        const typeClass = isMetcon ? 'metcon' : 'forza';
+        const badgeLabel = isMetcon ? 'METCON' : 'FORZA';
+        const timerLabel = p.timer_mode === 'tabata' ? `TABATA ${p.work_default}"/${p.rest_default}"` : (p.tempo_target ? `CRONO (${p.tempo_target})` : 'CRONOMETRO');
+        
+        const previewExercises = p.esercizi.slice(0, 4).map(ex => `
+            <div class="nst-ibrido-ex-item">
+                <span class="nst-ibrido-ex-name">${escapeHtml(ex.nome)}</span>
+                <span class="nst-ibrido-ex-target">${escapeHtml(ex.target)}</span>
+            </div>
+        `).join('');
+        const moreCount = p.esercizi.length > 4 ? `+ altri ${p.esercizi.length - 4} esercizi` : '';
+
+        return `
+            <div class="nst-ibrido-card ${typeClass}">
+                <div class="nst-ibrido-card-header">
+                    <div>
+                        <div class="nst-ibrido-card-title">${escapeHtml(p.nome)}</div>
+                        <div style="font-size: 10px; color: var(--nst-text-muted); margin-top: 2px;">IBRIDO BASE</div>
+                    </div>
+                    <div class="nst-ibrido-badge-group">
+                        <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
+                        <span class="nst-ibrido-badge timer">${timerLabel}</span>
+                    </div>
+                </div>
+                <div class="nst-ibrido-card-desc">${escapeHtml(p.descrizione)}</div>
+                <div class="nst-ibrido-ex-preview">
+                    ${previewExercises}
+                    ${moreCount ? `<div style="font-size: 9px; color: var(--nst-text-muted); text-align: center; margin-top: 4px; font-style: italic;">${moreCount}</div>` : ''}
+                </div>
+                <div class="nst-ibrido-card-footer">
+                    <button type="button" class="nst-btn-primary nst-btn-full" onclick="apriAnteprimaIbrido('${p.id}')">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">play_arrow</span>
+                        <span>APRI SCHEDA &amp; TIMER</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function apriAnteprimaIbrido(progId) {
+    const p = IBRIDO_PROGRAMMI_CATALOGO.find(item => item.id === progId);
+    if (!p) return;
+    ibridoSelezionato = p;
+
+    const modal = document.getElementById('nst-ibrido-preview-modal');
+    const card = document.getElementById('nst-ibrido-preview-card');
+    const titleEl = document.getElementById('nst-ibrido-preview-title');
+    const descEl = document.getElementById('nst-ibrido-preview-desc');
+    const iconEl = document.getElementById('nst-ibrido-preview-icon');
+    const tabataBox = document.getElementById('nst-ibrido-tabata-config-box');
+    const exListEl = document.getElementById('nst-ibrido-preview-ex-list');
+
+    if (titleEl) titleEl.textContent = `IBRIDO — ${p.nome.toUpperCase()}`;
+    if (descEl) descEl.textContent = p.descrizione;
+    
+    if (card) {
+        if (p.tipo === 'forza') card.classList.add('forza');
+        else card.classList.remove('forza');
+    }
+    if (iconEl) {
+        iconEl.style.color = p.tipo === 'forza' ? 'var(--nst-amber)' : 'var(--nst-cyan)';
+    }
+
+    if (p.timer_mode === 'tabata') {
+        if (tabataBox) tabataBox.classList.remove('nst-hidden');
+        ibridoWorkSec = p.work_default || 30;
+        ibridoRestSec = p.rest_default || 30;
+        ibridoRounds = p.rounds_default || 8;
+        const workInput = document.getElementById('nst-ibrido-cfg-work');
+        const restInput = document.getElementById('nst-ibrido-cfg-rest');
+        const roundsInput = document.getElementById('nst-ibrido-cfg-rounds');
+        if (workInput) workInput.value = ibridoWorkSec;
+        if (restInput) restInput.value = ibridoRestSec;
+        if (roundsInput) roundsInput.value = ibridoRounds;
+    } else {
+        if (tabataBox) tabataBox.classList.add('nst-hidden');
+    }
+
+    // Lista esercizi
+    if (exListEl) {
+        exListEl.innerHTML = `
+            <table class="nst-ex-table">
+                <thead>
+                    <tr>
+                        <th>ESERCIZIO</th>
+                        <th>TARGET / SCHEMA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${p.esercizi.map(ex => `
+                        <tr>
+                            <td style="font-weight: 600; color: #f1f5f9;">${escapeHtml(ex.nome)}</td>
+                            <td style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px;">${escapeHtml(ex.target)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    if (modal) modal.classList.remove('nst-hidden');
+}
+
+function chiudiAnteprimaIbrido() {
+    const modal = document.getElementById('nst-ibrido-preview-modal');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+function modificaIbridoParam(param, delta) {
+    const input = document.getElementById(`nst-ibrido-cfg-${param}`);
+    if (!input) return;
+    let val = parseInt(input.value, 10) || 0;
+    val = Math.max(parseInt(input.min, 10) || 0, Math.min(parseInt(input.max, 10) || 300, val + delta));
+    input.value = val;
+    aggiornaIbridoParamDaInput();
+}
+
+function aggiornaIbridoParamDaInput() {
+    const workInput = document.getElementById('nst-ibrido-cfg-work');
+    const restInput = document.getElementById('nst-ibrido-cfg-rest');
+    const roundsInput = document.getElementById('nst-ibrido-cfg-rounds');
+    if (workInput) ibridoWorkSec = parseInt(workInput.value, 10) || 30;
+    if (restInput) ibridoRestSec = parseInt(restInput.value, 10) || 30;
+    if (roundsInput) ibridoRounds = parseInt(roundsInput.value, 10) || 8;
+}
+
+function avviaIbridoSeduta() {
+    if (!ibridoSelezionato) return;
+    chiudiAnteprimaIbrido();
+
+    const p = ibridoSelezionato;
+    const modal = document.getElementById('nst-ibrido-active-modal');
+    const titleEl = document.getElementById('nst-ibrido-active-title');
+    const runningView = document.getElementById('nst-ibrido-running-view');
+    const saveView = document.getElementById('nst-ibrido-save-view');
+    const exTableContainer = document.getElementById('nst-ibrido-active-ex-table-container');
+    const lapsWrapper = document.getElementById('nst-ibrido-laps-wrapper');
+    const secBtnIcon = document.getElementById('nst-ibrido-action-sec-icon');
+    const secBtnText = document.getElementById('nst-ibrido-action-sec-text');
+
+    if (titleEl) {
+        titleEl.textContent = `IBRIDO — ${p.nome.toUpperCase()} — IN CORSO`;
+        titleEl.style.color = p.tipo === 'forza' ? 'var(--nst-amber)' : 'var(--nst-cyan)';
+    }
+
+    if (runningView) runningView.classList.remove('nst-hidden');
+    if (saveView) saveView.classList.add('nst-hidden');
+
+    // Tabella interattiva esercizi
+    if (exTableContainer) {
+        if (p.tipo === 'forza') {
+            exTableContainer.innerHTML = `
+                <table class="nst-ex-table">
+                    <thead>
+                        <tr>
+                            <th>ESERCIZIO</th>
+                            <th>SERIE</th>
+                            <th>PESO (KG)</th>
+                            <th>RIP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${p.esercizi.map((ex, idx) => `
+                            <tr>
+                                <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
+                                <td>
+                                    <input type="number" id="nst-ibrido-ex-serie-${idx}" class="nst-ex-input" value="${ex.serie_target || 4}" min="1" max="20" style="width: 50px;">
+                                </td>
+                                <td>
+                                    <input type="number" id="nst-ibrido-ex-peso-${idx}" class="nst-ex-input" value="${ex.peso_target || 0}" min="0" max="500" step="0.5" style="width: 65px;">
+                                </td>
+                                <td>
+                                    <input type="number" id="nst-ibrido-ex-rip-${idx}" class="nst-ex-input" value="${ex.rip_target || 5}" min="1" max="100" style="width: 50px;">
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            exTableContainer.innerHTML = `
+                <table class="nst-ex-table">
+                    <thead>
+                        <tr>
+                            <th>ESERCIZIO</th>
+                            <th>TARGET SCHEDA</th>
+                            <th>RISULTATO EFFETTIVO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${p.esercizi.map((ex, idx) => `
+                            <tr>
+                                <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
+                                <td style="color: var(--nst-lime); font-family: 'Orbitron', monospace;">${escapeHtml(ex.target)}</td>
+                                <td>
+                                    <input type="text" id="nst-ibrido-ex-risultato-${idx}" class="nst-ex-input" value="${escapeHtml(ex.target)}" style="width: 100%; text-align: left;">
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+    }
+
+    ibridoSessionStartMs = Date.now();
+
+    // Configura motore timer appropriato
+    if (p.timer_mode === 'tabata') {
+        currentTimerMode = 'tabata';
+        tabataEngine.state.config = {
+            prep: 5,
+            work: ibridoWorkSec,
+            rest: ibridoRestSec,
+            rounds: ibridoRounds,
+            sets: 1
+        };
+        tabataEngine.reset();
+        tabataEngine.start();
+        if (lapsWrapper) lapsWrapper.classList.add('nst-hidden');
+        if (secBtnIcon) secBtnIcon.textContent = 'skip_next';
+        if (secBtnText) secBtnText.textContent = 'SALTA FASE';
+    } else {
+        currentTimerMode = 'stopwatch';
+        timerEngine.reset();
+        timerEngine.start();
+        if (lapsWrapper) lapsWrapper.classList.remove('nst-hidden');
+        renderIbridoLapsList();
+        if (secBtnIcon) secBtnIcon.textContent = 'flag';
+        if (secBtnText) secBtnText.textContent = 'GIRO (LAP)';
+    }
+
+    if (modal) modal.classList.remove('nst-hidden');
+    aggiornaIbridoModalAttivo();
+}
+
+function gestisciIbridoActionPause() {
+    if (!ibridoSelezionato) return;
+    const p = ibridoSelezionato;
+    if (p.timer_mode === 'tabata') {
+        tabataEngine.toggle();
+    } else {
+        timerEngine.toggle();
+    }
+    aggiornaIbridoModalAttivo();
+}
+
+function gestisciIbridoActionSecondary() {
+    if (!ibridoSelezionato) return;
+    const p = ibridoSelezionato;
+    if (p.timer_mode === 'tabata') {
+        tabataEngine.skip();
+    } else {
+        if (!timerEngine.state.running) return;
+        timerEngine.lap();
+        renderIbridoLapsList();
+    }
+}
+
+function renderIbridoLapsList() {
+    const listEl = document.getElementById('nst-ibrido-laps-list');
+    const countEl = document.getElementById('nst-ibrido-laps-count');
+    if (!listEl) return;
+    const laps = timerEngine.state.laps || [];
+    if (countEl) countEl.textContent = `${laps.length} Lap`;
+    if (laps.length === 0) {
+        listEl.innerHTML = `<div class="nst-modal-laps-empty">Nessun intertempo registrato. Premi "GIRO (LAP)".</div>`;
+        return;
+    }
+    listEl.innerHTML = laps.map(l => {
+        const splitF = timerEngine.formatTime(l.splitMs);
+        const totalF = timerEngine.formatTime(l.totalMs);
+        return `
+            <div class="nst-modal-lap-row">
+                <span class="lap-num">LAP ${l.number}</span>
+                <span class="lap-split">+${splitF.main}${splitF.sub}</span>
+                <span class="lap-total">${totalF.main}${totalF.sub}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function aggiornaIbridoModalAttivo() {
+    const modal = document.getElementById('nst-ibrido-active-modal');
+    if (!modal || modal.classList.contains('nst-hidden') || !ibridoSelezionato) return;
+
+    const p = ibridoSelezionato;
+    const displayEl = document.getElementById('nst-ibrido-timer-display');
+    const subEl = document.getElementById('nst-ibrido-timer-sub');
+    const pauseIcon = document.getElementById('nst-ibrido-pause-icon');
+    const pauseText = document.getElementById('nst-ibrido-pause-text');
+    const dotEl = document.getElementById('nst-ibrido-status-dot');
+
+    if (p.timer_mode === 'tabata') {
+        const elapsed = tabataEngine.getPhaseElapsedMs();
+        const durationMs = tabataEngine.state.phaseDurationSec * 1000;
+        const remainSec = Math.max(0, Math.ceil((durationMs - elapsed) / 1000));
+        const m = Math.floor(remainSec / 60);
+        const s = remainSec % 60;
+        if (displayEl) displayEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        
+        const phaseNames = { prep: 'PREPARAZIONE', work: 'LAVORO (WORK)', rest: 'RIPOSO (REST)', done: 'COMPLETATO' };
+        const phaseName = phaseNames[tabataEngine.state.phase] || tabataEngine.state.phase.toUpperCase();
+        if (subEl) subEl.textContent = `${phaseName} — ROUND ${tabataEngine.state.currentRound}/${tabataEngine.state.config.rounds}`;
+
+        if (tabataEngine.state.phase === 'work') {
+            if (displayEl) displayEl.style.color = 'var(--nst-lime)';
+        } else if (tabataEngine.state.phase === 'rest') {
+            if (displayEl) displayEl.style.color = 'var(--nst-amber)';
+        } else {
+            if (displayEl) displayEl.style.color = '#fff';
+        }
+
+        if (tabataEngine.state.running) {
+            if (pauseIcon) pauseIcon.textContent = 'pause';
+            if (pauseText) pauseText.textContent = 'PAUSA';
+            if (dotEl) { dotEl.style.backgroundColor = 'var(--nst-lime)'; dotEl.classList.add('pulse'); }
+        } else {
+            if (pauseIcon) pauseIcon.textContent = 'play_arrow';
+            if (pauseText) pauseText.textContent = 'RIPRENDI';
+            if (dotEl) { dotEl.style.backgroundColor = 'var(--nst-amber)'; dotEl.classList.remove('pulse'); }
+        }
+    } else {
+        const elapsedMs = timerEngine.getElapsedMs();
+        const formatted = timerEngine.formatTime(elapsedMs);
+        if (displayEl) {
+            displayEl.textContent = `${formatted.main}${formatted.sub}`;
+            displayEl.style.color = '#fff';
+        }
+
+        if (timerEngine.state.running) {
+            if (subEl) subEl.textContent = 'CRONOMETRO IN CORSO';
+            if (pauseIcon) pauseIcon.textContent = 'pause';
+            if (pauseText) pauseText.textContent = 'PAUSA';
+            if (dotEl) { dotEl.style.backgroundColor = 'var(--nst-lime)'; dotEl.classList.add('pulse'); }
+        } else {
+            if (subEl) subEl.textContent = 'CRONOMETRO IN PAUSA';
+            if (pauseIcon) pauseIcon.textContent = 'play_arrow';
+            if (pauseText) pauseText.textContent = 'RIPRENDI';
+            if (dotEl) { dotEl.style.backgroundColor = 'var(--nst-amber)'; dotEl.classList.remove('pulse'); }
+        }
+    }
+}
+
+function terminaIbridoSeduta() {
+    if (!ibridoSelezionato) return;
+    const p = ibridoSelezionato;
+
+    // Ferma timer
+    if (p.timer_mode === 'tabata') {
+        tabataEngine.pause();
+    } else {
+        timerEngine.pause();
+    }
+
+    const elapsedTotalMs = Date.now() - ibridoSessionStartMs;
+    const durataMinuti = Math.max(1, Math.round(elapsedTotalMs / 60000));
+
+    const durationInput = document.getElementById('nst-ibrido-final-duration-input');
+    if (durationInput) durationInput.value = durataMinuti;
+
+    const warningBox = document.getElementById('nst-ibrido-timer-warning');
+    if (warningBox) {
+        if (durataMinuti >= 90) {
+            warningBox.classList.remove('nst-hidden');
+        } else {
+            warningBox.classList.add('nst-hidden');
+        }
+    }
+
+    const progNameEl = document.getElementById('nst-ibrido-save-prog-name');
+    if (progNameEl) progNameEl.textContent = p.nome;
+
+    // Genera riepilogo per conferma
+    const summaryContainer = document.getElementById('nst-ibrido-save-ex-summary');
+    if (summaryContainer) {
+        if (p.tipo === 'forza') {
+            summaryContainer.innerHTML = `
+                <table class="nst-ex-table">
+                    <thead>
+                        <tr>
+                            <th>ESERCIZIO</th>
+                            <th>SERIE</th>
+                            <th>PESO</th>
+                            <th>RIP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${p.esercizi.map((ex, idx) => {
+                            const s = document.getElementById(`nst-ibrido-ex-serie-${idx}`)?.value || ex.serie_target || 4;
+                            const kg = document.getElementById(`nst-ibrido-ex-peso-${idx}`)?.value || ex.peso_target || 0;
+                            const r = document.getElementById(`nst-ibrido-ex-rip-${idx}`)?.value || ex.rip_target || 5;
+                            return `
+                                <tr>
+                                    <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
+                                    <td style="color: var(--nst-cyan);">${escapeHtml(String(s))}</td>
+                                    <td style="color: var(--nst-lime); font-weight: 700;">${escapeHtml(String(kg))} kg</td>
+                                    <td style="color: #f1f5f9;">${escapeHtml(String(r))}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            summaryContainer.innerHTML = `
+                <table class="nst-ex-table">
+                    <thead>
+                        <tr>
+                            <th>ESERCIZIO</th>
+                            <th>RISULTATO CONFERMATO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${p.esercizi.map((ex, idx) => {
+                            const res = document.getElementById(`nst-ibrido-ex-risultato-${idx}`)?.value || ex.target;
+                            return `
+                                <tr>
+                                    <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
+                                    <td style="color: var(--nst-lime); font-weight: 700;">${escapeHtml(String(res))}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+    }
+
+    const runningView = document.getElementById('nst-ibrido-running-view');
+    const saveView = document.getElementById('nst-ibrido-save-view');
+    if (runningView) runningView.classList.add('nst-hidden');
+    if (saveView) saveView.classList.remove('nst-hidden');
+}
+
+function annullaSalvataggioIbrido() {
+    const runningView = document.getElementById('nst-ibrido-running-view');
+    const saveView = document.getElementById('nst-ibrido-save-view');
+    if (runningView) runningView.classList.remove('nst-hidden');
+    if (saveView) saveView.classList.add('nst-hidden');
+}
+
+async function confermaSalvaIbridoSeduta() {
+    if (!ibridoSelezionato) return;
+    const p = ibridoSelezionato;
+
+    const saveBtn = document.getElementById('nst-btn-confirm-save-ibrido');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<span class="material-symbols-outlined nst-spin">progress_activity</span><span>SALVATAGGIO...</span>`;
+    }
+
+    try {
+        const durataInput = document.getElementById('nst-ibrido-final-duration-input');
+        const durataMinuti = parseInt(durataInput?.value, 10) || 1;
+        const noteInput = document.getElementById('nst-ibrido-workout-note');
+        const userNote = noteInput ? noteInput.value.trim() : '';
+
+        // Costruisci payload dati esercizi
+        let eserciziDati = [];
+        if (p.tipo === 'forza') {
+            eserciziDati = p.esercizi.map((ex, idx) => {
+                const s = parseInt(document.getElementById(`nst-ibrido-ex-serie-${idx}`)?.value, 10) || ex.serie_target || 4;
+                const kg = parseFloat(document.getElementById(`nst-ibrido-ex-peso-${idx}`)?.value) || ex.peso_target || 0;
+                const r = parseInt(document.getElementById(`nst-ibrido-ex-rip-${idx}`)?.value, 10) || ex.rip_target || 5;
+                return {
+                    nome: ex.nome,
+                    serie: s,
+                    peso_kg: kg,
+                    ripetizioni: r,
+                    target_originario: ex.target
+                };
+            });
+        } else {
+            eserciziDati = p.esercizi.map((ex, idx) => {
+                const res = document.getElementById(`nst-ibrido-ex-risultato-${idx}`)?.value || ex.target;
+                return {
+                    nome: ex.nome,
+                    risultato: res,
+                    target_originario: ex.target
+                };
+            });
+        }
+
+        const schedaDati = {
+            tipo: p.tipo,
+            programma_id: p.id,
+            programma_nome: p.nome,
+            esercizi: eserciziDati,
+            timer_mode: p.timer_mode
+        };
+
+        const oggi = new Date().toISOString().split('T')[0];
+        const { error } = await supabaseClient.from('nestore_allenamenti').insert({
+            utente_id: currentUser.id,
+            data_allenamento: oggi,
+            corso_disciplina: `Ibrido — ${p.nome}`,
+            durata_minuti: durataMinuti,
+            scheda_dati: schedaDati,
+            note: userNote || `Sessione ${p.nome} completata.`
+        });
+
+        if (error) throw error;
+
+        // Reset e chiusura
+        if (p.timer_mode === 'tabata') tabataEngine.reset();
+        else timerEngine.reset();
+
+        const modal = document.getElementById('nst-ibrido-active-modal');
+        if (modal) modal.classList.add('nst-hidden');
+
+        showTimerToast(`✓ SESSIONE ${p.nome.toUpperCase()} REGISTRATA CON SUCCESSO!`);
+        await caricaKpiDashboard();
+
+        if (typeof renderGraficoAllenamenti === 'function') {
+            await renderGraficoAllenamenti();
+        }
+
+        // Ricalcolo scheda atleta asincrono
+        fetch('/api/nestore-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'recalculate_wiki' })
+        }).catch(err => console.warn('Ricalcolo asincrono non critico:', err));
+
+    } catch (err) {
+        console.error("Errore salvataggio seduta Ibrido:", err);
+        alert("Errore salvataggio: " + err.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = `<span class="material-symbols-outlined">save</span><span>CONFERMA E SALVA ALLENAMENTO</span>`;
+        }
+    }
+}
+
+function chiudiIbridoActiveModal() {
+    if (!ibridoSelezionato) {
+        const modal = document.getElementById('nst-ibrido-active-modal');
+        if (modal) modal.classList.add('nst-hidden');
+        return;
+    }
+    const p = ibridoSelezionato;
+    const isRunning = p.timer_mode === 'tabata' ? tabataEngine.state.running : timerEngine.state.running;
+    if (isRunning) {
+        if (!confirm("La sessione è ancora in corso. Vuoi interromperla e annullare il timer?")) {
+            return;
+        }
+    }
+    if (p.timer_mode === 'tabata') tabataEngine.reset();
+    else timerEngine.reset();
+
+    const modal = document.getElementById('nst-ibrido-active-modal');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
+window.renderCatalogoIbrido = renderCatalogoIbrido;
+window.apriAnteprimaIbrido = apriAnteprimaIbrido;
+window.chiudiAnteprimaIbrido = chiudiAnteprimaIbrido;
+window.modificaIbridoParam = modificaIbridoParam;
+window.aggiornaIbridoParamDaInput = aggiornaIbridoParamDaInput;
+window.avviaIbridoSeduta = avviaIbridoSeduta;
+window.gestisciIbridoActionPause = gestisciIbridoActionPause;
+window.gestisciIbridoActionSecondary = gestisciIbridoActionSecondary;
+window.terminaIbridoSeduta = terminaIbridoSeduta;
+window.annullaSalvataggioIbrido = annullaSalvataggioIbrido;
+window.confermaSalvaIbridoSeduta = confermaSalvaIbridoSeduta;
+window.chiudiIbridoActiveModal = chiudiIbridoActiveModal;
+window.aggiornaIbridoModalAttivo = aggiornaIbridoModalAttivo;
+
 window.gestisciTimerPrimaryClick = gestisciTimerPrimaryClick;
 window.gestisciTimerResetClick = gestisciTimerResetClick;
 window.modificaTabataParam = modificaTabataParam;
@@ -4228,7 +4946,20 @@ if (typeof module !== 'undefined' && module.exports) {
         terminaAllenamentoAttivo,
         annullaSalvataggioWorkout,
         confermaSalvaAllenamentoStandard,
-        chiudiModalWorkoutAttivo
+        chiudiModalWorkoutAttivo,
+        IBRIDO_PROGRAMMI_CATALOGO,
+        renderCatalogoIbrido,
+        apriAnteprimaIbrido,
+        chiudiAnteprimaIbrido,
+        modificaIbridoParam,
+        aggiornaIbridoParamDaInput,
+        avviaIbridoSeduta,
+        gestisciIbridoActionPause,
+        gestisciIbridoActionSecondary,
+        terminaIbridoSeduta,
+        annullaSalvataggioIbrido,
+        confermaSalvaIbridoSeduta,
+        chiudiIbridoActiveModal
     };
 }
 

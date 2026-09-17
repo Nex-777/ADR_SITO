@@ -156,6 +156,62 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         expect(impersonateBlockIdx).toBeGreaterThan(-1);
         expect(unconditionalIdx).toBeGreaterThan(impersonateBlockIdx);
     });
+
+    it('contains IBRIDO BASE programs catalog with exactly 8 programs (Metcon 1-4 and Forza 1-4)', () => {
+        require('../portal/nestore.js');
+        const catalog = global.window.IBRIDO_PROGRAMMI_CATALOGO;
+        expect(Array.isArray(catalog)).toBe(true);
+        expect(catalog.length).toBe(8);
+
+        const metcons = catalog.filter(p => p.tipo === 'metcon');
+        const forze = catalog.filter(p => p.tipo === 'forza');
+        expect(metcons.length).toBe(4);
+        expect(forze.length).toBe(4);
+
+        // Metcon 1, 2, 4 use tabata with configurable work and rest
+        const m1 = catalog.find(p => p.id === 'ibrido_metcon_1');
+        const m2 = catalog.find(p => p.id === 'ibrido_metcon_2');
+        const m4 = catalog.find(p => p.id === 'ibrido_metcon_4');
+        expect(m1.timer_mode).toBe('tabata');
+        expect(m1.work_default).toBe(30);
+        expect(m1.rest_default).toBe(30);
+        expect(m2.timer_mode).toBe('tabata');
+        expect(m4.timer_mode).toBe('tabata');
+        expect(m4.work_default).toBe(25);
+        expect(m4.rest_default).toBe(35);
+
+        // Metcon 3 and all Forza use stopwatch (with pause and lap)
+        const m3 = catalog.find(p => p.id === 'ibrido_metcon_3');
+        expect(m3.timer_mode).toBe('stopwatch');
+        forze.forEach(f => {
+            expect(f.timer_mode).toBe('stopwatch');
+            expect(f.esercizi.length).toBeGreaterThanOrEqual(3);
+        });
+    });
+
+    it('contains HTML components for Ibrido catalog and interactive workout execution', () => {
+        expect(html).toContain('id="nst-ibrido-programmi-section"');
+        expect(html).toContain('id="nst-ibrido-programmi-grid"');
+        expect(html).toContain('id="nst-ibrido-preview-modal"');
+        expect(html).toContain('id="nst-ibrido-active-modal"');
+        expect(html).toContain('id="nst-ibrido-final-duration-input"');
+        expect(html).toContain('id="nst-ibrido-timer-warning"');
+        expect(html).toContain('confermaSalvaIbridoSeduta()');
+    });
+
+    it('exports all Ibrido interactive workflow functions', () => {
+        require('../portal/nestore.js');
+        const target = global.window;
+        expect(typeof target.renderCatalogoIbrido).toBe('function');
+        expect(typeof target.apriAnteprimaIbrido).toBe('function');
+        expect(typeof target.chiudiAnteprimaIbrido).toBe('function');
+        expect(typeof target.avviaIbridoSeduta).toBe('function');
+        expect(typeof target.terminaIbridoSeduta).toBe('function');
+        expect(typeof target.annullaSalvataggioIbrido).toBe('function');
+        expect(typeof target.confermaSalvaIbridoSeduta).toBe('function');
+        expect(typeof target.chiudiIbridoActiveModal).toBe('function');
+    });
 });
+
 
 

@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] ingest | NESTORE — Programmi Ufficiali Ibrido Base (8 Schede: Metcon 1-4 & Forza 1-4)
+- **Frontend & Catalogo Schede (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Introdotto il catalogo ufficiale `IBRIDO_PROGRAMMI_CATALOGO` contenente gli 8 programmi del corso Ibrido Base estratti dal foglio Google Sheet ufficiale:
+    - **Metcon 1, 2, 4**: conditioning con motore `tabataEngine` preconfigurato con i secondi specifici di lavoro e recupero (es. 30"/30" o 25"/35") e rounds obiettivo, completamente modificabili dall'atleta prima dell'avvio.
+    - **Metcon 3**: programma Unbroken a 20 giri no time limit con tempo target 40', gestito via stopwatch `timerEngine` con supporto a pause e intertempi (lap).
+    - **Forza 1, 2, 3, 4**: progressione carichi e rampa su Panca Piana, Squat, Stacco da terra, Trazioni Pesate, Lento Avanti e Rematore Bilanciere, con tabella interattiva serie/rip/kg.
+  - Aggiunta nel pannello `SCHEDE` (`#nst-schede-panel`) della sezione `#nst-ibrido-programmi-section` con 8 card responsive (metcon in cyan, forza in amber).
+  - Implementata la modale anteprima e setup parametri (`#nst-ibrido-preview-modal`).
+  - Realizzata la modale di esecuzione attiva (`#nst-ibrido-active-modal`) sincronizzata a 60fps nel `masterTimerLoop`, con display cronometro gigante, laps/intertempi e tabella compilazione carichi ed esercizi dal vivo.
+  - Creata la vista di chiusura seduta con **prevenzione timer sballato/dimenticato**: input numerico modificabile per la durata effettiva, warning box pulsante se il timer supera 90 minuti, riepilogo carichi confermati e campo note.
+  - Salvataggio persistente in `public.nestore_allenamenti` con disciplina `Ibrido — [Nome]`, durata minuti e `scheda_dati` JSONB strutturato, con aggiornamento automatico dei KPI in dashboard e dei PR massimali.
+- **Testing & Quality Assurance (`tests/nestore-coach.test.js`)**:
+  - Aggiunti unit test specifici per verificare il catalogo da 8 programmi, le modalità timer corrette per ciascun programma, la presenza di tutti i componenti HTML e l'export di tutte le funzioni su `global.window`. Test suite complessiva: 62/62 superati senza errori.
+
 ## [2026-09-17] ingest | NESTORE — Fix Leak Permessi Impersonazione (Assistenza) & Banner Visivo
 - **Frontend & Access Control (`portal/nestore.js`)**:
   - Risolto il bug di leak dei permessi amministrativi durante la modalità Assistenza (`?impersonate_id=...`):
