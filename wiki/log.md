@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] ingest | NESTORE — Card Ultra-Compatte Programmi Base (Ibrido) & Standard (INVICTUS)
+- **UI & Interaction Design (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Compattate le 8 card dei programmi Ibrido Base (Metcon 1–4 e Forza 1–4) su griglia a 4 colonne $\times$ 2 righe su desktop:
+    - Rimosse le descrizioni testuali, l'elenco esercizi e il pulsante statico dal riassunto a pannello.
+    - Mostrati unicamente il Nome (`Metcon 1`, `Forza 1`, ecc.) e il Badge di tipologia (`METCON` in ciano, `FORZA` in ambra).
+    - L'intera card è cliccabile con cursore `pointer` e hover glow distintivo, aprendo istantaneamente `#nst-ibrido-preview-modal` con i dettagli completi, lo schema esercizi e la configurazione timer.
+  - Compattata la card **INVICTUS** (`#nst-standard-card-compact`) nel pannello standard workouts, ridotta ad altezza minima e resa cliccabile.
+  - Introdotta la modale popup `#nst-invictus-preview-modal` con lo stepper di selezione Pull-up base (1:2:4) e il calcolo dinamico dei target prima dell'avvio.
+- **Testing & Quality Assurance (`tests/standard-workouts.test.js`, `tests/nestore-coach.test.js`)**:
+  - Aggiunti test di verifica per la card compatta di Invictus e la modale di setup dedicata. 63/63 test passati.
+
 ## [2026-09-17] ingest | NESTORE — Programmi Ufficiali Ibrido Base (8 Schede: Metcon 1-4 & Forza 1-4)
 - **Frontend & Catalogo Schede (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Introdotto il catalogo ufficiale `IBRIDO_PROGRAMMI_CATALOGO` contenente gli 8 programmi del corso Ibrido Base estratti dal foglio Google Sheet ufficiale:

@@ -3946,7 +3946,18 @@ function modificaInvictusPull(delta) {
     if (targetSquatEl) targetSquatEl.textContent = invictusPullBase * 4;
 }
 
+function apriAnteprimaInvictus() {
+    const modal = document.getElementById('nst-invictus-preview-modal');
+    if (modal) modal.classList.remove('nst-hidden');
+}
+
+function chiudiAnteprimaInvictus() {
+    const modal = document.getElementById('nst-invictus-preview-modal');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
 function avviaAllenamentoInvictus() {
+    chiudiAnteprimaInvictus();
     // 1. Configura target nella modale
     const pullReps = invictusPullBase;
     const pushReps = invictusPullBase * 2;
@@ -4302,38 +4313,12 @@ function renderCatalogoIbrido() {
         const isMetcon = p.tipo === 'metcon';
         const typeClass = isMetcon ? 'metcon' : 'forza';
         const badgeLabel = isMetcon ? 'METCON' : 'FORZA';
-        const timerLabel = p.timer_mode === 'tabata' ? `TABATA ${p.work_default}"/${p.rest_default}"` : (p.tempo_target ? `CRONO (${p.tempo_target})` : 'CRONOMETRO');
-        
-        const previewExercises = p.esercizi.slice(0, 4).map(ex => `
-            <div class="nst-ibrido-ex-item">
-                <span class="nst-ibrido-ex-name">${escapeHtml(ex.nome)}</span>
-                <span class="nst-ibrido-ex-target">${escapeHtml(ex.target)}</span>
-            </div>
-        `).join('');
-        const moreCount = p.esercizi.length > 4 ? `+ altri ${p.esercizi.length - 4} esercizi` : '';
 
         return `
-            <div class="nst-ibrido-card ${typeClass}">
+            <div class="nst-ibrido-card ${typeClass}" onclick="apriAnteprimaIbrido('${p.id}')" role="button" tabindex="0" title="Apri scheda ${escapeHtml(p.nome)}">
                 <div class="nst-ibrido-card-header">
-                    <div>
-                        <div class="nst-ibrido-card-title">${escapeHtml(p.nome)}</div>
-                        <div style="font-size: 10px; color: var(--nst-text-muted); margin-top: 2px;">IBRIDO BASE</div>
-                    </div>
-                    <div class="nst-ibrido-badge-group">
-                        <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
-                        <span class="nst-ibrido-badge timer">${timerLabel}</span>
-                    </div>
-                </div>
-                <div class="nst-ibrido-card-desc">${escapeHtml(p.descrizione)}</div>
-                <div class="nst-ibrido-ex-preview">
-                    ${previewExercises}
-                    ${moreCount ? `<div style="font-size: 9px; color: var(--nst-text-muted); text-align: center; margin-top: 4px; font-style: italic;">${moreCount}</div>` : ''}
-                </div>
-                <div class="nst-ibrido-card-footer">
-                    <button type="button" class="nst-btn-primary nst-btn-full" onclick="apriAnteprimaIbrido('${p.id}')">
-                        <span class="material-symbols-outlined" style="font-size: 16px;">play_arrow</span>
-                        <span>APRI SCHEDA &amp; TIMER</span>
-                    </button>
+                    <span class="nst-ibrido-card-title">${escapeHtml(p.nome)}</span>
+                    <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
                 </div>
             </div>
         `;
@@ -4910,6 +4895,8 @@ window.copiaTestoSchedaModal = copiaTestoSchedaModal;
 window.modificaTargetCalorie = modificaTargetCalorie;
 window.renderGraficoDieta = renderGraficoDieta;
 window.modificaInvictusPull = modificaInvictusPull;
+window.apriAnteprimaInvictus = apriAnteprimaInvictus;
+window.chiudiAnteprimaInvictus = chiudiAnteprimaInvictus;
 window.avviaAllenamentoInvictus = avviaAllenamentoInvictus;
 window.gestisciWorkoutModalPausa = gestisciWorkoutModalPausa;
 window.gestisciWorkoutModalLap = gestisciWorkoutModalLap;
@@ -4940,6 +4927,8 @@ if (typeof module !== 'undefined' && module.exports) {
         caricaAdminDashboard,
         caricaSchedeAtleta,
         modificaInvictusPull,
+        apriAnteprimaInvictus,
+        chiudiAnteprimaInvictus,
         avviaAllenamentoInvictus,
         gestisciWorkoutModalPausa,
         gestisciWorkoutModalLap,

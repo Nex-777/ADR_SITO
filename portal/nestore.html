@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.44">
+    <link rel="stylesheet" href="nestore.css?v=1.05.45">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.44"></script>
+    <script src="config.js?v=1.05.45"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.44</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.45</span>
             </div>
         </div>
 
@@ -599,59 +599,22 @@
 
                 <!-- Grid Workout Standard -->
                 <div class="nst-standard-workout-grid">
-                    <!-- Card Workout INVICTUS -->
-                    <div class="nst-standard-card">
-                        <div class="nst-standard-card-header">
-                            <div>
-                                <div class="nst-standard-title">
-                                    INVICTUS
-                                    <span class="nst-pill-badge">RAPPORTO 1 : 2 : 4</span>
-                                </div>
-                                <div class="nst-standard-seq">
-                                    Sequenza: <strong>Pull</strong> → <strong>Push</strong> → <strong>Squat</strong>
-                                </div>
-                            </div>
-                            <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 32px;">fitness_center</span>
-                        </div>
-
-                        <div class="nst-standard-card-body">
-                            <p class="nst-standard-desc">
-                                Per ogni <strong>1 Pull-up</strong> devi eseguire <strong>2 Push-up</strong> e <strong>4 Air Squat</strong>.
-                                Imposta il numero base di Pull per calcolare l'obiettivo completo della sessione.
-                            </p>
-
-                            <!-- Stepper Configurazione Base Pull -->
-                            <div class="nst-stepper-container">
-                                <span class="nst-stepper-label">PULL-UP BASE:</span>
-                                <div class="nst-stepper-control">
-                                    <button type="button" class="nst-stepper-btn" onclick="modificaInvictusPull(-1)" title="Diminuisci">-</button>
-                                    <span id="nst-invictus-pull-val" class="nst-stepper-val">5</span>
-                                    <button type="button" class="nst-stepper-btn" onclick="modificaInvictusPull(1)" title="Aumenta">+</button>
+                    <!-- Card Workout INVICTUS Ultra-Compatta -->
+                    <div class="nst-standard-card nst-standard-card-compact" onclick="apriAnteprimaInvictus()" role="button" tabindex="0" title="Apri scheda INVICTUS">
+                        <div class="nst-standard-card-header" style="width: 100%; margin-bottom: 0;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 24px;">fitness_center</span>
+                                <div>
+                                    <div class="nst-standard-title" style="font-size: 13px;">
+                                        INVICTUS
+                                        <span class="nst-pill-badge">RAPPORTO 1 : 2 : 4</span>
+                                    </div>
+                                    <div class="nst-standard-seq" style="font-size: 10px; color: var(--nst-text-muted);">
+                                        Sequenza: <strong>Pull</strong> → <strong>Push</strong> → <strong>Squat</strong>
+                                    </div>
                                 </div>
                             </div>
-
-                            <!-- Target Calcolati in Tempo Reale -->
-                            <div class="nst-target-pills-row">
-                                <div class="nst-target-pill pull">
-                                    <span class="label">PULL-UP</span>
-                                    <span id="nst-invictus-target-pull" class="val">5</span>
-                                </div>
-                                <div class="nst-target-pill push">
-                                    <span class="label">PUSH-UP</span>
-                                    <span id="nst-invictus-target-push" class="val">10</span>
-                                </div>
-                                <div class="nst-target-pill squat">
-                                    <span class="label">AIR SQUAT</span>
-                                    <span id="nst-invictus-target-squat" class="val">20</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="nst-standard-card-footer">
-                            <button type="button" class="nst-btn-primary nst-btn-full" onclick="avviaAllenamentoInvictus()">
-                                <span class="material-symbols-outlined" style="font-size: 18px;">play_arrow</span>
-                                <span>AVVIA PROGRAMMA</span>
-                            </button>
+                            <span class="nst-version-badge" style="border-color: var(--nst-amber); color: var(--nst-amber); font-size: 9px;">BENCHMARK WOD</span>
                         </div>
                     </div>
                 </div>
@@ -1179,6 +1142,58 @@ GIORNO 2:
         </div>
     </div>
 
+    <!-- Modale Anteprima & Setup INVICTUS -->
+    <div id="nst-invictus-preview-modal" class="nst-modal-overlay nst-hidden">
+        <div class="nst-modal-card nst-ibrido-preview-card forza" style="max-width: 550px;">
+            <div class="nst-modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 20px;">fitness_center</span>
+                    <span class="nst-headline" style="font-size: 14px; color: var(--nst-amber);">INVICTUS — BENCHMARK WOD</span>
+                </div>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiAnteprimaInvictus()" title="Chiudi">✕</button>
+            </div>
+            <div class="nst-modal-body" style="padding: 20px;">
+                <p class="nst-standard-desc" style="margin-bottom: 16px;">
+                    Per ogni <strong>1 Pull-up</strong> devi eseguire <strong>2 Push-up</strong> e <strong>4 Air Squat</strong>.
+                    Imposta il numero base di Pull per calcolare l'obiettivo completo della sessione.
+                </p>
+
+                <!-- Stepper Configurazione Base Pull -->
+                <div class="nst-stepper-container">
+                    <span class="nst-stepper-label">PULL-UP BASE:</span>
+                    <div class="nst-stepper-control">
+                        <button type="button" class="nst-stepper-btn" onclick="modificaInvictusPull(-1)" title="Diminuisci">-</button>
+                        <span id="nst-invictus-pull-val" class="nst-stepper-val">5</span>
+                        <button type="button" class="nst-stepper-btn" onclick="modificaInvictusPull(1)" title="Aumenta">+</button>
+                    </div>
+                </div>
+
+                <!-- Target Calcolati in Tempo Reale -->
+                <div class="nst-target-pills-row" style="margin-bottom: 10px;">
+                    <div class="nst-target-pill pull">
+                        <span class="label">PULL-UP</span>
+                        <span id="nst-invictus-target-pull" class="val">5</span>
+                    </div>
+                    <div class="nst-target-pill push">
+                        <span class="label">PUSH-UP</span>
+                        <span id="nst-invictus-target-push" class="val">10</span>
+                    </div>
+                    <div class="nst-target-pill squat">
+                        <span class="label">AIR SQUAT</span>
+                        <span id="nst-invictus-target-squat" class="val">20</span>
+                    </div>
+                </div>
+            </div>
+            <div class="nst-modal-footer" style="padding: 14px 20px; display: flex; justify-content: space-between;">
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiAnteprimaInvictus()">ANNULLA</button>
+                <button type="button" class="nst-btn-primary" onclick="avviaAllenamentoInvictus()">
+                    <span class="material-symbols-outlined">play_arrow</span>
+                    <span>AVVIA PROGRAMMA</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modale Anteprima & Setup Programma Ibrido -->
     <div id="nst-ibrido-preview-modal" class="nst-modal-overlay nst-hidden">
         <div class="nst-modal-card nst-ibrido-preview-card" id="nst-ibrido-preview-card">
@@ -1366,6 +1381,6 @@ GIORNO 2:
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.44"></script>
+    <script src="nestore.js?v=1.05.45"></script>
 </body>
 </html>

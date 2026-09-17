@@ -210,6 +210,14 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         expect(typeof target.annullaSalvataggioIbrido).toBe('function');
         expect(typeof target.confermaSalvaIbridoSeduta).toBe('function');
         expect(typeof target.chiudiIbridoActiveModal).toBe('function');
+        expect(typeof target.apriAnteprimaInvictus).toBe('function');
+        expect(typeof target.chiudiAnteprimaInvictus).toBe('function');
+    });
+
+    it('contains compact card and preview modal for INVICTUS', () => {
+        expect(html).toContain('nst-standard-card-compact');
+        expect(html).toContain('onclick="apriAnteprimaInvictus()"');
+        expect(html).toContain('id="nst-invictus-preview-modal"');
     });
 });
 

@@ -3230,27 +3230,40 @@ input:checked + .nst-slider:before {
 
 .nst-ibrido-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
     margin-top: 14px;
+}
+
+@media (max-width: 992px) {
+    .nst-ibrido-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    .nst-ibrido-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .nst-ibrido-card {
     background: var(--nst-surface);
     border: 1px solid var(--nst-border);
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 10px;
+    padding: 12px 14px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: space-between;
-    transition: all 0.25s ease;
+    transition: all 0.22s ease;
     position: relative;
     overflow: hidden;
+    cursor: pointer;
+    user-select: none;
 }
 
 .nst-ibrido-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    transform: translateY(-2px);
 }
 
 .nst-ibrido-card.metcon {
@@ -3259,7 +3272,8 @@ input:checked + .nst-slider:before {
 
 .nst-ibrido-card.metcon:hover {
     border-color: var(--nst-cyan);
-    box-shadow: 0 8px 25px var(--nst-cyan-dim);
+    box-shadow: 0 4px 18px var(--nst-cyan-dim);
+    background: rgba(0, 229, 255, 0.06);
 }
 
 .nst-ibrido-card.forza {
@@ -3268,15 +3282,37 @@ input:checked + .nst-slider:before {
 
 .nst-ibrido-card.forza:hover {
     border-color: var(--nst-amber);
-    box-shadow: 0 8px 25px var(--nst-amber-glow);
+    box-shadow: 0 4px 18px var(--nst-amber-glow);
+    background: rgba(255, 179, 0, 0.06);
+}
+
+.nst-standard-card-compact {
+    background: var(--nst-surface);
+    border: 1px solid rgba(255, 179, 0, 0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.22s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.nst-standard-card-compact:hover {
+    border-color: var(--nst-amber);
+    box-shadow: 0 4px 18px var(--nst-amber-glow);
+    transform: translateY(-2px);
+    background: rgba(255, 179, 0, 0.06);
 }
 
 .nst-ibrido-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    width: 100%;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 0;
 }
 
 .nst-ibrido-card-title {

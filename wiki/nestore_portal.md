@@ -253,8 +253,12 @@ Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione d
   - Questo aggiorna istantaneamente la bacheca dei **Record Personali (PR Grid)** dell'atleta nel tab Allenamenti.
 
 ### 9.4. Programmi Ufficiali Corso Ibrido Base (Metcon 1-4 & Forza 1-4)
-Aggiunto nella versione **1.05.44**:
+Aggiunto nella versione **1.05.44**, perfezionato in **1.05.45**:
 Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione `#nst-ibrido-programmi-section` con il catalogo dei **8 Programmi Ufficiali Ibrido Base**:
+- **Design Ultra-Compatto (v1.05.45)**:
+  - Le 8 card sono disposte su griglia a 4 colonne (2 righe compatte), mostrando unicamente il **Nome** (es. `Metcon 1`, `Forza 1`) e il **Badge di Tipologia** (`METCON` in ciano, `FORZA` in ambra).
+  - Rimossi i pulsanti statici e i testi prolissi dal riepilogo: l'intera card è cliccabile (`cursor: pointer` con hover glow) per aprire istantaneamente la modale di anteprima.
+  - Lo stesso principio si applica a **INVICTUS** (`#nst-standard-card-compact`), la cui card è stata ridotta ad altezza minima e il cui stepper di configurazione pull-up è accessibile via modale popup dedicata (`#nst-invictus-preview-modal`).
 - **Metcon 1-4 (Conditioning Metabolico)**:
   - **Metcon 1, 2, 4**: integrano il motore `tabataEngine` con intervalli lavoro/riposo preimpostati (es. 30" work + 30" rest o 25" work + 35" rest), con possibilità per l'atleta di modificare i parametri di work, rest e rounds prima dell'avvio.
   - **Metcon 3**: programma Unbroken a 20 giri no time limit (tempo target 40'), integrato con il cronometro `timerEngine` (supporto a pause e lap).
