@@ -243,8 +243,9 @@ async function initNestore() {
         await caricaKpiDashboard();
         await caricaSchedaAtletaUI();
 
-        // 6. Carica Cronologia Chat & Catalogo Programmi Ibrido
+        // 6. Carica Cronologia Chat & Catalogo Programmi Ibrido / Libreria
         await caricaCronologiaChat();
+        await caricaLibreriaProgrammi();
         renderCatalogoIbrido();
 
     } catch (err) {
@@ -2083,6 +2084,9 @@ async function switchNestoreView(val) {
         if (dashSubtitle) dashSubtitle.textContent = 'Seleziona un atleta per monitorare i suoi parametri (peso, allenamenti, pasti, scheda AI) e assegnargli la scheda di allenamento.';
 
         // Mostra vista lista e nascondi dettaglio
+        switchCoachMainTab('athletes');
+        const athletesTabLabel = document.getElementById('nst-coach-tab-athletes-label');
+        if (athletesTabLabel) athletesTabLabel.textContent = 'I MIEI ATLETI';
         document.getElementById('nst-coach-list-view')?.classList.remove('nst-hidden');
         document.getElementById('nst-coach-atleta-view')?.classList.add('nst-hidden');
 
@@ -2099,6 +2103,9 @@ async function switchNestoreView(val) {
         if (dashTitle) dashTitle.textContent = 'TUTTI GLI ATLETI (AMMINISTRATORE)';
         if (dashSubtitle) dashSubtitle.textContent = 'Visualizzazione completa di tutti i corsi e atleti registrati ad Adrenalina Club.';
 
+        switchCoachMainTab('athletes');
+        const athletesTabLabel = document.getElementById('nst-coach-tab-athletes-label');
+        if (athletesTabLabel) athletesTabLabel.textContent = 'TUTTI GLI ATLETI';
         document.getElementById('nst-coach-list-view')?.classList.remove('nst-hidden');
         document.getElementById('nst-coach-atleta-view')?.classList.add('nst-hidden');
 
@@ -2144,6 +2151,7 @@ function switchNestorePanel(panelId) {
     } else if (panelId === 'profilo') {
         caricaSchedaAtletaUI();
     } else if (panelId === 'schede') {
+        caricaLibreriaProgrammi();
         renderCatalogoIbrido();
         caricaSchedeAtleta(currentUser.id, 'nst-atleta-schede-container', false);
     }
@@ -4172,7 +4180,8 @@ function chiudiModalWorkoutAttivo() {
 // SEZIONE PROGRAMMI UFFICIALI CORSO IBRIDO BASE (METCON 1-4 & FORZA 1-4)
 // ===========================================================================
 
-const IBRIDO_PROGRAMMI_CATALOGO = [
+let libreriaProgrammiTotali = [];
+let IBRIDO_PROGRAMMI_CATALOGO = [
     {
         id: 'ibrido_metcon_1',
         nome: 'Metcon 1',
@@ -4309,13 +4318,19 @@ function renderCatalogoIbrido() {
     const grid = document.getElementById('nst-ibrido-programmi-grid');
     if (!grid) return;
 
+    if (!IBRIDO_PROGRAMMI_CATALOGO || IBRIDO_PROGRAMMI_CATALOGO.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--nst-text-muted); padding: 16px; font-size: 12px;">Nessun programma Ibrido disponibile al momento.</div>`;
+        return;
+    }
+
     grid.innerHTML = IBRIDO_PROGRAMMI_CATALOGO.map(p => {
-        const isMetcon = p.tipo === 'metcon';
+        const isMetcon = (p.categoria === 'metcon' || p.tipo === 'metcon');
         const typeClass = isMetcon ? 'metcon' : 'forza';
         const badgeLabel = isMetcon ? 'METCON' : 'FORZA';
+        const progKey = p.id || p.codice;
 
         return `
-            <div class="nst-ibrido-card ${typeClass}" onclick="apriAnteprimaIbrido('${p.id}')" role="button" tabindex="0" title="Apri scheda ${escapeHtml(p.nome)}">
+            <div class="nst-ibrido-card ${typeClass}" onclick="apriAnteprimaIbrido('${progKey}')" role="button" tabindex="0" title="Apri scheda ${escapeHtml(p.nome)}">
                 <div class="nst-ibrido-card-header">
                     <span class="nst-ibrido-card-title">${escapeHtml(p.nome)}</span>
                     <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
@@ -4326,7 +4341,8 @@ function renderCatalogoIbrido() {
 }
 
 function apriAnteprimaIbrido(progId) {
-    const p = IBRIDO_PROGRAMMI_CATALOGO.find(item => item.id === progId);
+    const p = IBRIDO_PROGRAMMI_CATALOGO.find(item => item.id === progId || item.codice === progId)
+        || libreriaProgrammiTotali.find(item => item.id === progId || item.codice === progId);
     if (!p) return;
     ibridoSelezionato = p;
 
@@ -4842,6 +4858,413 @@ function chiudiIbridoActiveModal() {
     if (modal) modal.classList.add('nst-hidden');
 }
 
+// ===========================================================================
+// SEZIONE LIBRERIA ALLENAMENTI DINAMICA (Supabase & Gestione Coach)
+// ===========================================================================
+
+let currentEditingProgramId = null;
+
+function switchCoachMainTab(tab) {
+    const athletesBtn = document.getElementById('nst-coach-tab-athletes');
+    const libraryBtn = document.getElementById('nst-coach-tab-library');
+    const athletesWrapper = document.getElementById('nst-coach-athletes-wrapper');
+    const libraryView = document.getElementById('nst-coach-library-view');
+
+    if (tab === 'athletes') {
+        if (athletesBtn) athletesBtn.classList.add('active');
+        if (libraryBtn) libraryBtn.classList.remove('active');
+        if (athletesWrapper) athletesWrapper.classList.remove('nst-hidden');
+        if (libraryView) libraryView.classList.add('nst-hidden');
+    } else if (tab === 'library') {
+        if (athletesBtn) athletesBtn.classList.remove('active');
+        if (libraryBtn) libraryBtn.classList.add('active');
+        if (athletesWrapper) athletesWrapper.classList.add('nst-hidden');
+        if (libraryView) libraryView.classList.remove('nst-hidden');
+        caricaLibreriaProgrammiCoach();
+    }
+}
+
+async function caricaLibreriaProgrammi() {
+    try {
+        if (!supabaseClient) return;
+        const { data, error } = await supabaseClient
+            .from('nestore_programmi_libreria')
+            .select('*')
+            .eq('attivo', true)
+            .order('ordine', { ascending: true })
+            .order('nome', { ascending: true });
+
+        if (error) {
+            console.warn("Errore caricamento libreria programmi da DB (uso catalogo in cache):", error);
+            return;
+        }
+
+        if (Array.isArray(data) && data.length > 0) {
+            libreriaProgrammiTotali = data;
+            const ibridi = data.filter(p => p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza');
+            if (ibridi.length > 0) {
+                IBRIDO_PROGRAMMI_CATALOGO = ibridi.map(p => ({
+                    ...p,
+                    id: p.id,
+                    codice: p.codice || p.id
+                }));
+                if (typeof window !== 'undefined') {
+                    window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
+                }
+            }
+            renderCatalogoIbrido();
+        }
+    } catch (err) {
+        console.warn("Eccezione durante fetch libreria programmi:", err);
+    }
+}
+
+async function caricaLibreriaProgrammiCoach() {
+    const grid = document.getElementById('nst-coach-library-grid');
+    const statsPill = document.getElementById('nst-coach-library-stats-pill');
+
+    try {
+        if (!supabaseClient) return;
+        const { data, error } = await supabaseClient
+            .from('nestore_programmi_libreria')
+            .select('*')
+            .eq('attivo', true)
+            .order('ordine', { ascending: true })
+            .order('nome', { ascending: true });
+
+        if (error) throw error;
+
+        libreriaProgrammiTotali = data || [];
+        if (statsPill) {
+            statsPill.textContent = `${libreriaProgrammiTotali.length} PROGRAMMI ATTIVI`;
+        }
+
+        filtraProgrammiLibreriaCoach();
+    } catch (err) {
+        console.error("Errore caricamento libreria coach:", err);
+        if (grid) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; color: var(--nst-amber); padding: 16px;">Impossibile caricare la libreria: ${escapeHtml(err.message)}</div>`;
+        }
+    }
+}
+
+function filtraProgrammiLibreriaCoach() {
+    const tipoVal = document.getElementById('nst-lib-filter-tipo')?.value || 'ALL';
+    const searchVal = (document.getElementById('nst-lib-search-input')?.value || '').toLowerCase().trim();
+    const grid = document.getElementById('nst-coach-library-grid');
+    if (!grid) return;
+
+    let filtered = [...libreriaProgrammiTotali];
+
+    if (tipoVal === 'ibrido_metcon') {
+        filtered = filtered.filter(p => (p.tipo === 'ibrido' || p.categoria === 'metcon') && p.categoria === 'metcon');
+    } else if (tipoVal === 'ibrido_forza') {
+        filtered = filtered.filter(p => (p.tipo === 'ibrido' || p.categoria === 'forza') && p.categoria === 'forza');
+    } else if (tipoVal === 'invictus') {
+        filtered = filtered.filter(p => p.tipo === 'invictus' || p.categoria === 'standard');
+    } else if (tipoVal === 'altro') {
+        filtered = filtered.filter(p => p.tipo !== 'ibrido' && p.tipo !== 'invictus');
+    }
+
+    if (searchVal) {
+        filtered = filtered.filter(p => {
+            const inNome = (p.nome || '').toLowerCase().includes(searchVal);
+            const inDesc = (p.descrizione || '').toLowerCase().includes(searchVal);
+            const inEx = Array.isArray(p.esercizi) && p.esercizi.some(ex => (ex.nome || '').toLowerCase().includes(searchVal));
+            return inNome || inDesc || inEx;
+        });
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--nst-text-muted); padding: 30px;">Nessun programma trovato con i criteri selezionati.</div>`;
+        return;
+    }
+
+    grid.innerHTML = filtered.map(p => {
+        const isMetcon = (p.categoria === 'metcon');
+        const isForza = (p.categoria === 'forza');
+        const isInvictus = (p.tipo === 'invictus');
+        const cardClass = isMetcon ? 'metcon' : isForza ? 'forza' : 'standard';
+        const typeLabel = isMetcon ? 'IBRIDO METCON' : isForza ? 'IBRIDO FORZA' : isInvictus ? 'INVICTUS BENCHMARK' : (p.tipo ? p.tipo.toUpperCase() : 'STANDARD');
+
+        let timerMeta = '';
+        if (p.timer_mode === 'tabata') {
+            timerMeta = `Tabata: ${p.work_default}"w / ${p.rest_default}"r • ${p.rounds_default} giri`;
+        } else {
+            timerMeta = `Cronometro: Lap & Pausa${p.giri_target ? ` • ${p.giri_target} giri` : ''}`;
+        }
+        if (p.tempo_target) {
+            timerMeta += ` • Target: ${escapeHtml(p.tempo_target)}`;
+        }
+
+        const exPreview = Array.isArray(p.esercizi) && p.esercizi.length > 0
+            ? p.esercizi.slice(0, 4).map(ex => `<div>• <strong>${escapeHtml(ex.nome)}</strong>: <span style="color:var(--nst-lime);">${escapeHtml(ex.target || (ex.rip_target ? `${ex.serie_target || 4}x${ex.rip_target}` : ''))}</span></div>`).join('') + (p.esercizi.length > 4 ? `<div style="font-style: italic; margin-top: 2px;">...e altri ${p.esercizi.length - 4} esercizi</div>` : '')
+            : '<div style="font-style: italic;">Nessun esercizio dettagliato</div>';
+
+        return `
+            <div class="nst-coach-lib-card ${cardClass}">
+                <div>
+                    <div class="nst-coach-lib-card-header">
+                        <div>
+                            <div class="nst-coach-lib-title">${escapeHtml(p.nome)}</div>
+                            <span class="nst-ibrido-badge ${cardClass}" style="font-size: 9px; margin-top: 4px; display: inline-block;">${typeLabel}</span>
+                        </div>
+                        <span class="nst-version-badge" style="font-size: 9px;">ORD: ${p.ordine || 0}</span>
+                    </div>
+
+                    <div class="nst-coach-lib-desc">${escapeHtml(p.descrizione || 'Nessuna descrizione.')}</div>
+
+                    <div class="nst-coach-lib-meta-pill">
+                        <span class="material-symbols-outlined" style="font-size: 13px;">timer</span>
+                        <span>${timerMeta}</span>
+                    </div>
+
+                    <div class="nst-coach-lib-ex-preview">
+                        ${exPreview}
+                    </div>
+                </div>
+
+                <div class="nst-coach-lib-card-actions">
+                    <button type="button" class="nst-btn-ghost-sm" onclick="apriModalEditorProgramma('${p.id}')" title="Modifica programma">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">edit</span>
+                        <span>MODIFICA</span>
+                    </button>
+                    <button type="button" class="nst-btn-ghost-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="disattivaProgrammaLibreria('${p.id}')" title="Rimuovi dalla libreria">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">delete</span>
+                        <span>DISATTIVA</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function apriModalEditorProgramma(progId = null) {
+    currentEditingProgramId = progId;
+    const modal = document.getElementById('nst-coach-programma-modal');
+    const titleText = document.getElementById('nst-prog-modal-title-text');
+    const idInput = document.getElementById('nst-prog-edit-id');
+    const nomeInput = document.getElementById('nst-prog-edit-nome');
+    const tipoSelect = document.getElementById('nst-prog-edit-tipo');
+    const catSelect = document.getElementById('nst-prog-edit-categoria');
+    const timerSelect = document.getElementById('nst-prog-edit-timer-mode');
+    const ordineInput = document.getElementById('nst-prog-edit-ordine');
+    const workInput = document.getElementById('nst-prog-edit-work');
+    const restInput = document.getElementById('nst-prog-edit-rest');
+    const roundsInput = document.getElementById('nst-prog-edit-rounds');
+    const tempoInput = document.getElementById('nst-prog-edit-tempo-target');
+    const giriInput = document.getElementById('nst-prog-edit-giri-target');
+    const descInput = document.getElementById('nst-prog-edit-desc');
+    const exContainer = document.getElementById('nst-prog-edit-esercizi-container');
+
+    if (exContainer) exContainer.innerHTML = '';
+
+    if (progId) {
+        const prog = libreriaProgrammiTotali.find(p => p.id === progId);
+        if (titleText) titleText.textContent = `MODIFICA: ${prog ? prog.nome.toUpperCase() : 'PROGRAMMA'}`;
+        if (idInput) idInput.value = progId;
+        if (nomeInput) nomeInput.value = prog ? prog.nome : '';
+        if (tipoSelect) tipoSelect.value = prog ? prog.tipo : 'ibrido';
+        if (catSelect) catSelect.value = prog ? (prog.categoria || 'metcon') : 'metcon';
+        if (timerSelect) timerSelect.value = prog ? (prog.timer_mode || 'stopwatch') : 'stopwatch';
+        if (ordineInput) ordineInput.value = prog ? (prog.ordine || 10) : 10;
+        if (workInput) workInput.value = prog ? (prog.work_default || 30) : 30;
+        if (restInput) restInput.value = prog ? (prog.rest_default || 30) : 30;
+        if (roundsInput) roundsInput.value = prog ? (prog.rounds_default || 8) : 8;
+        if (tempoInput) tempoInput.value = prog ? (prog.tempo_target || '') : '';
+        if (giriInput) giriInput.value = prog ? (prog.giri_target || '') : '';
+        if (descInput) descInput.value = prog ? (prog.descrizione || '') : '';
+
+        if (prog && Array.isArray(prog.esercizi) && prog.esercizi.length > 0) {
+            prog.esercizi.forEach(ex => aggiungiRigaEsercizioModal(ex.nome || '', ex.target || ''));
+        } else {
+            aggiungiRigaEsercizioModal('', '');
+        }
+    } else {
+        if (titleText) titleText.textContent = 'NUOVO PROGRAMMA ALLENAMENTO';
+        if (idInput) idInput.value = '';
+        if (nomeInput) nomeInput.value = '';
+        if (tipoSelect) tipoSelect.value = 'ibrido';
+        if (catSelect) catSelect.value = 'metcon';
+        if (timerSelect) timerSelect.value = 'tabata';
+        if (ordineInput) ordineInput.value = (libreriaProgrammiTotali.length + 1) * 2;
+        if (workInput) workInput.value = 30;
+        if (restInput) restInput.value = 30;
+        if (roundsInput) roundsInput.value = 8;
+        if (tempoInput) tempoInput.value = '';
+        if (giriInput) giriInput.value = '';
+        if (descInput) descInput.value = '';
+
+        aggiungiRigaEsercizioModal('', '');
+        aggiungiRigaEsercizioModal('', '');
+    }
+
+    gestisciCambioTimerMode();
+    if (modal) modal.classList.remove('nst-hidden');
+}
+
+function chiudiModalEditorProgramma() {
+    const modal = document.getElementById('nst-coach-programma-modal');
+    if (modal) modal.classList.add('nst-hidden');
+    currentEditingProgramId = null;
+}
+
+function gestisciCambioTimerMode() {
+    const timerMode = document.getElementById('nst-prog-edit-timer-mode')?.value;
+    const tabataRow = document.getElementById('nst-prog-edit-tabata-row');
+    if (tabataRow) {
+        if (timerMode === 'tabata') tabataRow.classList.remove('nst-hidden');
+        else tabataRow.classList.add('nst-hidden');
+    }
+}
+
+function gestisciCambioTipoProgramma() {
+    const tipo = document.getElementById('nst-prog-edit-tipo')?.value;
+    const catSelect = document.getElementById('nst-prog-edit-categoria');
+    if (!catSelect) return;
+    if (tipo === 'invictus') catSelect.value = 'standard';
+    else if (tipo === 'ibrido' && catSelect.value === 'standard') catSelect.value = 'metcon';
+}
+
+function aggiungiRigaEsercizioModal(nome = '', target = '') {
+    const container = document.getElementById('nst-prog-edit-esercizi-container');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.className = 'nst-ex-row-edit';
+    row.innerHTML = `
+        <input type="text" class="nst-form-input ex-nome" placeholder="Nome Esercizio (es. Pull-up)" style="flex: 2; height: 34px; font-size: 12px;" value="${escapeHtml(nome)}">
+        <input type="text" class="nst-form-input ex-target" placeholder="Target / Schema (es. 4x5 @ 100kg o 15 rip)" style="flex: 2; height: 34px; font-size: 12px;" value="${escapeHtml(target)}">
+        <button type="button" class="nst-btn-icon-close" style="width: 28px; height: 28px; line-height: 28px; font-size: 12px;" onclick="this.parentElement.remove()" title="Rimuovi esercizio">✕</button>
+    `;
+    container.appendChild(row);
+}
+
+async function salvaProgrammaLibreriaDaModal() {
+    const id = document.getElementById('nst-prog-edit-id')?.value;
+    const nome = document.getElementById('nst-prog-edit-nome')?.value.trim();
+    const tipo = document.getElementById('nst-prog-edit-tipo')?.value;
+    const categoria = document.getElementById('nst-prog-edit-categoria')?.value;
+    const timerMode = document.getElementById('nst-prog-edit-timer-mode')?.value;
+    const ordine = parseInt(document.getElementById('nst-prog-edit-ordine')?.value, 10) || 10;
+    const work = parseInt(document.getElementById('nst-prog-edit-work')?.value, 10) || 30;
+    const rest = parseInt(document.getElementById('nst-prog-edit-rest')?.value, 10) || 30;
+    const rounds = parseInt(document.getElementById('nst-prog-edit-rounds')?.value, 10) || 8;
+    const tempoTarget = document.getElementById('nst-prog-edit-tempo-target')?.value.trim() || null;
+    const giriTargetVal = document.getElementById('nst-prog-edit-giri-target')?.value;
+    const giriTarget = giriTargetVal ? parseInt(giriTargetVal, 10) : null;
+    const descrizione = document.getElementById('nst-prog-edit-desc')?.value.trim();
+
+    if (!nome) {
+        alert("Inserisci il nome del programma.");
+        return;
+    }
+
+    const exRows = document.querySelectorAll('#nst-prog-edit-esercizi-container .nst-ex-row-edit');
+    const esercizi = [];
+    exRows.forEach(r => {
+        const exNome = r.querySelector('.ex-nome')?.value.trim();
+        const exTarget = r.querySelector('.ex-target')?.value.trim();
+        if (exNome) {
+            esercizi.push({ nome: exNome, target: exTarget || '' });
+        }
+    });
+
+    const payload = {
+        nome,
+        tipo,
+        categoria,
+        timer_mode: timerMode,
+        work_default: timerMode === 'tabata' ? work : null,
+        rest_default: timerMode === 'tabata' ? rest : null,
+        rounds_default: timerMode === 'tabata' ? rounds : null,
+        tempo_target: tempoTarget,
+        giri_target: giriTarget,
+        descrizione,
+        ordine,
+        esercizi,
+        attivo: true,
+        aggiornato_il: new Date().toISOString()
+    };
+
+    const saveBtn = document.getElementById('nst-btn-salva-programma-lib');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<span class="material-symbols-outlined nst-spin">progress_activity</span><span>SALVATAGGIO...</span>`;
+    }
+
+    try {
+        if (!supabaseClient) throw new Error("Client Supabase non disponibile.");
+
+        if (id) {
+            const { error } = await supabaseClient
+                .from('nestore_programmi_libreria')
+                .update(payload)
+                .eq('id', id);
+            if (error) throw error;
+        } else {
+            payload.creato_da = currentUser ? currentUser.id : null;
+            const { error } = await supabaseClient
+                .from('nestore_programmi_libreria')
+                .insert(payload);
+            if (error) throw error;
+        }
+
+        chiudiModalEditorProgramma();
+        showTimerToast("✓ PROGRAMMA SALVATO CON SUCCESSO NELLA LIBRERIA!");
+
+        await caricaLibreriaProgrammiCoach();
+        await caricaLibreriaProgrammi();
+
+    } catch (err) {
+        console.error("Errore salvataggio programma:", err);
+        alert("Errore salvataggio programma: " + err.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = `<span class="material-symbols-outlined">save</span><span>SALVA PROGRAMMA</span>`;
+        }
+    }
+}
+
+async function disattivaProgrammaLibreria(progId) {
+    const prog = libreriaProgrammiTotali.find(p => p.id === progId);
+    const nome = prog ? prog.nome : 'questo programma';
+    if (!confirm(`Sei sicuro di voler disattivare "${nome}" dalla libreria atleti?\n\n(Regola EPIKA: Il programma non verrà eliminato fisicamente, ma archiviato per mantenere intatto lo storico degli atleti)`)) {
+        return;
+    }
+
+    try {
+        if (!supabaseClient) throw new Error("Client Supabase non disponibile.");
+        const { error } = await supabaseClient
+            .from('nestore_programmi_libreria')
+            .update({ attivo: false, aggiornato_il: new Date().toISOString() })
+            .eq('id', progId);
+
+        if (error) throw error;
+
+        showTimerToast(`✓ Programma "${nome}" archiviato.`);
+        await caricaLibreriaProgrammiCoach();
+        await caricaLibreriaProgrammi();
+    } catch (err) {
+        console.error("Errore disattivazione programma:", err);
+        alert("Errore disattivazione: " + err.message);
+    }
+}
+
+window.libreriaProgrammiTotali = libreriaProgrammiTotali;
+window.switchCoachMainTab = switchCoachMainTab;
+window.caricaLibreriaProgrammi = caricaLibreriaProgrammi;
+window.caricaLibreriaProgrammiCoach = caricaLibreriaProgrammiCoach;
+window.filtraProgrammiLibreriaCoach = filtraProgrammiLibreriaCoach;
+window.apriModalEditorProgramma = apriModalEditorProgramma;
+window.chiudiModalEditorProgramma = chiudiModalEditorProgramma;
+window.gestisciCambioTimerMode = gestisciCambioTimerMode;
+window.gestisciCambioTipoProgramma = gestisciCambioTipoProgramma;
+window.aggiungiRigaEsercizioModal = aggiungiRigaEsercizioModal;
+window.salvaProgrammaLibreriaDaModal = salvaProgrammaLibreriaDaModal;
+window.disattivaProgrammaLibreria = disattivaProgrammaLibreria;
+
 window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
 window.renderCatalogoIbrido = renderCatalogoIbrido;
 window.apriAnteprimaIbrido = apriAnteprimaIbrido;
@@ -4948,7 +5371,18 @@ if (typeof module !== 'undefined' && module.exports) {
         terminaIbridoSeduta,
         annullaSalvataggioIbrido,
         confermaSalvaIbridoSeduta,
-        chiudiIbridoActiveModal
+        chiudiIbridoActiveModal,
+        switchCoachMainTab,
+        caricaLibreriaProgrammi,
+        caricaLibreriaProgrammiCoach,
+        filtraProgrammiLibreriaCoach,
+        apriModalEditorProgramma,
+        chiudiModalEditorProgramma,
+        gestisciCambioTimerMode,
+        gestisciCambioTipoProgramma,
+        aggiungiRigaEsercizioModal,
+        salvaProgrammaLibreriaDaModal,
+        disattivaProgrammaLibreria
     };
 }
 

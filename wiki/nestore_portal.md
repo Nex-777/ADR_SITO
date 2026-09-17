@@ -271,6 +271,20 @@ Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione `
   - **Schermata di Conferma Dati & Prevenzione Errori**: durata calcolata esposta in un input numerico modificabile dall'atleta, alert visuale giallo se il timer supera 90 minuti (`#nst-timer-warning-box`), riepilogo carichi confermati e campo note.
   - **Persistenza & Storicizzazione**: registrazione automatica in `public.nestore_allenamenti` con `corso_disciplina = 'Ibrido — ' + nome_programma` e `scheda_dati` JSONB strutturato.
 
+### 9.5. Gestione Libreria Programmi Allenatore (`public.nestore_programmi_libreria`)
+Introdotta nella versione **1.05.46**:
+Consente agli allenatori (Istruttori) e agli Amministratori di gestire in modo dinamico e centralizzato tutti i programmi di allenamento ufficiali (Invictus, Ibrido Metcon 1-4, Ibrido Forza 1-4 e programmi personalizzati futuri):
+- **Dashboard Allenatore a Due Tab Principali (`.nst-coach-main-tabs-bar`)**:
+  - **`[I MIEI ATLETI]`** (`#nst-coach-athletes-wrapper`): include la vista elenco atleti/corsi e la sotto-vista di ispezione parametri atleta.
+  - **`[LIBRERIA ALLENAMENTI]`** (`#nst-coach-library-view`): griglia interattiva dei programmi di allenamento gestibili, dotata di contatore KPI, filtro per tipologia (`Tutti`, `Ibrido Metcon`, `Ibrido Forza`, `Invictus`, `Altro`) e barra di ricerca live.
+- **Modale Editor Programma (`#nst-coach-programma-modal`)**:
+  - Form completo per la creazione e la modifica di schede e programmi (nome, macrotipologia, categoria, modalità timer `tabata`/`stopwatch`, parametri intervalli lavoro/riposo/giri, tempi target e note).
+  - Gestione dinamica degli esercizi della scheda con aggiunta/rimozione di righe (`nome` e schema `target`).
+- **Regola EPIKA - Soft Delete Rigoroso**:
+  - Nessun programma viene mai cancellato fisicamente dal database: la disattivazione imposta `attivo = false`, preservando l'integrità referenziale e lo storico degli allenamenti registrati dagli atleti nel tempo.
+- **Sincronizzazione Real-Time con la Vista Atleta**:
+  - Le modifiche o i nuovi programmi salvati nella tabella Supabase `nestore_programmi_libreria` si riflettono istantaneamente nelle schede visualizzate dagli atleti (`#nst-schede-panel`).
+
 ---
 
 ## 10. Related Concept Pages
@@ -278,4 +292,5 @@ Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione `
 - [Portal Dashboard](portal_dashboard.md)
 - [EPIKA Portal Architecture](epika_portal.md)
 - [API Endpoints](api_endpoints.md)
+
 

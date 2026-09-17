@@ -478,6 +478,28 @@ Archivio delle schede e dei programmi di allenamento assegnati dagli istruttori 
   - `SELECT`: L'atleta legge i propri file (`folder = atleta_id`), il Direttivo legge tutto, e gli istruttori assegnati al corso dell'atleta (`istruttori_eventi`) possono leggere.
   - `INSERT`: Consentito a Direttivo e istruttori assegnati o registrati in `registro_istruttori`.
 
+### 9. `public.nestore_programmi_libreria`
+Catalogo centralizzato e dinamico dei programmi ufficiali di allenamento (Invictus, Ibrido Metcon 1-4, Ibrido Forza 1-4 e nuovi benchmark) gestibili dagli allenatori (introdotta con `supabase/migration_nestore_libreria_programmi.sql`).
+- `id` (UUID PK, DEFAULT `gen_random_uuid()`)
+- `codice` (TEXT UNIQUE): Slug opzionale o identificatore legacy (es. `'invictus_base'`, `'ibrido_metcon_1'`)
+- `nome` (TEXT NOT NULL): Nome del programma visualizzato su card e timer (es. `"Metcon 1"`, `"Forza 1"`)
+- `tipo` (TEXT NOT NULL): Macrotipologia (es. `'ibrido'`, `'invictus'`, `'standard'`, `'altro'`)
+- `categoria` (TEXT): Subcategoria di disciplina (es. `'metcon'`, `'forza'`, `'standard'`)
+- `timer_mode` (TEXT NOT NULL DEFAULT `'stopwatch'`): Tipologia timer associata (`'tabata'` o `'stopwatch'`)
+- `work_default` (INTEGER): Secondi di lavoro predefiniti per interval timer (es. 30)
+- `rest_default` (INTEGER): Secondi di riposo predefiniti per interval timer (es. 30)
+- `rounds_default` (INTEGER): Giri / intervalli predefiniti (es. 40 o 7)
+- `tempo_target` (TEXT): Tempo target opzionale per benchmark (es. `'40 min'`)
+- `giri_target` (INTEGER): Giri complessivi target (es. 20)
+- `descrizione` (TEXT): Linee guida operative, note ed eventuale riscaldamento consigliato
+- `esercizi` (JSONB NOT NULL DEFAULT `'[]'::jsonb`): Elenco strutturato degli esercizi (`[{ nome, target, ... }]`)
+- `attivo` (BOOLEAN NOT NULL DEFAULT true): Flag di soft-delete in conformità alla regola EPIKA
+- `ordine` (INTEGER DEFAULT 0): Ordinamento di visualizzazione nelle griglie
+- `creato_da` (UUID FK `utenti.id` ON DELETE SET NULL): Istruttore o amministratore creatore
+- `creato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
+- `aggiornato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
+
+
 
 
 

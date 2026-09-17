@@ -219,7 +219,56 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         expect(html).toContain('onclick="apriAnteprimaInvictus()"');
         expect(html).toContain('id="nst-invictus-preview-modal"');
     });
+
+    it('contains coach 2-tab main navigation bar (Atleti vs Libreria Allenamenti)', () => {
+        expect(html).toContain('class="nst-coach-main-tabs-bar"');
+        expect(html).toContain('id="nst-coach-tab-athletes"');
+        expect(html).toContain('id="nst-coach-tab-library"');
+        expect(html).toContain('onclick="switchCoachMainTab(\'athletes\')"');
+        expect(html).toContain('onclick="switchCoachMainTab(\'library\')"');
+        expect(html).toContain('id="nst-coach-athletes-wrapper"');
+        expect(html).toContain('id="nst-coach-library-view"');
+        expect(css).toContain('.nst-coach-main-tabs-bar');
+        expect(css).toContain('.nst-coach-main-tab');
+        expect(css).toContain('.nst-coach-library-grid');
+    });
+
+    it('contains coach library view controls and program editor modal', () => {
+        expect(html).toContain('id="nst-coach-library-grid"');
+        expect(html).toContain('id="nst-lib-filter-tipo"');
+        expect(html).toContain('id="nst-lib-search-input"');
+        expect(html).toContain('id="nst-coach-programma-modal"');
+        expect(html).toContain('id="nst-prog-edit-nome"');
+        expect(html).toContain('id="nst-prog-edit-tipo"');
+        expect(html).toContain('id="nst-prog-edit-categoria"');
+        expect(html).toContain('id="nst-prog-edit-timer-mode"');
+        expect(html).toContain('id="nst-prog-edit-tabata-row"');
+        expect(html).toContain('id="nst-prog-edit-esercizi-container"');
+        expect(html).toContain('salvaProgrammaLibreriaDaModal()');
+    });
+
+    it('exports all coach library CRUD and navigation functions', () => {
+        require('../portal/nestore.js');
+        const target = global.window;
+        expect(typeof target.switchCoachMainTab).toBe('function');
+        expect(typeof target.caricaLibreriaProgrammi).toBe('function');
+        expect(typeof target.caricaLibreriaProgrammiCoach).toBe('function');
+        expect(typeof target.filtraProgrammiLibreriaCoach).toBe('function');
+        expect(typeof target.apriModalEditorProgramma).toBe('function');
+        expect(typeof target.chiudiModalEditorProgramma).toBe('function');
+        expect(typeof target.gestisciCambioTimerMode).toBe('function');
+        expect(typeof target.gestisciCambioTipoProgramma).toBe('function');
+        expect(typeof target.aggiungiRigaEsercizioModal).toBe('function');
+        expect(typeof target.salvaProgrammaLibreriaDaModal).toBe('function');
+        expect(typeof target.disattivaProgrammaLibreria).toBe('function');
+    });
+
+    it('enforces EPIKA soft-delete rule in disattivaProgrammaLibreria (attivo = false, no DELETE)', () => {
+        expect(js).toContain("update({ attivo: false");
+        expect(js).not.toContain(".from('nestore_programmi_libreria').delete()");
+    });
 });
+
 
 
 

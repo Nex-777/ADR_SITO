@@ -2,6 +2,23 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] ingest | NESTORE — Gestione Libreria Programmi per Allenatore (Supabase & 2-Tab Coach UI)
+- **Database & Storicizzazione EPIKA (`supabase/migration_nestore_libreria_programmi.sql`)**:
+  - Creata la tabella `public.nestore_programmi_libreria` con RLS (lettura per tutti gli autenticati su programmi attivi, gestione per Istruttori e Admin).
+  - Applicata la regola fondamentale EPIKA: soft-delete rigoroso tramite `attivo = false` (nessun DELETE fisico) per preservare l'integrità referenziale dello storico atleti.
+  - Eseguito il seeding iniziale dei 9 programmi ufficiali (Invictus Base, 4 Ibrido Metcon, 4 Ibrido Forza) con parametri completi.
+- **Frontend & Navigazione Coach (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Implementata la barra di navigazione principale a 2 tab nella dashboard Coach: `[I MIEI ATLETI]` (`#nst-coach-tab-athletes`) e `[LIBRERIA ALLENAMENTI]` (`#nst-coach-tab-library`).
+  - Creata la vista `#nst-coach-library-view` con contatore KPI dei programmi, filtro dinamico per tipologia (`Tutti`, `Ibrido Metcon`, `Ibrido Forza`, `Invictus Benchmark`, `Altro`) e barra di ricerca live.
+  - Realizzato il modale `#nst-coach-programma-modal` per la creazione e la modifica completa di qualsiasi programma:
+    - Input nome, tipologia, categoria, modalità timer (`tabata` o `stopwatch` con campi condizionali work/rest/rounds).
+    - Tempi e giri target opzionali, descrizione / linee guida operative.
+    - Gestione dinamica degli esercizi con aggiunta/rimozione interattiva di righe.
+  - Svincolato il catalogo da strutture statiche: i programmi vengono ora recuperati asincronamente da Supabase sia per gli atleti che per gli allenatori.
+- **Testing & Quality Assurance (`tests/nestore-coach.test.js`)**:
+  - Aggiunti unit test per il tab-switcher coach, per tutti gli elementi HTML della libreria e del modale di editing, per l'esportazione di tutte le funzioni CRUD e per la verifica del soft-delete.
+  - Vitest suite: 67/67 test superati con successo.
+
 ## [2026-09-17] ingest | NESTORE — Card Ultra-Compatte Programmi Base (Ibrido) & Standard (INVICTUS)
 - **UI & Interaction Design (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Compattate le 8 card dei programmi Ibrido Base (Metcon 1–4 e Forza 1–4) su griglia a 4 colonne $\times$ 2 righe su desktop:

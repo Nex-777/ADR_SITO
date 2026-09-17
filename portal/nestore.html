@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.45">
+    <link rel="stylesheet" href="nestore.css?v=1.05.46">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.45"></script>
+    <script src="config.js?v=1.05.46"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.45</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.46</span>
             </div>
         </div>
 
@@ -703,9 +703,23 @@
          PANNELLO ALLENATORE / AMMINISTRATORE (Fase 2)
          ======================================================================= -->
     <div id="nst-coach-container" class="nst-coach-container nst-hidden">
-        <!-- VISTA 1: Elenco Corsi & Atleti (Dashboard) -->
-        <div id="nst-coach-list-view" class="nst-coach-list-view">
-            <!-- Barra Superiore Dashboard Coach -->
+        <!-- Barra Superiore Selezione Tab Coach -->
+        <div class="nst-coach-main-tabs-bar">
+            <button type="button" class="nst-coach-main-tab active" id="nst-coach-tab-athletes" onclick="switchCoachMainTab('athletes')">
+                <span class="material-symbols-outlined">groups</span>
+                <span id="nst-coach-tab-athletes-label">I MIEI ATLETI</span>
+            </button>
+            <button type="button" class="nst-coach-main-tab" id="nst-coach-tab-library" onclick="switchCoachMainTab('library')">
+                <span class="material-symbols-outlined">fitness_center</span>
+                <span>LIBRERIA ALLENAMENTI</span>
+            </button>
+        </div>
+
+        <!-- SEZIONE 1: GESTIONE ATLETI (Dashboard Lista & Dettaglio Ispezione) -->
+        <div id="nst-coach-athletes-wrapper" class="nst-coach-athletes-wrapper">
+            <!-- VISTA 1: Elenco Corsi & Atleti (Dashboard) -->
+            <div id="nst-coach-list-view" class="nst-coach-list-view">
+                <!-- Barra Superiore Dashboard Coach -->
             <div class="nst-coach-header-card">
                 <div class="nst-coach-title-group">
                     <div class="nst-coach-badge-row">
@@ -995,6 +1009,62 @@ GIORNO 2:
                         </div>
                         <pre id="nst-coach-wiki-raw" class="nst-wiki-pre"></pre>
                     </div>
+                </div>
+            </div>
+        </div>
+        <!-- FINE SEZIONE 1: GESTIONE ATLETI -->
+        </div>
+
+        <!-- SEZIONE 2: LIBRERIA ALLENAMENTI (Standard, Benchmark & Ibrido) -->
+        <div id="nst-coach-library-view" class="nst-coach-library-view nst-hidden">
+            <!-- Barra Intestazione Libreria -->
+            <div class="nst-coach-header-card">
+                <div class="nst-coach-title-group">
+                    <div class="nst-coach-badge-row">
+                        <span class="nst-coach-pill">LIBRERIA ALLENAMENTI</span>
+                        <span id="nst-coach-library-stats-pill" class="nst-coach-pill alt">0 PROGRAMMI</span>
+                    </div>
+                    <h2 class="nst-headline nst-coach-title">LIBRERIA ALLENAMENTI STANDARD &amp; BASE</h2>
+                    <p class="nst-coach-subtitle">
+                        Gestisci i programmi di allenamento ufficiali disponibili per tutti gli atleti. Puoi creare nuovi programmi, modificare quelli esistenti o disattivarli.
+                    </p>
+                </div>
+
+                <div class="nst-coach-filter-bar" style="align-items: center; justify-content: space-between;">
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex-grow: 1;">
+                        <div class="nst-filter-item">
+                            <label for="nst-lib-filter-tipo" class="nst-filter-label">FILTRA PER TIPO</label>
+                            <select id="nst-lib-filter-tipo" class="nst-select nst-coach-select" onchange="filtraProgrammiLibreriaCoach()">
+                                <option value="ALL">TUTTI I PROGRAMMI</option>
+                                <option value="ibrido_metcon">IBRIDO — METCON</option>
+                                <option value="ibrido_forza">IBRIDO — FORZA</option>
+                                <option value="invictus">INVICTUS &amp; BENCHMARK</option>
+                                <option value="altro">ALTRI PROGRAMMI</option>
+                            </select>
+                        </div>
+                        <div class="nst-filter-item flex-grow">
+                            <label for="nst-lib-search-input" class="nst-filter-label">CERCA PROGRAMMA</label>
+                            <div class="nst-search-wrapper">
+                                <span class="material-symbols-outlined nst-search-icon">search</span>
+                                <input type="text" id="nst-lib-search-input" class="nst-search-input" placeholder="Cerca per nome o esercizio..." oninput="filtraProgrammiLibreriaCoach()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 18px;">
+                        <button type="button" class="nst-btn-primary" onclick="apriModalEditorProgramma()" style="height: 38px; display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span>
+                            <span>NUOVO PROGRAMMA</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Griglia Programmi per Coach -->
+            <div id="nst-coach-library-grid" class="nst-coach-library-grid">
+                <div class="nst-loading-box">
+                    <span class="material-symbols-outlined nst-spin">progress_activity</span>
+                    <span>Caricamento libreria programmi in corso...</span>
                 </div>
             </div>
         </div>
@@ -1377,10 +1447,121 @@ GIORNO 2:
         </div>
     </div>
 
+    <!-- Modale Editor Programma Libreria (Creazione / Modifica) -->
+    <div id="nst-coach-programma-modal" class="nst-modal-overlay nst-hidden" onclick="if(event.target === this) chiudiModalEditorProgramma()">
+        <div class="nst-modal-card" style="max-width: 650px;">
+            <div class="nst-modal-header">
+                <span id="nst-prog-modal-title" class="nst-headline" style="font-size: 14px; color: var(--nst-lime); display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">edit_note</span>
+                    <span id="nst-prog-modal-title-text">MODIFICA PROGRAMMA ALLENAMENTO</span>
+                </span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiModalEditorProgramma()">✕</button>
+            </div>
+
+            <div class="nst-modal-body" style="padding: 20px; max-height: 75vh; overflow-y: auto;">
+                <input type="hidden" id="nst-prog-edit-id">
+
+                <div class="nst-form-grid">
+                    <div class="nst-form-group" style="grid-column: span 2;">
+                        <label class="nst-form-label">NOME PROGRAMMA *</label>
+                        <input type="text" id="nst-prog-edit-nome" class="nst-form-input" placeholder="Es. Metcon 5, Forza 5, Benchmark WOD" maxlength="100">
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">TIPO *</label>
+                        <select id="nst-prog-edit-tipo" class="nst-form-input" onchange="gestisciCambioTipoProgramma()">
+                            <option value="ibrido">Ibrido</option>
+                            <option value="invictus">Invictus / Benchmark</option>
+                            <option value="standard">Standard</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">CATEGORIA</label>
+                        <select id="nst-prog-edit-categoria" class="nst-form-input">
+                            <option value="metcon">Metcon</option>
+                            <option value="forza">Forza</option>
+                            <option value="standard">Standard</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">MODALITÀ TIMER *</label>
+                        <select id="nst-prog-edit-timer-mode" class="nst-form-input" onchange="gestisciCambioTimerMode()">
+                            <option value="stopwatch">Cronometro con Lap / Stopwatch</option>
+                            <option value="tabata">Tabata Interval Timer</option>
+                        </select>
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">ORDINE VISUALIZZAZIONE</label>
+                        <input type="number" id="nst-prog-edit-ordine" class="nst-form-input" min="1" max="100" value="10">
+                    </div>
+                </div>
+
+                <!-- Configurazione specifica Tabata (mostrata solo se timer_mode == 'tabata') -->
+                <div id="nst-prog-edit-tabata-row" class="nst-form-grid nst-hidden" style="margin-top: 10px; background: rgba(0,229,255,0.04); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,229,255,0.15);">
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">LAVORO (SEC)</label>
+                        <input type="number" id="nst-prog-edit-work" class="nst-form-input" min="5" max="300" value="30">
+                    </div>
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">RIPOSO (SEC)</label>
+                        <input type="number" id="nst-prog-edit-rest" class="nst-form-input" min="5" max="300" value="30">
+                    </div>
+                    <div class="nst-form-group" style="grid-column: span 2;">
+                        <label class="nst-form-label">GIRI / ROUNDS PREDEFINITI</label>
+                        <input type="number" id="nst-prog-edit-rounds" class="nst-form-input" min="1" max="100" value="8">
+                    </div>
+                </div>
+
+                <!-- Target opzionali (tempo target, giri target) -->
+                <div class="nst-form-grid" style="margin-top: 10px;">
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">TEMPO TARGET (OPZIONALE)</label>
+                        <input type="text" id="nst-prog-edit-tempo-target" class="nst-form-input" placeholder="Es. 40 min, 42 min">
+                    </div>
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">GIRI TARGET (OPZIONALE)</label>
+                        <input type="number" id="nst-prog-edit-giri-target" class="nst-form-input" placeholder="Es. 20">
+                    </div>
+                </div>
+
+                <div class="nst-form-group full-width" style="margin-top: 10px;">
+                    <label class="nst-form-label">DESCRIZIONE E LINEE GUIDA</label>
+                    <textarea id="nst-prog-edit-desc" class="nst-form-input" rows="2" placeholder="Note operative, spiegazione del workout, riscaldamento consigliato..."></textarea>
+                </div>
+
+                <!-- Esercizi Programma -->
+                <div style="margin-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label class="nst-form-label" style="margin-bottom: 0;">ESERCIZI DEL PROGRAMMA</label>
+                        <button type="button" class="nst-btn-ghost-sm" onclick="aggiungiRigaEsercizioModal()" style="font-size: 11px;">
+                            + AGGIUNGI ESERCIZIO
+                        </button>
+                    </div>
+                    <div id="nst-prog-edit-esercizi-container" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Righe dinamiche esercizi -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="nst-modal-footer" style="padding: 16px 20px; display: flex; justify-content: space-between; gap: 12px;">
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiModalEditorProgramma()">ANNULLA</button>
+                <button type="button" class="nst-btn-primary" id="nst-btn-salva-programma-lib" onclick="salvaProgrammaLibreriaDaModal()">
+                    <span class="material-symbols-outlined">save</span>
+                    <span>SALVA PROGRAMMA</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Libreria Grafici Chart.js CDN (v4) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.45"></script>
+    <script src="nestore.js?v=1.05.46"></script>
 </body>
 </html>
