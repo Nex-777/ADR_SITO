@@ -369,6 +369,261 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         // Should append only active programs (prog-1 and prog-3)
         expect(selectMock.appendChild).toHaveBeenCalledTimes(2);
     });
+
+    describe('Forza Program Series Editor & PR Fallback (Fase 3)', () => {
+        it('has DEFAULT_FORZA_SERIE matching 10@60%, 5@70%, 3@80%, 1@90%, 1@100%', () => {
+            const nestore = require('../portal/nestore.js');
+            const defaults = nestore.DEFAULT_FORZA_SERIE || global.window.DEFAULT_FORZA_SERIE;
+            expect(defaults).toBeDefined();
+            expect(defaults.length).toBe(5);
+            expect(defaults[0]).toEqual({ rip: 10, pct: 60 });
+            expect(defaults[1]).toEqual({ rip: 5, pct: 70 });
+            expect(defaults[2]).toEqual({ rip: 3, pct: 80 });
+            expect(defaults[3]).toEqual({ rip: 1, pct: 90 });
+            expect(defaults[4]).toEqual({ rip: 1, pct: 100 });
+        });
+
+        it('isModalInForzaMode detects forza from either tipo or categoria', () => {
+            const nestore = require('../portal/nestore.js');
+            const isModalInForzaMode = nestore.isModalInForzaMode || global.window.isModalInForzaMode;
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-prog-edit-tipo') return { value: 'ibrido' };
+                if (id === 'nst-prog-edit-categoria') return { value: 'forza' };
+                return null;
+            });
+            expect(isModalInForzaMode()).toBe(true);
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-prog-edit-tipo') return { value: 'forza' };
+                if (id === 'nst-prog-edit-categoria') return { value: 'metcon' };
+                return null;
+            });
+            expect(isModalInForzaMode()).toBe(true);
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-prog-edit-tipo') return { value: 'ibrido' };
+                if (id === 'nst-prog-edit-categoria') return { value: 'metcon' };
+                return null;
+            });
+            expect(isModalInForzaMode()).toBe(false);
+        });
+
+        it('ottieniBaseMassimaleEsercizio uses athlete PR when available', async () => {
+            const nestore = require('../portal/nestore.js');
+            const ottieniBase = nestore.ottieniBaseMassimaleEsercizio || global.window.ottieniBaseMassimaleEsercizio;
+
+            global.window.currentUserPrList = [
+                { nome: 'Panca Piana', peso_kg: 100 }
+            ];
+
+            const res = await ottieniBase('Panca Piana');
+            expect(res.baseKg).toBe(100);
+            expect(res.fonte).toContain('PR');
+        });
+
+        it('ottieniBaseMassimaleEsercizio falls back to athlete body weight if PR missing', async () => {
+            const nestore = require('../portal/nestore.js');
+            const ottieniBase = nestore.ottieniBaseMassimaleEsercizio || global.window.ottieniBaseMassimaleEsercizio;
+
+            global.window.currentUserPrList = [];
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-current-weight') return { textContent: '82.5' };
+                return null;
+            });
+
+            const res = await ottieniBase('Squat Sconosciuto');
+            expect(res.baseKg).toBe(82.5);
+            expect(res.fonte).toContain('Peso atleta');
+        });
+
+        it('ottieniBaseMassimaleEsercizio falls back to 70 kg if both PR and body weight are missing', async () => {
+            const nestore = require('../portal/nestore.js');
+            const ottieniBase = nestore.ottieniBaseMassimaleEsercizio || global.window.ottieniBaseMassimaleEsercizio;
+
+            global.window.currentUserPrList = [];
+            global.window.currentUserPesoKg = null;
+            document.getElementById = vi.fn(() => null);
+
+            const res = await ottieniBase('Stacco Sconosciuto');
+            expect(res.baseKg).toBe(70);
+            expect(res.fonte).toContain('Default');
+        });
+
+        it('salvaProgrammaLibreriaDaModal formats structured series for forza programs', async () => {
+            const nestore = require('../portal/nestore.js');
+            let insertPayload = null;
+            const chainOrder = () => ({
+                order: vi.fn(() => ({
+                    order: vi.fn(async () => ({ data: [], error: null }))
+                }))
+            });
+            global.window.supabaseClient = {
+                from: () => ({
+                    insert: vi.fn(async (payload) => {
+                        insertPayload = payload;
+                        return { error: null };
+                    }),
+                    update: vi.fn(() => ({ eq: vi.fn(async () => ({ error: null })) })),
+                    select: vi.fn(() => ({
+                        eq: vi.fn(() => chainOrder()),
+                        ...chainOrder()
+                    }))
+                })
+            };
+
+            const mockNomeInput = { value: 'Forza Test Programma' };
+            const mockTipoInput = { value: 'forza' };
+            const mockCatInput = { value: 'forza' };
+
+            const fakeRow = {
+                querySelector: vi.fn((sel) => {
+                    if (sel === '.ex-nome') return { value: 'Back Squat' };
+                    return null;
+                }),
+                querySelectorAll: vi.fn((sel) => {
+                    if (sel === '.nst-serie-row') {
+                        return [
+                            {
+                                querySelector: (s) => (s === '.serie-rip' ? { value: '10' } : { value: '60' })
+                            },
+                            {
+                                querySelector: (s) => (s === '.serie-rip' ? { value: '5' } : { value: '70' })
+                            }
+                        ];
+                    }
+                    return [];
+                })
+            };
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-prog-edit-id') return { value: '' };
+                if (id === 'nst-prog-edit-nome') return mockNomeInput;
+                if (id === 'nst-prog-edit-tipo') return mockTipoInput;
+                if (id === 'nst-prog-edit-categoria') return mockCatInput;
+                if (id === 'nst-prog-edit-timer-mode') return { value: 'stopwatch' };
+                if (id === 'nst-prog-edit-ordine') return { value: '10' };
+                return { value: '' };
+            });
+
+            document.querySelectorAll = vi.fn((sel) => {
+                if (sel.includes('.nst-ex-row-edit')) return [fakeRow];
+                return [];
+            });
+
+            await global.window.salvaProgrammaLibreriaDaModal();
+
+            expect(insertPayload).toBeDefined();
+            expect(insertPayload.nome).toBe('Forza Test Programma');
+            expect(insertPayload.esercizi).toBeDefined();
+            expect(insertPayload.esercizi.length).toBe(1);
+            expect(insertPayload.esercizi[0].nome).toBe('Back Squat');
+            expect(insertPayload.esercizi[0].serie).toBeDefined();
+            expect(insertPayload.esercizi[0].serie.length).toBe(2);
+            expect(insertPayload.esercizi[0].serie[0]).toEqual({ rip: 10, pct: 60, percentuale: 60 });
+            expect(insertPayload.esercizi[0].serie[1]).toEqual({ rip: 5, pct: 70, percentuale: 70 });
+            expect(insertPayload.esercizi[0].target).toContain('10 rip @ 60%');
+        });
+
+        it('aggiungiRigaSerie creates formatted row and rimuoviRigaSerie reindexes badges', () => {
+            const nestore = require('../portal/nestore.js');
+            const aggiungi = nestore.aggiungiRigaSerie || global.window.aggiungiRigaSerie;
+            const rimuovi = nestore.rimuoviRigaSerie || global.window.rimuoviRigaSerie;
+
+            const listEl = {
+                classList: { contains: () => true },
+                rows: [],
+                appendChild(r) { this.rows.push(r); r.parentElement = this; },
+                querySelectorAll(sel) {
+                    if (sel === '.nst-serie-row') return this.rows;
+                    return [];
+                }
+            };
+
+            document.createElement = vi.fn((tag) => {
+                const el = {
+                    tagName: tag.toUpperCase(),
+                    className: '',
+                    innerHTML: '',
+                    remove() {
+                        if (this.parentElement) {
+                            const idx = this.parentElement.rows.indexOf(this);
+                            if (idx >= 0) this.parentElement.rows.splice(idx, 1);
+                        }
+                    },
+                    querySelector(s) {
+                        if (s === '.nst-serie-idx-badge') return this.badgeMock || { textContent: '' };
+                        return null;
+                    },
+                    closest(s) {
+                        if (s === '.nst-serie-row') return this;
+                        return null;
+                    }
+                };
+                el.badgeMock = { textContent: '' };
+                return el;
+            });
+
+            aggiungi(listEl, 10, 60);
+            aggiungi(listEl, 5, 70);
+            aggiungi(listEl, 3, 80);
+
+            expect(listEl.rows.length).toBe(3);
+
+            // Remove middle row
+            const secondRow = listEl.rows[1];
+            rimuovi(secondRow);
+
+            expect(listEl.rows.length).toBe(2);
+            expect(listEl.rows[0].badgeMock.textContent).toBe('Serie 1');
+            expect(listEl.rows[1].badgeMock.textContent).toBe('Serie 2');
+        });
+
+        it('apriAnteprimaIbrido renders formatted series text for strength program with ex.serie', () => {
+            const nestore = require('../portal/nestore.js');
+            const apriAnteprima = nestore.apriAnteprimaIbrido || global.window.apriAnteprimaIbrido;
+
+            global.window.libreriaProgrammiTotali = [
+                {
+                    id: 'forza-anteprima-test',
+                    nome: 'Forza Max Power',
+                    tipo: 'forza',
+                    categoria: 'forza',
+                    descrizione: 'Test anteprima forza',
+                    esercizi: [
+                        {
+                            nome: 'Panca Piana',
+                            serie: [
+                                { rip: 10, pct: 60 },
+                                { rip: 5, pct: 70 },
+                                { rip: 3, pct: 80 }
+                            ]
+                        }
+                    ]
+                }
+            ];
+
+            const exListMock = { innerHTML: '' };
+            const titleMock = { textContent: '' };
+            const descMock = { textContent: '' };
+            const cardMock = { classList: { add: vi.fn(), remove: vi.fn() } };
+            const modalMock = { classList: { add: vi.fn(), remove: vi.fn() } };
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-ibrido-preview-ex-list') return exListMock;
+                if (id === 'nst-ibrido-preview-title') return titleMock;
+                if (id === 'nst-ibrido-preview-desc') return descMock;
+                if (id === 'nst-ibrido-preview-card') return cardMock;
+                if (id === 'nst-ibrido-preview-modal') return modalMock;
+                return null;
+            });
+
+            apriAnteprima('forza-anteprima-test');
+
+            expect(exListMock.innerHTML).toContain('Panca Piana');
+            expect(exListMock.innerHTML).toContain('10 rip @ 60% · 5 rip @ 70% · 3 rip @ 80%');
+        });
+    });
 });
 
 

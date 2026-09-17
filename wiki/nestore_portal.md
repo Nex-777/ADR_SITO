@@ -303,6 +303,47 @@ Introdotta nella versione **1.05.47**:
   - Quando un atleta riceve una scheda collegata a un programma di libreria (`programma_libreria_id`), la sua card mostra la preview completa e leggibile dello schema esercizi e il pulsante **`AVVIA PROGRAMMA`** (`.nst-btn-launch-workout`).
   - Il click apre direttamente il modale di anteprima e timer (`apriAnteprimaIbrido`), permettendo all'atleta di avviare il workout, configurare il Tabata o registrare i lap col cronometro nativo e salvare la sessione nei propri registri.
 
+### 9.7. Editor Serie Programmi Forza (Ripetizioni, % Massimale & Calcolo Carico Automatico)
+Introdotto nella versione **1.05.48**:
+- **Editor Dedicato nella Libreria Allenamenti (Opzione A)**:
+  - Per i programmi di categoria o tipologia `forza`, l'editor del programma (`#nst-coach-programma-modal`) attiva una vista avanzata per ciascun esercizio.
+  - Al posto del campo di testo generico `Target / Schema`, ogni esercizio di forza presenta un container per le serie strutturate (`.nst-ex-serie-container`).
+  - **Schema Predefinito Standard (5 serie)**:
+    1. 10 rip @ 60%
+    2. 5 rip @ 70%
+    3. 3 rip @ 80%
+    4. 1 rip @ 90%
+    5. 1 rip @ 100%
+  - **Due Caselle Modificabili per Serie**: numero di ripetizioni (`serie-rip`) e percentuale sul massimale (`serie-pct`).
+  - **Pulsanti Dinamici**: aggiunta di nuove serie (`+ AGGIUNGI SERIE`) e rimozione (`✕`) con re-indicizzazione automatica dei badge (`Serie 1`, `Serie 2`, ...).
+- **Serializzazione JSONB & Retrocompatibilità**:
+  - Gli esercizi di forza vengono salvati in `nestore_programmi_libreria` come:
+    ```json
+    {
+      "nome": "Back Squat",
+      "serie": [
+        { "rip": 10, "pct": 60, "percentuale": 60 },
+        { "rip": 5, "pct": 70, "percentuale": 70 },
+        { "rip": 3, "pct": 80, "percentuale": 80 },
+        { "rip": 1, "pct": 90, "percentuale": 90 },
+        { "rip": 1, "pct": 100, "percentuale": 100 }
+      ],
+      "target": "10 rip @ 60%, 5 rip @ 70%, 3 rip @ 80%, 1 rip @ 90%, 1 rip @ 100%"
+    }
+    ```
+  - La generazione automatica del campo descrittivo `target` garantisce che qualsiasi vista o componente legacy che visualizza solo il testo continui a funzionare senza interruzioni.
+- **Calcolo Automatico del Peso (kg) a Runtime (`avviaIbridoSeduta`)**:
+  - Quando un atleta avvia un programma di forza, il sistema risolve la base di carico (`ottieniBaseMassimaleEsercizio`):
+    1. **PR dell'Atleta**: se esiste un record personale registrato per l'esercizio con peso > 0 in `nestore_allenamenti`, viene utilizzato come massimale (100%).
+    2. **Peso Corporeo dell'Atleta (Fallback)**: se non è presente un massimale registrato, il sistema usa come carico base l'ultimo peso corporeo registrato in `nestore_pesi_misure`.
+    3. **Default Standard (70 kg)**: se mancano sia il PR che il peso corporeo, viene utilizzato il default di sicurezza di 70 kg.
+  - Per ciascuna serie, la colonna **PESO (KG)** viene calcolata e precompilata automaticamente come:
+    $$\text{peso\_kg} = \text{round}\left(\text{baseKg} \times \frac{\%}{100} \times 2\right) / 2$$
+    (arrotondamento al mezzo chilo).
+  - L'atleta visualizza sotto il nome dell'esercizio la fonte utilizzata (es. `PR: 120 kg`, `Peso atleta: 78 kg`, `Default: 70 kg`) e può liberamente correggere o affinare i carichi effettivi sollevati durante la seduta.
+- **Registrazione Sessione & Alimentazione Massimali**:
+  - Al termine della seduta, vengono salvate tutte le serie con dettaglio in `scheda_dati.serie_dettaglio`, e il carico massimo sollevato viene registrato come `peso_kg` principale dell'esercizio per aggiornare automaticamente la bacheca dei Record Personali (PR).
+
 ---
 
 ## 10. Related Concept Pages

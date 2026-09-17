@@ -17,6 +17,17 @@ let currentSchedaAtleta = null;
 let currentAttachedImage = null; // { base64, mimeType, name }
 let speechRecognizer = null;
 let isRecordingVoice = false;
+let currentUserPesoKg = null;
+let currentUserPrList = null;
+
+// Schema di serie predefinito per programmi di forza: ripetizioni per % sul massimale
+const DEFAULT_FORZA_SERIE = [
+    { rip: 10, pct: 60 },
+    { rip: 5, pct: 70 },
+    { rip: 3, pct: 80 },
+    { rip: 1, pct: 90 },
+    { rip: 1, pct: 100 }
+];
 
 // Stato Globale Vista Allenatore & Admin (Fase 2)
 let currentNestoreView = 'athlete'; // 'athlete' | 'coach' | 'admin'
@@ -623,6 +634,7 @@ async function renderGraficoPesiMisure() {
 
         // Aggiorna riassunto ultimo peso & delta
         const ultimo = data[data.length - 1];
+        currentUserPesoKg = ultimo.peso_kg ? Number(ultimo.peso_kg) : null;
         document.getElementById('nst-current-weight').textContent = ultimo.peso_kg ? Number(ultimo.peso_kg).toFixed(1) : '--';
         const altEl = document.getElementById('nst-altezza-val');
         if (altEl) altEl.textContent = userPreferenze.altezza_cm || ultimo.altezza_cm || '--';
@@ -995,6 +1007,100 @@ function calcolaRecordPersonali(allWorkouts) {
     return prList;
 }
 
+async function ottieniBaseMassimaleEsercizio(nomeEsercizio) {
+    const nomeNorm = (nomeEsercizio || '').trim().toLowerCase();
+    let massimale = null;
+    let fonte = 'pr';
+
+    const prList = (typeof window !== 'undefined' && Array.isArray(window.currentUserPrList))
+        ? window.currentUserPrList
+        : (typeof currentUserPrList !== 'undefined' ? currentUserPrList : null);
+
+    // 1. Cerca nei PR calcolati in memoria
+    if (Array.isArray(prList) && prList.length > 0) {
+        const pr = prList.find(p => (p.nome || '').trim().toLowerCase() === nomeNorm);
+        if (pr && pr.peso_kg > 0) {
+            massimale = Number(pr.peso_kg);
+            fonte = `PR: ${massimale} kg`;
+        }
+    }
+
+    const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
+    const user = (typeof window !== 'undefined' && window.currentUser) ? window.currentUser : (typeof currentUser !== 'undefined' ? currentUser : null);
+
+    // 1b. Se non in memoria ma abbiamo client Supabase e utente loggato
+    if (!massimale && client && user?.id && typeof client.from === 'function') {
+        try {
+            const { data: allW } = await client
+                .from('nestore_allenamenti')
+                .select('*')
+                .eq('utente_id', user.id)
+                .eq('attivo', true);
+            if (allW && allW.length > 0) {
+                const prs = calcolaRecordPersonali(allW);
+                currentUserPrList = prs;
+                if (typeof window !== 'undefined') window.currentUserPrList = prs;
+                const pr = prs.find(p => (p.nome || '').trim().toLowerCase() === nomeNorm);
+                if (pr && pr.peso_kg > 0) {
+                    massimale = Number(pr.peso_kg);
+                    fonte = `PR: ${massimale} kg`;
+                }
+            }
+        } catch (e) {
+            console.warn("Impossibile recuperare PR per", nomeEsercizio, e);
+        }
+    }
+
+    // 2. Se nessun massimale, cerca il peso dell'atleta
+    if (!massimale) {
+        const pesoKgVal = (typeof window !== 'undefined' && window.currentUserPesoKg !== undefined)
+            ? window.currentUserPesoKg
+            : (typeof currentUserPesoKg !== 'undefined' ? currentUserPesoKg : null);
+
+        if (typeof pesoKgVal === 'number' && pesoKgVal > 0) {
+            massimale = pesoKgVal;
+            fonte = `Peso atleta: ${massimale} kg`;
+        } else if (typeof document !== 'undefined' && document) {
+            const weightEl = document.getElementById('nst-current-weight');
+            const wVal = parseFloat(weightEl?.textContent);
+            if (!isNaN(wVal) && wVal > 0) {
+                massimale = wVal;
+                currentUserPesoKg = massimale;
+                if (typeof window !== 'undefined') window.currentUserPesoKg = massimale;
+                fonte = `Peso atleta: ${massimale} kg`;
+            }
+        }
+
+        if (!massimale && client && user?.id && typeof client.from === 'function') {
+            try {
+                const { data: pesi } = await client
+                    .from('nestore_pesi_misure')
+                    .select('peso_kg')
+                    .eq('utente_id', user.id)
+                    .eq('attivo', true)
+                    .order('data_rilevazione', { ascending: false })
+                    .limit(1);
+                if (pesi && pesi.length > 0 && pesi[0].peso_kg > 0) {
+                    massimale = Number(pesi[0].peso_kg);
+                    currentUserPesoKg = massimale;
+                    if (typeof window !== 'undefined') window.currentUserPesoKg = massimale;
+                    fonte = `Peso atleta: ${massimale} kg`;
+                }
+            } catch (e) {
+                console.warn("Impossibile recuperare peso atleta:", e);
+            }
+        }
+    }
+
+    // 3. Fallback standard se nessun massimale e nessun peso corporeo
+    if (!massimale || massimale <= 0) {
+        massimale = 70;
+        fonte = `Default: 70 kg`;
+    }
+
+    return { baseKg: massimale, fonte };
+}
+
 function renderPrGrid(prList) {
     const container = document.getElementById('nst-pr-container');
     const prCountEl = document.getElementById('nst-pr-count');
@@ -1068,6 +1174,7 @@ async function renderGraficoAllenamenti() {
 
         // 1. Calcola e renderizza i Record Personali ALL-TIME
         const prList = calcolaRecordPersonali(allData);
+        currentUserPrList = prList;
         renderPrGrid(prList);
 
         // 2. Filtra i dati per il periodo selezionato (7G / 14G / 30G / ALL) per lo Storico Sessioni in basso
@@ -3377,12 +3484,16 @@ function showTimerToast(message) {
         document.body.appendChild(toast);
     }
     toast.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;color:var(--nst-cyan);">timer</span> ${escapeHtml(message)}`;
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateX(-50%) translateY(0)';
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(-50%) translateY(-10px)';
-    }, 3500);
+    if (toast.style) {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        setTimeout(() => {
+            if (toast.style) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(-10px)';
+            }
+        }, 3500);
+    }
 }
 
 // Modalità attiva: 'stopwatch' | 'tabata'
@@ -4488,8 +4599,11 @@ function renderCatalogoIbrido() {
 }
 
 function apriAnteprimaIbrido(progId) {
-    const p = IBRIDO_PROGRAMMI_CATALOGO.find(item => item.id === progId || item.codice === progId)
-        || libreriaProgrammiTotali.find(item => item.id === progId || item.codice === progId);
+    const catList = (typeof window !== 'undefined' && window.IBRIDO_PROGRAMMI_CATALOGO) ? window.IBRIDO_PROGRAMMI_CATALOGO : IBRIDO_PROGRAMMI_CATALOGO;
+    const libList = (typeof window !== 'undefined' && window.libreriaProgrammiTotali) ? window.libreriaProgrammiTotali : libreriaProgrammiTotali;
+
+    const p = (catList || []).find(item => item.id === progId || item.codice === progId)
+        || (libList || []).find(item => item.id === progId || item.codice === progId);
     if (!p) return;
     ibridoSelezionato = p;
 
@@ -4504,11 +4618,11 @@ function apriAnteprimaIbrido(progId) {
     if (titleEl) titleEl.textContent = `IBRIDO — ${p.nome.toUpperCase()}`;
     if (descEl) descEl.textContent = p.descrizione;
     
-    if (card) {
+    if (card && card.classList) {
         if (p.tipo === 'forza') card.classList.add('forza');
         else card.classList.remove('forza');
     }
-    if (iconEl) {
+    if (iconEl && iconEl.style) {
         iconEl.style.color = p.tipo === 'forza' ? 'var(--nst-amber)' : 'var(--nst-cyan)';
     }
 
@@ -4529,6 +4643,7 @@ function apriAnteprimaIbrido(progId) {
 
     // Lista esercizi
     if (exListEl) {
+        const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
         exListEl.innerHTML = `
             <table class="nst-ex-table">
                 <thead>
@@ -4538,12 +4653,18 @@ function apriAnteprimaIbrido(progId) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${p.esercizi.map(ex => `
-                        <tr>
-                            <td style="font-weight: 600; color: #f1f5f9;">${escapeHtml(ex.nome)}</td>
-                            <td style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px;">${escapeHtml(ex.target)}</td>
-                        </tr>
-                    `).join('')}
+                    ${(p.esercizi || []).map(ex => {
+                        let targetText = ex.target || '';
+                        if (ex.serie && Array.isArray(ex.serie) && ex.serie.length > 0) {
+                            targetText = ex.serie.map(s => `${s.rip} rip @ ${(s.pct !== undefined ? s.pct : s.percentuale)}%`).join(' · ');
+                        }
+                        return `
+                            <tr>
+                                <td style="font-weight: 600; color: #f1f5f9;">${escapeHtml(ex.nome)}</td>
+                                <td style="color: ${isForza ? 'var(--nst-amber)' : 'var(--nst-lime)'}; font-family: 'Orbitron', monospace; font-size: 11px;">${escapeHtml(targetText)}</td>
+                            </tr>
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
@@ -4575,11 +4696,12 @@ function aggiornaIbridoParamDaInput() {
     if (roundsInput) ibridoRounds = parseInt(roundsInput.value, 10) || 8;
 }
 
-function avviaIbridoSeduta() {
+async function avviaIbridoSeduta() {
     if (!ibridoSelezionato) return;
     chiudiAnteprimaIbrido();
 
     const p = ibridoSelezionato;
+    const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
     const modal = document.getElementById('nst-ibrido-active-modal');
     const titleEl = document.getElementById('nst-ibrido-active-title');
     const runningView = document.getElementById('nst-ibrido-running-view');
@@ -4591,7 +4713,7 @@ function avviaIbridoSeduta() {
 
     if (titleEl) {
         titleEl.textContent = `IBRIDO — ${p.nome.toUpperCase()} — IN CORSO`;
-        titleEl.style.color = p.tipo === 'forza' ? 'var(--nst-amber)' : 'var(--nst-cyan)';
+        titleEl.style.color = isForza ? 'var(--nst-amber)' : 'var(--nst-cyan)';
     }
 
     if (runningView) runningView.classList.remove('nst-hidden');
@@ -4599,35 +4721,86 @@ function avviaIbridoSeduta() {
 
     // Tabella interattiva esercizi
     if (exTableContainer) {
-        if (p.tipo === 'forza') {
-            exTableContainer.innerHTML = `
-                <table class="nst-ex-table">
-                    <thead>
-                        <tr>
-                            <th>ESERCIZIO</th>
-                            <th>SERIE</th>
-                            <th>PESO (KG)</th>
-                            <th>RIP</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${p.esercizi.map((ex, idx) => `
+        if (isForza) {
+            const hasStructuredSeries = (p.esercizi || []).some(ex => Array.isArray(ex.serie) && ex.serie.length > 0);
+
+            if (hasStructuredSeries) {
+                // Calcola base massimale (PR -> Peso Atleta -> 70kg) per ciascun esercizio
+                const baseInfoList = await Promise.all((p.esercizi || []).map(ex => ottieniBaseMassimaleEsercizio(ex.nome)));
+
+                exTableContainer.innerHTML = `
+                    <table class="nst-ex-table">
+                        <thead>
                             <tr>
-                                <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
-                                <td>
-                                    <input type="number" id="nst-ibrido-ex-serie-${idx}" class="nst-ex-input" value="${ex.serie_target || 4}" min="1" max="20" style="width: 50px;">
-                                </td>
-                                <td>
-                                    <input type="number" id="nst-ibrido-ex-peso-${idx}" class="nst-ex-input" value="${ex.peso_target || 0}" min="0" max="500" step="0.5" style="width: 65px;">
-                                </td>
-                                <td>
-                                    <input type="number" id="nst-ibrido-ex-rip-${idx}" class="nst-ex-input" value="${ex.rip_target || 5}" min="1" max="100" style="width: 50px;">
-                                </td>
+                                <th>ESERCIZIO</th>
+                                <th>SERIE</th>
+                                <th>%</th>
+                                <th>PESO (KG)</th>
+                                <th>RIP</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+                        </thead>
+                        <tbody>
+                            ${p.esercizi.map((ex, exIdx) => {
+                                const baseInfo = baseInfoList[exIdx] || { baseKg: 70, fonte: 'Default: 70 kg' };
+                                const serieList = (Array.isArray(ex.serie) && ex.serie.length > 0)
+                                    ? ex.serie
+                                    : DEFAULT_FORZA_SERIE;
+
+                                return serieList.map((s, sIdx) => {
+                                    const pct = Number(s.pct !== undefined ? s.pct : s.percentuale) || 100;
+                                    const rip = Number(s.rip) || 5;
+                                    const calcKg = Math.round((baseInfo.baseKg * pct / 100) * 2) / 2;
+                                    const isFirst = (sIdx === 0);
+
+                                    return `
+                                        <tr>
+                                            ${isFirst ? `<td rowspan="${serieList.length}" style="font-weight: 600; color: #fff; vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.1);">${escapeHtml(ex.nome)}<div style="font-size: 10px; color: var(--nst-amber); margin-top: 3px; font-weight: normal;">${escapeHtml(baseInfo.fonte)}</div></td>` : ''}
+                                            <td style="font-family: 'Orbitron', monospace; font-size: 11px; color: var(--nst-text-muted);">Serie ${sIdx + 1}</td>
+                                            <td style="color: var(--nst-cyan); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">${pct}%</td>
+                                            <td>
+                                                <input type="number" id="nst-ibrido-ex-peso-${exIdx}-${sIdx}" class="nst-ex-input" value="${calcKg}" min="0" max="500" step="0.5" style="width: 65px; font-weight: 700; color: var(--nst-lime);">
+                                            </td>
+                                            <td>
+                                                <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-ex-input" value="${rip}" min="1" max="100" style="width: 50px; font-weight: 600;">
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('');
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                // Layout compatibilità precedente (singola riga per esercizio)
+                exTableContainer.innerHTML = `
+                    <table class="nst-ex-table">
+                        <thead>
+                            <tr>
+                                <th>ESERCIZIO</th>
+                                <th>SERIE</th>
+                                <th>PESO (KG)</th>
+                                <th>RIP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${p.esercizi.map((ex, idx) => `
+                                <tr>
+                                    <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
+                                    <td>
+                                        <input type="number" id="nst-ibrido-ex-serie-${idx}" class="nst-ex-input" value="${ex.serie_target || 4}" min="1" max="20" style="width: 50px;">
+                                    </td>
+                                    <td>
+                                        <input type="number" id="nst-ibrido-ex-peso-${idx}" class="nst-ex-input" value="${ex.peso_target || 0}" min="0" max="500" step="0.5" style="width: 65px;">
+                                    </td>
+                                    <td>
+                                        <input type="number" id="nst-ibrido-ex-rip-${idx}" class="nst-ex-input" value="${ex.rip_target || 5}" min="1" max="100" style="width: 50px;">
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
         } else {
             exTableContainer.innerHTML = `
                 <table class="nst-ex-table">
@@ -4796,6 +4969,7 @@ function aggiornaIbridoModalAttivo() {
 function terminaIbridoSeduta() {
     if (!ibridoSelezionato) return;
     const p = ibridoSelezionato;
+    const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
 
     // Ferma timer
     if (p.timer_mode === 'tabata') {
@@ -4825,34 +4999,76 @@ function terminaIbridoSeduta() {
     // Genera riepilogo per conferma
     const summaryContainer = document.getElementById('nst-ibrido-save-ex-summary');
     if (summaryContainer) {
-        if (p.tipo === 'forza') {
-            summaryContainer.innerHTML = `
-                <table class="nst-ex-table">
-                    <thead>
-                        <tr>
-                            <th>ESERCIZIO</th>
-                            <th>SERIE</th>
-                            <th>PESO</th>
-                            <th>RIP</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${p.esercizi.map((ex, idx) => {
-                            const s = document.getElementById(`nst-ibrido-ex-serie-${idx}`)?.value || ex.serie_target || 4;
-                            const kg = document.getElementById(`nst-ibrido-ex-peso-${idx}`)?.value || ex.peso_target || 0;
-                            const r = document.getElementById(`nst-ibrido-ex-rip-${idx}`)?.value || ex.rip_target || 5;
-                            return `
-                                <tr>
-                                    <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
-                                    <td style="color: var(--nst-cyan);">${escapeHtml(String(s))}</td>
-                                    <td style="color: var(--nst-lime); font-weight: 700;">${escapeHtml(String(kg))} kg</td>
-                                    <td style="color: #f1f5f9;">${escapeHtml(String(r))}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
+        if (isForza) {
+            const hasStructuredSeries = (p.esercizi || []).some(ex => Array.isArray(ex.serie) && ex.serie.length > 0);
+
+            if (hasStructuredSeries) {
+                summaryContainer.innerHTML = `
+                    <table class="nst-ex-table">
+                        <thead>
+                            <tr>
+                                <th>ESERCIZIO</th>
+                                <th>SERIE</th>
+                                <th>%</th>
+                                <th>PESO</th>
+                                <th>RIP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${p.esercizi.map((ex, exIdx) => {
+                                const serieList = (Array.isArray(ex.serie) && ex.serie.length > 0)
+                                    ? ex.serie
+                                    : DEFAULT_FORZA_SERIE;
+
+                                return serieList.map((s, sIdx) => {
+                                    const pct = Number(s.pct !== undefined ? s.pct : s.percentuale) || 100;
+                                    const kg = document.getElementById(`nst-ibrido-ex-peso-${exIdx}-${sIdx}`)?.value || 0;
+                                    const r = document.getElementById(`nst-ibrido-ex-rip-${exIdx}-${sIdx}`)?.value || s.rip || 0;
+                                    const isFirst = (sIdx === 0);
+
+                                    return `
+                                        <tr>
+                                            ${isFirst ? `<td rowspan="${serieList.length}" style="font-weight: 600; color: #fff; vertical-align: middle;">${escapeHtml(ex.nome)}</td>` : ''}
+                                            <td style="color: var(--nst-cyan); font-family: 'Orbitron', monospace; font-size: 11px;">Serie ${sIdx + 1}</td>
+                                            <td style="color: var(--nst-text-muted); font-size: 11px;">${pct}%</td>
+                                            <td style="color: var(--nst-lime); font-weight: 700;">${escapeHtml(String(kg))} kg</td>
+                                            <td style="color: #f1f5f9; font-weight: 600;">${escapeHtml(String(r))} rip</td>
+                                        </tr>
+                                    `;
+                                }).join('');
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                summaryContainer.innerHTML = `
+                    <table class="nst-ex-table">
+                        <thead>
+                            <tr>
+                                <th>ESERCIZIO</th>
+                                <th>SERIE</th>
+                                <th>PESO</th>
+                                <th>RIP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${p.esercizi.map((ex, idx) => {
+                                const s = document.getElementById(`nst-ibrido-ex-serie-${idx}`)?.value || ex.serie_target || 4;
+                                const kg = document.getElementById(`nst-ibrido-ex-peso-${idx}`)?.value || ex.peso_target || 0;
+                                const r = document.getElementById(`nst-ibrido-ex-rip-${idx}`)?.value || ex.rip_target || 5;
+                                return `
+                                    <tr>
+                                        <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
+                                        <td style="color: var(--nst-cyan);">${escapeHtml(String(s))}</td>
+                                        <td style="color: var(--nst-lime); font-weight: 700;">${escapeHtml(String(kg))} kg</td>
+                                        <td style="color: #f1f5f9;">${escapeHtml(String(r))}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
         } else {
             summaryContainer.innerHTML = `
                 <table class="nst-ex-table">
@@ -4894,6 +5110,7 @@ function annullaSalvataggioIbrido() {
 async function confermaSalvaIbridoSeduta() {
     if (!ibridoSelezionato) return;
     const p = ibridoSelezionato;
+    const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
 
     const saveBtn = document.getElementById('nst-btn-confirm-save-ibrido');
     if (saveBtn) {
@@ -4909,19 +5126,52 @@ async function confermaSalvaIbridoSeduta() {
 
         // Costruisci payload dati esercizi
         let eserciziDati = [];
-        if (p.tipo === 'forza') {
-            eserciziDati = p.esercizi.map((ex, idx) => {
-                const s = parseInt(document.getElementById(`nst-ibrido-ex-serie-${idx}`)?.value, 10) || ex.serie_target || 4;
-                const kg = parseFloat(document.getElementById(`nst-ibrido-ex-peso-${idx}`)?.value) || ex.peso_target || 0;
-                const r = parseInt(document.getElementById(`nst-ibrido-ex-rip-${idx}`)?.value, 10) || ex.rip_target || 5;
-                return {
-                    nome: ex.nome,
-                    serie: s,
-                    peso_kg: kg,
-                    ripetizioni: r,
-                    target_originario: ex.target
-                };
-            });
+        if (isForza) {
+            const hasStructuredSeries = (p.esercizi || []).some(ex => Array.isArray(ex.serie) && ex.serie.length > 0);
+
+            if (hasStructuredSeries) {
+                eserciziDati = p.esercizi.map((ex, exIdx) => {
+                    const serieList = (Array.isArray(ex.serie) && ex.serie.length > 0)
+                        ? ex.serie
+                        : DEFAULT_FORZA_SERIE;
+
+                    const serieDettaglio = serieList.map((s, sIdx) => {
+                        const kg = parseFloat(document.getElementById(`nst-ibrido-ex-peso-${exIdx}-${sIdx}`)?.value) || 0;
+                        const r = parseInt(document.getElementById(`nst-ibrido-ex-rip-${exIdx}-${sIdx}`)?.value, 10) || s.rip || 0;
+                        return {
+                            serie: sIdx + 1,
+                            pct: Number(s.pct !== undefined ? s.pct : s.percentuale) || 100,
+                            peso_kg: kg,
+                            ripetizioni: r
+                        };
+                    });
+
+                    const maxPeso = Math.max(0, ...serieDettaglio.map(d => d.peso_kg));
+                    const bestSet = serieDettaglio.find(d => d.peso_kg === maxPeso) || serieDettaglio[0];
+
+                    return {
+                        nome: ex.nome,
+                        serie: serieDettaglio.length,
+                        peso_kg: maxPeso,
+                        ripetizioni: bestSet ? bestSet.ripetizioni : (ex.rip || 1),
+                        serie_dettaglio: serieDettaglio,
+                        target_originario: ex.target || ''
+                    };
+                });
+            } else {
+                eserciziDati = p.esercizi.map((ex, idx) => {
+                    const s = parseInt(document.getElementById(`nst-ibrido-ex-serie-${idx}`)?.value, 10) || ex.serie_target || 4;
+                    const kg = parseFloat(document.getElementById(`nst-ibrido-ex-peso-${idx}`)?.value) || ex.peso_target || 0;
+                    const r = parseInt(document.getElementById(`nst-ibrido-ex-rip-${idx}`)?.value, 10) || ex.rip_target || 5;
+                    return {
+                        nome: ex.nome,
+                        serie: s,
+                        peso_kg: kg,
+                        ripetizioni: r,
+                        target_originario: ex.target
+                    };
+                });
+            }
         } else {
             eserciziDati = p.esercizi.map((ex, idx) => {
                 const res = document.getElementById(`nst-ibrido-ex-risultato-${idx}`)?.value || ex.target;
@@ -5033,8 +5283,9 @@ function switchCoachMainTab(tab) {
 
 async function caricaLibreriaProgrammi() {
     try {
-        if (!supabaseClient) return;
-        const { data, error } = await supabaseClient
+        const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : supabaseClient;
+        if (!client) return;
+        const { data, error } = await client
             .from('nestore_programmi_libreria')
             .select('*')
             .eq('attivo', true)
@@ -5071,8 +5322,9 @@ async function caricaLibreriaProgrammiCoach() {
     const statsPill = document.getElementById('nst-coach-library-stats-pill');
 
     try {
-        if (!supabaseClient) return;
-        const { data, error } = await supabaseClient
+        const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : supabaseClient;
+        if (!client) return;
+        const { data, error } = await client
             .from('nestore_programmi_libreria')
             .select('*')
             .eq('attivo', true)
@@ -5194,6 +5446,12 @@ function filtraProgrammiLibreriaCoach() {
     }).join('');
 }
 
+function isModalInForzaMode() {
+    const tipo = document.getElementById('nst-prog-edit-tipo')?.value;
+    const cat = document.getElementById('nst-prog-edit-categoria')?.value;
+    return (tipo === 'forza' || cat === 'forza');
+}
+
 function apriModalEditorProgramma(progId = null) {
     currentEditingProgramId = progId;
     const modal = document.getElementById('nst-coach-programma-modal');
@@ -5219,11 +5477,15 @@ function apriModalEditorProgramma(progId = null) {
             ? window.libreriaProgrammiTotali
             : libreriaProgrammiTotali;
         const prog = list.find(p => p.id === progId);
+        const pTipo = prog ? prog.tipo : 'ibrido';
+        const pCat = prog ? (prog.categoria || 'metcon') : 'metcon';
+        const isForza = (pTipo === 'forza' || pCat === 'forza');
+
         if (titleText) titleText.textContent = `MODIFICA: ${prog ? prog.nome.toUpperCase() : 'PROGRAMMA'}`;
         if (idInput) idInput.value = progId;
         if (nomeInput) nomeInput.value = prog ? prog.nome : '';
-        if (tipoSelect) tipoSelect.value = prog ? prog.tipo : 'ibrido';
-        if (catSelect) catSelect.value = prog ? (prog.categoria || 'metcon') : 'metcon';
+        if (tipoSelect) tipoSelect.value = pTipo;
+        if (catSelect) catSelect.value = pCat;
         if (timerSelect) timerSelect.value = prog ? (prog.timer_mode || 'stopwatch') : 'stopwatch';
         if (ordineInput) ordineInput.value = prog ? (prog.ordine || 10) : 10;
         if (workInput) workInput.value = prog ? (prog.work_default || 30) : 30;
@@ -5234,9 +5496,9 @@ function apriModalEditorProgramma(progId = null) {
         if (descInput) descInput.value = prog ? (prog.descrizione || '') : '';
 
         if (prog && Array.isArray(prog.esercizi) && prog.esercizi.length > 0) {
-            prog.esercizi.forEach(ex => aggiungiRigaEsercizioModal(ex.nome || '', ex.target || ''));
+            prog.esercizi.forEach(ex => aggiungiRigaEsercizioModal(ex.nome || '', ex.target || '', ex.serie || null, isForza));
         } else {
-            aggiungiRigaEsercizioModal('', '');
+            aggiungiRigaEsercizioModal('', '', null, isForza);
         }
     } else {
         if (titleText) titleText.textContent = 'NUOVO PROGRAMMA ALLENAMENTO';
@@ -5253,8 +5515,9 @@ function apriModalEditorProgramma(progId = null) {
         if (giriInput) giriInput.value = '';
         if (descInput) descInput.value = '';
 
-        aggiungiRigaEsercizioModal('', '');
-        aggiungiRigaEsercizioModal('', '');
+        const isForza = isModalInForzaMode();
+        aggiungiRigaEsercizioModal('', '', null, isForza);
+        aggiungiRigaEsercizioModal('', '', null, isForza);
     }
 
     gestisciCambioTimerMode();
@@ -5263,7 +5526,7 @@ function apriModalEditorProgramma(progId = null) {
 
 function chiudiModalEditorProgramma() {
     const modal = document.getElementById('nst-coach-programma-modal');
-    if (modal) modal.classList.add('nst-hidden');
+    if (modal && modal.classList) modal.classList.add('nst-hidden');
     currentEditingProgramId = null;
 }
 
@@ -5279,22 +5542,139 @@ function gestisciCambioTimerMode() {
 function gestisciCambioTipoProgramma() {
     const tipo = document.getElementById('nst-prog-edit-tipo')?.value;
     const catSelect = document.getElementById('nst-prog-edit-categoria');
-    if (!catSelect) return;
-    if (tipo === 'invictus') catSelect.value = 'standard';
-    else if (tipo === 'ibrido' && catSelect.value === 'standard') catSelect.value = 'metcon';
+    if (catSelect) {
+        if (tipo === 'invictus') catSelect.value = 'standard';
+        else if (tipo === 'forza') catSelect.value = 'forza';
+        else if (tipo === 'ibrido' && catSelect.value === 'standard') catSelect.value = 'metcon';
+        else if (catSelect.value === 'forza' && tipo !== 'forza') {
+            const tipoSelect = document.getElementById('nst-prog-edit-tipo');
+            if (tipoSelect) tipoSelect.value = 'forza';
+        }
+    }
+    aggiornaLayoutEserciziModal();
 }
 
-function aggiungiRigaEsercizioModal(nome = '', target = '') {
+function aggiornaLayoutEserciziModal() {
     const container = document.getElementById('nst-prog-edit-esercizi-container');
     if (!container) return;
 
+    const isForza = isModalInForzaMode();
+    const existingRows = container.querySelectorAll ? container.querySelectorAll('.nst-ex-row-edit') : [];
+    if (existingRows.length === 0) return;
+
+    const datiEsercizi = [];
+    existingRows.forEach(r => {
+        const nome = r.querySelector('.ex-nome')?.value || '';
+        const target = r.querySelector('.ex-target')?.value || '';
+        const serie = [];
+        const sRows = r.querySelectorAll ? r.querySelectorAll('.nst-serie-row') : [];
+        sRows.forEach(sr => {
+            const rip = parseInt(sr.querySelector('.serie-rip')?.value, 10) || 5;
+            const pct = parseFloat(sr.querySelector('.serie-pct')?.value) || 70;
+            serie.push({ rip, pct, percentuale: pct });
+        });
+        datiEsercizi.push({ nome, target, serie: serie.length > 0 ? serie : null });
+    });
+
+    container.innerHTML = '';
+    datiEsercizi.forEach(d => {
+        aggiungiRigaEsercizioModal(d.nome, d.target, d.serie, isForza);
+    });
+}
+
+function aggiungiRigaSerie(container, rip = 5, pct = 70) {
+    if (!container) return;
+    const list = container.classList?.contains('nst-serie-rows-list')
+        ? container
+        : (container.querySelector ? container.querySelector('.nst-serie-rows-list') : container);
+
+    if (!list) return;
+
     const row = document.createElement('div');
-    row.className = 'nst-ex-row-edit';
+    row.className = 'nst-serie-row';
+    const currentCount = (list.querySelectorAll ? list.querySelectorAll('.nst-serie-row').length : 0) + 1;
+
     row.innerHTML = `
-        <input type="text" class="nst-form-input ex-nome" placeholder="Nome Esercizio (es. Pull-up)" style="flex: 2; height: 34px; font-size: 12px;" value="${escapeHtml(nome)}">
-        <input type="text" class="nst-form-input ex-target" placeholder="Target / Schema (es. 4x5 @ 100kg o 15 rip)" style="flex: 2; height: 34px; font-size: 12px;" value="${escapeHtml(target)}">
-        <button type="button" class="nst-btn-icon-close" style="width: 28px; height: 28px; line-height: 28px; font-size: 12px;" onclick="this.parentElement.remove()" title="Rimuovi esercizio">✕</button>
+        <span class="nst-serie-idx-badge">Serie ${currentCount}</span>
+        <div style="position: relative;">
+            <input type="number" class="nst-form-input serie-rip" min="1" max="100" value="${rip}" placeholder="Rip" style="height: 30px; font-size: 12px; padding-right: 28px; text-align: center;">
+            <span style="position: absolute; right: 8px; top: 6px; font-size: 10px; color: var(--nst-text-muted); pointer-events: none;">rip</span>
+        </div>
+        <div style="position: relative;">
+            <input type="number" class="nst-form-input serie-pct" min="1" max="200" step="1" value="${pct}" placeholder="%" style="height: 30px; font-size: 12px; padding-right: 20px; text-align: center;">
+            <span style="position: absolute; right: 8px; top: 6px; font-size: 10px; color: var(--nst-text-muted); pointer-events: none;">%</span>
+        </div>
+        <button type="button" class="nst-btn-icon-close" style="width: 26px; height: 26px; line-height: 26px; font-size: 11px;" onclick="rimuoviRigaSerie(this)" title="Rimuovi serie">✕</button>
     `;
+    list.appendChild(row);
+}
+
+function rimuoviRigaSerie(btn) {
+    const row = btn?.closest ? btn.closest('.nst-serie-row') : btn?.parentElement;
+    const list = row?.parentElement;
+    if (row && typeof row.remove === 'function') row.remove();
+    if (list && list.querySelectorAll) {
+        const rows = list.querySelectorAll('.nst-serie-row');
+        rows.forEach((r, idx) => {
+            const badge = r.querySelector('.nst-serie-idx-badge');
+            if (badge) badge.textContent = `Serie ${idx + 1}`;
+        });
+    }
+}
+
+function aggiungiRigaEsercizioModal(nome = '', target = '', serie = null, forzaMode = null) {
+    const container = document.getElementById('nst-prog-edit-esercizi-container');
+    if (!container) return;
+
+    const isForza = (forzaMode !== null) ? !!forzaMode : isModalInForzaMode();
+
+    const row = document.createElement('div');
+    row.className = 'nst-ex-row-edit' + (isForza ? ' nst-ex-forza-block' : '');
+
+    if (isForza) {
+        row.innerHTML = `
+            <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 18px;">fitness_center</span>
+                <input type="text" class="nst-form-input ex-nome" placeholder="Nome Esercizio di Forza (es. Back Squat, Panca, Stacco)" style="flex: 1; height: 34px; font-size: 12px; font-weight: 600;" value="${escapeHtml(nome)}">
+                <button type="button" class="nst-btn-icon-close" style="width: 28px; height: 28px; line-height: 28px; font-size: 12px;" onclick="this.closest('.nst-ex-row-edit').remove()" title="Rimuovi esercizio">✕</button>
+            </div>
+            <div class="nst-ex-serie-container" style="width: 100%;">
+                <div style="display: grid; grid-template-columns: 80px 1fr 1fr 32px; gap: 8px; font-size: 10px; font-weight: 700; color: var(--nst-text-muted); text-transform: uppercase; margin-bottom: 6px; padding-left: 4px;">
+                    <span>Serie</span>
+                    <span>Ripetizioni</span>
+                    <span>% Massimale</span>
+                    <span></span>
+                </div>
+                <div class="nst-serie-rows-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+                <div style="margin-top: 8px; display: flex; justify-content: flex-end;">
+                    <button type="button" class="nst-btn-ghost-sm nst-btn-add-serie" style="font-size: 11px; padding: 4px 10px; border-color: rgba(245,158,11,0.3); color: var(--nst-amber);">
+                        + AGGIUNGI SERIE
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const serieList = row.querySelector ? row.querySelector('.nst-serie-rows-list') : null;
+        const addBtn = row.querySelector ? row.querySelector('.nst-btn-add-serie') : null;
+        if (addBtn && serieList) {
+            addBtn.onclick = () => aggiungiRigaSerie(serieList);
+        }
+
+        const seriesToRender = (Array.isArray(serie) && serie.length > 0) ? serie : DEFAULT_FORZA_SERIE;
+        seriesToRender.forEach(s => {
+            const rip = s.rip || 5;
+            const pct = s.pct !== undefined ? s.pct : (s.percentuale !== undefined ? s.percentuale : 70);
+            aggiungiRigaSerie(serieList, rip, pct);
+        });
+
+    } else {
+        row.innerHTML = `
+            <input type="text" class="nst-form-input ex-nome" placeholder="Nome Esercizio (es. Pull-up)" style="flex: 2; height: 34px; font-size: 12px;" value="${escapeHtml(nome)}">
+            <input type="text" class="nst-form-input ex-target" placeholder="Target / Schema (es. 4x5 @ 100kg o 15 rip)" style="flex: 2; height: 34px; font-size: 12px;" value="${escapeHtml(target)}">
+            <button type="button" class="nst-btn-icon-close" style="width: 28px; height: 28px; line-height: 28px; font-size: 12px;" onclick="this.parentElement.remove()" title="Rimuovi esercizio">✕</button>
+        `;
+    }
+
     container.appendChild(row);
 }
 
@@ -5318,13 +5698,34 @@ async function salvaProgrammaLibreriaDaModal() {
         return;
     }
 
+    const isForza = isModalInForzaMode();
     const exRows = document.querySelectorAll('#nst-prog-edit-esercizi-container .nst-ex-row-edit');
     const esercizi = [];
+
     exRows.forEach(r => {
         const exNome = r.querySelector('.ex-nome')?.value.trim();
-        const exTarget = r.querySelector('.ex-target')?.value.trim();
-        if (exNome) {
-            esercizi.push({ nome: exNome, target: exTarget || '' });
+        if (!exNome) return;
+
+        if (isForza) {
+            const serieRows = r.querySelectorAll ? r.querySelectorAll('.nst-serie-row') : [];
+            const serie = [];
+            serieRows.forEach(sr => {
+                const rip = parseInt(sr.querySelector('.serie-rip')?.value, 10) || 0;
+                const pct = parseFloat(sr.querySelector('.serie-pct')?.value) || 0;
+                if (rip > 0 || pct > 0) {
+                    serie.push({ rip, pct, percentuale: pct });
+                }
+            });
+            const finalSerie = serie.length > 0 ? serie : DEFAULT_FORZA_SERIE;
+            const targetStr = finalSerie.map(s => `${s.rip} rip @ ${s.pct}%`).join(', ');
+            esercizi.push({
+                nome: exNome,
+                serie: finalSerie,
+                target: targetStr
+            });
+        } else {
+            const exTarget = r.querySelector('.ex-target')?.value.trim() || '';
+            esercizi.push({ nome: exNome, target: exTarget });
         }
     });
 
@@ -5352,31 +5753,32 @@ async function salvaProgrammaLibreriaDaModal() {
     }
 
     try {
-        if (!supabaseClient) throw new Error("Client Supabase non disponibile.");
+        const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : supabaseClient;
+        if (!client) throw new Error("Client Supabase non disponibile.");
 
         if (id) {
-            const { error } = await supabaseClient
+            const { error } = await client
                 .from('nestore_programmi_libreria')
                 .update(payload)
                 .eq('id', id);
             if (error) throw error;
         } else {
-            payload.creato_da = currentUser ? currentUser.id : null;
-            const { error } = await supabaseClient
+            payload.creato_da = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null;
+            const { error } = await client
                 .from('nestore_programmi_libreria')
                 .insert(payload);
             if (error) throw error;
         }
 
         chiudiModalEditorProgramma();
-        showTimerToast("✓ PROGRAMMA SALVATO CON SUCCESSO NELLA LIBRERIA!");
+        if (typeof showTimerToast === 'function') showTimerToast("✓ PROGRAMMA SALVATO CON SUCCESSO NELLA LIBRERIA!");
 
-        await caricaLibreriaProgrammiCoach();
-        await caricaLibreriaProgrammi();
+        if (typeof caricaLibreriaProgrammiCoach === 'function') await caricaLibreriaProgrammiCoach();
+        if (typeof caricaLibreriaProgrammi === 'function') await caricaLibreriaProgrammi();
 
     } catch (err) {
         console.error("Errore salvataggio programma:", err);
-        alert("Errore salvataggio programma: " + err.message);
+        if (typeof alert === 'function') alert("Errore salvataggio programma: " + err.message);
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
@@ -5606,6 +6008,12 @@ window.chiudiModalAssegnaProgramma = chiudiModalAssegnaProgramma;
 window.confermaAssegnazioneProgrammaDaModal = confermaAssegnazioneProgrammaDaModal;
 window.popolaSelectProgrammiLibreriaPerScheda = popolaSelectProgrammiLibreriaPerScheda;
 window.gestisciSelezioneProgrammaPerScheda = gestisciSelezioneProgrammaPerScheda;
+window.ottieniBaseMassimaleEsercizio = ottieniBaseMassimaleEsercizio;
+window.DEFAULT_FORZA_SERIE = DEFAULT_FORZA_SERIE;
+window.isModalInForzaMode = isModalInForzaMode;
+window.aggiungiRigaSerie = aggiungiRigaSerie;
+window.rimuoviRigaSerie = rimuoviRigaSerie;
+window.aggiornaLayoutEserciziModal = aggiornaLayoutEserciziModal;
 
 window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
 window.renderCatalogoIbrido = renderCatalogoIbrido;
@@ -5730,7 +6138,13 @@ if (typeof module !== 'undefined' && module.exports) {
         chiudiModalAssegnaProgramma,
         confermaAssegnazioneProgrammaDaModal,
         popolaSelectProgrammiLibreriaPerScheda,
-        gestisciSelezioneProgrammaPerScheda
+        gestisciSelezioneProgrammaPerScheda,
+        ottieniBaseMassimaleEsercizio,
+        DEFAULT_FORZA_SERIE,
+        isModalInForzaMode,
+        aggiungiRigaSerie,
+        rimuoviRigaSerie,
+        aggiornaLayoutEserciziModal
     };
 }
 

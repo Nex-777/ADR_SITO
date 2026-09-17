@@ -3659,6 +3659,38 @@ input:checked + .nst-slider:before {
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.nst-ex-forza-block {
+    flex-direction: column;
+    align-items: stretch;
+    background: rgba(245, 158, 11, 0.03);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    padding: 10px 12px;
+    border-radius: 8px;
+    gap: 8px;
+}
+
+.nst-ex-serie-container {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 6px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nst-serie-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 32px;
+    gap: 8px;
+    align-items: center;
+}
+
+.nst-serie-idx-badge {
+    font-size: 11px;
+    font-family: 'Orbitron', monospace;
+    color: var(--nst-amber);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
 .nst-btn-launch-workout {
     background: linear-gradient(135deg, rgba(0, 229, 255, 0.15), rgba(118, 255, 3, 0.15));
     border: 1px solid var(--nst-cyan);

@@ -2,6 +2,29 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] ingest | NESTORE — Editor Serie Programmi Forza con Ripetizioni, % Massimale e Calcolo Carico Automatico
+- **Editor Dedicato nella Libreria Allenamenti (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
+  - Implementato nella modale `#nst-coach-programma-modal` un editor strutturato per tutti i programmi con categoria o tipologia `forza`.
+  - Ogni esercizio di forza include un container per le serie (`.nst-ex-serie-container`) precompilato con lo standard a 5 serie richieste:
+    1. 10 rip @ 60%
+    2. 5 rip @ 70%
+    3. 3 rip @ 80%
+    4. 1 rip @ 90%
+    5. 1 rip @ 100%
+  - Ciascuna serie dispone di due input numerici dedicati (`rip` e `%`), pulsante di eliminazione (`✕`) con re-indicizzazione istantanea delle serie e pulsante `+ AGGIUNGI SERIE` per aggiungere serie dinamiche a piacere.
+- **Serializzazione JSONB & Piena Retrocompatibilità**:
+  - Struttura salvata in `nestore_programmi_libreria` come `serie: [{ rip, pct, percentuale }]` con generazione automatica contestuale del testo `target` (es. `10 rip @ 60%, 5 rip @ 70%...`), garantendo compatibilità al 100% con qualsiasi vista esistente.
+- **Risoluzione Massimale e Calcolo Carico a Runtime (`avviaIbridoSeduta`)**:
+  - Algoritmo `ottieniBaseMassimaleEsercizio` che determina la base in kg:
+    1. **PR dell'atleta** per quell'esercizio da `nestore_allenamenti` se presente e > 0.
+    2. **Peso corporeo dell'atleta** da `nestore_pesi_misure` come primo fallback.
+    3. **Default standard (70 kg)** se mancano sia PR che peso corporeo.
+  - Tabella workout espansa per serie con calcolo automatico $\text{baseKg} \times \% / 100$ arrotondato a 0.5 kg, indicazione della fonte utilizzata e input modificabili durante l'allenamento.
+  - Salvataggio dettagliato in `scheda_dati.serie_dettaglio` con alimentazione automatica del carico massimo per il calcolo dei Record Personali futuri.
+- **Testing & Quality Assurance (`tests/nestore-coach.test.js`)**:
+  - Aggiunti unit test specifici a copertura di: schema di default, rilevazione modalità forza, calcolo massimale con tutti i livelli di fallback (PR $\rightarrow$ peso $\rightarrow$ 70kg), serializzazione corretta e rendering dell'anteprima formattata.
+  - Vitest suite: 79/79 test passati con successo (8 test files).
+
 ## [2026-09-17] ingest | NESTORE — Duplicazione e Assegnazione Programmi ad Atleti (Opzione A & Timer Integrato)
 - **Database & Storicizzazione EPIKA (`supabase/migration_nestore_assegnazione_libreria.sql`)**:
   - Aggiunta colonna `programma_libreria_id` (UUID NULLABLE, FK `public.nestore_programmi_libreria(id)`) su `public.nestore_schede_allenamento`.
