@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] fix | Rettifica Data Scadenza Certificato Medico e Sblocco Tesseramento Alessandro Santucci
+- **Database (`certificati_medici` & `registro_tesserati`)**:
+  - Eseguita transazione atomica SQL per la rettifica della data di scadenza del certificato medico (`id: 430d3d50-b89d-485e-a876-a4f3b58f2b39`) dell'atleta Alessandro Santucci (`CF: SNTLSN00B16A462I`).
+  - Corretta la data di scadenza da `2026-09-05` (valore errato trascritto a 1 mese) a `2027-08-05` (validità piena di 1 anno dal rilascio del 06/08/2026).
+  - Ripristinato lo stato di tesseramento a `ATTIVO` su `registro_tesserati` (`id_tesserato: 177`), sbloccando l'atleta precedentemente marcato come `SOSPESO`.
+  - Registrata traccia immutabile in `registro_audit_operazioni` con azione `RETTIFICA_SCADENZA_CERTIFICATO` a firma del Consiglio Direttivo, nel pieno rispetto delle regole di storicizzazione Epika.
+
 ## [2026-09-17] ingest | NESTORE — Editor Serie Programmi Forza con Ripetizioni, % Massimale e Calcolo Carico Automatico
 - **Editor Dedicato nella Libreria Allenamenti (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
   - Implementato nella modale `#nst-coach-programma-modal` un editor strutturato per tutti i programmi con categoria o tipologia `forza`.
