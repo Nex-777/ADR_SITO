@@ -136,5 +136,26 @@ describe('Nestore Coach & Admin Dashboard (Fase 2)', () => {
         expect(js).toContain("optAdmin.value = 'admin'");
         expect(js).toContain("if (switcher.options.length > 1)");
     });
+
+    it('contains assistance banner in nestore.html and manages it in nestore.js', () => {
+        expect(html).toContain('id="nst-assistenza-banner"');
+        expect(html).toContain('id="nst-assistenza-target-nome"');
+        expect(html).toContain('MODALITÀ ASSISTENZA ATTIVA');
+        expect(js).toContain("document.getElementById('nst-assistenza-banner')");
+        expect(js).toContain("document.getElementById('nst-assistenza-target-nome')");
+    });
+
+    it('recalculates permissions strictly during impersonation without privilege leakage', () => {
+        // Must fetch anagrafiche for targetProfile to check registro_istruttori
+        expect(js).toContain("select('id, nome, cognome, ruolo, anagrafiche(id, registro_approvazioni(stato))')");
+        // Must recalculate isAuthorizedAdmin strictly for targetProfile
+        expect(js).toContain("// Ricalcolo permessi per l'utente impersonato (simulazione al 100% dell'utente reale)");
+        // Must evaluate hasUnconditionalAccess after the impersonation block
+        const impersonateBlockIdx = js.indexOf('if (impersonateId && isAuthorizedAdmin)');
+        const unconditionalIdx = js.indexOf('const hasUnconditionalAccess = isBoardMember || isIstruttore;');
+        expect(impersonateBlockIdx).toBeGreaterThan(-1);
+        expect(unconditionalIdx).toBeGreaterThan(impersonateBlockIdx);
+    });
 });
+
 

@@ -22,7 +22,11 @@ Access to Nestore follows the standalone portal pattern established by [EPIKA Po
 2. **Authorization Requirements**:
    - **Standard Athletes**: Require athlete registration and annual dues approved (`registro_approvazioni.stato === 'APPROVATO'`), active non-expired course enrollment (`eventi.tipo === 'corso'` with `data_scadenza_corso >= CURRENT_DATE` or available carnet entries in `iscrizioni_eventi`), and approved medical certificate.
    - **Unconditional Access (v1.05.15)**: Board Members (`ruolo_utente` including `presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`) and certified instructors registered in `public.registro_istruttori` bypass the active course requirement and have permanent access.
-   - **Role-Aware View Switcher**: A contextual switcher in the header enables direct personal usage while preserving role state for upcoming coach management features.
+   - **Role-Aware View Switcher**: A contextual switcher in the header enables direct personal usage while preserving role state for coach management and admin features.
+   - **Modalità Assistenza / Impersonazione (v1.05.43)**: Quando un Amministratore (Presidente) accede a Nestore in modalità assistenza per conto di un utente (`?impersonate_id=...`):
+     - I permessi (`isAuthorizedAdmin`, `isBoardMember`, `isIstruttore`, `hasUnconditionalAccess`) vengono **ricalcolati al 100%** sui dati reali dell'utente impersonato.
+     - Viene azzerata qualsiasi fuga di privilegi da amministratore (es. l'opzione `AMMINISTRATORE` non compare se l'utente assistito non è presidente).
+     - Compare in cima alla pagina il banner `#nst-assistenza-banner` (*"⚠️ MODALITÀ ASSISTENZA ATTIVA — Stai visualizzando Nestore come: [Nome]"*) con pulsante rapido per ritornare alla Dashboard.
 3. **Restricted Modal**: If a non-eligible user clicks NESTORE, `#nestore-access-modal` informs the athlete and directs them via CTA to the available courses list (`user_corsi`).
 
 ---

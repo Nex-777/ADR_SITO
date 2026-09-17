@@ -118,17 +118,49 @@ async function initNestore() {
             }
         }
 
-        const hasUnconditionalAccess = isBoardMember || isIstruttore;
-
         if (impersonateId && isAuthorizedAdmin) {
             currentUser = { ...currentUser, id: impersonateId };
             const { data: targetProfile } = await supabaseClient
                 .from('utenti')
-                .select('id, nome, cognome, ruolo')
+                .select('id, nome, cognome, ruolo, anagrafiche(id, registro_approvazioni(stato))')
                 .eq('id', impersonateId)
                 .maybeSingle();
-            if (targetProfile) profile = targetProfile;
+            if (targetProfile) {
+                profile = targetProfile;
+
+                // Ricalcolo permessi per l'utente impersonato (simulazione al 100% dell'utente reale)
+                isAuthorizedAdmin = Array.isArray(profile.ruolo) && profile.ruolo.includes('presidente');
+                isBoardMember = Array.isArray(profile.ruolo) && profile.ruolo.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
+                
+                isIstruttore = false;
+                if (profile.anagrafiche && profile.anagrafiche.length > 0) {
+                    try {
+                        const anagId = profile.anagrafiche[0].id;
+                        const { data: istrData } = await supabaseClient
+                            .from('registro_istruttori')
+                            .select('id')
+                            .eq('anagrafica_id', anagId)
+                            .maybeSingle();
+                        if (istrData) isIstruttore = true;
+                    } catch (e) {
+                        console.error("Errore verifica istruttore in nestore per utente impersonato:", e);
+                    }
+                }
+
+                // Visualizzazione Banner Assistenza
+                const banner = document.getElementById('nst-assistenza-banner');
+                const bannerTargetNome = document.getElementById('nst-assistenza-target-nome');
+                if (banner) {
+                    banner.classList.remove('nst-hidden');
+                    if (bannerTargetNome) {
+                        const targetNome = `${profile.nome || ''} ${profile.cognome || ''}`.trim() || impersonateId;
+                        bannerTargetNome.textContent = targetNome;
+                    }
+                }
+            }
         }
+
+        const hasUnconditionalAccess = isBoardMember || isIstruttore;
 
         currentUserProfile = profile;
         const nomeCompleto = `${profile.nome || ''} ${profile.cognome || ''}`.trim() || 'Atleta';

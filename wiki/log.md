@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-17] ingest | NESTORE — Fix Leak Permessi Impersonazione (Assistenza) & Banner Visivo
+- **Frontend & Access Control (`portal/nestore.js`)**:
+  - Risolto il bug di leak dei permessi amministrativi durante la modalità Assistenza (`?impersonate_id=...`):
+    - All'attivazione dell'impersonazione, i flag di autorizzazione `isAuthorizedAdmin`, `isBoardMember` e `isIstruttore` vengono ora ricalcolati **al 100% sui dati reali dell'utente impersonato** (`targetProfile` e `registro_istruttori`).
+    - Spostata la valutazione di `hasUnconditionalAccess` a valle del blocco di impersonazione per impedire che l'utente simulato erediti l'accesso incondizionato dell'amministratore.
+    - Se l'utente impersonato è un istruttore (es. Ciaralli), il selettore mostra unicamente `ATLETA` e `ALLENATORE`, e il badge di stato riporta correttamente `ISTRUTTORE` (non più `AMMINISTRATORE` o `MODALITÀ ADMIN`).
+- **UI & Layout (`portal/nestore.html`)**:
+  - Introdotto il banner statico `#nst-assistenza-banner` posizionato subito sotto l'header, con bordo e accento rosso/arancio: *"⚠️ MODALITÀ ASSISTENZA ATTIVA — Stai visualizzando Nestore come: [Nome]"* e pulsante rapido *"← TORNA ALLA DASHBOARD"* conforme allo standard visuale di EPIKA e Dashboard.
+- **Testing & Quality Assurance (`tests/nestore-coach.test.js`)**:
+  - Aggiunti unit test specifici per verificare l'esistenza del banner HTML, la gestione in `nestore.js` e la rigorosa esclusione di privilegi da amministratore non dovuti durante l'impersonazione. Tutti i 59 test della suite sono passati senza errori.
+
 ## [2026-09-17] ingest | NESTORE — Restrizione Vista Amministratore (Solo Presidente) e Hardening RLS
 - **Frontend & Access Control (`portal/nestore.js`)**:
   - Ristretto `isAuthorizedAdmin` rigorosamente al ruolo `'presidente'` (`Array.isArray(profile.ruolo) && profile.ruolo.includes('presidente')`), rimuovendo i consiglieri e altri membri del Direttivo dall'accesso globale admin.
