@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.49"
+                VERSION: "1.05.50"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6180,6 +6180,7 @@
             document.getElementById('instructor-course-detail-title').textContent = title.toUpperCase();
             document.getElementById('instructor-course-detail-subtitle').textContent = `ORARIO: ${orariStr.toUpperCase()} | LUOGO: ${luogo.toUpperCase()}`;
 
+            resetInstructorFilters(false);
             await loadRegistroIscritti();
         }
 
@@ -6249,6 +6250,433 @@
             await loadRegistroIscritti();
         }
 
+        window.resetInstructorFilters = function(triggerRender = true) {
+            const s = document.getElementById('instructor-filter-search');
+            const c = document.getElementById('instructor-filter-csen');
+            const m = document.getElementById('instructor-filter-cert');
+            const p = document.getElementById('instructor-filter-corso');
+            if (s) s.value = '';
+            if (c) c.value = 'ALL';
+            if (m) m.value = 'ALL';
+            if (p) p.value = 'ALL';
+            if (triggerRender) {
+                renderInstructorCards();
+            }
+        };
+
+        window.renderInstructorCards = function() {
+            const container = document.getElementById('instructor-iscritti-cards');
+            if (!container) return;
+
+            const badgeCount = document.getElementById('instructor-filter-count-badge');
+
+            if (!instructorStudentsData || instructorStudentsData.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-gray-500 font-mono text-xs uppercase bg-black/40 border border-white/10">
+                        <span class="material-symbols-outlined text-3xl mb-2 text-gray-600">group_off</span>
+                        <p class="font-headline font-bold">Nessun tesserato iscritto a questo corso</p>
+                    </div>
+                `;
+                if (badgeCount) badgeCount.textContent = '0 TESSERATI';
+                return;
+            }
+
+            const searchVal = (document.getElementById('instructor-filter-search')?.value || '').trim().toLowerCase();
+            const csenVal = document.getElementById('instructor-filter-csen')?.value || 'ALL';
+            const certVal = document.getElementById('instructor-filter-cert')?.value || 'ALL';
+            const corsoVal = document.getElementById('instructor-filter-corso')?.value || 'ALL';
+
+            const filteredData = instructorStudentsData.filter(atl => {
+                // 1. Ricerca Nome o Cognome
+                if (searchVal) {
+                    const nomeCompleto = `${atl.nome || ''} ${atl.cognome || ''}`.toLowerCase();
+                    const cognomeNome = `${atl.cognome || ''} ${atl.nome || ''}`.toLowerCase();
+                    if (!nomeCompleto.includes(searchVal) && !cognomeNome.includes(searchVal)) {
+                        return false;
+                    }
+                }
+
+                // 2. Filtro CSEN
+                if (csenVal !== 'ALL') {
+                    const statoCsen = (atl.stato_tesseramento || '').toUpperCase();
+                    if (csenVal === 'ATTIVO' && statoCsen !== 'ATTIVO') return false;
+                    if (csenVal === 'SOSPESO' && statoCsen !== 'SOSPESO') return false;
+                    if (csenVal === 'SCADUTO' && (statoCsen === 'ATTIVO' || statoCsen === 'SOSPESO')) return false;
+                }
+
+                // 3. Filtro Certificato Medico
+                if (certVal !== 'ALL') {
+                    const isVerde = atl.cert_stato === 'VERDE' && atl.cert_valido;
+                    const isGiallo = atl.cert_stato === 'GIALLO' || atl.cert_stato === 'IN_ATTESA';
+                    const isRosso = !isVerde && !isGiallo;
+
+                    if (certVal === 'VERDE' && !isVerde) return false;
+                    if (certVal === 'GIALLO' && !isGiallo) return false;
+                    if (certVal === 'ROSSO' && !isRosso) return false;
+                }
+
+                // 4. Filtro Scadenza Corso / Pagamento
+                if (corsoVal !== 'ALL') {
+                    let isScaduto = false;
+                    let isInScadenza = false;
+                    let isRegolare = false;
+
+                    if (atl.stato_rate === 'INSOLUTO') {
+                        isScaduto = true;
+                    } else if (atl.ingressi_totali) {
+                        const rimasti = Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0));
+                        if (rimasti === 0) {
+                            isScaduto = true;
+                        } else if (atl.data_scadenza_corso) {
+                            const expiry = new Date(atl.data_scadenza_corso);
+                            const today = new Date();
+                            expiry.setHours(0,0,0,0);
+                            today.setHours(0,0,0,0);
+                            const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+                            if (diffDays < 0) isScaduto = true;
+                            else if (diffDays <= 10) isInScadenza = true;
+                            else isRegolare = true;
+                        } else {
+                            isRegolare = true;
+                        }
+                    } else {
+                        const scadenzaVal = atl.data_scadenza_corso;
+                        if (!scadenzaVal) {
+                            isScaduto = true;
+                        } else {
+                            const expiry = new Date(scadenzaVal);
+                            const today = new Date();
+                            expiry.setHours(0,0,0,0);
+                            today.setHours(0,0,0,0);
+                            const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+                            if (diffDays < 0) {
+                                isScaduto = true;
+                            } else if (diffDays <= 10) {
+                                isInScadenza = true;
+                            } else {
+                                isRegolare = true;
+                            }
+                        }
+                    }
+
+                    if (corsoVal === 'REGOLARE' && !isRegolare) return false;
+                    if (corsoVal === 'IN_SCADENZA' && !isInScadenza) return false;
+                    if (corsoVal === 'SCADUTO' && !isScaduto) return false;
+                }
+
+                return true;
+            });
+
+            if (badgeCount) {
+                if (filteredData.length === instructorStudentsData.length) {
+                    badgeCount.textContent = `${instructorStudentsData.length} TESSERATI`;
+                } else {
+                    badgeCount.textContent = `${filteredData.length} DI ${instructorStudentsData.length} TESSERATI`;
+                }
+            }
+
+            if (filteredData.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-gray-500 font-mono text-xs uppercase bg-black/40 border border-white/10">
+                        <span class="material-symbols-outlined text-3xl mb-2 text-gray-600">search_off</span>
+                        <p class="font-headline font-bold">Nessun tesserato corrisponde ai filtri impostati</p>
+                        <button type="button" onclick="resetInstructorFilters()" class="mt-3 inline-flex items-center gap-1 text-[10px] text-primary hover:underline font-mono uppercase">
+                            <span class="material-symbols-outlined text-xs">restart_alt</span> Reimposta tutti i filtri
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+
+            filteredData.forEach((atl, idx) => {
+                const uniqueCardId = (atl.iscrizione_id || atl.utente_id) + '_' + idx;
+
+                // Badge CSEN
+                const badgeCsen = atl.stato_tesseramento === 'ATTIVO'
+                    ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">ATTIVO</span>'
+                    : (atl.stato_tesseramento === 'SOSPESO' ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">SOSPESO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">SCADUTO</span>');
+
+                // Certificato Medico
+                let testoScadenzaCert = 'MANCANTE';
+                if (atl.cert_scadenza) {
+                    const parts = atl.cert_scadenza.split('-');
+                    if (parts.length === 3) {
+                        testoScadenzaCert = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    } else {
+                        testoScadenzaCert = atl.cert_scadenza;
+                    }
+                }
+
+                const certBarHtml = generateProgressBarHtml(atl.cert_scadenza);
+                let semaforoCert = '';
+
+                if (atl.cert_stato === 'VERDE' && atl.cert_valido) {
+                    semaforoCert = `
+                        <div class="flex flex-col items-end">
+                            <span class="text-green-500 font-mono text-[11px] font-bold">🟢 ${testoScadenzaCert}</span>
+                            ${certBarHtml}
+                        </div>
+                    `;
+                } else if (atl.cert_stato === 'GIALLO' || atl.cert_stato === 'IN_ATTESA') {
+                    semaforoCert = `
+                        <div class="flex flex-col items-end">
+                            <span class="text-yellow-500 font-mono text-[11px] font-bold">🟡 ${testoScadenzaCert}</span>
+                            ${certBarHtml}
+                        </div>
+                    `;
+                } else {
+                    semaforoCert = `
+                        <div class="flex flex-col items-end">
+                            <span class="text-red-500 font-mono text-[11px] font-bold">🔴 ${testoScadenzaCert}</span>
+                            ${certBarHtml}
+                        </div>
+                    `;
+                }
+
+                // Formattazione Date
+                let dataInizioStr = 'N/D';
+                if (atl.data_inizio_corso) {
+                    const parts = atl.data_inizio_corso.split('T')[0].split('-');
+                    if (parts.length === 3) dataInizioStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+
+                let scadenzaVal = atl.data_scadenza_corso || '';
+                let dataScadenzaStr = 'N/D';
+                if (scadenzaVal) {
+                    const parts = scadenzaVal.split('T')[0].split('-');
+                    if (parts.length === 3) dataScadenzaStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+
+                const courseBarHtml = generateProgressBarHtml(scadenzaVal);
+
+                // Abbonamento e Tipo Pagamento
+                const abbonamentoStr = atl.abbonamento_scelto || 'N/D';
+                
+                let startMonth = new Date().getMonth() + 1;
+                const dataRif = atl.data_inizio_corso || atl.data_iscrizione;
+                if (dataRif) {
+                    const parts = dataRif.split('T')[0].split('-');
+                    if (parts.length >= 2 && !isNaN(parseInt(parts[1], 10))) {
+                        startMonth = parseInt(parts[1], 10);
+                    }
+                }
+                const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
+                let headerBoxesHtml = '';
+                let headerLabel = 'ABBONAMENTO';
+                let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
+
+                if (atl.tipo_iscrizione === 'PROMO_BUNDLE') {
+                    tipoPagamentoBadge = '<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">🎁 COMPRESO CON IBRIDO</span>';
+                } else if (atl.ingressi_totali) {
+                    const rimasti = Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0));
+                    tipoPagamentoBadge = `<span class="bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">CARNET (${rimasti}/${atl.ingressi_totali})</span>`;
+                    headerLabel = `CARNET (${rimasti}/${atl.ingressi_totali})`;
+                    
+                    let carnetBoxes = '';
+                    const ingressiUsati = atl.ingressi_usati || 0;
+                    for (let i = 1; i <= atl.ingressi_totali; i++) {
+                        if (i <= ingressiUsati) {
+                            carnetBoxes += `
+                                <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Utilizzato">
+                                    ✓
+                                </div>
+                            `;
+                        } else if (i === ingressiUsati + 1) {
+                            carnetBoxes += `
+                                <button onclick="event.stopPropagation(); scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="w-5 h-5 flex items-center justify-center bg-primary/20 border border-primary text-primary hover:bg-primary hover:text-black text-[9px] font-mono font-bold select-none cursor-pointer transition-all animate-pulse" title="Ingresso ${i}/${atl.ingressi_totali}: Clicca per scalare 1 presenza">
+                                    +
+                                </button>
+                            `;
+                        } else {
+                            carnetBoxes += `
+                                <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-500 text-[9px] font-mono select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Rimanente">
+                                    ${i}
+                                </div>
+                            `;
+                        }
+                    }
+                    headerBoxesHtml = carnetBoxes;
+                } else if (atl.tipo_pagamento === 'A RATE') {
+                    const totRate = atl.totale_rate || (atl.abbonamento_scelto && atl.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
+                    const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
+                    const statoRate = atl.stato_rate || 'IN_REGOLA';
+                    headerLabel = `A RATE (${ratePagate}/${totRate})`;
+
+                    let rateBoxes = '';
+                    for (let i = 1; i <= totRate; i++) {
+                        const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
+                        const nomeMese = nomiMesi[meseNum - 1];
+
+                        if (i <= ratePagate) {
+                            rateBoxes += `
+                                <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe effettuato con successo (Pagato)">
+                                    ✓
+                                </div>
+                            `;
+                        } else if (i === ratePagate + 1 && statoRate === 'INSOLUTO') {
+                            rateBoxes += `
+                                <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe FALLITO (Insoluto)">
+                                    ✗
+                                </div>
+                            `;
+                        } else {
+                            rateBoxes += `
+                                <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-400 text-[9px] font-mono select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): In attesa di addebito">
+                                    ${meseNum}
+                                </div>
+                            `;
+                        }
+                    }
+
+                    const statusText = statoRate === 'INSOLUTO'
+                        ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider animate-pulse">🔴 INSOLUTO</span>'
+                        : (statoRate === 'ANNULLATO' ? '<span class="text-gray-500 font-bold text-[9px] uppercase tracking-wider">⚪ ANNULLATO</span>' : `<span class="text-green-500 font-mono text-[9px] font-bold">(${ratePagate}/${totRate})</span>`);
+
+                    tipoPagamentoBadge = `
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>
+                            ${statusText}
+                        </div>
+                    `;
+
+                    headerBoxesHtml = rateBoxes;
+                } else if (atl.tipo_pagamento === 'UNICA RATA') {
+                    tipoPagamentoBadge = '<span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">UNICA RATA</span>';
+                    headerLabel = 'UNICA RATA (SALDATO)';
+
+                    let numMesi = 1;
+                    const abb = (atl.abbonamento_scelto || '').toLowerCase();
+                    if (abb.includes('annua')) numMesi = 12;
+                    else if (abb.includes('semest')) numMesi = 6;
+                    else if (abb.includes('quadrimest')) numMesi = 4;
+                    else if (abb.includes('trimest')) numMesi = 3;
+                    else if (abb.includes('bimest')) numMesi = 2;
+                    else if (abb.includes('mese') || abb.includes('mensil')) numMesi = 1;
+                    else if (atl.totale_rate) numMesi = atl.totale_rate;
+                    else if (atl.data_inizio_corso && atl.data_scadenza_corso) {
+                        const d1 = new Date(atl.data_inizio_corso);
+                        const d2 = new Date(atl.data_scadenza_corso);
+                        numMesi = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24 * 30.4375)));
+                    }
+
+                    let unicaBoxes = '';
+                    for (let i = 1; i <= numMesi; i++) {
+                        const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
+                        const nomeMese = nomiMesi[meseNum - 1];
+                        unicaBoxes += `
+                            <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Mese ${meseNum} (${nomeMese}): Saldo unico effettuato (Pagato)">
+                                ✓
+                            </div>
+                        `;
+                    }
+                    headerBoxesHtml = unicaBoxes;
+                } else if (atl.tipo_pagamento === 'GRATUITO') {
+                    tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">GRATUITO</span>';
+                }
+
+                const hasIssue = !atl.cert_valido || atl.stato_rate === 'INSOLUTO';
+
+                const card = document.createElement('div');
+                card.className = `bg-black/60 border ${hasIssue ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
+                card.innerHTML = `
+                    <!-- Header riga -->
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${uniqueCardId}')">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${uniqueCardId}">expand_more</span>
+                            <div>
+                                <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2">
+                                    ${hasIssue ? '<span class="text-red-500 font-bold" title="CERTIFICATO NON VALIDO O RATA INSOLUTA">⚠</span>' : ''}
+                                    ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
+                                </h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[9px] font-mono text-gray-400 uppercase">ISCRITTO IL: ${dataInizioStr}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-4 self-start md:self-center">
+                            ${headerBoxesHtml ? `
+                                <div class="flex flex-col items-start md:items-end">
+                                    <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">${headerLabel}</span>
+                                    <div class="flex flex-wrap items-center gap-1 mt-0.5" onclick="event.stopPropagation()">
+                                        ${headerBoxesHtml}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            <div class="flex flex-col items-end">
+                                <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">TESSERA CSEN</span>
+                                ${badgeCsen}
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">CERT. MEDICO</span>
+                                ${semaforoCert}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dettagli Espandibili -->
+                    <div id="details-card-${uniqueCardId}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <div>
+                            <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">PIANO ABBONAMENTO</span>
+                            <div class="mt-1 flex items-center gap-1">
+                                <input type="text" value="${abbonamentoStr}" onchange="modificaPianoCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none w-28 uppercase" title="Modifica piano abbonamento" />
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">MODALITÀ PAGAMENTO</span>
+                            <div class="mt-1">${tipoPagamentoBadge}</div>
+                        </div>
+                        <div>
+                            <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">DATA ISCRIZIONE</span>
+                            <p class="font-mono text-gray-300 text-xs mt-1 font-bold">${dataInizioStr}</p>
+                        </div>
+                        <div>
+                            <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">SCADENZA CORSO</span>
+                            <div class="mt-1 flex flex-col items-start">
+                                <div class="flex items-center gap-1">
+                                    <input type="date" value="${scadenzaVal}" onchange="modificaScadenzaCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
+                                    ${atl.scadenza_modificata_a_mano ? '<span title="Modificata a mano" class="text-xs">✋</span>' : ''}
+                                </div>
+                                <div class="mt-1">${courseBarHtml}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${atl.ingressi_totali ? `
+                        <div class="mt-3 pt-3 border-t border-primary/20 bg-primary/5 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-primary text-xl">confirmation_number</span>
+                                <div>
+                                    <div class="text-[10px] font-headline font-bold text-white uppercase tracking-wider">
+                                        CARNET INGRESSI: <span class="text-primary font-mono text-xs font-bold">${Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0))}</span> / ${atl.ingressi_totali} RIMANENTI
+                                    </div>
+                                    <div class="text-[9px] text-gray-400 font-mono">
+                                        Utilizzati: ${atl.ingressi_usati || 0} di ${atl.ingressi_totali} (Scadenza fissa: ${dataScadenzaStr})
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                ${(atl.ingressi_totali - (atl.ingressi_usati || 0) > 0) ? `
+                                    <button onclick="scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="bg-primary text-black hover:bg-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all tracking-wider flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-xs">check</span> SCALA 1 INGRESSO
+                                    </button>
+                                ` : `
+                                    <span class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 text-[9px] font-mono font-bold uppercase tracking-wider">
+                                        INGRESSI ESAURITI
+                                    </span>
+                                `}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+
+                container.appendChild(card);
+            });
+        };
+
         async function loadRegistroIscritti() {
             if (!instructorSelectedCourseId) return;
 
@@ -6267,305 +6695,7 @@
                 if (errAtleti) throw errAtleti;
 
                 instructorStudentsData = atleti || [];
-
-                if (instructorStudentsData.length === 0) {
-                    container.innerHTML = `
-                        <div class="p-8 text-center text-gray-500 font-mono text-xs uppercase bg-black/40 border border-white/10">
-                            <span class="material-symbols-outlined text-3xl mb-2 text-gray-600">group_off</span>
-                            <p class="font-headline font-bold">Nessun tesserato iscritto a questo corso</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                container.innerHTML = '';
-
-                instructorStudentsData.forEach((atl, idx) => {
-                    const uniqueCardId = (atl.iscrizione_id || atl.utente_id) + '_' + idx;
-
-                    // Badge CSEN
-                    const badgeCsen = atl.stato_tesseramento === 'ATTIVO'
-                        ? '<span class="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">ATTIVO</span>'
-                        : (atl.stato_tesseramento === 'SOSPESO' ? '<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">SOSPESO</span>' : '<span class="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">SCADUTO</span>');
-
-                    // Certificato Medico
-                    let testoScadenzaCert = 'MANCANTE';
-                    if (atl.cert_scadenza) {
-                        const parts = atl.cert_scadenza.split('-');
-                        if (parts.length === 3) {
-                            testoScadenzaCert = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                        } else {
-                            testoScadenzaCert = atl.cert_scadenza;
-                        }
-                    }
-
-                    const certBarHtml = generateProgressBarHtml(atl.cert_scadenza);
-                    let semaforoCert = '';
-
-                    if (atl.cert_stato === 'VERDE' && atl.cert_valido) {
-                        semaforoCert = `
-                            <div class="flex flex-col items-end">
-                                <span class="text-green-500 font-mono text-[11px] font-bold">🟢 ${testoScadenzaCert}</span>
-                                ${certBarHtml}
-                            </div>
-                        `;
-                    } else if (atl.cert_stato === 'GIALLO' || atl.cert_stato === 'IN_ATTESA') {
-                        semaforoCert = `
-                            <div class="flex flex-col items-end">
-                                <span class="text-yellow-500 font-mono text-[11px] font-bold">🟡 ${testoScadenzaCert}</span>
-                                ${certBarHtml}
-                            </div>
-                        `;
-                    } else {
-                        semaforoCert = `
-                            <div class="flex flex-col items-end">
-                                <span class="text-red-500 font-mono text-[11px] font-bold">🔴 ${testoScadenzaCert}</span>
-                                ${certBarHtml}
-                            </div>
-                        `;
-                    }
-
-                    // Formattazione Date
-                    let dataInizioStr = 'N/D';
-                    if (atl.data_inizio_corso) {
-                        const parts = atl.data_inizio_corso.split('T')[0].split('-');
-                        if (parts.length === 3) dataInizioStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-
-                    let scadenzaVal = atl.data_scadenza_corso || '';
-                    let dataScadenzaStr = 'N/D';
-                    if (scadenzaVal) {
-                        const parts = scadenzaVal.split('T')[0].split('-');
-                        if (parts.length === 3) dataScadenzaStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-
-                    const courseBarHtml = generateProgressBarHtml(scadenzaVal);
-
-                    // Abbonamento e Tipo Pagamento
-                    const abbonamentoStr = atl.abbonamento_scelto || 'N/D';
-                    
-                    let startMonth = new Date().getMonth() + 1;
-                    const dataRif = atl.data_inizio_corso || atl.data_iscrizione;
-                    if (dataRif) {
-                        const parts = dataRif.split('T')[0].split('-');
-                        if (parts.length >= 2 && !isNaN(parseInt(parts[1], 10))) {
-                            startMonth = parseInt(parts[1], 10);
-                        }
-                    }
-                    const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-
-                    let headerBoxesHtml = '';
-                    let headerLabel = 'ABBONAMENTO';
-                    let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
-
-                    if (atl.tipo_iscrizione === 'PROMO_BUNDLE') {
-                        tipoPagamentoBadge = '<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">🎁 COMPRESO CON IBRIDO</span>';
-                    } else if (atl.ingressi_totali) {
-                        const rimasti = Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0));
-                        tipoPagamentoBadge = `<span class="bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">CARNET (${rimasti}/${atl.ingressi_totali})</span>`;
-                        headerLabel = `CARNET (${rimasti}/${atl.ingressi_totali})`;
-                        
-                        let carnetBoxes = '';
-                        const ingressiUsati = atl.ingressi_usati || 0;
-                        for (let i = 1; i <= atl.ingressi_totali; i++) {
-                            if (i <= ingressiUsati) {
-                                carnetBoxes += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Utilizzato">
-                                        ✓
-                                    </div>
-                                `;
-                            } else if (i === ingressiUsati + 1) {
-                                carnetBoxes += `
-                                    <button onclick="event.stopPropagation(); scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="w-5 h-5 flex items-center justify-center bg-primary/20 border border-primary text-primary hover:bg-primary hover:text-black text-[9px] font-mono font-bold select-none cursor-pointer transition-all animate-pulse" title="Ingresso ${i}/${atl.ingressi_totali}: Clicca per scalare 1 presenza">
-                                        +
-                                    </button>
-                                `;
-                            } else {
-                                carnetBoxes += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-500 text-[9px] font-mono select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Rimanente">
-                                        ${i}
-                                    </div>
-                                `;
-                            }
-                        }
-                        headerBoxesHtml = carnetBoxes;
-                    } else if (atl.tipo_pagamento === 'A RATE') {
-                        const totRate = atl.totale_rate || (atl.abbonamento_scelto && atl.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
-                        const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
-                        const statoRate = atl.stato_rate || 'IN_REGOLA';
-                        headerLabel = `A RATE (${ratePagate}/${totRate})`;
-
-                        let rateBoxes = '';
-                        for (let i = 1; i <= totRate; i++) {
-                            const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
-                            const nomeMese = nomiMesi[meseNum - 1];
-
-                            if (i <= ratePagate) {
-                                rateBoxes += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe effettuato con successo (Pagato)">
-                                        ✓
-                                    </div>
-                                `;
-                            } else if (i === ratePagate + 1 && statoRate === 'INSOLUTO') {
-                                rateBoxes += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe FALLITO (Insoluto)">
-                                        ✗
-                                    </div>
-                                `;
-                            } else {
-                                rateBoxes += `
-                                    <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-400 text-[9px] font-mono select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): In attesa di addebito">
-                                        ${meseNum}
-                                    </div>
-                                `;
-                            }
-                        }
-
-                        const statusText = statoRate === 'INSOLUTO'
-                            ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider animate-pulse">🔴 INSOLUTO</span>'
-                            : (statoRate === 'ANNULLATO' ? '<span class="text-gray-500 font-bold text-[9px] uppercase tracking-wider">⚪ ANNULLATO</span>' : `<span class="text-green-500 font-mono text-[9px] font-bold">(${ratePagate}/${totRate})</span>`);
-
-                        tipoPagamentoBadge = `
-                            <div class="flex items-center gap-1.5">
-                                <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>
-                                ${statusText}
-                            </div>
-                        `;
-
-                        headerBoxesHtml = rateBoxes;
-                    } else if (atl.tipo_pagamento === 'UNICA RATA') {
-                        tipoPagamentoBadge = '<span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">UNICA RATA</span>';
-                        headerLabel = 'UNICA RATA (SALDATO)';
-
-                        let numMesi = 1;
-                        const abb = (atl.abbonamento_scelto || '').toLowerCase();
-                        if (abb.includes('annua')) numMesi = 12;
-                        else if (abb.includes('semest')) numMesi = 6;
-                        else if (abb.includes('quadrimest')) numMesi = 4;
-                        else if (abb.includes('trimest')) numMesi = 3;
-                        else if (abb.includes('bimest')) numMesi = 2;
-                        else if (abb.includes('mese') || abb.includes('mensil')) numMesi = 1;
-                        else if (atl.totale_rate) numMesi = atl.totale_rate;
-                        else if (atl.data_inizio_corso && atl.data_scadenza_corso) {
-                            const d1 = new Date(atl.data_inizio_corso);
-                            const d2 = new Date(atl.data_scadenza_corso);
-                            numMesi = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24 * 30.4375)));
-                        }
-
-                        let unicaBoxes = '';
-                        for (let i = 1; i <= numMesi; i++) {
-                            const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
-                            const nomeMese = nomiMesi[meseNum - 1];
-                            unicaBoxes += `
-                                <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Mese ${meseNum} (${nomeMese}): Saldo unico effettuato (Pagato)">
-                                    ✓
-                                </div>
-                            `;
-                        }
-                        headerBoxesHtml = unicaBoxes;
-                    } else if (atl.tipo_pagamento === 'GRATUITO') {
-                        tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">GRATUITO</span>';
-                    }
-
-                    const hasIssue = !atl.cert_valido || atl.stato_rate === 'INSOLUTO';
-
-                    const card = document.createElement('div');
-                    card.className = `bg-black/60 border ${hasIssue ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
-                    card.innerHTML = `
-                        <!-- Header riga -->
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${uniqueCardId}')">
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${uniqueCardId}">expand_more</span>
-                                <div>
-                                    <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2">
-                                        ${hasIssue ? '<span class="text-red-500 font-bold" title="CERTIFICATO NON VALIDO O RATA INSOLUTA">⚠</span>' : ''}
-                                        ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
-                                    </h4>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <span class="text-[9px] font-mono text-gray-400 uppercase">ISCRITTO IL: ${dataInizioStr}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="flex flex-wrap items-center gap-4 self-start md:self-center">
-                                ${headerBoxesHtml ? `
-                                    <div class="flex flex-col items-start md:items-end">
-                                        <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">${headerLabel}</span>
-                                        <div class="flex flex-wrap items-center gap-1 mt-0.5" onclick="event.stopPropagation()">
-                                            ${headerBoxesHtml}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                <div class="flex flex-col items-end">
-                                    <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">TESSERA CSEN</span>
-                                    ${badgeCsen}
-                                </div>
-                                <div class="flex flex-col items-end">
-                                    <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">CERT. MEDICO</span>
-                                    ${semaforoCert}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Dettagli Espandibili -->
-                        <div id="details-card-${uniqueCardId}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                            <div>
-                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">PIANO ABBONAMENTO</span>
-                                <div class="mt-1 flex items-center gap-1">
-                                    <input type="text" value="${abbonamentoStr}" onchange="modificaPianoCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none w-28 uppercase" title="Modifica piano abbonamento" />
-                                </div>
-                            </div>
-                            <div>
-                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">MODALITÀ PAGAMENTO</span>
-                                <div class="mt-1">${tipoPagamentoBadge}</div>
-                            </div>
-                            <div>
-                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">DATA ISCRIZIONE</span>
-                                <p class="font-mono text-gray-300 text-xs mt-1 font-bold">${dataInizioStr}</p>
-                            </div>
-                            <div>
-                                <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">SCADENZA CORSO</span>
-                                <div class="mt-1 flex flex-col items-start">
-                                    <div class="flex items-center gap-1">
-                                        <input type="date" value="${scadenzaVal}" onchange="modificaScadenzaCorso('${atl.iscrizione_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none" />
-                                        ${atl.scadenza_modificata_a_mano ? '<span title="Modificata a mano" class="text-xs">✋</span>' : ''}
-                                    </div>
-                                    <div class="mt-1">${courseBarHtml}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        ${atl.ingressi_totali ? `
-                            <div class="mt-3 pt-3 border-t border-primary/20 bg-primary/5 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                <div class="flex items-center gap-3">
-                                    <span class="material-symbols-outlined text-primary text-xl">confirmation_number</span>
-                                    <div>
-                                        <div class="text-[10px] font-headline font-bold text-white uppercase tracking-wider">
-                                            CARNET INGRESSI: <span class="text-primary font-mono text-xs font-bold">${Math.max(0, atl.ingressi_totali - (atl.ingressi_usati || 0))}</span> / ${atl.ingressi_totali} RIMANENTI
-                                        </div>
-                                        <div class="text-[9px] text-gray-400 font-mono">
-                                            Utilizzati: ${atl.ingressi_usati || 0} di ${atl.ingressi_totali} (Scadenza fissa: ${dataScadenzaStr})
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    ${(atl.ingressi_totali - (atl.ingressi_usati || 0) > 0) ? `
-                                        <button onclick="scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="bg-primary text-black hover:bg-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all tracking-wider flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-xs">check</span> SCALA 1 INGRESSO
-                                        </button>
-                                    ` : `
-                                        <span class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 text-[9px] font-mono font-bold uppercase tracking-wider">
-                                            INGRESSI ESAURITI
-                                        </span>
-                                    `}
-                                </div>
-                            </div>
-                        ` : ''}
-                    `;
-
-                    container.appendChild(card);
-                });
-
+                renderInstructorCards();
             } catch (err) {
                 console.error("Errore loadRegistroIscritti:", err);
                 container.innerHTML = `<div class="p-6 text-center text-red-500 font-mono text-xs uppercase bg-black/40 border border-white/10">Errore: ${escapeHtml(err.message)}</div>`;

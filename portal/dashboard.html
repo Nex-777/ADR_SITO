@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.05.49"></script>
+    <script src="config.js?v=1.05.50"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -512,7 +512,7 @@
             color: #00e5ff;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.05.49">
+    <link rel="stylesheet" href="../output.css?v=1.05.50">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -538,7 +538,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.05.49</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.05.50</span>
                 <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer max-w-[100px] sm:max-w-none truncate hidden">
                     <option value="board">DIRETTIVO</option>
                     <option value="member">SOCIO</option>
@@ -2135,6 +2135,60 @@
                         </div>
                     </div>
 
+                    <!-- Filtri e Ricerca Tesserati -->
+                    <div class="bg-black/40 border border-white/10 p-4 space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm text-primary">filter_alt</span>
+                                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-white">FILTRI DI VISUALIZZAZIONE</span>
+                                <span id="instructor-filter-count-badge" class="bg-white/10 text-gray-300 text-[9px] font-mono px-2 py-0.5 border border-white/10">0 TESSERATI</span>
+                            </div>
+                            <button type="button" onclick="resetInstructorFilters()" class="text-[10px] font-mono uppercase tracking-wider text-gray-400 hover:text-primary transition-colors flex items-center gap-1">
+                                <span class="material-symbols-outlined text-xs">restart_alt</span> RESET FILTRI
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <!-- Ricerca Testo -->
+                            <div>
+                                <label class="block text-[9px] font-headline uppercase tracking-wider text-gray-400 mb-1">Cerca Tesserato</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+                                    <input type="text" id="instructor-filter-search" oninput="renderInstructorCards()" placeholder="Nome o cognome..." class="w-full bg-black/60 border border-white/10 pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-primary font-mono transition-colors">
+                                </div>
+                            </div>
+                            <!-- Filtro CSEN -->
+                            <div>
+                                <label class="block text-[9px] font-headline uppercase tracking-wider text-gray-400 mb-1">Tesseramento CSEN</label>
+                                <select id="instructor-filter-csen" onchange="renderInstructorCards()" class="w-full bg-black/60 border border-white/10 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary font-mono transition-colors">
+                                    <option value="ALL">TUTTI I TESSERAMENTI</option>
+                                    <option value="ATTIVO">🟢 ATTIVO</option>
+                                    <option value="SOSPESO">🟡 SOSPESO</option>
+                                    <option value="SCADUTO">🔴 SCADUTO / MANCANTE</option>
+                                </select>
+                            </div>
+                            <!-- Filtro Certificato -->
+                            <div>
+                                <label class="block text-[9px] font-headline uppercase tracking-wider text-gray-400 mb-1">Certificato Medico</label>
+                                <select id="instructor-filter-cert" onchange="renderInstructorCards()" class="w-full bg-black/60 border border-white/10 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary font-mono transition-colors">
+                                    <option value="ALL">TUTTI I CERTIFICATI</option>
+                                    <option value="VERDE">🟢 VALIDO</option>
+                                    <option value="GIALLO">🟡 IN SCADENZA / ATTESA</option>
+                                    <option value="ROSSO">🔴 SCADUTO / MANCANTE</option>
+                                </select>
+                            </div>
+                            <!-- Filtro Scadenza Corso -->
+                            <div>
+                                <label class="block text-[9px] font-headline uppercase tracking-wider text-gray-400 mb-1">Scadenza Corso / Pagamento</label>
+                                <select id="instructor-filter-corso" onchange="renderInstructorCards()" class="w-full bg-black/60 border border-white/10 px-2 py-1.5 text-xs text-white focus:outline-none focus:border-primary font-mono transition-colors">
+                                    <option value="ALL">TUTTE LE SCADENZE</option>
+                                    <option value="REGOLARE">🟢 REGOLARE (&gt;10 GG)</option>
+                                    <option value="IN_SCADENZA">🟡 IN SCADENZA (≤10 GG)</option>
+                                    <option value="SCADUTO">🔴 SCADUTO / INSOLUTO</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Container Card Atleti -->
                     <div id="instructor-iscritti-cards" class="space-y-3">
                         <div class="p-6 text-center text-gray-500 font-mono text-xs uppercase bg-black/40 border border-white/10">
@@ -3278,8 +3332,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.05.49"></script>
-    <script src="dashboard.js?v=1.05.49"></script>
+    <script src="password-validator.js?v=1.05.50"></script>
+    <script src="dashboard.js?v=1.05.50"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -3499,7 +3553,7 @@
     </div>
 
     <!-- Floating Timer Dock for Active Timers from Nestore -->
-    <script src="timer-dock.js?v=1.05.49"></script>
+    <script src="timer-dock.js?v=1.05.50"></script>
 </body></html>
 
 

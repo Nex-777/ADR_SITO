@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-18] ingest | Dashboard Istruttori — Filtri Multipli Indipendenti e Ricerca Real-Time Atleti
+- **Frontend & UI (`portal/dashboard.html`)**:
+  - Aggiunta toolbar di filtri avanzati (`#instructor-filter-search`, `#instructor-filter-csen`, `#instructor-filter-cert`, `#instructor-filter-corso`) e badge dinamico contatore `#instructor-filter-count-badge` posizionato sopra `#instructor-iscritti-cards`.
+  - Tasto rapido di reset filtri `resetInstructorFilters()` con azzeramento campi e ripristino immediato della vista completa.
+- **Logica di Ricerca e Filtraggio Lato Client (`portal/dashboard.js`)**:
+  - Separata la logica di caricamento da quella di rendering tramite la funzione reattiva `renderInstructorCards()`, che applica i filtri sull'array in memoria `instructorStudentsData` per massimizzare la reattività senza chiamate di rete superflue.
+  - Ricerca in tempo reale durante la digitazione (`oninput`) su nome o cognome.
+  - Filtro indipendente CSEN (`ATTIVO`, `SOSPESO`, `SCADUTO/MANCANTE`).
+  - Filtro indipendente Certificato Medico (`VALIDO`, `IN SCADENZA / IN ATTESA`, `SCADUTO / MANCANTE`).
+  - Filtro indipendente Scadenza Corso / Pagamento (`REGOLARE`, `IN SCADENZA (≤10 gg)`, `SCADUTO / INSOLUTO`, con gestione automatica sia delle quote a rate insolute che dei carnet ingressi esauriti).
+  - Feedback visivo dello stato vuoto contestuale qualora nessun atleta corrisponda ai filtri applicati.
+
 ## [2026-09-17] fix | Rettifica Data Scadenza Certificato Medico e Sblocco Tesseramento Alessandro Santucci
 - **Database (`certificati_medici` & `registro_tesserati`)**:
   - Eseguita transazione atomica SQL per la rettifica della data di scadenza del certificato medico (`id: 430d3d50-b89d-485e-a876-a4f3b58f2b39`) dell'atleta Alessandro Santucci (`CF: SNTLSN00B16A462I`).
