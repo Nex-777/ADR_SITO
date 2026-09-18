@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-18] ingest | Gestione Codice Accesso Palestra (PIN Personale Tastierino)
+- **Database (`supabase/migration_codice_accesso_palestra.sql` & Supabase DB)**:
+  - Aggiunta colonna `codice_accesso VARCHAR(20) DEFAULT NULL` su `public.utenti` con vincolo UNIQUE `utenti_codice_accesso_unique`.
+  - Aggiornata la vista SQL `public.vw_stato_atleta_corso` per esporre `u.codice_accesso`.
+  - Eseguito seed transazionale dei codici a 6 cifre per i 17 atleti registrati (Domenico Galanti ignorato come da direttiva in quanto non ancora registrato).
+- **Dashboard Istruttori & Direttivo (`portal/dashboard.html`, `portal/dashboard.js`)**:
+  - Estesa la griglia dei dettagli espandibili delle card atleti (`#instructor-iscritti-cards`) con il nuovo riquadro "CODICE ACCESSO PALESTRA".
+  - Modalità Presidente / Vice Presidente: campo modificabile con validazione 6 cifre, controllo preventivo di unicità prima dell'UPDATE e pulsante 🎲 `generaCodiceAccesso()` per la creazione istantanea di codici casuali univoci.
+  - Modalità Istruttore (sola lettura): badge protetto con visualizzazione del codice per assistenza all'accesso in palestra.
+  - Funzioni globali implementate: `window.salvaCodicePalestra(utenteId, nuovoCodice)` e `window.generaCodiceAccesso(utenteId, inputId)`.
+- **Dashboard Personale Atleta (`portal/dashboard.html`, `portal/dashboard.js`)**:
+  - Aggiunto display del PIN di accesso personale in "PANORAMICA" (`#user-info-codice-accesso`) nella card Stato Registro Sportivo.
+  - Aggiunto widget dedicato ad alta visibilità in "IL MIO PROFILO" (`#user-display-codice-accesso`) con evidenziazione in giallo primario e istruzioni per il tastierino d'ingresso.
+  - Popolamento reattivo integrato in `populateUserPanoramicaSummary()` e `loadUserProfilo()`.
+
 ## [2026-09-18] ingest | Dashboard Istruttori — Filtri Multipli Indipendenti e Ricerca Real-Time Atleti
 - **Frontend & UI (`portal/dashboard.html`)**:
   - Aggiunta toolbar di filtri avanzati (`#instructor-filter-search`, `#instructor-filter-csen`, `#instructor-filter-cert`, `#instructor-filter-corso`) e badge dinamico contatore `#instructor-filter-count-badge` posizionato sopra `#instructor-iscritti-cards`.

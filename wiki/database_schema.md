@@ -284,6 +284,7 @@ SELECT
     ie.scadenza_modificata_a_mano,
     u.nome,
     u.cognome,
+    u.codice_accesso,
     COALESCE(u.quota_totale, 0) AS quota_totale,
     CASE WHEN COALESCE(u.quota_totale, 0) <= 0 THEN true ELSE false END AS quota_annuale_ok,
     rs.quota_scadenza,

@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.50"
+                VERSION: "1.05.51"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6246,6 +6246,86 @@
             }
         };
 
+        window.salvaCodicePalestra = async function(utenteId, nuovoCodice) {
+            try {
+                const cleanCodice = nuovoCodice ? nuovoCodice.trim() : null;
+                if (cleanCodice && !/^\d{6}$/.test(cleanCodice)) {
+                    alert("Il codice di accesso deve essere composto esattamente da 6 cifre numeriche (es. 123456).");
+                    return;
+                }
+
+                // Controllo unicità su altri utenti
+                if (cleanCodice) {
+                    const { data: existing, error: checkErr } = await supabaseClient
+                        .from('utenti')
+                        .select('id, nome, cognome')
+                        .eq('codice_accesso', cleanCodice)
+                        .neq('id', utenteId)
+                        .maybeSingle();
+
+                    if (checkErr) throw checkErr;
+                    if (existing) {
+                        alert(`Il codice ${cleanCodice} è già assegnato all'atleta ${existing.nome} ${existing.cognome}! Inserisci un codice univoco.`);
+                        return;
+                    }
+                }
+
+                const { error } = await supabaseClient
+                    .from('utenti')
+                    .update({ codice_accesso: cleanCodice })
+                    .eq('id', utenteId);
+
+                if (error) throw error;
+
+                if (instructorStudentsData) {
+                    const found = instructorStudentsData.find(a => a.utente_id === utenteId);
+                    if (found) found.codice_accesso = cleanCodice;
+                }
+
+                showToastNotification("Codice accesso palestra salvato con successo!", "success");
+            } catch (err) {
+                console.error("Errore salvataggio codice accesso:", err);
+                alert("Errore durante il salvataggio del codice: " + err.message);
+            }
+        };
+
+        window.generaCodiceAccesso = async function(utenteId, inputId) {
+            try {
+                let isUnique = false;
+                let generatedCode = null;
+                let attempts = 0;
+
+                while (!isUnique && attempts < 25) {
+                    attempts++;
+                    const candidate = Math.floor(100000 + Math.random() * 900000).toString();
+                    const { data: exists, error: checkErr } = await supabaseClient
+                        .from('utenti')
+                        .select('id')
+                        .eq('codice_accesso', candidate)
+                        .maybeSingle();
+
+                    if (checkErr) throw checkErr;
+                    if (!exists) {
+                        generatedCode = candidate;
+                        isUnique = true;
+                    }
+                }
+
+                if (!generatedCode) {
+                    alert("Impossibile generare un codice casuale univoco al momento. Riprova.");
+                    return;
+                }
+
+                const inputEl = document.getElementById(inputId);
+                if (inputEl) inputEl.value = generatedCode;
+
+                await window.salvaCodicePalestra(utenteId, generatedCode);
+            } catch (err) {
+                console.error("Errore generazione codice accesso:", err);
+                alert("Errore durante la generazione del codice: " + err.message);
+            }
+        };
+
         async function onPresenceDateChange() {
             await loadRegistroIscritti();
         }
@@ -6269,6 +6349,7 @@
             if (!container) return;
 
             const badgeCount = document.getElementById('instructor-filter-count-badge');
+            const isPresidentOrVP = (typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) || (typeof currentUser !== 'undefined' && currentUser && (currentUser.email === 'titofabiopaoletti@gmail.com' || currentUser.email === 'nexglg@gmail.com'));
 
             if (!instructorStudentsData || instructorStudentsData.length === 0) {
                 container.innerHTML = `
@@ -6618,7 +6699,7 @@
                     </div>
 
                     <!-- Dettagli Espandibili -->
-                    <div id="details-card-${uniqueCardId}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div id="details-card-${uniqueCardId}" class="hidden mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-xs">
                         <div>
                             <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">PIANO ABBONAMENTO</span>
                             <div class="mt-1 flex items-center gap-1">
@@ -6642,6 +6723,23 @@
                                 </div>
                                 <div class="mt-1">${courseBarHtml}</div>
                             </div>
+                        </div>
+                        <div>
+                            <span class="text-[8px] text-gray-500 font-headline uppercase block tracking-wider">CODICE ACCESSO PALESTRA</span>
+                            ${isPresidentOrVP ? `
+                                <div class="mt-1 flex items-center gap-1">
+                                    <input type="text" id="codice-accesso-input-${atl.utente_id}" value="${atl.codice_accesso || ''}" maxlength="6" onchange="salvaCodicePalestra('${atl.utente_id}', this.value)" class="bg-black text-white text-[10px] p-1 border border-white/20 font-mono focus:outline-none focus:border-primary rounded-none w-20 text-center tracking-widest font-bold" placeholder="------" title="Modifica codice accesso palestra (6 cifre)" />
+                                    <button type="button" onclick="generaCodiceAccesso('${atl.utente_id}', 'codice-accesso-input-${atl.utente_id}')" class="bg-white/10 hover:bg-primary hover:text-black text-white px-2 py-1 text-[10px] font-mono font-bold transition-all border border-white/10" title="Genera codice casuale a 6 cifre univoco">
+                                        🎲
+                                    </button>
+                                </div>
+                            ` : `
+                                <div class="mt-1">
+                                    <span class="bg-white/5 border border-white/10 px-2 py-1 text-[11px] font-mono font-bold text-primary tracking-widest inline-block">
+                                        ${atl.codice_accesso || 'NON ASSEGNATO'}
+                                    </span>
+                                </div>
+                            `}
                         </div>
                     </div>
 
@@ -7197,6 +7295,11 @@
                     ? `${emergenzaNome} (${emergenzaTel})`
                     : emergenzaNome;
 
+                const codAccInfo = document.getElementById('user-info-codice-accesso');
+                if (codAccInfo) {
+                    codAccInfo.textContent = currentUserProfile.codice_accesso || 'NON ASSEGNATO';
+                }
+
             } catch (err) {
                 console.error("Errore popolamento summary utente:", err);
             }
@@ -7278,6 +7381,19 @@
                     img.src = "";
                     img.classList.add('hidden');
                     placeholder.classList.remove('hidden');
+                }
+
+                const codAccEl = document.getElementById('user-display-codice-accesso');
+                if (codAccEl) {
+                    if (currentUserProfile && currentUserProfile.codice_accesso) {
+                        codAccEl.textContent = currentUserProfile.codice_accesso;
+                        codAccEl.classList.remove('text-gray-500');
+                        codAccEl.classList.add('text-primary');
+                    } else {
+                        codAccEl.textContent = "NON ASSEGNATO";
+                        codAccEl.classList.remove('text-primary');
+                        codAccEl.classList.add('text-gray-500');
+                    }
                 }
             } catch (err) {
                 console.error("Errore caricamento dati profilo:", err);
