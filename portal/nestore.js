@@ -4433,10 +4433,8 @@ async function confermaSalvaAllenamentoStandard() {
 }
 
 function chiudiModalWorkoutAttivo() {
-    if (timerEngine.state.running) {
-        if (!confirm("L'allenamento è ancora in corso. Vuoi interromperlo e annullare il cronometro?")) {
-            return;
-        }
+    if (!confirm("Attenzione: sei sicuro di voler annullare l'allenamento? Tutti i progressi e il tempo registrato andranno persi.")) {
+        return;
     }
     timerEngine.reset();
     const modal = document.getElementById('nst-active-workout-modal');

@@ -248,6 +248,7 @@ Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione d
     - **Pausa / Riprendi**: Sincronizzato con il `timerEngine` nativo di Nestore.
     - **Giro (Lap)**: Registrazione degli intertempi con split parziale e totale progressivo.
     - **Termina e Salva**: Arresta il cronometro e apre il form di completamento.
+    - **Pulsante ANNULLA con Blocco di Sicurezza**: Sostituita la precedente "✕" con un pulsante esplicito `[ANNULLA]` con stile ghost rosso (`.nst-btn-danger-ghost`), provvisto di dialogo di conferma obbligatorio per impedire la perdita accidentale della sessione (anche quando il timer si trova in stato di pausa).
 - **Salvataggio Persistente & Alimentazione Record Personali**:
   - Inserimento diretto in `public.nestore_allenamenti` con disciplina `'Invictus'`, durata in minuti, campo note libero e payload strutturato in `scheda_dati` con gli esercizi svolti (`Pull-up`, `Push-up`, `Air Squat`, `peso_kg: 0`).
   - Questo aggiorna istantaneamente la bacheca dei **Record Personali (PR Grid)** dell'atleta nel tab Allenamenti.

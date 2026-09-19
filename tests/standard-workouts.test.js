@@ -34,6 +34,8 @@ describe('Standard Workouts (INVICTUS) & Active Modal Logic', () => {
         expect(html).toContain('id="nst-modal-finish-btn"');
         expect(html).toContain('id="nst-workout-note-input"');
         expect(html).toContain('id="nst-btn-confirm-save-workout"');
+        expect(html).toContain('nst-btn-danger-ghost');
+        expect(html).toContain('ANNULLA');
     });
 
     it('contiene gli stili CSS dedicati a INVICTUS e alla modale attiva in nestore.css', () => {
@@ -43,6 +45,7 @@ describe('Standard Workouts (INVICTUS) & Active Modal Logic', () => {
         expect(css).toContain('.nst-big-timer-display');
         expect(css).toContain('.nst-modal-target-item');
         expect(css).toContain('.nst-modal-laps-wrapper');
+        expect(css).toContain('.nst-btn-danger-ghost');
     });
 
     it('calcola correttamente le proporzioni 1:2:4 per INVICTUS', () => {

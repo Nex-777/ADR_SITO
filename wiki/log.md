@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-19] ingest | NESTORE — Pulsante ANNULLA con Blocco di Sicurezza su Modale Workout Attivo
+- **Frontend & UI Workout (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Sostituita la precedente icona "✕" nell'header della modale `#nst-active-workout-modal` con un pulsante esplicito `[ANNULLA]`.
+  - Introdotta la classe CSS `.nst-btn-danger-ghost` per una visualizzazione chiara con bordo e testo rosso tenue, prevenendo tocchi accidentali rispetto a una generica chiusura di finestra.
+  - Aggiornata la funzione `chiudiModalWorkoutAttivo()` rimuovendo la dipendenza dallo stato `timerEngine.state.running`, introducendo un `confirm()` incondizionato e bloccante con testo esplicito: *"Attenzione: sei sicuro di voler annullare l'allenamento? Tutti i progressi e il tempo registrato andranno persi."*.
+  - Risolto il rischio di perdita dati immediata quando il timer veniva messo in pausa prima dell'uscita.
+- **Testing & Quality Assurance (`tests/standard-workouts.test.js`)**:
+  - Aggiunti controlli di conformità per `.nst-btn-danger-ghost` e la presenza del testo `ANNULLA`. Suite complessiva: 88/88 test passati.
+
+---
+
 ## [2026-09-19] ingest | NESTORE — Rework Flusso Schede Forza (Preview Personalizzabile & Sessione con Precompilazione Zero-Effort)
 - **Frontend & Configurazione Anteprima (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
   - Riorganizzato il flusso "Schede Forza" separando nettamente la configurazione pre-seduta dalla registrazione attiva in tempo reale.
