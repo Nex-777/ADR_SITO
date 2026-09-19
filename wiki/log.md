@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-19] ingest | NESTORE — Layout Testata Mobile a 2 Righe (Stile EPIKA)
+- **Ristrutturazione UI (`portal/nestore.html`, `portal/nestore.css`)**:
+  - Modificato l'header principale (`.nst-header`) rimuovendo i vecchi wrapper rigidi `.nst-header-left` e `.nst-header-right`.
+  - Su Desktop la testata rimane compatta su una singola riga orizzontale.
+  - Su Mobile/Tablet (sotto 768px), la testata passa a un layout CSS Grid a due righe per evitare troncamenti:
+    - **Riga 1**: Brand (Logo+Testo) a sinistra, tasto CHIUDI a destra.
+    - **Riga 2**: Selettore Vista a sinistra, Info Utente (Nome e Corso) a destra.
+  - Ripristinata la piena visibilità (`display: block / inline-block`) del badge versione e del corso attivo anche su smartphone compatti.
+
+---
+
 ## [2026-09-19] ingest | NESTORE — Mobile UX Fix: Minimizzazione Scheda Ibrido & Sticky Action Bar
 - **Riapertura Scheda Ibrido da Dock Timer (`portal/nestore.js`, `portal/nestore.html`)**:
   - Risolto il bug di riapertura che riportava forzatamente al solo cronometro: implementata variabile di stato `ibridoSessionMinimized` e funzione `minimizzaIbridoSeduta()`.

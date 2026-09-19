@@ -72,8 +72,9 @@ body.nst-body {
     backdrop-filter: blur(12px);
     padding: 12px 24px;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
+    gap: 16px;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -82,10 +83,11 @@ body.nst-body {
     box-sizing: border-box;
 }
 
-.nst-header-left {
+.nst-header-brand {
     display: flex;
     align-items: center;
     gap: 14px;
+    margin-right: auto;
 }
 
 .nst-logo-img {
@@ -108,12 +110,6 @@ body.nst-body {
     padding: 2px 8px;
     border-radius: 9999px;
     letter-spacing: 0.05em;
-}
-
-.nst-header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
 }
 
 .nst-user-badge {
@@ -274,16 +270,49 @@ body.nst-body {
         display: none !important;
     }
 
-    /* Header compatto mobile anti-overflow */
+    /* Header mobile a 2 righe (Stile EPIKA) */
     .nst-header {
-        padding: 8px 12px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        row-gap: 12px;
+        column-gap: 10px;
+        padding: 12px 16px;
+    }
+
+    .nst-header-brand {
+        grid-column: 1 / 2;
+        grid-row: 1 / 2;
+        margin-right: 0;
         gap: 8px;
     }
 
-    .nst-header-left {
-        gap: 8px;
-        min-width: 0;
-        flex-shrink: 1;
+    .nst-btn-close {
+        grid-column: 2 / 3;
+        grid-row: 1 / 2;
+        justify-self: end;
+        align-self: center;
+        padding: 6px 12px;
+        font-size: 10px;
+    }
+
+    #nst-view-switcher {
+        grid-column: 1 / 2;
+        grid-row: 2 / 3;
+        justify-self: start;
+        align-self: center;
+        max-width: 140px;
+        font-size: 10px;
+        padding: 5px 6px;
+    }
+
+    .nst-user-badge {
+        grid-column: 2 / 3;
+        grid-row: 2 / 3;
+        justify-self: end;
+        align-self: center;
+        text-align: right;
+        max-width: none;
     }
 
     .nst-logo-img {
@@ -291,75 +320,29 @@ body.nst-body {
         width: 32px;
     }
 
-    .nst-header-left h1 {
+    .nst-header-brand h1 {
         font-size: 15px !important;
     }
 
     .nst-version-badge {
         font-size: 8px;
         padding: 1px 6px;
-    }
-
-    .nst-header-right {
-        gap: 8px;
-        flex-shrink: 0;
-    }
-
-    .nst-select {
-        max-width: 110px;
-        font-size: 10px;
-        padding: 5px 6px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-    }
-
-    .nst-user-badge {
-        max-width: 85px;
-        overflow: hidden;
-        text-align: right;
+        display: inline-block !important;
     }
 
     .nst-user-name {
         font-size: 11px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
     }
 
     .nst-user-course {
         font-size: 9px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .nst-btn-close {
-        padding: 5px 8px;
-        font-size: 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    .nst-header {
-        padding: 6px 8px;
-    }
-    .nst-version-badge {
-        display: none;
-    }
-    .nst-user-course {
-        display: none;
-    }
-    .nst-select {
-        max-width: 95px;
-        font-size: 9px;
-        padding: 4px 5px;
-    }
-    .nst-user-badge {
-        max-width: 70px;
-    }
-    .nst-user-name {
-        font-size: 10px;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        display: block !important;
     }
 }
 
