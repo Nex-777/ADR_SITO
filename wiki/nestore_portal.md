@@ -344,6 +344,38 @@ Introdotto nella versione **1.05.48**:
 - **Registrazione Sessione & Alimentazione Massimali**:
   - Al termine della seduta, vengono salvate tutte le serie con dettaglio in `scheda_dati.serie_dettaglio`, e il carico massimo sollevato viene registrato come `peso_kg` principale dell'esercizio per aggiornare automaticamente la bacheca dei Record Personali (PR).
 
+### 9.8. Flusso Schede Forza Avanzato: Configurazione Anteprima & Tracciamento Seduta (v1.05.52)
+Introdotto nella versione **1.05.52**:
+Riorganizza il flusso dei programmi Forza in due fasi concettualmente separate e ottimizzate per l'atleta:
+
+1. **Modale Anteprima / Pre-Configurazione (`#nst-ibrido-preview-modal`)**:
+   - **Riscaldamento Generico**: 10 minuti dinamici liberi.
+   - **Riscaldamento Specifico (`DEFAULT_FORZA_WARMUP`)**: sequenza di ramp-up a 5 serie progressive ($1\times10@75\%$, $1\times5@80\%$, $1\times3@85\%$, $1\times1@95\%$, $1\times1@100\%$) con **pesi in kg modificabili** dall'atleta per ciascuna serie.
+   - **Sequenza Allenante (Target)**: serie, ripetizioni e carico target (kg) modificabili prima di iniziare la sessione.
+   - **Risoluzione Intelligente dei Carichi**:
+     - Se l'atleta ha già completato in passato una seduta dello **stesso programma**, i carichi e le ripetizioni vengono precompilati prendendoli automaticamente dall'ultima sessione precedente (`recuperaUltimaSessioneProgramma`).
+     - Al primo avvio, i carichi vengono calcolati sul massimale PR, peso corporeo o fallback 70 kg (`ottieniBaseMassimaleEsercizio`).
+   - **Badge Massimo Storico (`verificaForzaMaxStorico`)**:
+     - Se l'atleta imposta un carico inferiore rispetto al suo record all-time registrato per l'esercizio, compare un badge visivo ambra con avviso (*"Il peso impostato è inferiore al tuo massimo storico (X kg)"*). Se pari o superiore, compare il badge di record verde.
+   - **Suggerimento di Progressione**: guida visiva alla progressione di sovraccarico progressivo ($4\times4 \rightarrow 4\times5 \rightarrow 4\times6$, e a $4\times6$ superato: passaggio a $4\times7$ o incremento carico tornando a $4\times4$).
+
+2. **Modale Seduta in Corso (`#nst-ibrido-active-modal`)**:
+   - **Target Fisso (Read-Only)**: il nome del programma e i target configurati in anteprima sono esposti come riferimento e non possono essere modificati durante la sessione.
+   - **Guida Riscaldamento**: promemoria visivo compatto dei pesi di riscaldamento specifico configurati.
+   - **Registrazione Effettivo Zero-Effort**:
+     - Per ciascuna serie allenante, la casella delle ripetizioni è **già precompilata con il numero target di default**.
+     - Se l'atleta completa tutte le ripetizioni, **non deve fare alcuna azione né spuntare checkbox**.
+     - Se ne completa di meno (o di più), modifica semplicemente il numero nella casella.
+   - **Serie Extra**: pulsante `+ AGGIUNGI SERIE EXTRA` se l'atleta esegue serie supplementari superando la scheda.
+
+3. **Valutazione Esito, Feedback Visivo & Storicizzazione**:
+   - A fine sessione (`terminaIbridoSeduta`), il sistema confronta le ripetizioni effettive con quelle target per ciascun esercizio e a livello globale:
+     - 🎯 `COMPLETATA` (tutte le serie chiuse a target)
+     - 🔥 `SUPERATA` (rip totali o serie superiori al target)
+     - ⚡ `PARZIALE` (rip inferiori al target o serie incomplete)
+   - Badge visivo evidenziato nella schermata di salvataggio (`#nst-ibrido-esito-badge`) con indicazioni sul mantenimento o incremento del carico.
+   - Persistenza in `nestore_allenamenti.scheda_dati` con `esito_globale`, `serie_target`, `rip_target`, `peso_target_kg`, `serie_effettive` e alimentazione della bacheca PR.
+
 ---
 
 ## 10. Related Concept Pages

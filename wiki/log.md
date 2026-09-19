@@ -2,6 +2,27 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-19] ingest | NESTORE — Rework Flusso Schede Forza (Preview Personalizzabile & Sessione con Precompilazione Zero-Effort)
+- **Frontend & Configurazione Anteprima (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
+  - Riorganizzato il flusso "Schede Forza" separando nettamente la configurazione pre-seduta dalla registrazione attiva in tempo reale.
+  - Nella modale anteprima (`#nst-ibrido-preview-modal`):
+    - Escluso il riscaldamento generico da 10' da indicazioni rigide (libero per l'atleta).
+    - Esposto il protocollo di riscaldamento specifico a 5 serie progressive ($1\times10@75\%$, $1\times5@80\%$, $1\times3@85\%$, $1\times1@95\%$, $1\times1@100\%$) con **pesi in kg modificabili** dall'atleta.
+    - Esposta la sequenza allenante con serie, ripetizioni e carico modificabili prima dell'avvio.
+    - Risoluzione carichi: precompilazione automatica dai carichi della sessione precedente dello stesso programma (`recuperaUltimaSessioneProgramma`), oppure calcolo su massimale PR/peso atleta al primo avvio.
+    - Badge di monitoraggio massimo storico (`verificaForzaMaxStorico`): avviso ambra se il carico impostato è inferiore al record storico all-time per quell'esercizio, badge verde se pari o superiore.
+    - Guida visiva alla progressione di carico consigliata ($4\times4 \rightarrow 4\times5 \rightarrow 4\times6$).
+- **Modale Esecuzione Attiva (`#nst-ibrido-active-modal`)**:
+  - Target di riferimento fisso e immutabile durante la sessione.
+  - Caselle delle ripetizioni precompilate con il valore target: nessun click né spunta richiesta se l'atleta chiude le ripetizioni (modalità zero-effort). Se ne completa meno o più, modifica direttamente la casella numerica.
+  - Pulsante `+ AGGIUNGI SERIE EXTRA` (`aggiungiSerieExtraForza`) per serie supplementari oltre il programma.
+- **Riepilogo, Valutazione Esito e Salvataggio**:
+  - Calcolo automatico dell'esito globale e per esercizio: `COMPLETATA` (100%), `SUPERATA` (volume/ripetizioni extra), `PARZIALE` (mancato completamento).
+  - Badge visuale di feedback (`#nst-ibrido-esito-badge`) in `#nst-ibrido-save-view` con consigli specifici sulla progressione.
+  - Persistenza strutturata in `public.nestore_allenamenti` (`scheda_dati.esito_globale`, `serie_effettive`, `riscaldamento`) e alimentazione Record Personali (PR).
+- **Testing & Quality Assurance (`tests/forza-schede.test.js`)**:
+  - Suite dedicata con 9 test unitari su riscaldamento, bodyweight check, max storico, badge avviso carichi, rendering configurazione, avvio seduta, aggiunta serie extra e calcolo esiti. Tutti gli 88 test del progetto passano con 0 errori.
+
 ## [2026-09-18] ingest | Gestione Codice Accesso Palestra (PIN Personale Tastierino)
 - **Database (`supabase/migration_codice_accesso_palestra.sql` & Supabase DB)**:
   - Aggiunta colonna `codice_accesso VARCHAR(20) DEFAULT NULL` su `public.utenti` con vincolo UNIQUE `utenti_codice_accesso_unique`.

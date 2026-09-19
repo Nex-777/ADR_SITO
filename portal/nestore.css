@@ -3515,6 +3515,266 @@ input:checked + .nst-slider:before {
     outline: none;
 }
 
+/* Card Esercizio Forza in Anteprima / Configurazione */
+.nst-forza-ex-card {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 179, 0, 0.25);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+    transition: border-color 0.2s ease;
+}
+
+.nst-forza-ex-card:hover {
+    border-color: rgba(255, 179, 0, 0.5);
+}
+
+.nst-forza-ex-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.nst-forza-ex-sub {
+    font-size: 10px;
+    color: var(--nst-amber);
+    font-family: 'Orbitron', monospace;
+}
+
+.nst-forza-sec-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--nst-text-muted);
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.nst-forza-warmup-container {
+    background: rgba(0, 229, 255, 0.03);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+}
+
+.nst-forza-warmup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 8px;
+}
+
+.nst-forza-warmup-chip {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+}
+
+.nst-forza-warmup-chip .chip-step {
+    font-size: 9px;
+    font-family: 'Orbitron', monospace;
+    color: var(--nst-cyan);
+    font-weight: 700;
+}
+
+.nst-warmup-input {
+    width: 55px !important;
+    font-size: 11px !important;
+    padding: 2px 4px !important;
+}
+
+.nst-forza-work-container {
+    background: rgba(255, 179, 0, 0.03);
+    border: 1px solid rgba(255, 179, 0, 0.15);
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.nst-forza-target-grid {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nst-forza-param-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nst-forza-param-col label {
+    font-size: 9px;
+    font-family: 'Orbitron', sans-serif;
+    color: var(--nst-amber);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.nst-forza-badge-container {
+    margin-top: 8px;
+}
+
+.nst-forza-max-warn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+    animation: nstPulseWarning 2.5s infinite ease-in-out;
+}
+
+.nst-forza-max-record {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--nst-lime);
+    background: rgba(118, 255, 3, 0.1);
+    border: 1px solid rgba(118, 255, 3, 0.3);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: 600;
+}
+
+.nst-forza-tip-box {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--nst-text-muted);
+    line-height: 1.4;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    padding-top: 6px;
+}
+
+/* Modale Esecuzione Attiva — Blocchi Esercizi */
+.nst-active-workout-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.nst-active-ex-block {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.nst-active-ex-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.nst-active-ex-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.05em;
+}
+
+.nst-active-warmup-guide {
+    font-size: 10px;
+    color: var(--nst-cyan);
+    font-family: 'Orbitron', monospace;
+    margin-top: 3px;
+}
+
+.nst-active-target-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--nst-amber);
+    background: rgba(255, 179, 0, 0.12);
+    border: 1px solid rgba(255, 179, 0, 0.35);
+    border-radius: 5px;
+    padding: 3px 8px;
+}
+
+.nst-active-series-table {
+    margin-top: 4px;
+}
+
+.nst-active-series-table th {
+    font-size: 9px;
+    padding: 4px 6px;
+}
+
+.nst-active-series-table td {
+    padding: 6px 8px;
+}
+
+.nst-active-rip-input {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    color: var(--nst-lime) !important;
+}
+
+/* Badge Esito Sessione (Completata / Superata / Parziale) */
+.nst-esito-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.nst-esito-badge.completata {
+    background: rgba(0, 229, 255, 0.12);
+    border: 1px solid var(--nst-cyan);
+    color: #e0f2fe;
+}
+.nst-esito-badge.completata span.material-symbols-outlined {
+    color: var(--nst-cyan);
+}
+
+.nst-esito-badge.superata {
+    background: rgba(118, 255, 3, 0.12);
+    border: 1px solid var(--nst-lime);
+    color: #f0fdf4;
+}
+.nst-esito-badge.superata span.material-symbols-outlined {
+    color: var(--nst-lime);
+}
+
+.nst-esito-badge.parziale {
+    background: rgba(255, 179, 0, 0.12);
+    border: 1px solid var(--nst-amber);
+    color: #fef3c7;
+}
+.nst-esito-badge.parziale span.material-symbols-outlined {
+    color: var(--nst-amber);
+}
+
 /* ==========================================================================
    COACH WORKOUT LIBRARY & MAIN TABS
    ========================================================================== */
