@@ -2,6 +2,23 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-19] ingest | NESTORE — Mobile UI Redesign Scheda Attiva: 3 Tasti Icona, Termina con Conferma & Ottimizzazione Input
+- **Riorganizzazione Barra Azioni Mobile (`portal/nestore.html`, `portal/nestore.css`)**:
+  - Posizionati i 3 tasti di controllo (`GIRO`, `PAUSA`, `TERMINA`) su una singola riga orizzontale in fondo allo schermo con larghezza perfettamente uguale (`grid-template-columns: 1fr 1fr 1fr`).
+  - Rimossi i testi dei tasti su mobile tramite classe dedicata `.nst-action-btn-text` (`display: none !important;`), mostrando unicamente le icone (`flag`, `pause/play_arrow`, `close`).
+  - Trasformato il tasto di termine seduta in un pulsante rosso ad alta visibilità (`.nst-btn-danger`) con icona `close` (X).
+- **Protezione Anti-Pressione Accidentale (`portal/nestore.js`)**:
+  - Implementata la funzione `promptTerminaIbridoSeduta()` con finestra di conferma modale prima di chiudere la sessione e passare alla schermata di salvataggio/riepilogo, evitando uscite involontarie non reversibili su mobile.
+- **Ottimizzazione Campi Input Numerici (Opzione A - `portal/nestore.css`)**:
+  - Nascoste le etichette ridondanti `kg` e `rip` all'interno delle singole righe (`.nst-active-unit-label { display: none !important; }`), in quanto già chiaramente specificate nelle intestazioni di colonna ("CARICO (KG)" e "RIP EFFETTIVE").
+  - Rimossi i selettori di incremento/decremento nativi del browser (`appearance: textfield`, spin buttons nascosti).
+  - Estesa la larghezza dei campi input numerici a `width: 100% !important;` per consentire la visualizzazione chiara e non troncata anche di numeri a più cifre con decimali (es. `82.5`) con font `Orbitron`.
+- **Testing & QA (`tests/forza-schede.test.js`)**:
+  - Aggiunti 2 nuovi test unitari a copertura del popup di conferma per `promptTerminaIbridoSeduta` e della conformità di classi/markup HTML e regole CSS.
+  - Test suite globale: 100/100 test passati con successo.
+
+---
+
 ## [2026-09-19] ingest | NESTORE — Layout Testata Mobile a 2 Righe (Stile EPIKA)
 - **Ristrutturazione UI (`portal/nestore.html`, `portal/nestore.css`)**:
   - Modificato l'header principale (`.nst-header`) rimuovendo i vecchi wrapper rigidi `.nst-header-left` e `.nst-header-right`.

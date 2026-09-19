@@ -5400,6 +5400,17 @@ function aggiornaIbridoModalAttivo() {
     }
 }
 
+function promptTerminaIbridoSeduta() {
+    const hasConfirm = typeof window !== 'undefined' && typeof window.confirm === 'function';
+    if (!hasConfirm || window.confirm("Vuoi terminare la sessione e passare al riepilogo per il salvataggio?")) {
+        if (typeof window !== 'undefined' && typeof window.terminaIbridoSeduta === 'function') {
+            window.terminaIbridoSeduta();
+        } else {
+            terminaIbridoSeduta();
+        }
+    }
+}
+
 function terminaIbridoSeduta() {
     if (!ibridoSelezionato) return;
     const p = ibridoSelezionato;
@@ -6619,6 +6630,7 @@ window.aggiornaIbridoParamDaInput = aggiornaIbridoParamDaInput;
 window.avviaIbridoSeduta = avviaIbridoSeduta;
 window.gestisciIbridoActionPause = gestisciIbridoActionPause;
 window.gestisciIbridoActionSecondary = gestisciIbridoActionSecondary;
+window.promptTerminaIbridoSeduta = promptTerminaIbridoSeduta;
 window.terminaIbridoSeduta = terminaIbridoSeduta;
 window.annullaSalvataggioIbrido = annullaSalvataggioIbrido;
 window.confermaSalvaIbridoSeduta = confermaSalvaIbridoSeduta;
@@ -6718,6 +6730,7 @@ if (typeof module !== 'undefined' && module.exports) {
         avviaIbridoSeduta,
         gestisciIbridoActionPause,
         gestisciIbridoActionSecondary,
+        promptTerminaIbridoSeduta,
         terminaIbridoSeduta,
         annullaSalvataggioIbrido,
         confermaSalvaIbridoSeduta,

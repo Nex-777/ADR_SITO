@@ -549,4 +549,37 @@ describe('NESTORE — Schede Allenamento Forza & Flusso Personalizzato', () => {
         expect(html).toContain('nst-ibrido-scrollable-content');
         expect(html).toContain('TERMINA E SALVA');
     });
+
+    it('promptTerminaIbridoSeduta richiede conferma prima di terminare', () => {
+        const confirmSpy = vi.fn(() => false);
+        window.confirm = confirmSpy;
+        const terminaSpy = vi.fn();
+        window.terminaIbridoSeduta = terminaSpy;
+
+        nestore.promptTerminaIbridoSeduta();
+        expect(confirmSpy).toHaveBeenCalled();
+        expect(terminaSpy).not.toHaveBeenCalled();
+
+        confirmSpy.mockReturnValue(true);
+        nestore.promptTerminaIbridoSeduta();
+        expect(terminaSpy).toHaveBeenCalled();
+    });
+
+    it('verifica che nestore.html e nestore.css contengano la UI ottimizzata per mobile (3 tasti icona e input)', async () => {
+        const fs = await import('fs');
+        const path = await import('path');
+        const html = fs.readFileSync(path.resolve(__dirname, '../portal/nestore.html'), 'utf-8');
+        const css = fs.readFileSync(path.resolve(__dirname, '../portal/nestore.css'), 'utf-8');
+
+        // HTML checks
+        expect(html).toContain('promptTerminaIbridoSeduta()');
+        expect(html).toContain('nst-btn-danger');
+        expect(html).toContain('nst-action-btn-text');
+        expect(html).toContain('<span class="material-symbols-outlined">close</span>');
+
+        // CSS checks
+        expect(css).toContain('.nst-btn-danger');
+        expect(css).toContain('grid-template-columns: 1fr 1fr 1fr');
+        expect(css).toContain('.nst-workout-actions-row .nst-action-btn-text');
+    });
 });

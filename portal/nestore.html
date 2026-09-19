@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.57">
+    <link rel="stylesheet" href="nestore.css?v=1.05.58">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.57"></script>
+    <script src="config.js?v=1.05.58"></script>
 </head>
 <body class="nst-body">
 
@@ -21,7 +21,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div class="nst-brand-text">
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.57</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.58</span>
             </div>
         </div>
 
@@ -1413,15 +1413,15 @@ GIORNO 2:
                 <div class="nst-workout-actions-row">
                     <button type="button" class="nst-btn-ghost-sm" id="nst-ibrido-action-secondary" onclick="gestisciIbridoActionSecondary()">
                         <span class="material-symbols-outlined" id="nst-ibrido-action-sec-icon">flag</span>
-                        <span id="nst-ibrido-action-sec-text">GIRO (LAP)</span>
+                        <span id="nst-ibrido-action-sec-text" class="nst-action-btn-text">GIRO (LAP)</span>
                     </button>
                     <button type="button" class="nst-btn-sm" id="nst-ibrido-action-pause" onclick="gestisciIbridoActionPause()">
                         <span class="material-symbols-outlined" id="nst-ibrido-pause-icon">pause</span>
-                        <span id="nst-ibrido-pause-text">PAUSA</span>
+                        <span id="nst-ibrido-pause-text" class="nst-action-btn-text">PAUSA</span>
                     </button>
-                    <button type="button" class="nst-btn-primary" onclick="terminaIbridoSeduta()">
-                        <span class="material-symbols-outlined">check_circle</span>
-                        <span>TERMINA E SALVA</span>
+                    <button type="button" class="nst-btn-danger" id="nst-ibrido-action-end" onclick="promptTerminaIbridoSeduta()">
+                        <span class="material-symbols-outlined">close</span>
+                        <span class="nst-action-btn-text">TERMINA E SALVA</span>
                     </button>
                 </div>
             </div>
@@ -1651,6 +1651,6 @@ GIORNO 2:
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.57"></script>
+    <script src="nestore.js?v=1.05.58"></script>
 </body>
 </html>

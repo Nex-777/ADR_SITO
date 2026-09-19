@@ -2586,6 +2586,32 @@ input:checked + .nst-slider:before {
     box-shadow: 0 4px 16px var(--nst-cyan-glow);
 }
 
+.nst-btn-danger {
+    background: var(--nst-danger, #ef4444);
+    color: #ffffff;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+}
+
+.nst-btn-danger:hover {
+    transform: translateY(-2px);
+    background: #dc2626;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.6);
+}
+
 /* ===========================================================================
    LISTA SCHEDE (ATLETA & COACH)
    =========================================================================== */
@@ -4156,6 +4182,14 @@ input:checked + .nst-slider:before {
     min-height: 40px;
     transition: all 0.2s;
     box-sizing: border-box;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.nst-active-set-input::-webkit-outer-spin-button,
+.nst-active-set-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .warmup-row .nst-active-set-input.peso-input { color: var(--nst-amber); }
@@ -4287,27 +4321,47 @@ input:checked + .nst-slider:before {
     .nst-active-set-input {
         min-height: 44px;
         font-size: 16px !important;
-        padding: 8px 2px;
-        max-width: 100%;
+        padding: 6px 2px;
+        width: 100% !important;
+        max-width: 100% !important;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
     }
 
     .nst-active-unit-label {
-        font-size: 9px;
+        display: none !important;
     }
 
-    /* Pulsanti di controllo sticky comodi da premere in colonna */
-    #nst-ibrido-running-view .nst-workout-actions-row {
+    .nst-active-input-col {
+        width: 100%;
         display: flex;
-        flex-direction: column;
+        justify-content: center;
+    }
+
+    /* Pulsanti di controllo sticky su una sola riga ad uguale larghezza con solo icone */
+    #nst-ibrido-running-view .nst-workout-actions-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 8px;
         padding: 10px 12px;
+        align-items: center;
     }
 
     .nst-workout-actions-row button {
         width: 100%;
-        min-height: 46px;
+        min-height: 48px;
+        padding: 8px 4px;
         justify-content: center;
         font-size: 13px;
+    }
+
+    .nst-workout-actions-row .nst-action-btn-text {
+        display: none !important;
+    }
+
+    .nst-workout-actions-row button .material-symbols-outlined {
+        font-size: 24px;
+        margin: 0;
     }
 }
 
