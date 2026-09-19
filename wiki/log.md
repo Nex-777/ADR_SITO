@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-19] ingest | NESTORE — Mobile UX Fix: Minimizzazione Scheda Ibrido & Sticky Action Bar
+- **Riapertura Scheda Ibrido da Dock Timer (`portal/nestore.js`, `portal/nestore.html`)**:
+  - Risolto il bug di riapertura che riportava forzatamente al solo cronometro: implementata variabile di stato `ibridoSessionMinimized` e funzione `minimizzaIbridoSeduta()`.
+  - Aggiunto pulsante esplicito `▼ RIDUCI` (`.nst-btn-minimize`) nell'header della modale attiva a fianco del tasto di chiusura/annulla.
+  - Aggiornato `dockExpandTimer()` per riaprire automaticamente la sessione Ibrido/Forza in corso mantenendo intatti dati, timer e serie registrate.
+  - Aggiornato `aggiornaVisibilitaDock()` per mostrare il dock timer anche a sessione minimizzata e garantire sincronizzazione visiva istantanea.
+- **Sticky Actions Footer & Ergonomia Mobile (`portal/nestore.css`, `portal/nestore.html`)**:
+  - Risolto il bug dei bottoni azione non raggiungibili su smartphone con schede lunghe: ristrutturato `#nst-ibrido-running-view` con flex layout verticale.
+  - Incapsulato il contenuto scorrevole (timer, tabella esercizi e carichi, note, laps) nel container `#nst-ibrido-scrollable-content` con `flex: 1 1 auto; overflow-y: auto;`.
+  - Fissata la barra comandi `.nst-workout-actions-row` come footer sticky con `flex-shrink: 0`, garantendo che i bottoni `PAUSA` e `TERMINA E SALVA` rimangano sempre visibili e raggiungibili con un tocco del pollice.
+  - Ottimizzato il display del timer gigante su dispositivi mobili (<= 600px) riducendolo a 32px con padding compresso, per massimizzare lo spazio verticale per gli esercizi.
+- **Testing & QA (`tests/forza-schede.test.js`)**:
+  - Aggiunti 5 nuovi test unitari a copertura di `minimizzaIbridoSeduta`, riapertura modale da dock, fallback pannello timer standard, reset alla chiusura/salvataggio e verifica struttura HTML. Suite: 98/98 test passanti con zero errori.
+
+---
+
 ## [2026-09-19] ui_redesign | Header Mobile su Due Righe Stile EPIKA e Ripristino Dati Utente (v1.05.55)
 - **Frontend Dashboard (`portal/dashboard.html`)**:
   - **Architettura Header a Due Livelli Responsive**: Riorganizzato l'header in un grid Tailwind 2x2 su mobile (`grid grid-cols-2 gap-y-3 gap-x-2`) che si trasforma automaticamente in riga flessibile su desktop (`lg:flex lg:items-center lg:gap-4`).
