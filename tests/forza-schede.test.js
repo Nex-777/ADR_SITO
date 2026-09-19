@@ -446,4 +446,107 @@ describe('NESTORE — Schede Allenamento Forza & Flusso Personalizzato', () => {
         expect(ex1.riscaldamento_effettivo[0].peso_kg).toBe(85);
         expect(ex1.serie_dettaglio[0].peso_kg).toBe(105);
     });
+
+    it('minimizzaIbridoSeduta nasconde il modal e imposta ibridoSessionMinimized a true', () => {
+        const modalClasses = new Set();
+        const dockClasses = new Set(['nst-hidden']);
+
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-ibrido-active-modal') {
+                return {
+                    classList: {
+                        add: vi.fn((cls) => modalClasses.add(cls)),
+                        remove: vi.fn((cls) => modalClasses.delete(cls)),
+                        contains: vi.fn((cls) => modalClasses.has(cls))
+                    }
+                };
+            }
+            if (id === 'nst-timer-dock') {
+                return {
+                    classList: {
+                        add: vi.fn((cls) => dockClasses.add(cls)),
+                        remove: vi.fn((cls) => dockClasses.delete(cls)),
+                        contains: vi.fn((cls) => dockClasses.has(cls))
+                    }
+                };
+            }
+            if (id === 'nst-timer-panel') return { classList: { contains: () => true } };
+            return null;
+        });
+
+        nestore.minimizzaIbridoSeduta();
+
+        expect(modalClasses.has('nst-hidden')).toBe(true);
+        expect(nestore.getIbridoSessionMinimized()).toBe(true);
+    });
+
+    it('dockExpandTimer riapre il modal se la sessione ibrido e minimizzata', () => {
+        nestore.apriAnteprimaIbrido('ibrido_forza_1');
+        nestore.setIbridoSessionMinimized(true);
+
+        const modalClasses = new Set(['nst-hidden']);
+        const dockClasses = new Set();
+
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-ibrido-active-modal') {
+                return {
+                    classList: {
+                        add: vi.fn((cls) => modalClasses.add(cls)),
+                        remove: vi.fn((cls) => modalClasses.delete(cls)),
+                        contains: vi.fn((cls) => modalClasses.has(cls))
+                    }
+                };
+            }
+            if (id === 'nst-timer-dock') {
+                return {
+                    classList: {
+                        add: vi.fn((cls) => dockClasses.add(cls)),
+                        remove: vi.fn((cls) => dockClasses.delete(cls)),
+                        contains: vi.fn((cls) => dockClasses.has(cls))
+                    }
+                };
+            }
+            if (id === 'nst-timer-panel') return { classList: { contains: () => true } };
+            return null;
+        });
+
+        nestore.dockExpandTimer();
+
+        expect(modalClasses.has('nst-hidden')).toBe(false);
+        expect(nestore.getIbridoSessionMinimized()).toBe(false);
+    });
+
+    it('dockExpandTimer esegue il fallback a switchNestorePanel se non minimizzato', () => {
+        nestore.setIbridoSessionMinimized(false);
+        const timerPanelMock = { classList: { remove: vi.fn(), add: vi.fn() } };
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-timer-panel') return timerPanelMock;
+            return null;
+        });
+
+        nestore.dockExpandTimer();
+
+        expect(timerPanelMock.classList.remove).toHaveBeenCalledWith('nst-hidden');
+    });
+
+    it('chiudiIbridoActiveModal resetta il flag ibridoSessionMinimized', () => {
+        nestore.setIbridoSessionMinimized(true);
+        document.getElementById = vi.fn(() => ({
+            classList: { add: vi.fn(), remove: vi.fn(), contains: () => false }
+        }));
+
+        nestore.chiudiIbridoActiveModal();
+        expect(nestore.getIbridoSessionMinimized()).toBe(false);
+    });
+
+    it('verifica che nestore.html contenga il pulsante RIDUCI e il wrapper scrollabile', async () => {
+        const fs = await import('fs');
+        const path = await import('path');
+        const html = fs.readFileSync(path.resolve(__dirname, '../portal/nestore.html'), 'utf-8');
+
+        expect(html).toContain('minimizzaIbridoSeduta()');
+        expect(html).toContain('nst-btn-minimize');
+        expect(html).toContain('nst-ibrido-scrollable-content');
+        expect(html).toContain('TERMINA E SALVA');
+    });
 });

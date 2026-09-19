@@ -4215,7 +4215,11 @@ function dockExpandTimer() {
         if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
         aggiornaVisibilitaDock();
     } else {
-        switchNestorePanel('timer');
+        if (typeof window !== 'undefined' && typeof window.switchNestorePanel === 'function') {
+            window.switchNestorePanel('timer');
+        } else if (typeof switchNestorePanel === 'function') {
+            switchNestorePanel('timer');
+        }
     }
 }
 
@@ -6721,6 +6725,8 @@ if (typeof module !== 'undefined' && module.exports) {
         minimizzaIbridoSeduta,
         getIbridoSessionMinimized,
         setIbridoSessionMinimized,
+        dockExpandTimer,
+        aggiornaVisibilitaDock,
         switchCoachMainTab,
         caricaLibreriaProgrammi,
         caricaLibreriaProgrammiCoach,
