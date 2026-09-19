@@ -1359,49 +1359,54 @@ GIORNO 2:
                         <span>SCHERMO ATTIVO</span>
                     </span>
                 </div>
-                <button type="button" class="nst-btn-icon-close" onclick="chiudiIbridoActiveModal()" title="Chiudi / Annulla">✕</button>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <button type="button" class="nst-btn-minimize" onclick="minimizzaIbridoSeduta()" title="Riduci a icona">▼ RIDUCI</button>
+                    <button type="button" class="nst-btn-icon-close" onclick="chiudiIbridoActiveModal()" title="Chiudi / Annulla">✕</button>
+                </div>
             </div>
 
             <!-- Vista 1: Esecuzione in Corso -->
-            <div id="nst-ibrido-running-view" class="nst-modal-body" style="padding: 20px;">
-                <!-- Display Timer Gigante -->
-                <div class="nst-big-timer-container" id="nst-ibrido-timer-container">
-                    <div class="nst-big-timer-display" id="nst-ibrido-timer-display">00:00.0</div>
-                    <div class="nst-big-timer-sub" id="nst-ibrido-timer-sub">IN CORSO</div>
-                </div>
+            <div id="nst-ibrido-running-view" class="nst-modal-body" style="padding: 0;">
+                <div id="nst-ibrido-scrollable-content" class="nst-active-scrollable-area">
+                    <!-- Display Timer Gigante -->
+                    <div class="nst-big-timer-container" id="nst-ibrido-timer-container">
+                        <div class="nst-big-timer-display" id="nst-ibrido-timer-display">00:00.0</div>
+                        <div class="nst-big-timer-sub" id="nst-ibrido-timer-sub">IN CORSO</div>
+                    </div>
 
-                <!-- Sezione Registrazione Risultati In-Sessione -->
-                <div class="nst-modal-targets-box" style="margin-bottom: 14px;">
-                    <div class="nst-modal-targets-title" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>REGISTRAZIONE ESERCIZI &amp; CARICHI</span>
-                        <span style="color: var(--nst-lime); font-size: 9px;">COMPILA I DATI DURANTE O A FINE SESSIONE</span>
+                    <!-- Sezione Registrazione Risultati In-Sessione -->
+                    <div class="nst-modal-targets-box" style="margin-bottom: 14px;">
+                        <div class="nst-modal-targets-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>REGISTRAZIONE ESERCIZI &amp; CARICHI</span>
+                            <span style="color: var(--nst-lime); font-size: 9px;">COMPILA I DATI DURANTE O A FINE SESSIONE</span>
+                        </div>
+                        <div id="nst-ibrido-active-ex-table-container">
+                            <!-- Tabella interattiva esercizi -->
+                        </div>
                     </div>
-                    <div id="nst-ibrido-active-ex-table-container">
-                        <!-- Tabella interattiva esercizi -->
-                    </div>
-                </div>
 
-                <!-- Note In-Sessione Espandibili -->
-                <div class="nst-active-note-section" style="margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: flex-end;">
-                        <button type="button" id="nst-ibrido-note-toggle-btn" class="nst-btn-ghost-sm" style="font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;" onclick="toggleIbridoNoteInSession()">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">edit_note</span>
-                            <span id="nst-ibrido-note-toggle-text">📝 Note Sessione</span>
-                        </button>
+                    <!-- Note In-Sessione Espandibili -->
+                    <div class="nst-active-note-section" style="margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: flex-end;">
+                            <button type="button" id="nst-ibrido-note-toggle-btn" class="nst-btn-ghost-sm" style="font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;" onclick="toggleIbridoNoteInSession()">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">edit_note</span>
+                                <span id="nst-ibrido-note-toggle-text">📝 Note Sessione</span>
+                            </button>
+                        </div>
+                        <div id="nst-ibrido-note-inline-box" class="nst-hidden" style="margin-top: 8px;">
+                            <textarea id="nst-ibrido-workout-note-inline" class="nst-scheda-full-text" style="width: 100%; min-height: 60px; resize: vertical;" rows="2" placeholder="Sensazioni, note tecniche, carichi o difficoltà..."></textarea>
+                        </div>
                     </div>
-                    <div id="nst-ibrido-note-inline-box" class="nst-hidden" style="margin-top: 8px;">
-                        <textarea id="nst-ibrido-workout-note-inline" class="nst-scheda-full-text" style="width: 100%; min-height: 60px; resize: vertical;" rows="2" placeholder="Sensazioni, note tecniche, carichi o difficoltà..."></textarea>
-                    </div>
-                </div>
 
-                <!-- Laps per stopwatch (se Metcon 3 o Forza) -->
-                <div id="nst-ibrido-laps-wrapper" class="nst-modal-laps-wrapper nst-hidden">
-                    <div class="nst-modal-laps-header">
-                        <span>GIRI &amp; INTERTEMPI (LAP)</span>
-                        <span id="nst-ibrido-laps-count">0 Lap</span>
-                    </div>
-                    <div id="nst-ibrido-laps-list" class="nst-modal-laps-list">
-                        <div class="nst-modal-laps-empty">Nessun intertempo registrato. Premi "GIRO (LAP)".</div>
+                    <!-- Laps per stopwatch (se Metcon 3 o Forza) -->
+                    <div id="nst-ibrido-laps-wrapper" class="nst-modal-laps-wrapper nst-hidden">
+                        <div class="nst-modal-laps-header">
+                            <span>GIRI &amp; INTERTEMPI (LAP)</span>
+                            <span id="nst-ibrido-laps-count">0 Lap</span>
+                        </div>
+                        <div id="nst-ibrido-laps-list" class="nst-modal-laps-list">
+                            <div class="nst-modal-laps-empty">Nessun intertempo registrato. Premi "GIRO (LAP)".</div>
+                        </div>
                     </div>
                 </div>
 
