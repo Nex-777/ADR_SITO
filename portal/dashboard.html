@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.05.54"></script>
+    <script src="config.js?v=1.05.55"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -137,14 +137,6 @@
 
             /* Compact header */
             header { padding: 10px 16px !important; }
-            header .max-w-7xl { gap: 8px; }
-            
-            /* Hide context switcher badge on mobile header */
-            #static-context-badge { display: none !important; }
-            
-            /* Compact user display */
-            header #user-display-name { font-size: 11px; }
-            header #user-display-role { font-size: 9px; }
 
             /* Logout button - icon only style */
             header button[id="auto-dashboard-click-1"] {
@@ -512,7 +504,7 @@
             color: #00e5ff;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.05.54">
+    <link rel="stylesheet" href="../output.css?v=1.05.55">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -532,14 +524,30 @@
 
     <!-- Header / Navbar -->
     <header class="border-b border-white/10 bg-black/80 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-2 sm:gap-4">
+        <div class="max-w-7xl mx-auto w-full grid grid-cols-2 gap-y-3 gap-x-2 lg:flex lg:items-center lg:gap-4">
+            <!-- Item 1: Logo & Versione (Order 1 su Mobile, 1 su Desktop) -->
+            <div class="flex items-center gap-2 sm:gap-3 justify-start order-1">
                 <a href="../index.html" class="flex items-center gap-3 group">
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.05.54</span>
-                <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer max-w-[100px] sm:max-w-none truncate hidden">
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.05.55</span>
+            </div>
+
+            <!-- Item 2: Azioni Logout + Hamburger (Order 2 su Mobile, 4 su Desktop) -->
+            <div class="flex items-center gap-2 sm:gap-4 justify-end order-2 lg:order-4">
+                <button class="border border-white/10 hover:border-primary/50 text-gray-400 hover:text-white px-3 py-1.5 text-xs font-headline uppercase tracking-wider transition-all flex items-center justify-center gap-1" id="auto-dashboard-click-1">
+                    <span class="material-symbols-outlined text-sm lg:hidden">logout</span>
+                    <span class="hidden lg:inline">LOGOUT</span>
+                </button>
+                <button id="mobile-hamburger-btn" style="display:none;" onclick="document.getElementById('mobile-menu-overlay').classList.remove('menu-hidden');">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+            </div>
+
+            <!-- Item 3: Selettore Contesto (Order 3 su Mobile, 2 su Desktop) -->
+            <div class="flex items-center justify-start order-3 lg:order-2">
+                <select id="context-switcher" class="bg-primary/10 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider focus:outline-none focus:ring-0 cursor-pointer max-w-[130px] sm:max-w-none truncate hidden">
                     <option value="board">DIRETTIVO</option>
                     <option value="member">SOCIO</option>
                     <option value="athlete">TESSERATO</option>
@@ -548,18 +556,11 @@
                 </select>
                 <span id="static-context-badge" class="bg-primary/20 text-primary text-[10px] font-headline font-bold px-2 py-0.5 border border-primary/30 rounded uppercase tracking-wider hidden">TESSERATO</span>
             </div>
-            <div class="flex items-center gap-2 sm:gap-4">
-                <div class="text-right hidden lg:block">
-                    <p id="user-display-name" class="text-xs font-bold uppercase tracking-wider">Caricamento...</p>
-                    <p id="user-display-role" class="text-[9px] text-primary font-headline font-bold uppercase tracking-widest">Ruolo: -</p>
-                </div>
-                <button class="border border-white/10 hover:border-primary/50 text-gray-400 hover:text-white px-3 py-1.5 text-xs font-headline uppercase tracking-wider transition-all flex items-center justify-center gap-1" id="auto-dashboard-click-1">
-                    <span class="material-symbols-outlined text-sm lg:hidden">logout</span>
-                    <span class="hidden lg:inline">LOGOUT</span>
-                </button>
-                <button id="mobile-hamburger-btn" style="display:none;" onclick="document.getElementById('mobile-menu-overlay').classList.remove('menu-hidden');">
-                    <span class="material-symbols-outlined">menu</span>
-                </button>
+
+            <!-- Item 4: Dati Utente (Order 4 su Mobile, 3 su Desktop con lg:ml-auto) -->
+            <div class="text-right flex flex-col justify-center order-4 lg:order-3 lg:ml-auto min-w-0">
+                <p id="user-display-name" class="text-[11px] lg:text-xs font-bold uppercase tracking-wider truncate">Caricamento...</p>
+                <p id="user-display-role" class="text-[9px] text-primary font-headline font-bold uppercase tracking-widest truncate">Ruolo: -</p>
             </div>
         </div>
     </header>
@@ -3347,8 +3348,8 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.05.54"></script>
-    <script src="dashboard.js?v=1.05.54"></script>
+    <script src="password-validator.js?v=1.05.55"></script>
+    <script src="dashboard.js?v=1.05.55"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -3568,7 +3569,7 @@
     </div>
 
     <!-- Floating Timer Dock for Active Timers from Nestore -->
-    <script src="timer-dock.js?v=1.05.54"></script>
+    <script src="timer-dock.js?v=1.05.55"></script>
 </body></html>
 
 

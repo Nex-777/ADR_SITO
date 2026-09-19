@@ -4157,7 +4157,7 @@ function aggiornaVisibilitaDock() {
     const isStopwatchActive = timerEngine.state.running || timerEngine.getElapsedMs() > 0;
     const isTabataActive = tabataEngine.state.running || (tabataEngine.state.phase !== 'prep' && tabataEngine.state.phase !== 'done');
 
-    const shouldShow = (!isTimerPanelVisible) && (isStopwatchActive || isTabataActive);
+    const shouldShow = (!isTimerPanelVisible) && (isStopwatchActive || isTabataActive || ibridoSessionMinimized);
 
     if (shouldShow) {
         dockEl.classList.remove('nst-hidden');
@@ -4208,7 +4208,15 @@ function dockToggleTimer() {
 }
 
 function dockExpandTimer() {
-    switchNestorePanel('timer');
+    if (ibridoSelezionato && ibridoSessionMinimized) {
+        const modal = document.getElementById('nst-ibrido-active-modal');
+        if (modal) modal.classList.remove('nst-hidden');
+        ibridoSessionMinimized = false;
+        if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
+        aggiornaVisibilitaDock();
+    } else {
+        switchNestorePanel('timer');
+    }
 }
 
 // --- 5. Render Loop Master (RAF + Background Interval) ---
@@ -4668,6 +4676,16 @@ let ibridoRestSec = 30;
 let ibridoRounds = 40;
 let ibridoSessionStartMs = 0;
 let ibridoConfigurazionePersonalizzata = null;
+let ibridoSessionMinimized = false;
+
+function getIbridoSessionMinimized() {
+    return ibridoSessionMinimized;
+}
+
+function setIbridoSessionMinimized(val) {
+    ibridoSessionMinimized = !!val;
+    if (typeof window !== 'undefined') window.ibridoSessionMinimized = ibridoSessionMinimized;
+}
 
 function isPureBodyweight(nome) {
     const n = (nome || '').trim().toLowerCase();

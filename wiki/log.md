@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-19] ui_redesign | Header Mobile su Due Righe Stile EPIKA e Ripristino Dati Utente (v1.05.55)
+- **Frontend Dashboard (`portal/dashboard.html`)**:
+  - **Architettura Header a Due Livelli Responsive**: Riorganizzato l'header in un grid Tailwind 2x2 su mobile (`grid grid-cols-2 gap-y-3 gap-x-2`) che si trasforma automaticamente in riga flessibile su desktop (`lg:flex lg:items-center lg:gap-4`).
+  - **Distribuzione Elementi (Mobile)**:
+    - **Riga 1 (In alto)**: Logo e Versione (`order-1`, sinistra) | Azioni Logout e Hamburger (`order-2`, destra).
+    - **Riga 2 (In basso)**: Selettore Ruolo / Badge Statico (`order-3`, sinistra) | Nome Utente e Ruolo (`order-4`, destra).
+  - **Distribuzione Elementi (Desktop)**: Utilizzate le classi `lg:order-*` e `lg:ml-auto` sui dati utente per mantenere la classica riga singola (Logo + Switcher a sinistra, Dati Utente + Logout a destra).
+  - **Ripristino Visibilità Dati Utente e Badge Statico**: Eliminato il blocco `hidden lg:block` e le regole CSS soppressive, rendendo nome utente, ruolo e badge statico leggibili e confortevoli su tutti i dispositivi mobile con supporto `truncate` anti-overflow.
+- **Global Bump**: Versione globale aggiornata a **v1.05.55** su 23 file tramite `npm run bump`.
+
+---
+
 ## [2026-09-19] ingest | NESTORE — Overhaul Modale Workout Attivo Mobile, Warmup Interattivo & Screen WakeLock API
 - **Screen Wake Lock API (`portal/nestore.js`, `portal/nestore.html`, `portal/nestore.css`)**:
   - Implementato modulo nativo `WakeLockManager` (`navigator.wakeLock.request('screen')`) per impedire lo spegnimento dello schermo smartphone durante tutta la durata dell'allenamento attivo.
