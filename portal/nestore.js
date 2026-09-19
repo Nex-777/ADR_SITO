@@ -38,6 +38,83 @@ const DEFAULT_FORZA_WARMUP = [
     { rip: 1, pct: 100 }
 ];
 
+// Gestore Screen Wake Lock API (mantiene lo schermo sempre acceso durante allenamento/timer)
+const WakeLockManager = {
+    sentinel: null,
+    isActive: false,
+    async request() {
+        if (typeof navigator !== 'undefined' && 'wakeLock' in navigator) {
+            try {
+                this.sentinel = await navigator.wakeLock.request('screen');
+                this.isActive = true;
+                this.sentinel.addEventListener('release', () => {
+                    this.isActive = false;
+                    this.updateUI();
+                });
+                this.updateUI();
+                return true;
+            } catch (err) {
+                console.warn('[WakeLock] Impossibile attivare il blocco schermo:', err);
+                this.isActive = false;
+                this.updateUI();
+                return false;
+            }
+        }
+        return false;
+    },
+    async release() {
+        if (this.sentinel) {
+            try {
+                await this.sentinel.release();
+            } catch (e) {
+                // Ignore release errors
+            }
+            this.sentinel = null;
+        }
+        this.isActive = false;
+        this.updateUI();
+    },
+    updateUI() {
+        if (typeof document === 'undefined') return;
+        const badge = document.getElementById('nst-wakelock-badge');
+        if (badge) {
+            if (this.isActive) {
+                badge.classList.remove('nst-hidden');
+            } else {
+                badge.classList.add('nst-hidden');
+            }
+        }
+    }
+};
+
+// Re-acquisizione automatica Wake Lock quando l'app torna visibile
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && typeof ibridoSelezionato !== 'undefined' && ibridoSelezionato) {
+            const modal = document.getElementById('nst-ibrido-active-modal');
+            if (modal && !modal.classList.contains('nst-hidden')) {
+                await WakeLockManager.request();
+            }
+        }
+    });
+}
+
+function toggleIbridoNoteInSession() {
+    const box = document.getElementById('nst-ibrido-note-inline-box');
+    const btnText = document.getElementById('nst-ibrido-note-toggle-text');
+    if (!box) return;
+    const isHidden = box.classList.contains('nst-hidden');
+    if (isHidden) {
+        box.classList.remove('nst-hidden');
+        if (btnText) btnText.textContent = '▲ Chiudi Note';
+        const textarea = document.getElementById('nst-ibrido-workout-note-inline');
+        if (textarea) textarea.focus();
+    } else {
+        box.classList.add('nst-hidden');
+        if (btnText) btnText.textContent = '📝 Note Sessione';
+    }
+}
+
 // Stato Globale Vista Allenatore & Admin (Fase 2)
 let currentNestoreView = 'athlete'; // 'athlete' | 'coach' | 'admin'
 let isIstruttore = false;
@@ -606,10 +683,13 @@ async function caricaKpiDashboard() {
 
 async function renderGraficoPesiMisure() {
     try {
+        const u = currentUser || (typeof window !== 'undefined' ? window.currentUser : null);
+        if (!u || !u.id || !supabaseClient) return;
+
         let query = supabaseClient
             .from('nestore_pesi_misure')
             .select('*')
-            .eq('utente_id', currentUser.id)
+            .eq('utente_id', u.id)
             .eq('attivo', true);
 
         const dataInizio = calcolaDataInizio(rangeFiltri.peso);
@@ -1156,11 +1236,14 @@ function renderPrGrid(prList) {
 
 async function renderGraficoAllenamenti() {
     try {
+        const u = currentUser || (typeof window !== 'undefined' ? window.currentUser : null);
+        if (!u || !u.id || !supabaseClient) return;
+
         // Query ALL-TIME per calcolare i Record Personali di tutti gli allenamenti registrati
         const { data: allData, error } = await supabaseClient
             .from('nestore_allenamenti')
             .select('*')
-            .eq('utente_id', currentUser.id)
+            .eq('utente_id', u.id)
             .eq('attivo', true)
             .order('data_allenamento', { ascending: true });
 
@@ -1226,10 +1309,13 @@ async function renderGraficoAllenamenti() {
 
 async function renderGraficoDieta() {
     try {
+        const u = currentUser || (typeof window !== 'undefined' ? window.currentUser : null);
+        if (!u || !u.id || !supabaseClient) return;
+
         let query = supabaseClient
             .from('nestore_pasti')
             .select('*')
-            .eq('utente_id', currentUser.id)
+            .eq('utente_id', u.id)
             .eq('attivo', true);
 
         const dataInizio = calcolaDataInizio(rangeFiltri.dieta);
@@ -3485,12 +3571,15 @@ const SoundEngine = {
 
 // Toast di sistema per notifiche timer
 function showTimerToast(message) {
+    if (typeof document === 'undefined') return;
     let toast = document.getElementById('nst-timer-toast');
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'nst-timer-toast';
         toast.className = 'nst-timer-toast';
-        document.body.appendChild(toast);
+        if (document.body && typeof document.body.appendChild === 'function') {
+            document.body.appendChild(toast);
+        }
     }
     toast.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;color:var(--nst-cyan);">timer</span> ${escapeHtml(message)}`;
     if (toast.style) {
@@ -4644,18 +4733,23 @@ function aggiungiSerieExtraForza(exIdx) {
     if (!ex) return;
     const currentRows = tbody.querySelectorAll('tr').length;
     const sIdx = currentRows;
+    const pesoVal = ex.isBw ? 0 : (ex.peso_target_kg || 0);
     const tr = document.createElement('tr');
+    tr.className = 'nst-active-set-row work-row extra-row';
     tr.innerHTML = `
-        <td style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">
+        <td class="nst-active-set-label" style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">
             Serie ${sIdx + 1} (Extra)
         </td>
-        <td style="color: var(--nst-lime); font-weight: 700; font-size: 12px;">
-            ${ex.isBw ? 'Corpo Libero' : `${ex.peso_target_kg} kg`}
+        <td style="text-align: center;">
+            <div class="nst-active-input-col">
+                <input type="number" id="nst-ibrido-ex-peso-${exIdx}-${sIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${pesoVal}" step="0.5" min="0" max="500" ${ex.isBw ? 'disabled title="Corpo Libero"' : ''}>
+                <span class="nst-active-unit-label">kg</span>
+            </div>
         </td>
         <td style="text-align: center;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-ex-input nst-active-rip-input" value="${ex.rip_target}" min="0" max="100" style="width: 60px; font-size: 13px;">
-                <span style="font-size: 10px; color: var(--nst-text-muted);">rip</span>
+            <div class="nst-active-input-col">
+                <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-ex-input nst-active-rip-input nst-active-set-input rip-input" value="${ex.rip_target}" min="0" max="100">
+                <span class="nst-active-unit-label">rip</span>
             </div>
         </td>
     `;
@@ -5015,52 +5109,89 @@ async function avviaIbridoSeduta() {
             exTableContainer.innerHTML = `
                 <div class="nst-active-workout-wrapper">
                     ${ibridoConfigurazionePersonalizzata.esercizi.map((ex, exIdx) => {
-                        const warmupSummary = (ex.riscaldamento && ex.riscaldamento.length > 0)
-                            ? ex.riscaldamento.map(w => `${w.rip}@${w.peso_kg}kg`).join(' · ')
-                            : '';
+                        const hasWarmup = !ex.isBw && ex.riscaldamento && ex.riscaldamento.length > 0;
+
+                        // Righe riscaldamento specifico interattive (Risc 1 10x, Risc 2 5x, etc.)
+                        const warmupRowsHtml = hasWarmup ? ex.riscaldamento.map((w, wIdx) => {
+                            const riscLabel = `Risc ${wIdx + 1} ${w.rip}x`;
+                            return `
+                                <tr class="nst-active-set-row warmup-row">
+                                    <td class="nst-active-set-label">
+                                        <span style="font-size: 11px;">🔥</span>
+                                        <span>${riscLabel}</span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <div class="nst-active-input-col">
+                                            <input type="number" id="nst-ibrido-warmup-peso-${exIdx}-${wIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${w.peso_kg}" step="0.5" min="0" max="500">
+                                            <span class="nst-active-unit-label">kg</span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <div class="nst-active-input-col">
+                                            <input type="number" id="nst-ibrido-warmup-rip-${exIdx}-${wIdx}" class="nst-active-set-input rip-input nst-ex-input" value="${w.rip}" min="0" max="100">
+                                            <span class="nst-active-unit-label">rip</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('') : '';
+
+                        // Righe serie allenanti interattive (Serie 1, Serie 2, etc.)
+                        const workRowsHtml = Array.from({ length: ex.serie_target }).map((_, sIdx) => {
+                            const pesoVal = ex.isBw ? 0 : (ex.peso_target_kg || 0);
+                            return `
+                                <tr class="nst-active-set-row work-row">
+                                    <td class="nst-active-set-label">
+                                        <span>Serie ${sIdx + 1}</span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <div class="nst-active-input-col">
+                                            <input type="number" id="nst-ibrido-ex-peso-${exIdx}-${sIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${pesoVal}" step="0.5" min="0" max="500" ${ex.isBw ? 'disabled title="Corpo Libero"' : ''}>
+                                            <span class="nst-active-unit-label">kg</span>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <div class="nst-active-input-col">
+                                            <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-active-set-input rip-input nst-ex-input nst-active-rip-input" value="${ex.rip_target}" min="0" max="100">
+                                            <span class="nst-active-unit-label">rip</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
 
                         return `
                             <div class="nst-active-ex-block" data-ex-idx="${exIdx}">
                                 <div class="nst-active-ex-header">
                                     <div>
                                         <span class="nst-active-ex-title">${escapeHtml(ex.nome)}</span>
-                                        ${warmupSummary ? `<div class="nst-active-warmup-guide">🔥 Risc. specifico: ${escapeHtml(warmupSummary)}</div>` : ''}
+                                        ${hasWarmup ? `<div style="font-size: 10px; color: var(--nst-amber); margin-top: 2px;">🔥 Riscaldamento specifico (5 serie) + Serie Allenanti</div>` : ''}
                                     </div>
                                     <div class="nst-active-target-badge">
                                         🎯 TARGET: ${escapeHtml(ex.target_descrittivo)}
                                     </div>
                                 </div>
 
-                                <table class="nst-ex-table nst-active-series-table">
+                                <table class="nst-ex-table nst-active-series-table" style="width: 100%;">
                                     <thead>
-                                        <tr>
-                                            <th style="width: 25%;">SERIE</th>
-                                            <th style="width: 35%;">CARICO</th>
-                                            <th style="width: 40%; text-align: center;">RIP COMPLETATE</th>
+                                        <tr class="nst-active-sets-header">
+                                            <th style="width: 32%;">SET</th>
+                                            <th style="width: 34%; text-align: center;">CARICO (KG)</th>
+                                            <th style="width: 34%; text-align: center;">RIP EFFETTIVE</th>
                                         </tr>
                                     </thead>
+                                    ${hasWarmup ? `
+                                    <tbody id="nst-active-warmup-tbody-ex-${exIdx}">
+                                        ${warmupRowsHtml}
+                                    </tbody>
+                                    ` : ''}
                                     <tbody id="nst-active-tbody-ex-${exIdx}">
-                                        ${Array.from({ length: ex.serie_target }).map((_, sIdx) => `
-                                            <tr>
-                                                <td style="color: var(--nst-cyan); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">
-                                                    Serie ${sIdx + 1}
-                                                </td>
-                                                <td style="color: var(--nst-lime); font-weight: 700; font-size: 12px;">
-                                                    ${ex.isBw ? 'Corpo Libero' : `${ex.peso_target_kg} kg`}
-                                                </td>
-                                                <td style="text-align: center;">
-                                                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-                                                        <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-ex-input nst-active-rip-input" value="${ex.rip_target}" min="0" max="100" style="width: 60px; font-size: 13px;">
-                                                        <span style="font-size: 10px; color: var(--nst-text-muted);">rip</span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
+                                        ${workRowsHtml}
                                     </tbody>
                                 </table>
 
-                                <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-                                    <button type="button" class="nst-btn-ghost-sm" style="font-size: 10px; padding: 3px 8px; border-color: rgba(255,179,0,0.3); color: var(--nst-amber);" onclick="aggiungiSerieExtraForza(${exIdx})">
+                                <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                                    <button type="button" class="nst-btn-ghost-sm" style="font-size: 10px; padding: 4px 10px; border-color: rgba(255,179,0,0.3); color: var(--nst-amber);" onclick="aggiungiSerieExtraForza(${exIdx})">
                                         + AGGIUNGI SERIE EXTRA
                                     </button>
                                 </div>
@@ -5095,7 +5226,18 @@ async function avviaIbridoSeduta() {
         }
     }
 
+    // Reset eventuale campo note in sessione
+    const inlineNote = document.getElementById('nst-ibrido-workout-note-inline');
+    if (inlineNote) inlineNote.value = '';
+    const inlineNoteBox = document.getElementById('nst-ibrido-note-inline-box');
+    if (inlineNoteBox) inlineNoteBox.classList.add('nst-hidden');
+    const noteToggleText = document.getElementById('nst-ibrido-note-toggle-text');
+    if (noteToggleText) noteToggleText.textContent = '📝 Note Sessione';
+
     ibridoSessionStartMs = Date.now();
+
+    // Attiva Screen Wake Lock API per mantenere lo schermo acceso
+    WakeLockManager.request();
 
     // Configura motore timer appropriato
     if (p.timer_mode === 'tabata') {
@@ -5277,33 +5419,86 @@ function terminaIbridoSeduta() {
             const tbody = document.getElementById(`nst-active-tbody-ex-${exIdx}`);
             const rows = tbody ? tbody.querySelectorAll('tr') : [];
             const serieEffettive = [];
+            const riscaldamentoEffettivo = [];
             let sumCompletedReps = 0;
+            let targetTotalReps = 0;
+            let exHasParziale = false;
+            let exHasSuperata = false;
 
+            // 1. Raccolta dati Riscaldamento Specifico (se presente e non a corpo libero)
+            if (!ex.isBw && ex.riscaldamento && ex.riscaldamento.length > 0) {
+                ex.riscaldamento.forEach((w, wIdx) => {
+                    const ripInput = document.getElementById(`nst-ibrido-warmup-rip-${exIdx}-${wIdx}`);
+                    const pesoInput = document.getElementById(`nst-ibrido-warmup-peso-${exIdx}-${wIdx}`);
+                    const ripVal = ripInput ? (parseInt(ripInput.value, 10) || 0) : w.rip;
+                    const pesoVal = pesoInput ? (parseFloat(pesoInput.value) || 0) : (w.peso_kg || 0);
+
+                    riscaldamentoEffettivo.push({
+                        serie: wIdx + 1,
+                        label: `Risc ${wIdx + 1} ${w.rip}x`,
+                        rip: ripVal,
+                        rip_target: w.rip,
+                        peso_kg: pesoVal,
+                        pct: w.pct
+                    });
+
+                    sumCompletedReps += ripVal;
+                    targetTotalReps += w.rip;
+
+                    if (ripVal < w.rip) {
+                        exHasParziale = true;
+                    } else if (ripVal > w.rip) {
+                        exHasSuperata = true;
+                    }
+                });
+            }
+
+            // 2. Raccolta dati Serie Allenanti
             rows.forEach((_, sIdx) => {
-                const input = document.getElementById(`nst-ibrido-ex-rip-${exIdx}-${sIdx}`);
-                const ripVal = input ? (parseInt(input.value, 10) || 0) : ex.rip_target;
+                const ripInput = document.getElementById(`nst-ibrido-ex-rip-${exIdx}-${sIdx}`);
+                const pesoInput = document.getElementById(`nst-ibrido-ex-peso-${exIdx}-${sIdx}`);
+                const ripVal = ripInput ? (parseInt(ripInput.value, 10) || 0) : ex.rip_target;
+                const pesoVal = pesoInput ? (parseFloat(pesoInput.value) || 0) : (ex.isBw ? 0 : (ex.peso_target_kg || 0));
+
                 serieEffettive.push({
                     serie: sIdx + 1,
-                    rip_completate: ripVal
+                    rip_completate: ripVal,
+                    peso_kg: pesoVal
                 });
+
                 sumCompletedReps += ripVal;
+
+                if (ripVal < ex.rip_target) {
+                    exHasParziale = true;
+                } else if (ripVal > ex.rip_target) {
+                    exHasSuperata = true;
+                }
             });
 
-            const targetTotalReps = ex.serie_target * ex.rip_target;
+            const workTargetReps = ex.serie_target * ex.rip_target;
+            targetTotalReps += workTargetReps;
+
             totalTargetRepsAll += targetTotalReps;
             totalCompletedRepsAll += sumCompletedReps;
 
+            if (serieEffettive.length > ex.serie_target) {
+                exHasSuperata = true;
+            } else if (serieEffettive.length < ex.serie_target) {
+                exHasParziale = true;
+            }
+
             let esitoEx = 'COMPLETATA';
-            if (serieEffettive.length > ex.serie_target || sumCompletedReps > targetTotalReps) {
-                esitoEx = 'SUPERATA';
-                hasSuperata = true;
-            } else if (serieEffettive.length < ex.serie_target || serieEffettive.some(s => s.rip_completate < ex.rip_target)) {
+            if (exHasParziale || sumCompletedReps < targetTotalReps) {
                 esitoEx = 'PARZIALE';
                 hasParziale = true;
+            } else if (exHasSuperata || sumCompletedReps > targetTotalReps) {
+                esitoEx = 'SUPERATA';
+                hasSuperata = true;
             }
 
             return {
                 ...ex,
+                riscaldamento_effettivo: riscaldamentoEffettivo,
                 serie_effettive: serieEffettive,
                 rip_totali_effettive: sumCompletedReps,
                 rip_totali_target: targetTotalReps,
@@ -5376,6 +5571,8 @@ function terminaIbridoSeduta() {
                             else esitoBadgeColor = 'var(--nst-cyan)';
 
                             const setsDetailStr = ex.serie_effettive.map(s => `${s.rip_completate}`).join(', ');
+                            const pesiEff = ex.serie_effettive.map(s => s.peso_kg).filter(p => typeof p === 'number' && p > 0);
+                            const maxEffPeso = pesiEff.length > 0 ? Math.max(...pesiEff) : ex.peso_target_kg;
 
                             return `
                                 <tr>
@@ -5383,7 +5580,7 @@ function terminaIbridoSeduta() {
                                     <td style="color: var(--nst-text-muted); font-size: 11px;">${escapeHtml(ex.target_descrittivo)}</td>
                                     <td style="color: #f1f5f9; font-weight: 600;">
                                         ${ex.serie_effettive.length} serie (${escapeHtml(setsDetailStr)} rip)
-                                        ${!ex.isBw ? `<span style="color: var(--nst-lime); margin-left: 4px;">@ ${ex.peso_target_kg}kg</span>` : ''}
+                                        ${!ex.isBw ? `<span style="color: var(--nst-lime); margin-left: 4px;">@ ${maxEffPeso}kg</span>` : ''}
                                     </td>
                                     <td>
                                         <span style="color: ${esitoBadgeColor}; font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700;">
@@ -5424,6 +5621,13 @@ function terminaIbridoSeduta() {
         }
     }
 
+    // Sincronizza note scritte durante la seduta attiva verso la vista di salvataggio
+    const inlineNoteEl = document.getElementById('nst-ibrido-workout-note-inline');
+    const saveNoteEl = document.getElementById('nst-ibrido-workout-note');
+    if (inlineNoteEl && saveNoteEl && inlineNoteEl.value.trim() && !saveNoteEl.value.trim()) {
+        saveNoteEl.value = inlineNoteEl.value.trim();
+    }
+
     const runningView = document.getElementById('nst-ibrido-running-view');
     const saveView = document.getElementById('nst-ibrido-save-view');
     if (runningView) runningView.classList.add('nst-hidden');
@@ -5452,7 +5656,8 @@ async function confermaSalvaIbridoSeduta() {
         const durataInput = document.getElementById('nst-ibrido-final-duration-input');
         const durataMinuti = parseInt(durataInput?.value, 10) || 1;
         const noteInput = document.getElementById('nst-ibrido-workout-note');
-        const userNote = noteInput ? noteInput.value.trim() : '';
+        const inlineNoteInput = document.getElementById('nst-ibrido-workout-note-inline');
+        const userNote = (noteInput ? noteInput.value.trim() : '') || (inlineNoteInput ? inlineNoteInput.value.trim() : '');
 
         let schedaDati = null;
         let esitoPerNote = '';
@@ -5469,7 +5674,8 @@ async function confermaSalvaIbridoSeduta() {
                 esito_globale: esitoGlobale,
                 timer_mode: p.timer_mode,
                 esercizi: summary.map(ex => {
-                    const maxPeso = ex.peso_target_kg || 0;
+                    const pesiEffettivi = (ex.serie_effettive || []).map(s => s.peso_kg).filter(p => typeof p === 'number' && p > 0);
+                    const maxPeso = pesiEffettivi.length > 0 ? Math.max(...pesiEffettivi) : (ex.peso_target_kg || 0);
                     return {
                         nome: ex.nome,
                         serie: ex.serie_effettive.length,
@@ -5480,9 +5686,10 @@ async function confermaSalvaIbridoSeduta() {
                         serie_target: ex.serie_target,
                         esito: ex.esito,
                         riscaldamento: ex.riscaldamento || [],
+                        riscaldamento_effettivo: ex.riscaldamento_effettivo || [],
                         serie_dettaglio: ex.serie_effettive.map(s => ({
                             serie: s.serie,
-                            peso_kg: maxPeso,
+                            peso_kg: typeof s.peso_kg === 'number' ? s.peso_kg : maxPeso,
                             ripetizioni: s.rip_completate
                         })),
                         target_originario: ex.target_descrittivo
@@ -5533,6 +5740,8 @@ async function confermaSalvaIbridoSeduta() {
         if (p.timer_mode === 'tabata') tabataEngine.reset();
         else timerEngine.reset();
 
+        WakeLockManager.release();
+
         ibridoConfigurazionePersonalizzata = null;
 
         const modal = document.getElementById('nst-ibrido-active-modal');
@@ -5543,14 +5752,16 @@ async function confermaSalvaIbridoSeduta() {
             : `✓ SESSIONE ${p.nome.toUpperCase()} REGISTRATA CON SUCCESSO!`;
 
         if (typeof showTimerToast === 'function') showTimerToast(toastMsg);
-        if (typeof caricaKpiDashboard === 'function') await caricaKpiDashboard();
+        if (typeof caricaKpiDashboard === 'function' && typeof document !== 'undefined' && document.getElementById('nst-current-weight')) {
+            await caricaKpiDashboard();
+        }
 
-        if (typeof renderGraficoAllenamenti === 'function') {
+        if (typeof renderGraficoAllenamenti === 'function' && typeof document !== 'undefined' && document.getElementById('nst-chart-allenamenti')) {
             await renderGraficoAllenamenti();
         }
 
         // Ricalcolo scheda atleta asincrono
-        if (typeof fetch === 'function') {
+        if (typeof window !== 'undefined' && window.location && window.location.origin && typeof fetch === 'function') {
             fetch('/api/nestore-chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -5573,6 +5784,7 @@ function chiudiIbridoActiveModal() {
     if (!ibridoSelezionato) {
         const modal = document.getElementById('nst-ibrido-active-modal');
         if (modal) modal.classList.add('nst-hidden');
+        WakeLockManager.release();
         ibridoConfigurazionePersonalizzata = null;
         return;
     }
@@ -5585,6 +5797,8 @@ function chiudiIbridoActiveModal() {
     }
     if (p.timer_mode === 'tabata') tabataEngine.reset();
     else timerEngine.reset();
+
+    WakeLockManager.release();
 
     ibridoConfigurazionePersonalizzata = null;
 
@@ -6372,6 +6586,8 @@ window.annullaSalvataggioIbrido = annullaSalvataggioIbrido;
 window.confermaSalvaIbridoSeduta = confermaSalvaIbridoSeduta;
 window.chiudiIbridoActiveModal = chiudiIbridoActiveModal;
 window.aggiornaIbridoModalAttivo = aggiornaIbridoModalAttivo;
+window.WakeLockManager = WakeLockManager;
+window.toggleIbridoNoteInSession = toggleIbridoNoteInSession;
 
 window.gestisciTimerPrimaryClick = gestisciTimerPrimaryClick;
 window.gestisciTimerResetClick = gestisciTimerResetClick;
@@ -6485,6 +6701,8 @@ if (typeof module !== 'undefined' && module.exports) {
         ottieniBaseMassimaleEsercizio,
         DEFAULT_FORZA_SERIE,
         DEFAULT_FORZA_WARMUP,
+        WakeLockManager,
+        toggleIbridoNoteInSession,
         isPureBodyweight,
         ottieniMassimoStoricoEsercizio,
         recuperaUltimaSessioneProgramma,

@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-19] ingest | NESTORE — Overhaul Modale Workout Attivo Mobile, Warmup Interattivo & Screen WakeLock API
+- **Screen Wake Lock API (`portal/nestore.js`, `portal/nestore.html`, `portal/nestore.css`)**:
+  - Implementato modulo nativo `WakeLockManager` (`navigator.wakeLock.request('screen')`) per impedire lo spegnimento dello schermo smartphone durante tutta la durata dell'allenamento attivo.
+  - Gestione automatica dell'evento `visibilitychange` (re-acquisizione del blocco dello schermo se l'utente torna sull'app dopo un cambio finestra).
+  - Indicatore visivo `SCHERMO ATTIVO` (`#nst-wakelock-badge`) con pulsazione cyber nell'header della modale attiva.
+- **Riscaldamento Specifico e Serie Allenanti Interattive (`avviaIbridoSeduta`)**:
+  - Trasformate le 5 serie di riscaldamento specifico (`Risc 1 10x`, `Risc 2 5x`, `Risc 3 3x`, `Risc 4 1x`, `Risc 5 1x`) in righe pienamente interattive e modificabili dall'atleta per **Carico (kg)** e **Ripetizioni**.
+  - Dotate tutte le serie allenanti (`Serie 1..N`) e le serie extra di doppio input modificabile in-sessione per peso e ripetizioni.
+- **Calcolo Esito con Warmup & Note In-Sessione**:
+  - Il calcolo dell'esito scheda (`COMPLETATA`, `SUPERATA`, `PARZIALE`) ora include integralmente sia le serie di riscaldamento che le serie allenanti.
+  - Aggiunto box note espandibile in tempo reale durante la sessione attiva (`#nst-ibrido-workout-note-inline`), con sincronizzazione bidirezionale verso la vista di salvataggio e persistenza in `public.nestore_allenamenti`.
+  - Aggiornato payload di salvataggio per includere `riscaldamento_effettivo` e il carico reale per-serie.
+- **Design Ergonomico Mobile-First (≤ 600px)**:
+  - Eliminato il box a scorrimento fisso da 200px in favore di scorrimento naturale ampio (max 55vh su mobile).
+  - Touch target degli input $\ge 44\text{px}$, font-size 16px per prevenire l'auto-zoom di Safari iOS, e controlli di fine sessione impilati ad alta ergonomia touch.
+- **Testing & Quality Assurance (`tests/forza-schede.test.js`)**:
+  - Aggiunti 5 nuovi test unitari su `WakeLockManager`, toggle note, rendering warmup modificabili ed esiti con riscaldamento. Totale test: 93/93 passanti con zero errori di log.
+
+---
+
 ## [2026-09-19] ingest | NESTORE — Pulsante ANNULLA con Blocco di Sicurezza su Modale Workout Attivo
 - **Frontend & UI Workout (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Sostituita la precedente icona "✕" nell'header della modale `#nst-active-workout-modal` con un pulsante esplicito `[ANNULLA]`.

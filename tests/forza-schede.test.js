@@ -3,8 +3,21 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Mock browser globals before requiring nestore.js in Node
 global.APP_CONFIG = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_KEY: 'test-key' };
 global.localStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {}, clear: () => {} };
+const createChainableQuery = () => {
+    const q = {
+        select: () => q,
+        eq: () => q,
+        order: () => q,
+        gte: () => q,
+        insert: () => Promise.resolve({ error: null }),
+        update: () => q,
+        then: (resolve) => resolve({ data: [], error: null })
+    };
+    return q;
+};
+
 global.window = global.window || {
-    supabase: { createClient: () => ({ from: () => ({ select: () => ({}) }) }) },
+    supabase: { createClient: () => ({ from: () => createChainableQuery() }) },
     addEventListener: () => {},
     location: { search: '', hash: '' },
     requestAnimationFrame: () => {}
@@ -247,5 +260,190 @@ describe('NESTORE — Schede Allenamento Forza & Flusso Personalizzato', () => {
         nestore.terminaIbridoSeduta();
         expect(esitoBadgeMock.className).toContain('parziale');
         expect(esitoBadgeMock.innerHTML).toContain('SESSIONE PARZIALE');
+    });
+
+    it('WakeLockManager attiva e rilascia correttamente il wake lock gestendo il badge UI', async () => {
+        const releaseFn = vi.fn().mockResolvedValue();
+        const addListenerFn = vi.fn();
+        const mockSentinel = { release: releaseFn, addEventListener: addListenerFn };
+        
+        Object.defineProperty(globalThis.navigator, 'wakeLock', {
+            value: {
+                request: vi.fn().mockResolvedValue(mockSentinel)
+            },
+            configurable: true,
+            writable: true
+        });
+
+        const mockBadge = {
+            classList: { remove: vi.fn(), add: vi.fn() }
+        };
+
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-wakelock-badge') return mockBadge;
+            return null;
+        });
+
+        const success = await nestore.WakeLockManager.request();
+        expect(success).toBe(true);
+        expect(nestore.WakeLockManager.isActive).toBe(true);
+        expect(mockBadge.classList.remove).toHaveBeenCalledWith('nst-hidden');
+
+        await nestore.WakeLockManager.release();
+        expect(releaseFn).toHaveBeenCalled();
+        expect(nestore.WakeLockManager.isActive).toBe(false);
+        expect(mockBadge.classList.add).toHaveBeenCalledWith('nst-hidden');
+    });
+
+    it('toggleIbridoNoteInSession alterna la visibilità del box note e aggiorna il testo', () => {
+        let isHidden = true;
+        const mockBox = {
+            classList: {
+                contains: vi.fn((cls) => cls === 'nst-hidden' ? isHidden : false),
+                remove: vi.fn(() => { isHidden = false; }),
+                add: vi.fn(() => { isHidden = true; })
+            }
+        };
+        const mockBtnText = { textContent: '' };
+        const mockTextarea = { focus: vi.fn() };
+
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-ibrido-note-inline-box') return mockBox;
+            if (id === 'nst-ibrido-note-toggle-text') return mockBtnText;
+            if (id === 'nst-ibrido-workout-note-inline') return mockTextarea;
+            return null;
+        });
+
+        nestore.toggleIbridoNoteInSession();
+        expect(mockBox.classList.remove).toHaveBeenCalledWith('nst-hidden');
+        expect(mockBtnText.textContent).toBe('▲ Chiudi Note');
+        expect(mockTextarea.focus).toHaveBeenCalled();
+
+        nestore.toggleIbridoNoteInSession();
+        expect(mockBox.classList.add).toHaveBeenCalledWith('nst-hidden');
+        expect(mockBtnText.textContent).toBe('📝 Note Sessione');
+    });
+
+    it('avviaIbridoSeduta genera righe riscaldamento Risc 1..5 con input peso e rip modificabili', async () => {
+        const modalMock = { classList: { remove: vi.fn(), add: vi.fn(), contains: vi.fn(() => false) } };
+        const tableContainerMock = { innerHTML: '' };
+        
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-ibrido-active-modal') return modalMock;
+            if (id === 'nst-ibrido-active-ex-table-container') return tableContainerMock;
+            if (id === 'nst-ibrido-timer-display') return { textContent: '', style: {} };
+            if (id === 'nst-ibrido-timer-sub') return { textContent: '' };
+            if (id === 'nst-ibrido-action-pause') return {};
+            if (id === 'nst-ibrido-status-dot') return { style: {}, classList: { add: vi.fn(), remove: vi.fn() } };
+            return null;
+        });
+
+        nestore.apriAnteprimaIbrido('ibrido_forza_1');
+        await nestore.avviaIbridoSeduta();
+
+        const html = tableContainerMock.innerHTML;
+        // Verifica presenza righe riscaldamento richieste
+        expect(html).toContain('Risc 1 10x');
+        expect(html).toContain('Risc 2 5x');
+        expect(html).toContain('Risc 3 3x');
+        expect(html).toContain('Risc 4 1x');
+        expect(html).toContain('Risc 5 1x');
+        expect(html).toContain('nst-ibrido-warmup-peso-0-0');
+        expect(html).toContain('nst-ibrido-warmup-rip-0-0');
+        expect(html).toContain('nst-ibrido-ex-peso-0-0');
+        expect(html).toContain('nst-ibrido-ex-rip-0-0');
+    });
+
+    it('terminaIbridoSeduta assegna esito PARZIALE se una serie di riscaldamento specifico non è completata', async () => {
+        const modalMock = { classList: { remove: vi.fn(), add: vi.fn(), contains: vi.fn(() => false) } };
+        const runningView = { classList: { remove: vi.fn(), add: vi.fn() } };
+        const saveView = { classList: { remove: vi.fn(), add: vi.fn() } };
+        const esitoBadgeMock = { className: '', innerHTML: '', classList: { remove: vi.fn(), add: vi.fn() } };
+        const summaryMock = { innerHTML: '' };
+
+        nestore.apriAnteprimaIbrido('ibrido_forza_1');
+        await nestore.avviaIbridoSeduta();
+
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-ibrido-active-modal') return modalMock;
+            if (id === 'nst-ibrido-running-view') return runningView;
+            if (id === 'nst-ibrido-save-view') return saveView;
+            if (id === 'nst-ibrido-esito-badge') return esitoBadgeMock;
+            if (id === 'nst-ibrido-save-ex-summary') return summaryMock;
+            if (id === 'nst-ibrido-final-duration-input') return { value: '40' };
+            if (id === 'nst-ibrido-save-prog-name') return { textContent: '' };
+            if (id && id.startsWith('nst-active-tbody-ex-')) {
+                return { querySelectorAll: vi.fn(() => [{}, {}, {}, {}]) };
+            }
+            // Tutte le serie allenanti regolari
+            if (id && id.startsWith('nst-ibrido-ex-rip-')) return { value: '4' };
+            // Riscaldamento 1 completato solo con 6 rip invece di 10
+            if (id === 'nst-ibrido-warmup-rip-0-0') return { value: '6' };
+            if (id && id.startsWith('nst-ibrido-warmup-rip-')) return null; // fallback default
+            return null;
+        });
+
+        nestore.terminaIbridoSeduta();
+        expect(esitoBadgeMock.className).toContain('parziale');
+        expect(esitoBadgeMock.innerHTML).toContain('SESSIONE PARZIALE');
+    });
+
+    it('confermaSalvaIbridoSeduta salva riscaldamento_effettivo, carico per-serie e note in sessione nel payload Supabase', async () => {
+        let insertedPayload = null;
+        const mockQueryBuilder = {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            gte: vi.fn().mockReturnThis(),
+            insert: vi.fn(async (payload) => {
+                insertedPayload = payload;
+                return { error: null };
+            })
+        };
+        const mockSupabase = {
+            from: vi.fn(() => mockQueryBuilder)
+        };
+
+        global.window.supabaseClient = mockSupabase;
+        global.window.currentUser = { id: 'usr-123-atleta' };
+        global.currentUser = { id: 'usr-123-atleta' };
+        global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+
+        nestore.apriAnteprimaIbrido('ibrido_forza_1');
+        await nestore.avviaIbridoSeduta();
+
+        // Simula input modificati durante la sessione attiva
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-ibrido-active-modal') return { classList: { add: vi.fn(), remove: vi.fn() } };
+            if (id === 'nst-ibrido-running-view') return { classList: { add: vi.fn(), remove: vi.fn() } };
+            if (id === 'nst-ibrido-save-view') return { classList: { add: vi.fn(), remove: vi.fn() } };
+            if (id === 'nst-ibrido-final-duration-input') return { value: '52' };
+            if (id === 'nst-ibrido-workout-note-inline') return { value: 'Sensazione ottima alla panca' };
+            if (id === 'nst-ibrido-workout-note') return { value: '' }; // vuoto nel save-view, deve prendere quello inline
+            if (id && id.startsWith('nst-active-tbody-ex-')) {
+                return { querySelectorAll: vi.fn(() => [{}, {}, {}, {}]) };
+            }
+            if (id === 'nst-ibrido-ex-peso-0-0') return { value: '105' }; // peso modificato
+            if (id && id.startsWith('nst-ibrido-ex-peso-')) return { value: '100' };
+            if (id && id.startsWith('nst-ibrido-ex-rip-')) return { value: '5' };
+            if (id === 'nst-ibrido-warmup-peso-0-0') return { value: '85' };
+            if (id === 'nst-ibrido-warmup-rip-0-0') return { value: '10' };
+            return null;
+        });
+
+        nestore.terminaIbridoSeduta();
+        await nestore.confermaSalvaIbridoSeduta();
+
+        expect(mockSupabase.from).toHaveBeenCalledWith('nestore_allenamenti');
+        expect(insertedPayload).not.toBeNull();
+        expect(insertedPayload.durata_minuti).toBe(52);
+        expect(insertedPayload.note).toBe('Sensazione ottima alla panca');
+        expect(insertedPayload.scheda_dati).toBeDefined();
+
+        const ex1 = insertedPayload.scheda_dati.esercizi[0];
+        expect(ex1.riscaldamento_effettivo).toBeDefined();
+        expect(ex1.riscaldamento_effettivo.length).toBeGreaterThan(0);
+        expect(ex1.riscaldamento_effettivo[0].peso_kg).toBe(85);
+        expect(ex1.serie_dettaglio[0].peso_kg).toBe(105);
     });
 });

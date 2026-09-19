@@ -4003,6 +4003,275 @@ input:checked + .nst-slider:before {
     border-color: rgba(0, 229, 255, 0.3);
 }
 
+/* ==========================================================================
+   ACTIVE WORKOUT & WAKELOCK RESPONSIVE STYLES (MOBILE-FIRST)
+   ========================================================================== */
+
+/* Badge Wake Lock Schermo Attivo */
+.nst-wakelock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(118, 255, 3, 0.12);
+    border: 1px solid var(--nst-lime);
+    color: var(--nst-lime);
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 20px;
+    box-shadow: 0 0 10px rgba(118, 255, 3, 0.25);
+    animation: nstWakePulse 2.5s infinite ease-in-out;
+}
+
+@keyframes nstWakePulse {
+    0%, 100% { opacity: 0.85; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.03); box-shadow: 0 0 14px rgba(118, 255, 3, 0.45); }
+}
+
+/* Contenitore Esercizi Attivi: scroll fluido e naturale senza blocchi ristretti */
+#nst-ibrido-active-ex-table-container {
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.nst-active-workout-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.nst-active-ex-block {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px;
+    transition: border-color 0.2s ease;
+}
+
+.nst-active-ex-block:hover {
+    border-color: rgba(0, 229, 255, 0.3);
+}
+
+.nst-active-ex-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 8px;
+}
+
+.nst-active-ex-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    display: block;
+}
+
+.nst-active-target-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--nst-lime);
+    background: rgba(118, 255, 3, 0.08);
+    border: 1px solid rgba(118, 255, 3, 0.25);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+/* Intestazione Colonne Set */
+.nst-active-sets-header {
+    display: grid;
+    grid-template-columns: 110px 1fr 1fr;
+    gap: 8px;
+    padding: 4px 8px 6px 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--nst-text-muted);
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nst-active-sets-header > div:nth-child(2),
+.nst-active-sets-header > div:nth-child(3) {
+    text-align: center;
+}
+
+/* Righe Set (Warmup & Serie) */
+.nst-active-set-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin-top: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.nst-active-set-row:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.nst-active-set-row.warmup-row {
+    background: rgba(245, 158, 11, 0.04);
+    border-left: 3px solid var(--nst-amber);
+}
+
+.nst-active-set-row.work-row {
+    background: rgba(0, 229, 255, 0.03);
+    border-left: 3px solid var(--nst-cyan);
+}
+
+.nst-active-set-row.extra-row {
+    background: rgba(118, 255, 3, 0.04);
+    border-left: 3px solid var(--nst-lime);
+}
+
+.nst-active-set-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.warmup-row .nst-active-set-label { color: var(--nst-amber); }
+.work-row .nst-active-set-label { color: var(--nst-cyan); }
+.extra-row .nst-active-set-label { color: var(--nst-lime); }
+
+.nst-active-input-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.nst-active-set-input {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 4px;
+    width: 100%;
+    max-width: 90px;
+    text-align: center;
+    min-height: 40px;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.warmup-row .nst-active-set-input.peso-input { color: var(--nst-amber); }
+.work-row .nst-active-set-input.peso-input { color: var(--nst-lime); }
+.nst-active-set-input.rip-input { color: #f1f5f9; }
+
+.nst-active-set-input:focus {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 0 10px var(--nst-cyan-dim);
+    outline: none;
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.nst-active-unit-label {
+    font-size: 10px;
+    color: var(--nst-text-muted);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   MOBILE VIEWPORT ADAPTATIONS (<= 600px)
+   ========================================================================== */
+@media (max-width: 600px) {
+    #nst-ibrido-active-card {
+        max-width: 100% !important;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    #nst-ibrido-active-modal .nst-modal-body {
+        padding: 14px 12px !important;
+    }
+
+    #nst-ibrido-active-ex-table-container {
+        max-height: 55vh; /* Scorrimento ampio e dedicato su mobile */
+    }
+
+    .nst-big-timer-display {
+        font-size: 40px !important;
+    }
+
+    .nst-active-ex-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .nst-active-target-badge {
+        font-size: 9px;
+    }
+
+    /* Griglia 3 colonne ad alta ergonomia touch per dita/pollice */
+    .nst-active-sets-header {
+        grid-template-columns: 78px 1fr 1fr;
+        gap: 6px;
+        padding: 4px 4px 6px 4px;
+        font-size: 8px;
+    }
+
+    .nst-active-set-row {
+        grid-template-columns: 78px 1fr 1fr;
+        gap: 6px;
+        padding: 6px 4px;
+    }
+
+    .nst-active-set-label {
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
+    /* Input touch target >= 44px e font 16px per evitare auto-zoom su Safari iOS */
+    .nst-active-set-input {
+        min-height: 44px;
+        font-size: 16px !important;
+        padding: 8px 2px;
+        max-width: 100%;
+    }
+
+    .nst-active-unit-label {
+        font-size: 9px;
+    }
+
+    /* Pulsanti di controllo comodi da premere in verticale */
+    .nst-workout-actions-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .nst-workout-actions-row button {
+        width: 100%;
+        min-height: 46px;
+        justify-content: center;
+        font-size: 13px;
+    }
+}
+
+
 
 
 

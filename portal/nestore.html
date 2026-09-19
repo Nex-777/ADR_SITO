@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.53">
+    <link rel="stylesheet" href="nestore.css?v=1.05.54">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.53"></script>
+    <script src="config.js?v=1.05.54"></script>
 </head>
 <body class="nst-body">
 
@@ -20,7 +20,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div>
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.53</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.54</span>
             </div>
         </div>
 
@@ -1351,9 +1351,13 @@ GIORNO 2:
         <div class="nst-modal-card nst-active-workout-card" id="nst-ibrido-active-card" style="max-width: 680px;">
             <!-- Header Modale -->
             <div class="nst-modal-header">
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span class="nst-status-dot pulse" id="nst-ibrido-status-dot"></span>
                     <span id="nst-ibrido-active-title" class="nst-headline" style="font-size: 13px; color: var(--nst-cyan);">IBRIDO — IN CORSO</span>
+                    <span id="nst-wakelock-badge" class="nst-wakelock-badge nst-hidden" title="Schermo sempre attivo durante l'allenamento">
+                        <span class="material-symbols-outlined" style="font-size: 13px;">wb_sunny</span>
+                        <span>SCHERMO ATTIVO</span>
+                    </span>
                 </div>
                 <button type="button" class="nst-btn-icon-close" onclick="chiudiIbridoActiveModal()" title="Chiudi / Annulla">✕</button>
             </div>
@@ -1372,8 +1376,21 @@ GIORNO 2:
                         <span>REGISTRAZIONE ESERCIZI &amp; CARICHI</span>
                         <span style="color: var(--nst-lime); font-size: 9px;">COMPILA I DATI DURANTE O A FINE SESSIONE</span>
                     </div>
-                    <div id="nst-ibrido-active-ex-table-container" style="max-height: 200px; overflow-y: auto;">
+                    <div id="nst-ibrido-active-ex-table-container">
                         <!-- Tabella interattiva esercizi -->
+                    </div>
+                </div>
+
+                <!-- Note In-Sessione Espandibili -->
+                <div class="nst-active-note-section" style="margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="button" id="nst-ibrido-note-toggle-btn" class="nst-btn-ghost-sm" style="font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;" onclick="toggleIbridoNoteInSession()">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">edit_note</span>
+                            <span id="nst-ibrido-note-toggle-text">📝 Note Sessione</span>
+                        </button>
+                    </div>
+                    <div id="nst-ibrido-note-inline-box" class="nst-hidden" style="margin-top: 8px;">
+                        <textarea id="nst-ibrido-workout-note-inline" class="nst-scheda-full-text" style="width: 100%; min-height: 60px; resize: vertical;" rows="2" placeholder="Sensazioni, note tecniche, carichi o difficoltà..."></textarea>
                     </div>
                 </div>
 
@@ -1630,6 +1647,6 @@ GIORNO 2:
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.53"></script>
+    <script src="nestore.js?v=1.05.54"></script>
 </body>
 </html>
