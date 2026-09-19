@@ -5062,6 +5062,8 @@ function aggiornaIbridoParamDaInput() {
 
 async function avviaIbridoSeduta() {
     if (!ibridoSelezionato) return;
+    ibridoSessionMinimized = false;
+    if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
     const p = ibridoSelezionato;
     const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
 
@@ -5759,6 +5761,8 @@ async function confermaSalvaIbridoSeduta() {
         else timerEngine.reset();
 
         WakeLockManager.release();
+        ibridoSessionMinimized = false;
+        if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
 
         ibridoConfigurazionePersonalizzata = null;
 
@@ -5798,11 +5802,21 @@ async function confermaSalvaIbridoSeduta() {
     }
 }
 
+function minimizzaIbridoSeduta() {
+    const modal = document.getElementById('nst-ibrido-active-modal');
+    if (modal) modal.classList.add('nst-hidden');
+    ibridoSessionMinimized = true;
+    if (typeof window !== 'undefined') window.ibridoSessionMinimized = true;
+    aggiornaVisibilitaDock();
+}
+
 function chiudiIbridoActiveModal() {
     if (!ibridoSelezionato) {
         const modal = document.getElementById('nst-ibrido-active-modal');
         if (modal) modal.classList.add('nst-hidden');
         WakeLockManager.release();
+        ibridoSessionMinimized = false;
+        if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
         ibridoConfigurazionePersonalizzata = null;
         return;
     }
@@ -5817,6 +5831,8 @@ function chiudiIbridoActiveModal() {
     else timerEngine.reset();
 
     WakeLockManager.release();
+    ibridoSessionMinimized = false;
+    if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
 
     ibridoConfigurazionePersonalizzata = null;
 
@@ -6603,6 +6619,9 @@ window.terminaIbridoSeduta = terminaIbridoSeduta;
 window.annullaSalvataggioIbrido = annullaSalvataggioIbrido;
 window.confermaSalvaIbridoSeduta = confermaSalvaIbridoSeduta;
 window.chiudiIbridoActiveModal = chiudiIbridoActiveModal;
+window.minimizzaIbridoSeduta = minimizzaIbridoSeduta;
+window.getIbridoSessionMinimized = getIbridoSessionMinimized;
+window.setIbridoSessionMinimized = setIbridoSessionMinimized;
 window.aggiornaIbridoModalAttivo = aggiornaIbridoModalAttivo;
 window.WakeLockManager = WakeLockManager;
 window.toggleIbridoNoteInSession = toggleIbridoNoteInSession;
@@ -6699,6 +6718,9 @@ if (typeof module !== 'undefined' && module.exports) {
         annullaSalvataggioIbrido,
         confermaSalvaIbridoSeduta,
         chiudiIbridoActiveModal,
+        minimizzaIbridoSeduta,
+        getIbridoSessionMinimized,
+        setIbridoSessionMinimized,
         switchCoachMainTab,
         caricaLibreriaProgrammi,
         caricaLibreriaProgrammiCoach,
