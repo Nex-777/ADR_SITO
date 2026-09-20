@@ -4466,3 +4466,73 @@ input:checked + .nst-slider:before {
     border-radius: 4px;
     border: 1px solid rgba(163, 230, 53, 0.25);
 }
+
+/* Metcon Row Highlighting per Work / Rest Phase (Iterazione 2) */
+.nst-metcon-ex-row {
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.nst-metcon-ex-row.active-work,
+.nst-metcon-ex-row.nst-metcon-ex-active-work {
+    background: rgba(0, 230, 118, 0.12) !important;
+}
+
+.nst-metcon-ex-row.active-work td,
+.nst-metcon-ex-row.nst-metcon-ex-active-work td {
+    border-top: 2px solid var(--nst-lime) !important;
+    border-bottom: 2px solid var(--nst-lime) !important;
+}
+
+.nst-metcon-ex-row.active-work td:first-child,
+.nst-metcon-ex-row.nst-metcon-ex-active-work td:first-child {
+    border-left: 2px solid var(--nst-lime) !important;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.nst-metcon-ex-row.active-work td:last-child,
+.nst-metcon-ex-row.nst-metcon-ex-active-work td:last-child {
+    border-right: 2px solid var(--nst-lime) !important;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.nst-metcon-ex-row.active-work .nst-metcon-round-input,
+.nst-metcon-ex-row.nst-metcon-ex-active-work .nst-metcon-round-input {
+    border-color: var(--nst-lime) !important;
+    box-shadow: 0 0 10px rgba(0, 230, 118, 0.45) !important;
+    background: rgba(0, 230, 118, 0.1) !important;
+}
+
+.nst-metcon-ex-row.active-rest,
+.nst-metcon-ex-row.nst-metcon-ex-active-rest {
+    background: rgba(255, 82, 82, 0.12) !important;
+}
+
+.nst-metcon-ex-row.active-rest td,
+.nst-metcon-ex-row.nst-metcon-ex-active-rest td {
+    border-top: 2px solid var(--nst-red, #ff5252) !important;
+    border-bottom: 2px solid var(--nst-red, #ff5252) !important;
+}
+
+.nst-metcon-ex-row.active-rest td:first-child,
+.nst-metcon-ex-row.nst-metcon-ex-active-rest td:first-child {
+    border-left: 2px solid var(--nst-red, #ff5252) !important;
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.nst-metcon-ex-row.active-rest td:last-child,
+.nst-metcon-ex-row.nst-metcon-ex-active-rest td:last-child {
+    border-right: 2px solid var(--nst-red, #ff5252) !important;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.nst-metcon-ex-row.active-rest .nst-metcon-round-input,
+.nst-metcon-ex-row.nst-metcon-ex-active-rest .nst-metcon-round-input {
+    border-color: var(--nst-red, #ff5252) !important;
+    box-shadow: 0 0 10px rgba(255, 82, 82, 0.45) !important;
+    background: rgba(255, 82, 82, 0.1) !important;
+}
+

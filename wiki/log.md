@@ -2,6 +2,27 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-20] ingest | NESTORE — Overhaul Schede Metcon Iterazione 2: Calcolo Giri/Intervalli, Evidenziazione Visiva (Work/Rest), Auto-Avanzamento & Tasto Annulla
+- **Logica Giri vs Intervalli Tabata (`portal/nestore.html`, `portal/nestore.js`)**:
+  - Ridefinita la nozione di "Giro": 1 Giro = completamento di tutti gli esercizi del circuito (es. 6 esercizi = 6 turni di lavoro e 6 di riposo).
+  - Aggiornato `IBRIDO_PROGRAMMI_CATALOGO` impostando per Metcon 1 `rounds_default: 6` (invece di 40), perfettamente coerente con 6 giri da 6 minuti = 36 minuti.
+  - Aggiornato `aggiornaIbridoTempoTotalePreview()` per calcolare la durata complessiva moltiplicando i giri per il numero di esercizi (`(work + rest) * (rounds * numEsercizi)`).
+  - In `avviaIbridoSeduta()`, `tabataEngine.state.config.rounds` viene configurato automaticamente con il numero totale di intervalli (`rounds * numEsercizi`), mentre `ibridoMetconResults` mantiene la suddivisione esatta dei giri del circuito per la compilazione.
+- **Evidenziazione Visiva Esercizio Attivo (`portal/nestore.css`, `portal/nestore.js`)**:
+  - Create le classi CSS `.nst-metcon-ex-row.active-work` (bordo verde lime e glow) e `.active-rest` (bordo rosso corallo e glow) con evidenziazione integrale della riga e dell'input target/effettivo.
+  - In `aggiornaIbridoModalAttivo()`, mappato l'intervallo corrente del Tabata all'indice dell'esercizio attivo `(round - 1) % numEsercizi` e al giro corrente del timer `Math.floor((round - 1) / numEsercizi) + 1`.
+  - Aggiornato il display del sottotitolo timer con indicazione chiara di stato: `${phaseName} — GIRO X/Y • ES Z/N: NOME_ESERCIZIO`.
+- **Auto-Avanzamento Automatico della Scheda (`portal/nestore.js`)**:
+  - Al passaggio del timer da un giro all'altro, il sistema salva automaticamente i dati compilati nel DOM e avanza la scheda visualizzata (`currentMetconDisplayedRound`) al nuovo giro del timer senza interruzioni.
+  - L'atleta mantiene comunque la libertà di navigare liberamente con `◀`, `▶` o selettore rapido per consultare o correggere giri passati.
+- **Pulsante "ANNULLA" (`portal/nestore.html`)**:
+  - Sostituita l'icona '✕' di chiusura nell'header della sessione modale con il pulsante rosso `.nst-btn-danger-ghost nst-btn-annulla-workout` ("ANNULLA"), uniformando il design alla scheda Invictus e chiedendo conferma prima di interrompere il timer.
+- **Testing & QA (`tests/metcon-schede.test.js`)**:
+  - Aggiunti 5 nuovi test unitari a copertura completa di: calcolo tempo totale con moltiplicatore esercizi, configurazione intervalli tabataEngine, mapping round-to-exercise/giro, evidenziazione classi work/rest e auto-avanzamento automatico.
+  - Test suite globale: 117/117 test passati con successo (10 suite su 10).
+
+---
+
 ## [2026-09-20] ingest | NESTORE — Overhaul Schede Metcon: Tempo Totale, Scheda Giro Corrente (Opzione 2.B) & Calcolo Esito Globale
 - **Calcolo Dinamico Tempo Totale in Anteprima (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
   - Aggiunto badge dinamico `#nst-ibrido-preview-total-time` nel box di configurazione Tabata.

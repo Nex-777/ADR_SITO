@@ -4555,8 +4555,8 @@ let IBRIDO_PROGRAMMI_CATALOGO = [
         timer_mode: 'tabata',
         work_default: 30,
         rest_default: 30,
-        rounds_default: 40,
-        descrizione: '30" work + 30" rest (Giro 60"), 40 giri tot. Riscaldamento dinamico 10\'.',
+        rounds_default: 6,
+        descrizione: '30" work + 30" rest (Giro 60"), 6 giri tot (36 min). Riscaldamento dinamico 10\'.',
         esercizi: [
             { nome: 'PULL', target: '15 rip' },
             { nome: 'Assault Bike', target: '60 cal/rpm' },
@@ -4677,13 +4677,22 @@ let IBRIDO_PROGRAMMI_CATALOGO = [
 let ibridoSelezionato = null;
 let ibridoWorkSec = 30;
 let ibridoRestSec = 30;
-let ibridoRounds = 40;
+let ibridoRounds = 6;
 let ibridoSessionStartMs = 0;
 let ibridoConfigurazionePersonalizzata = null;
 let ibridoSessionMinimized = false;
 let ibridoMetconResults = [];
 let ibridoMetconSummary = null;
 let currentMetconDisplayedRound = 1;
+let lastActiveTimerGiro = 1;
+
+function getLastActiveTimerGiro() {
+    return lastActiveTimerGiro;
+}
+
+function setLastActiveTimerGiro(val) {
+    lastActiveTimerGiro = parseInt(val, 10) || 1;
+}
 
 function estraiTargetValoreEUnita(targetStr) {
     if (!targetStr) return { targetVal: '', unita: '', targetNum: 0 };
@@ -5098,7 +5107,10 @@ function apriAnteprimaIbrido(progId) {
 function aggiornaIbridoTempoTotalePreview() {
     const totalTimeEl = document.getElementById('nst-ibrido-total-time-display');
     if (!totalTimeEl) return;
-    const totalSec = (ibridoWorkSec + ibridoRestSec) * ibridoRounds;
+    const numEsercizi = (ibridoSelezionato && Array.isArray(ibridoSelezionato.esercizi) && ibridoSelezionato.esercizi.length > 0)
+        ? ibridoSelezionato.esercizi.length
+        : 1;
+    const totalSec = (ibridoWorkSec + ibridoRestSec) * (ibridoRounds * numEsercizi);
     const min = Math.floor(totalSec / 60);
     const sec = totalSec % 60;
     const formatted = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
@@ -5332,14 +5344,18 @@ async function avviaIbridoSeduta() {
     // Attiva Screen Wake Lock API per mantenere lo schermo acceso
     WakeLockManager.request();
 
+    lastActiveTimerGiro = 1;
+
     // Configura motore timer appropriato
     if (p.timer_mode === 'tabata') {
         currentTimerMode = 'tabata';
+        const numEsercizi = (p.esercizi && p.esercizi.length > 0) ? p.esercizi.length : 1;
+        const totalIntervals = ibridoRounds * numEsercizi;
         tabataEngine.state.config = {
             prep: 5,
             work: ibridoWorkSec,
             rest: ibridoRestSec,
-            rounds: ibridoRounds,
+            rounds: totalIntervals,
             sets: 1
         };
         tabataEngine.reset();
@@ -5401,8 +5417,19 @@ function renderMetconGiroCorrente() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${roundData.map((item, exIdx) => `
-                        <tr>
+                    ${roundData.map((item, exIdx) => {
+                        let activeRowClass = '';
+                        if (currentTimerMode === 'tabata' && typeof tabataEngine !== 'undefined' && tabataEngine.state) {
+                            const totalEx = roundData.length || 1;
+                            const timerGiro = Math.floor((tabataEngine.state.currentRound - 1) / totalEx) + 1;
+                            const activeExIdx = (tabataEngine.state.currentRound - 1) % totalEx;
+                            if (currentMetconDisplayedRound === timerGiro && exIdx === activeExIdx) {
+                                if (tabataEngine.state.phase === 'work') activeRowClass = ' active-work';
+                                else if (tabataEngine.state.phase === 'rest') activeRowClass = ' active-rest';
+                            }
+                        }
+                        return `
+                        <tr class="nst-metcon-ex-row${activeRowClass}" id="nst-metcon-ex-row-${exIdx}" data-ex-idx="${exIdx}">
                             <td>
                                 <div style="font-weight: 600; color: #fff; font-size: 12px;">${escapeHtml(item.nome)}</div>
                                 ${item.unita ? `<div style="font-size: 10px; color: var(--nst-text-muted);">${escapeHtml(item.unita)}</div>` : ''}
@@ -5418,7 +5445,8 @@ function renderMetconGiroCorrente() {
                                        oninput="aggiornaMetconRisultatoInput(${exIdx}, this.value)">
                             </td>
                         </tr>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
@@ -5432,8 +5460,8 @@ function salvaMetconGiroCorrenteDaDom() {
     const roundData = ibridoMetconResults[rIdx];
     roundData.forEach((exItem, exIdx) => {
         const inputEl = document.getElementById(`nst-metcon-ex-risultato-${exIdx}`);
-        if (inputEl) {
-            exItem.risultato_effettivo = inputEl.value.trim();
+        if (inputEl && inputEl.value !== undefined) {
+            exItem.risultato_effettivo = String(inputEl.value).trim();
         }
     });
 }
@@ -5531,7 +5559,50 @@ function aggiornaIbridoModalAttivo() {
         
         const phaseNames = { prep: 'PREPARAZIONE', work: 'LAVORO (WORK)', rest: 'RIPOSO (REST)', done: 'COMPLETATO' };
         const phaseName = phaseNames[tabataEngine.state.phase] || tabataEngine.state.phase.toUpperCase();
-        if (subEl) subEl.textContent = `${phaseName} — ROUND ${tabataEngine.state.currentRound}/${tabataEngine.state.config.rounds}`;
+
+        const numEsercizi = (p.esercizi && p.esercizi.length > 0) ? p.esercizi.length : 1;
+        const currentExIdx = Math.max(0, (tabataEngine.state.currentRound - 1) % numEsercizi);
+        const timerGiro = Math.floor((tabataEngine.state.currentRound - 1) / numEsercizi) + 1;
+
+        if (ibridoMetconResults && ibridoMetconResults.length > 0) {
+            const currentExName = (p.esercizi && p.esercizi[currentExIdx]) ? p.esercizi[currentExIdx].nome : '';
+            if (subEl) {
+                subEl.textContent = `${phaseName} — GIRO ${timerGiro}/${ibridoRounds} • ES ${currentExIdx + 1}/${numEsercizi}: ${currentExName.toUpperCase()}`;
+            }
+
+            // Auto-avanzamento giro al passaggio del timer (Soluzione A)
+            if (timerGiro !== lastActiveTimerGiro) {
+                lastActiveTimerGiro = timerGiro;
+                if (timerGiro >= 1 && timerGiro <= ibridoMetconResults.length) {
+                    salvaMetconGiroCorrenteDaDom();
+                    currentMetconDisplayedRound = timerGiro;
+                    renderMetconGiroCorrente();
+                }
+            }
+
+            // Evidenziazione esercizio attivo (Soluzione A)
+            const rows = document.querySelectorAll('.nst-metcon-ex-row');
+            if (rows && rows.length > 0) {
+                const isShowingTimerGiro = (currentMetconDisplayedRound === timerGiro);
+                rows.forEach((row, idx) => {
+                    if (isShowingTimerGiro && idx === currentExIdx) {
+                        if (tabataEngine.state.phase === 'work') {
+                            row.classList.add('active-work');
+                            row.classList.remove('active-rest');
+                        } else if (tabataEngine.state.phase === 'rest') {
+                            row.classList.add('active-rest');
+                            row.classList.remove('active-work');
+                        } else {
+                            row.classList.remove('active-work', 'active-rest');
+                        }
+                    } else {
+                        row.classList.remove('active-work', 'active-rest');
+                    }
+                });
+            }
+        } else {
+            if (subEl) subEl.textContent = `${phaseName} — ROUND ${tabataEngine.state.currentRound}/${tabataEngine.state.config.rounds}`;
+        }
 
         if (tabataEngine.state.phase === 'work') {
             if (displayEl) displayEl.style.color = 'var(--nst-lime)';
@@ -6127,6 +6198,7 @@ async function confermaSalvaIbridoSeduta() {
         ibridoMetconResults = [];
         ibridoMetconSummary = null;
         currentMetconDisplayedRound = 1;
+        lastActiveTimerGiro = 1;
 
         const modal = document.getElementById('nst-ibrido-active-modal');
         if (modal) modal.classList.add('nst-hidden');
@@ -6183,6 +6255,7 @@ function chiudiIbridoActiveModal() {
         ibridoMetconResults = [];
         ibridoMetconSummary = null;
         currentMetconDisplayedRound = 1;
+        lastActiveTimerGiro = 1;
         return;
     }
     const p = ibridoSelezionato;
@@ -6203,6 +6276,7 @@ function chiudiIbridoActiveModal() {
     ibridoMetconResults = [];
     ibridoMetconSummary = null;
     currentMetconDisplayedRound = 1;
+    lastActiveTimerGiro = 1;
 
     const modal = document.getElementById('nst-ibrido-active-modal');
     if (modal) modal.classList.add('nst-hidden');
@@ -7006,6 +7080,8 @@ window.getIbridoMetconResults = getIbridoMetconResults;
 window.setIbridoMetconResults = setIbridoMetconResults;
 window.getCurrentMetconDisplayedRound = getCurrentMetconDisplayedRound;
 window.setCurrentMetconDisplayedRound = setCurrentMetconDisplayedRound;
+window.getLastActiveTimerGiro = getLastActiveTimerGiro;
+window.setLastActiveTimerGiro = setLastActiveTimerGiro;
 window.getIbridoMetconSummary = getIbridoMetconSummary;
 
 window.gestisciTimerPrimaryClick = gestisciTimerPrimaryClick;
@@ -7105,8 +7181,11 @@ if (typeof module !== 'undefined' && module.exports) {
         setIbridoMetconResults,
         getCurrentMetconDisplayedRound,
         setCurrentMetconDisplayedRound,
+        getLastActiveTimerGiro,
+        setLastActiveTimerGiro,
         getIbridoMetconSummary,
         avviaIbridoSeduta,
+        aggiornaIbridoModalAttivo,
         gestisciIbridoActionPause,
         gestisciIbridoActionSecondary,
         promptTerminaIbridoSeduta,

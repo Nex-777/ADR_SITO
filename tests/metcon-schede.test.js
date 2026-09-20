@@ -341,4 +341,157 @@ describe('NESTORE — METCON Schede Overhaul & Giro Corrente', () => {
             expect(insertedPayload.scheda_dati.esercizi[0].giri_dettaglio).toHaveLength(2);
         });
     });
+
+    describe('Iteration 2: Calcolo Giri, Evidenziazione Visiva e Auto-Avanzamento', () => {
+        it('calcola correttamente la durata totale moltiplicando i giri per il numero di esercizi del programma', () => {
+            const mockDisplay = { textContent: '' };
+            const mockWork = { value: '30' };
+            const mockRest = { value: '30' };
+            const mockRounds = { value: '6' };
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-ibrido-total-time-display') return mockDisplay;
+                if (id === 'nst-ibrido-cfg-work') return mockWork;
+                if (id === 'nst-ibrido-cfg-rest') return mockRest;
+                if (id === 'nst-ibrido-cfg-rounds') return mockRounds;
+                return { classList: { remove: vi.fn(), add: vi.fn(), contains: vi.fn(() => false) }, style: {}, value: '' };
+            });
+
+            // Apri anteprima Metcon 1 (ha 6 esercizi, 30w + 30r, 6 giri)
+            nestore.apriAnteprimaIbrido('ibrido_metcon_1');
+            nestore.aggiornaIbridoParamDaInput();
+
+            // (30 + 30) * (6 giri * 6 esercizi) = 60 * 36 = 2160 sec = 36 min
+            expect(mockDisplay.textContent).toBe('36 min (36:00)');
+        });
+
+        it('configura tabataEngine con rounds totali pari a Giri * Numero di Esercizi in avviaIbridoSeduta', async () => {
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-ibrido-cfg-work') return { value: '30' };
+                if (id === 'nst-ibrido-cfg-rest') return { value: '30' };
+                if (id === 'nst-ibrido-cfg-rounds') return { value: '6' };
+                return {
+                    classList: { remove: vi.fn(), add: vi.fn(), contains: vi.fn(() => false) },
+                    style: {},
+                    value: '',
+                    innerHTML: '',
+                    textContent: ''
+                };
+            });
+
+            nestore.apriAnteprimaIbrido('ibrido_metcon_1');
+            nestore.aggiornaIbridoParamDaInput();
+            await nestore.avviaIbridoSeduta();
+
+            // Metcon 1 ha 6 esercizi. 6 giri * 6 esercizi = 36 intervalli totali
+            expect(window.tabataEngine.state.config.rounds).toBe(36);
+            expect(nestore.getIbridoMetconResults().length).toBe(6);
+            expect(nestore.getCurrentMetconDisplayedRound()).toBe(1);
+            expect(nestore.getLastActiveTimerGiro()).toBe(1);
+        });
+
+        it('mappa correttamente intervallo Tabata a Indice Esercizio e Giro del Circuito', () => {
+            const numEsercizi = 6;
+
+            // Round 1 (Primo esercizio del Giro 1)
+            let round = 1;
+            let exIdx = (round - 1) % numEsercizi;
+            let giro = Math.floor((round - 1) / numEsercizi) + 1;
+            expect(exIdx).toBe(0);
+            expect(giro).toBe(1);
+
+            // Round 6 (Ultimo esercizio del Giro 1)
+            round = 6;
+            exIdx = (round - 1) % numEsercizi;
+            giro = Math.floor((round - 1) / numEsercizi) + 1;
+            expect(exIdx).toBe(5);
+            expect(giro).toBe(1);
+
+            // Round 7 (Primo esercizio del Giro 2)
+            round = 7;
+            exIdx = (round - 1) % numEsercizi;
+            giro = Math.floor((round - 1) / numEsercizi) + 1;
+            expect(exIdx).toBe(0);
+            expect(giro).toBe(2);
+
+            // Round 36 (Ultimo esercizio del Giro 6)
+            round = 36;
+            exIdx = (round - 1) % numEsercizi;
+            giro = Math.floor((round - 1) / numEsercizi) + 1;
+            expect(exIdx).toBe(5);
+            expect(giro).toBe(6);
+        });
+
+        it('evidenzia la riga con active-work durante LAVORO e active-rest durante RIPOSO', () => {
+            const mockRows = [
+                { classList: { add: vi.fn(), remove: vi.fn() } },
+                { classList: { add: vi.fn(), remove: vi.fn() } }
+            ];
+
+            const mockSubEl = { textContent: '' };
+            const mockDisplayEl = { textContent: '', style: {} };
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-ibrido-active-modal') return { classList: { contains: () => false } };
+                if (id === 'nst-ibrido-timer-display') return mockDisplayEl;
+                if (id === 'nst-ibrido-timer-sub') return mockSubEl;
+                return { classList: { add: vi.fn(), remove: vi.fn(), contains: vi.fn(() => false) }, style: {} };
+            });
+
+            document.querySelectorAll = vi.fn((sel) => {
+                if (sel === '.nst-metcon-ex-row') return mockRows;
+                return [];
+            });
+
+            // Imposta tabataEngine su Round 1, fase 'work'
+            window.tabataEngine.state.currentRound = 1;
+            window.tabataEngine.state.phase = 'work';
+            window.tabataEngine.state.running = true;
+            window.tabataEngine.state.phaseDurationSec = 30;
+            window.tabataEngine.getPhaseElapsedMs = () => 5000;
+
+            nestore.setCurrentMetconDisplayedRound(1);
+            nestore.setLastActiveTimerGiro(1);
+
+            nestore.aggiornaIbridoModalAttivo();
+
+            // Riga 0 deve avere active-work
+            expect(mockRows[0].classList.add).toHaveBeenCalledWith('active-work');
+            expect(mockSubEl.textContent).toContain('LAVORO (WORK)');
+            expect(mockSubEl.textContent).toContain('GIRO 1');
+
+            // Passa a 'rest'
+            vi.clearAllMocks();
+            window.tabataEngine.state.phase = 'rest';
+            nestore.aggiornaIbridoModalAttivo();
+
+            expect(mockRows[0].classList.add).toHaveBeenCalledWith('active-rest');
+            expect(mockSubEl.textContent).toContain('RIPOSO (REST)');
+        });
+
+        it('auto-avanza automaticamente la scheda quando il timer passa al giro successivo', () => {
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-ibrido-active-modal') return { classList: { contains: () => false } };
+                if (id === 'nst-ibrido-timer-display') return { textContent: '', style: {} };
+                if (id === 'nst-ibrido-timer-sub') return { textContent: '' };
+                return { classList: { add: vi.fn(), remove: vi.fn(), contains: vi.fn(() => false) }, style: {} };
+            });
+
+            nestore.setCurrentMetconDisplayedRound(1);
+            nestore.setLastActiveTimerGiro(1);
+
+            // Simula timer che supera l'esercizio 6 e passa a Round 7 (Giro 2)
+            window.tabataEngine.state.currentRound = 7;
+            window.tabataEngine.state.phase = 'work';
+            window.tabataEngine.state.running = true;
+            window.tabataEngine.getPhaseElapsedMs = () => 1000;
+
+            nestore.aggiornaIbridoModalAttivo();
+
+            // Il giro visualizzato deve avanzare automaticamente a 2
+            expect(nestore.getCurrentMetconDisplayedRound()).toBe(2);
+            expect(nestore.getLastActiveTimerGiro()).toBe(2);
+        });
+    });
 });
+

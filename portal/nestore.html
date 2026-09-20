@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.59">
+    <link rel="stylesheet" href="nestore.css?v=1.05.60">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.59"></script>
+    <script src="config.js?v=1.05.60"></script>
 </head>
 <body class="nst-body">
 
@@ -21,7 +21,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div class="nst-brand-text">
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.59</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.60</span>
             </div>
         </div>
 
@@ -1320,7 +1320,7 @@ GIORNO 2:
                             <span class="nst-ibrido-config-label">GIRI / ROUNDS</span>
                             <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
                                 <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('rounds', -1)">-</button>
-                                <input type="number" id="nst-ibrido-cfg-rounds" class="nst-ex-input" value="40" min="1" max="100" oninput="aggiornaIbridoParamDaInput()" onchange="aggiornaIbridoParamDaInput()">
+                                <input type="number" id="nst-ibrido-cfg-rounds" class="nst-ex-input" value="6" min="1" max="100" oninput="aggiornaIbridoParamDaInput()" onchange="aggiornaIbridoParamDaInput()">
                                 <button type="button" class="nst-stepper-btn" onclick="modificaIbridoParam('rounds', 1)">+</button>
                             </div>
                         </div>
@@ -1328,7 +1328,7 @@ GIORNO 2:
                     <div id="nst-ibrido-preview-total-time" class="nst-ibrido-preview-total-time">
                         <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-lime);">timer</span>
                         <span style="color: var(--nst-text-muted);">TEMPO TOTALE PREVISTO:</span>
-                        <strong id="nst-ibrido-total-time-display" style="color: var(--nst-lime);">40 min (40:00)</strong>
+                        <strong id="nst-ibrido-total-time-display" style="color: var(--nst-lime);">36 min (36:00)</strong>
                     </div>
                 </div>
 
@@ -1365,7 +1365,7 @@ GIORNO 2:
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <button type="button" class="nst-btn-minimize" onclick="minimizzaIbridoSeduta()" title="Riduci a icona">▼ RIDUCI</button>
-                    <button type="button" class="nst-btn-icon-close" onclick="chiudiIbridoActiveModal()" title="Chiudi / Annulla">✕</button>
+                    <button type="button" class="nst-btn-danger-ghost nst-btn-annulla-workout" onclick="chiudiIbridoActiveModal()" title="Annulla allenamento">ANNULLA</button>
                 </div>
             </div>
 
@@ -1656,6 +1656,6 @@ GIORNO 2:
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.59"></script>
+    <script src="nestore.js?v=1.05.60"></script>
 </body>
 </html>
