@@ -4365,9 +4365,104 @@ input:checked + .nst-slider:before {
     }
 }
 
+/* Metcon Preview Total Time */
+.nst-ibrido-preview-total-time {
+    background: rgba(0, 229, 255, 0.05);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 12px;
+    border-top: 1px solid rgba(0, 229, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+}
 
+/* Metcon Active Round Card (Opzione 2.B) */
+.nst-metcon-round-card {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 4px;
+}
 
+.nst-metcon-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.25);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
 
+.nst-metcon-nav-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
+.nst-metcon-nav-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--nst-cyan);
+    letter-spacing: 0.06em;
+}
 
+.nst-metcon-select {
+    background: rgba(10, 15, 29, 0.95);
+    border: 1px solid var(--nst-cyan);
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    outline: none;
+}
 
+.nst-metcon-select:focus {
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+}
+
+.nst-metcon-round-table {
+    width: 100%;
+}
+
+.nst-metcon-round-input {
+    width: 100%;
+    max-width: 80px;
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    margin: 0 auto;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    border-radius: 6px;
+    padding: 6px 4px;
+}
+
+.nst-metcon-round-input:focus {
+    border-color: var(--nst-cyan);
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.45);
+}
+
+.nst-metcon-target-badge {
+    display: inline-block;
+    color: var(--nst-lime);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(163, 230, 53, 0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(163, 230, 53, 0.25);
+}

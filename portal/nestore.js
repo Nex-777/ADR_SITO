@@ -4152,7 +4152,7 @@ function aggiornaVisibilitaDock() {
 
     // Controlla se il pannello timer è attualmente visibile a tutto schermo
     const timerPanel = document.getElementById('nst-timer-panel');
-    const isTimerPanelVisible = timerPanel && !timerPanel.classList.contains('nst-hidden');
+    const isTimerPanelVisible = timerPanel && timerPanel.classList && typeof timerPanel.classList.contains === 'function' && !timerPanel.classList.contains('nst-hidden');
 
     const isStopwatchActive = timerEngine.state.running || timerEngine.getElapsedMs() > 0;
     const isTabataActive = tabataEngine.state.running || (tabataEngine.state.phase !== 'prep' && tabataEngine.state.phase !== 'done');
@@ -4681,6 +4681,59 @@ let ibridoRounds = 40;
 let ibridoSessionStartMs = 0;
 let ibridoConfigurazionePersonalizzata = null;
 let ibridoSessionMinimized = false;
+let ibridoMetconResults = [];
+let ibridoMetconSummary = null;
+let currentMetconDisplayedRound = 1;
+
+function estraiTargetValoreEUnita(targetStr) {
+    if (!targetStr) return { targetVal: '', unita: '', targetNum: 0 };
+    const str = String(targetStr).trim();
+    const match = str.match(/^([\d\.\+\-\/]+)\s*(.*)$/);
+    if (match) {
+        const valStr = match[1].trim();
+        const unitStr = match[2].trim();
+        let num = 0;
+        if (valStr.includes('+')) {
+            num = valStr.split('+').reduce((acc, part) => acc + (parseFloat(part.trim()) || 0), 0);
+        } else {
+            num = parseFloat(valStr) || 0;
+        }
+        return { targetVal: valStr, unita: unitStr, targetNum: num };
+    }
+    const numFallback = parseFloat(str) || 0;
+    return { targetVal: str, unita: '', targetNum: numFallback };
+}
+
+function parseMetconResultNumber(valStr) {
+    if (typeof valStr === 'number') return isNaN(valStr) ? 0 : valStr;
+    if (!valStr) return 0;
+    const s = String(valStr).trim();
+    if (s.includes('+')) {
+        return s.split('+').reduce((acc, part) => acc + (parseFloat(part.trim()) || 0), 0);
+    }
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+}
+
+function getIbridoMetconResults() {
+    return ibridoMetconResults;
+}
+
+function setIbridoMetconResults(arr) {
+    ibridoMetconResults = Array.isArray(arr) ? arr : [];
+}
+
+function getCurrentMetconDisplayedRound() {
+    return currentMetconDisplayedRound;
+}
+
+function setCurrentMetconDisplayedRound(roundNum) {
+    currentMetconDisplayedRound = parseInt(roundNum, 10) || 1;
+}
+
+function getIbridoMetconSummary() {
+    return ibridoMetconSummary;
+}
 
 function getIbridoSessionMinimized() {
     return ibridoSessionMinimized;
@@ -4994,6 +5047,7 @@ function apriAnteprimaIbrido(progId) {
         if (workInput) workInput.value = ibridoWorkSec;
         if (restInput) restInput.value = ibridoRestSec;
         if (roundsInput) roundsInput.value = ibridoRounds;
+        aggiornaIbridoTempoTotalePreview();
     } else {
         if (tabataBox) tabataBox.classList.add('nst-hidden');
     }
@@ -5041,6 +5095,22 @@ function apriAnteprimaIbrido(progId) {
     }
 }
 
+function aggiornaIbridoTempoTotalePreview() {
+    const totalTimeEl = document.getElementById('nst-ibrido-total-time-display');
+    if (!totalTimeEl) return;
+    const totalSec = (ibridoWorkSec + ibridoRestSec) * ibridoRounds;
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    const formatted = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    if (min > 0 && sec === 0) {
+        totalTimeEl.textContent = `${min} min (${formatted})`;
+    } else if (min > 0) {
+        totalTimeEl.textContent = `${min} min ${sec}s (${formatted})`;
+    } else {
+        totalTimeEl.textContent = `${sec} sec (${formatted})`;
+    }
+}
+
 function chiudiAnteprimaIbrido() {
     const modal = document.getElementById('nst-ibrido-preview-modal');
     if (modal) modal.classList.add('nst-hidden');
@@ -5062,6 +5132,7 @@ function aggiornaIbridoParamDaInput() {
     if (workInput) ibridoWorkSec = parseInt(workInput.value, 10) || 30;
     if (restInput) ibridoRestSec = parseInt(restInput.value, 10) || 30;
     if (roundsInput) ibridoRounds = parseInt(roundsInput.value, 10) || 8;
+    aggiornaIbridoTempoTotalePreview();
 }
 
 async function avviaIbridoSeduta() {
@@ -5106,6 +5177,25 @@ async function avviaIbridoSeduta() {
         };
     } else {
         ibridoConfigurazionePersonalizzata = null;
+        const totalRounds = (p.timer_mode === 'tabata') ? ibridoRounds : (p.giri_target || 1);
+        currentMetconDisplayedRound = 1;
+        ibridoMetconResults = [];
+        ibridoMetconSummary = null;
+
+        for (let r = 0; r < totalRounds; r++) {
+            const roundExercises = (p.esercizi || []).map((ex) => {
+                const { targetVal, unita, targetNum } = estraiTargetValoreEUnita(ex.target);
+                return {
+                    nome: ex.nome,
+                    target_originario: ex.target,
+                    target_val: targetVal,
+                    unita: unita,
+                    target_num: targetNum,
+                    risultato_effettivo: targetVal
+                };
+            });
+            ibridoMetconResults.push(roundExercises);
+        }
     }
 
     chiudiAnteprimaIbrido();
@@ -5121,7 +5211,7 @@ async function avviaIbridoSeduta() {
 
     if (titleEl) {
         titleEl.textContent = `IBRIDO — ${p.nome.toUpperCase()} — IN CORSO`;
-        titleEl.style.color = isForza ? 'var(--nst-amber)' : 'var(--nst-cyan)';
+        if (titleEl.style) titleEl.style.color = isForza ? 'var(--nst-amber)' : 'var(--nst-cyan)';
     }
 
     if (runningView) runningView.classList.remove('nst-hidden');
@@ -5225,28 +5315,7 @@ async function avviaIbridoSeduta() {
                 </div>
             `;
         } else {
-            exTableContainer.innerHTML = `
-                <table class="nst-ex-table">
-                    <thead>
-                        <tr>
-                            <th>ESERCIZIO</th>
-                            <th>TARGET SCHEDA</th>
-                            <th>RISULTATO EFFETTIVO</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${(p.esercizi || []).map((ex, idx) => `
-                            <tr>
-                                <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
-                                <td style="color: var(--nst-lime); font-family: 'Orbitron', monospace;">${escapeHtml(ex.target)}</td>
-                                <td>
-                                    <input type="text" id="nst-ibrido-ex-risultato-${idx}" class="nst-ex-input" value="${escapeHtml(ex.target)}" style="width: 100%; text-align: left;">
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+            renderMetconGiroCorrente();
         }
     }
 
@@ -5290,6 +5359,109 @@ async function avviaIbridoSeduta() {
 
     if (modal) modal.classList.remove('nst-hidden');
     aggiornaIbridoModalAttivo();
+}
+
+function renderMetconGiroCorrente() {
+    const exTableContainer = document.getElementById('nst-ibrido-active-ex-table-container');
+    if (!exTableContainer || !ibridoMetconResults || ibridoMetconResults.length === 0) return;
+
+    const rIdx = currentMetconDisplayedRound - 1;
+    const roundData = ibridoMetconResults[rIdx] || [];
+    const totalRounds = ibridoMetconResults.length;
+
+    exTableContainer.innerHTML = `
+        <div class="nst-metcon-round-card">
+            <!-- Barra Navigazione Giro -->
+            <div class="nst-metcon-nav-header">
+                <button type="button" class="nst-btn-ghost-sm" onclick="cambiaMetconGiro(-1)" ${currentMetconDisplayedRound <= 1 ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Giro precedente">
+                    ◀
+                </button>
+                <div class="nst-metcon-nav-center">
+                    <span class="nst-metcon-nav-title">GIRO</span>
+                    <select id="nst-metcon-round-select" class="nst-metcon-select" onchange="impostaMetconGiro(parseInt(this.value, 10))" title="Seleziona giro">
+                        ${Array.from({ length: totalRounds }).map((_, i) => `
+                            <option value="${i + 1}" ${i + 1 === currentMetconDisplayedRound ? 'selected' : ''}>
+                                ${i + 1} di ${totalRounds}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+                <button type="button" class="nst-btn-ghost-sm" onclick="cambiaMetconGiro(1)" ${currentMetconDisplayedRound >= totalRounds ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Giro successivo">
+                    ▶
+                </button>
+            </div>
+
+            <!-- Tabella Esercizi Giro Corrente -->
+            <table class="nst-ex-table nst-metcon-round-table">
+                <thead>
+                    <tr>
+                        <th style="width: 44%;">ESERCIZIO</th>
+                        <th style="width: 28%; text-align: center;">TARGET GIRO</th>
+                        <th style="width: 28%; text-align: center;">EFFETTIVO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${roundData.map((item, exIdx) => `
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600; color: #fff; font-size: 12px;">${escapeHtml(item.nome)}</div>
+                                ${item.unita ? `<div style="font-size: 10px; color: var(--nst-text-muted);">${escapeHtml(item.unita)}</div>` : ''}
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="nst-metcon-target-badge">${escapeHtml(item.target_originario)}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <input type="text" 
+                                       id="nst-metcon-ex-risultato-${exIdx}" 
+                                       class="nst-ex-input nst-metcon-round-input" 
+                                       value="${escapeHtml(String(item.risultato_effettivo))}" 
+                                       oninput="aggiornaMetconRisultatoInput(${exIdx}, this.value)">
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function salvaMetconGiroCorrenteDaDom() {
+    if (!ibridoMetconResults || ibridoMetconResults.length === 0) return;
+    const rIdx = currentMetconDisplayedRound - 1;
+    if (rIdx < 0 || rIdx >= ibridoMetconResults.length) return;
+    const roundData = ibridoMetconResults[rIdx];
+    roundData.forEach((exItem, exIdx) => {
+        const inputEl = document.getElementById(`nst-metcon-ex-risultato-${exIdx}`);
+        if (inputEl) {
+            exItem.risultato_effettivo = inputEl.value.trim();
+        }
+    });
+}
+
+function aggiornaMetconRisultatoInput(exIdx, val) {
+    if (!ibridoMetconResults || ibridoMetconResults.length === 0) return;
+    const rIdx = currentMetconDisplayedRound - 1;
+    if (rIdx >= 0 && rIdx < ibridoMetconResults.length && ibridoMetconResults[rIdx][exIdx]) {
+        ibridoMetconResults[rIdx][exIdx].risultato_effettivo = val;
+    }
+}
+
+function cambiaMetconGiro(delta) {
+    salvaMetconGiroCorrenteDaDom();
+    const nuovoGiro = Math.max(1, Math.min(ibridoMetconResults.length, currentMetconDisplayedRound + delta));
+    if (nuovoGiro !== currentMetconDisplayedRound) {
+        currentMetconDisplayedRound = nuovoGiro;
+        renderMetconGiroCorrente();
+    }
+}
+
+function impostaMetconGiro(giroNum) {
+    salvaMetconGiroCorrenteDaDom();
+    const g = Math.max(1, Math.min(ibridoMetconResults.length, giroNum || 1));
+    if (g !== currentMetconDisplayedRound) {
+        currentMetconDisplayedRound = g;
+        renderMetconGiroCorrente();
+    }
 }
 
 function gestisciIbridoActionPause() {
@@ -5340,7 +5512,7 @@ function renderIbridoLapsList() {
 
 function aggiornaIbridoModalAttivo() {
     const modal = document.getElementById('nst-ibrido-active-modal');
-    if (!modal || modal.classList.contains('nst-hidden') || !ibridoSelezionato) return;
+    if (!modal || !modal.classList || typeof modal.classList.contains !== 'function' || modal.classList.contains('nst-hidden') || !ibridoSelezionato) return;
 
     const p = ibridoSelezionato;
     const displayEl = document.getElementById('nst-ibrido-timer-display');
@@ -5629,6 +5801,153 @@ function terminaIbridoSeduta() {
                 </table>
             `;
         }
+    } else if (ibridoMetconResults && ibridoMetconResults.length > 0) {
+        salvaMetconGiroCorrenteDaDom();
+        const totalRounds = ibridoMetconResults.length;
+        let totalTargetAllMetcon = 0;
+        let totalEffectiveAllMetcon = 0;
+        let metconHasParziale = false;
+        let metconHasSuperata = false;
+
+        const pExercises = p.esercizi || [];
+        const summaryEserciziMetcon = pExercises.map((ex, exIdx) => {
+            const firstRoundItem = (ibridoMetconResults[0] && ibridoMetconResults[0][exIdx]) || {};
+            const targetNumPerRound = firstRoundItem.target_num || 0;
+            const targetTotalEx = targetNumPerRound * totalRounds;
+            const unita = firstRoundItem.unita || '';
+            const targetOriginario = firstRoundItem.target_originario || ex.target || '';
+
+            let sumEffectiveEx = 0;
+            const giriDettaglio = [];
+
+            for (let r = 0; r < totalRounds; r++) {
+                const rItem = ibridoMetconResults[r] ? ibridoMetconResults[r][exIdx] : null;
+                const rValStr = rItem ? String(rItem.risultato_effettivo) : '';
+                const rValNum = parseMetconResultNumber(rValStr);
+                sumEffectiveEx += rValNum;
+                giriDettaglio.push({
+                    giro: r + 1,
+                    target: firstRoundItem.target_val || targetOriginario,
+                    effettivo: rValStr,
+                    effettivo_num: rValNum
+                });
+            }
+
+            totalTargetAllMetcon += targetTotalEx;
+            totalEffectiveAllMetcon += sumEffectiveEx;
+
+            let esitoEx = 'COMPLETATA';
+            if (targetTotalEx > 0) {
+                if (sumEffectiveEx < targetTotalEx) {
+                    esitoEx = 'PARZIALE';
+                    metconHasParziale = true;
+                } else if (sumEffectiveEx > targetTotalEx) {
+                    esitoEx = 'SUPERATA';
+                    metconHasSuperata = true;
+                }
+            }
+
+            return {
+                nome: ex.nome,
+                target_originario: targetOriginario,
+                target_val: firstRoundItem.target_val || '',
+                target_num_giro: targetNumPerRound,
+                target_totale: targetTotalEx,
+                totale_effettivo: sumEffectiveEx,
+                unita: unita,
+                esito: esitoEx,
+                giri_dettaglio: giriDettaglio
+            };
+        });
+
+        let esitoGlobaleMetcon = 'COMPLETATA';
+        if (metconHasParziale) {
+            esitoGlobaleMetcon = 'PARZIALE';
+        } else if (metconHasSuperata) {
+            esitoGlobaleMetcon = 'SUPERATA';
+        }
+
+        ibridoMetconSummary = {
+            totalRounds,
+            totalTargetAll: totalTargetAllMetcon,
+            totalEffectiveAll: totalEffectiveAllMetcon,
+            esitoGlobale: esitoGlobaleMetcon,
+            esercizi: summaryEserciziMetcon
+        };
+
+        if (esitoBadge) {
+            esitoBadge.classList.remove('nst-hidden');
+            if (esitoGlobaleMetcon === 'SUPERATA') {
+                esitoBadge.className = 'nst-esito-badge superata';
+                esitoBadge.innerHTML = `
+                    <span class="material-symbols-outlined" style="font-size: 24px;">local_fire_department</span>
+                    <div>
+                        <strong style="color: var(--nst-lime);">🔥 METCON SUPERATO CON SUCCESSO!</strong>
+                        <div style="font-size: 11px; margin-top: 2px;">Hai chiuso ${totalEffectiveAllMetcon} rip/cal su un target di ${totalTargetAllMetcon} in ${totalRounds} giri. Ottima prestazione!</div>
+                    </div>
+                `;
+            } else if (esitoGlobaleMetcon === 'COMPLETATA') {
+                esitoBadge.className = 'nst-esito-badge completata';
+                esitoBadge.innerHTML = `
+                    <span class="material-symbols-outlined" style="font-size: 24px;">check_circle</span>
+                    <div>
+                        <strong style="color: var(--nst-cyan);">🎯 METCON COMPLETATO AL 100%!</strong>
+                        <div style="font-size: 11px; margin-top: 2px;">Tutti gli obiettivi sono stati centrati in tutti i ${totalRounds} giri (${totalEffectiveAllMetcon}/${totalTargetAllMetcon} rip/cal).</div>
+                    </div>
+                `;
+            } else {
+                esitoBadge.className = 'nst-esito-badge parziale';
+                esitoBadge.innerHTML = `
+                    <span class="material-symbols-outlined" style="font-size: 24px;">info</span>
+                    <div>
+                        <strong style="color: var(--nst-amber);">⚡ METCON PARZIALE</strong>
+                        <div style="font-size: 11px; margin-top: 2px;">Completate ${totalEffectiveAllMetcon}/${totalTargetAllMetcon} rip/cal previste su ${totalRounds} giri. Ottimo lavoro, mantieni il ritmo per la prossima!</div>
+                    </div>
+                `;
+            }
+        }
+
+        if (summaryContainer) {
+            summaryContainer.innerHTML = `
+                <table class="nst-ex-table">
+                    <thead>
+                        <tr>
+                            <th>ESERCIZIO</th>
+                            <th>TARGET TOTALE (${totalRounds} GIRI)</th>
+                            <th>TOTALE EFFETTIVO</th>
+                            <th>ESITO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${summaryEserciziMetcon.map(ex => {
+                            let esitoBadgeColor = 'var(--nst-cyan)';
+                            if (ex.esito === 'SUPERATA') esitoBadgeColor = 'var(--nst-lime)';
+                            else if (ex.esito === 'PARZIALE') esitoBadgeColor = 'var(--nst-amber)';
+
+                            const targetDesc = ex.target_totale > 0 
+                                ? `${ex.target_totale} ${ex.unita} (${ex.target_num_giro} x ${totalRounds})`
+                                : ex.target_originario;
+                            const effettivoDesc = ex.target_totale > 0
+                                ? `${ex.totale_effettivo} ${ex.unita}`
+                                : `${ex.totale_effettivo}`;
+
+                            return `
+                                <tr>
+                                    <td style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</td>
+                                    <td style="color: var(--nst-text-muted); font-size: 11px;">${escapeHtml(targetDesc)}</td>
+                                    <td style="color: #f1f5f9; font-weight: 700;">${escapeHtml(effettivoDesc)}</td>
+                                    <td>
+                                        <span style="color: ${esitoBadgeColor}; font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700;">
+                                            ${ex.esito}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
     } else {
         if (esitoBadge) esitoBadge.classList.add('nst-hidden');
         if (summaryContainer) {
@@ -5731,6 +6050,31 @@ async function confermaSalvaIbridoSeduta() {
                     };
                 })
             };
+        } else if (ibridoMetconSummary) {
+            const summary = ibridoMetconSummary.esercizi || [];
+            const esitoGlobale = ibridoMetconSummary.esitoGlobale || 'COMPLETATA';
+            esitoPerNote = esitoGlobale;
+
+            schedaDati = {
+                tipo: p.tipo,
+                programma_id: p.id,
+                programma_nome: p.nome,
+                esito_globale: esitoGlobale,
+                giri_totali: ibridoMetconSummary.totalRounds,
+                rip_totali_target: ibridoMetconSummary.totalTargetAll,
+                rip_totali_effettive: ibridoMetconSummary.totalEffectiveAll,
+                timer_mode: p.timer_mode,
+                esercizi: summary.map(ex => ({
+                    nome: ex.nome,
+                    target_originario: ex.target_originario,
+                    target_val: ex.target_val,
+                    unita: ex.unita,
+                    target_totale: ex.target_totale,
+                    totale_effettivo: ex.totale_effettivo,
+                    esito: ex.esito,
+                    giri_dettaglio: ex.giri_dettaglio
+                }))
+            };
         } else {
             const eserciziDati = (p.esercizi || []).map((ex, idx) => {
                 const res = document.getElementById(`nst-ibrido-ex-risultato-${idx}`)?.value || ex.target;
@@ -5780,6 +6124,9 @@ async function confermaSalvaIbridoSeduta() {
         if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
 
         ibridoConfigurazionePersonalizzata = null;
+        ibridoMetconResults = [];
+        ibridoMetconSummary = null;
+        currentMetconDisplayedRound = 1;
 
         const modal = document.getElementById('nst-ibrido-active-modal');
         if (modal) modal.classList.add('nst-hidden');
@@ -5833,6 +6180,9 @@ function chiudiIbridoActiveModal() {
         ibridoSessionMinimized = false;
         if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
         ibridoConfigurazionePersonalizzata = null;
+        ibridoMetconResults = [];
+        ibridoMetconSummary = null;
+        currentMetconDisplayedRound = 1;
         return;
     }
     const p = ibridoSelezionato;
@@ -5850,6 +6200,9 @@ function chiudiIbridoActiveModal() {
     if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
 
     ibridoConfigurazionePersonalizzata = null;
+    ibridoMetconResults = [];
+    ibridoMetconSummary = null;
+    currentMetconDisplayedRound = 1;
 
     const modal = document.getElementById('nst-ibrido-active-modal');
     if (modal) modal.classList.add('nst-hidden');
@@ -6641,6 +6994,19 @@ window.setIbridoSessionMinimized = setIbridoSessionMinimized;
 window.aggiornaIbridoModalAttivo = aggiornaIbridoModalAttivo;
 window.WakeLockManager = WakeLockManager;
 window.toggleIbridoNoteInSession = toggleIbridoNoteInSession;
+window.aggiornaIbridoTempoTotalePreview = aggiornaIbridoTempoTotalePreview;
+window.estraiTargetValoreEUnita = estraiTargetValoreEUnita;
+window.parseMetconResultNumber = parseMetconResultNumber;
+window.renderMetconGiroCorrente = renderMetconGiroCorrente;
+window.salvaMetconGiroCorrenteDaDom = salvaMetconGiroCorrenteDaDom;
+window.aggiornaMetconRisultatoInput = aggiornaMetconRisultatoInput;
+window.cambiaMetconGiro = cambiaMetconGiro;
+window.impostaMetconGiro = impostaMetconGiro;
+window.getIbridoMetconResults = getIbridoMetconResults;
+window.setIbridoMetconResults = setIbridoMetconResults;
+window.getCurrentMetconDisplayedRound = getCurrentMetconDisplayedRound;
+window.setCurrentMetconDisplayedRound = setCurrentMetconDisplayedRound;
+window.getIbridoMetconSummary = getIbridoMetconSummary;
 
 window.gestisciTimerPrimaryClick = gestisciTimerPrimaryClick;
 window.gestisciTimerResetClick = gestisciTimerResetClick;
@@ -6727,6 +7093,19 @@ if (typeof module !== 'undefined' && module.exports) {
         chiudiAnteprimaIbrido,
         modificaIbridoParam,
         aggiornaIbridoParamDaInput,
+        aggiornaIbridoTempoTotalePreview,
+        estraiTargetValoreEUnita,
+        parseMetconResultNumber,
+        renderMetconGiroCorrente,
+        salvaMetconGiroCorrenteDaDom,
+        aggiornaMetconRisultatoInput,
+        cambiaMetconGiro,
+        impostaMetconGiro,
+        getIbridoMetconResults,
+        setIbridoMetconResults,
+        getCurrentMetconDisplayedRound,
+        setCurrentMetconDisplayedRound,
+        getIbridoMetconSummary,
         avviaIbridoSeduta,
         gestisciIbridoActionPause,
         gestisciIbridoActionSecondary,

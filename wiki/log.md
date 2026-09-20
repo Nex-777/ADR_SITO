@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-20] ingest | NESTORE — Overhaul Schede Metcon: Tempo Totale, Scheda Giro Corrente (Opzione 2.B) & Calcolo Esito Globale
+- **Calcolo Dinamico Tempo Totale in Anteprima (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
+  - Aggiunto badge dinamico `#nst-ibrido-preview-total-time` nel box di configurazione Tabata.
+  - La funzione `aggiornaIbridoTempoTotalePreview()` calcola istantaneamente la durata totale prevista in minuti e secondi sulla base di lavoro, riposo e giri impostati (o modificati via stepper o input diretto).
+- **Scheda Giro Corrente con Selettore Rapido (Opzione 2.B - `portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
+  - Sostituita la tabella statica monolitica con una card dinamica `#nst-metcon-round-card` per la compilazione del giro corrente.
+  - Navigazione bidirezionale con tasti `◀` e `▶` e menu a tendina `<select id="nst-metcon-round-select">` per saltare istantaneamente a qualsiasi round (es. da giro 1 a giro 20).
+  - Le caselle input visualizzano esclusivamente il valore target grezzo (es. `15`, `60`, `3+3`) senza unità di misura, posizionando le unità nella colonna del target iniziale o come sottotitolo.
+  - Salvataggio automatico in tempo reale dello stato round-by-round (`ibridoMetconResults`) tramite eventi `oninput` e alla navigazione tra i giri.
+- **Calcolo Totali Sommati ed Esito Globale (`portal/nestore.js`)**:
+  - A fine sessione (`terminaIbridoSeduta`), il sistema calcola la somma effettiva di ripetizioni/calorie su tutti i giri per ciascun esercizio confrontandola con il target totale atteso.
+  - Attribuzione automatica dell'esito globale (`COMPLETATA`, `PARZIALE`, `SUPERATA`) con apposito badge visuale e tabella riassuntiva.
+  - Persistenza del payload completo (`scheda_dati`) con array `giri_dettaglio` e status globale su Supabase (`confermaSalvaIbridoSeduta`).
+- **Testing & QA (`tests/metcon-schede.test.js`)**:
+  - Creati 12 nuovi test unitari a copertura di: calcolo tempo totale anteprima, estrazione valori e unità, parsing espressioni composite (`3+3`), gestione e navigazione matrice giri, calcolo esiti (Completata, Parziale, Superata) e conformità payload Supabase.
+  - Test suite globale: 112/112 test passati con successo.
+
+---
+
 ## [2026-09-19] ingest | NESTORE — Mobile UI Redesign Scheda Attiva: 3 Tasti Icona, Termina con Conferma & Ottimizzazione Input
 - **Riorganizzazione Barra Azioni Mobile (`portal/nestore.html`, `portal/nestore.css`)**:
   - Posizionati i 3 tasti di controllo (`GIRO`, `PAUSA`, `TERMINA`) su una singola riga orizzontale in fondo allo schermo con larghezza perfettamente uguale (`grid-template-columns: 1fr 1fr 1fr`).
