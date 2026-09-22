@@ -737,10 +737,24 @@ Se l'utente fa solo una domanda, saluta o i dati sono ancora INCOMPLETI, NON INS
                         }
                         salvatoDirettamente = true;
                     } else if (item.tipo === 'pasto') {
+                        const dataPasto = item.data || oggi;
+                        const tipoPasto = item.tipo_pasto || 'pranzo';
+                        // Pasti unici al giorno (colazione, pranzo, cena): disattiva eventuale pasto precedente
+                        const PASTI_UNICI = ['colazione', 'pranzo', 'cena'];
+                        if (PASTI_UNICI.includes(tipoPasto)) {
+                            await supabaseAdmin
+                                .from('nestore_pasti')
+                                .update({ attivo: false })
+                                .eq('utente_id', utenteId)
+                                .eq('data_pasto', dataPasto)
+                                .eq('tipo_pasto', tipoPasto)
+                                .eq('attivo', true);
+                        }
+
                         await supabaseAdmin.from('nestore_pasti').insert({
                             utente_id: utenteId,
-                            data_pasto: item.data || oggi,
-                            tipo_pasto: item.tipo_pasto || 'pranzo',
+                            data_pasto: dataPasto,
+                            tipo_pasto: tipoPasto,
                             descrizione: item.descrizione || 'Pasto',
                             calorie_stimate: item.calorie || null,
                             proteine_g: item.proteine || null,

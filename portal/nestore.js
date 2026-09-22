@@ -1309,6 +1309,13 @@ async function renderGraficoAllenamenti() {
 
 let currentDietaData = [];
 
+function formatTipoPastoDisplay(tipo, snackIndex) {
+    if (tipo === 'snack') {
+        return snackIndex ? `Spuntino ${snackIndex}` : 'Spuntino';
+    }
+    return tipo || '-';
+}
+
 async function renderGraficoDieta() {
     try {
         const u = currentUser || (typeof window !== 'undefined' ? window.currentUser : null);
@@ -1326,7 +1333,8 @@ async function renderGraficoDieta() {
         }
 
         const { data, error } = await query
-            .order('data_pasto', { ascending: true });
+            .order('data_pasto', { ascending: true })
+            .order('creato_il', { ascending: true });
 
         const emptyMsg = document.getElementById('nst-empty-dieta');
 
@@ -1607,6 +1615,16 @@ async function renderGraficoDieta() {
             }
         });
 
+        // Calcola numerazione progressiva per gli snack nella stessa giornata (in ordine cronologico)
+        const snackCounters = {};
+        data.forEach(item => {
+            if (item.tipo_pasto === 'snack') {
+                const d = item.data_pasto;
+                snackCounters[d] = (snackCounters[d] || 0) + 1;
+                item._snackIndex = snackCounters[d];
+            }
+        });
+
         // Genera Tabella Storico Pasti
         const tbody = document.getElementById('nst-tbody-dieta');
         if (tbody) {
@@ -1615,9 +1633,10 @@ async function renderGraficoDieta() {
                 const item = data[i];
                 const tr = document.createElement('tr');
                 tr.setAttribute('data-pasto-id', item.id);
+                const tipoDisplay = formatTipoPastoDisplay(item.tipo_pasto, item._snackIndex);
                 tr.innerHTML = `
                     <td>${formatDateShort(item.data_pasto)}</td>
-                    <td style="color: #f59e0b; font-weight: 600; text-transform: capitalize;">${escapeHtml(item.tipo_pasto || '-')}</td>
+                    <td style="color: #f59e0b; font-weight: 600; text-transform: capitalize;">${escapeHtml(tipoDisplay)}</td>
                     <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.descrizione || '')}">${escapeHtml(item.descrizione || '')}</td>
                     <td>${item.calorie_stimate != null ? item.calorie_stimate : '-'}</td>
                     <td style="font-size: 10px; color: var(--nst-text-muted);">
@@ -1704,8 +1723,9 @@ function openMobilePastoActions(pastoId) {
     const summary = document.getElementById('nst-action-pasto-summary');
     const meta = document.getElementById('nst-action-pasto-meta');
 
+    const tipoDisplay = formatTipoPastoDisplay(pasto.tipo_pasto, pasto._snackIndex);
     if (inputId) inputId.value = pasto.id;
-    if (summary) summary.textContent = `${(pasto.tipo_pasto || 'Pasto').toUpperCase()} - ${formatDateShort(pasto.data_pasto)}`;
+    if (summary) summary.textContent = `${tipoDisplay.toUpperCase()} - ${formatDateShort(pasto.data_pasto)}`;
     if (meta) {
         const kcal = pasto.calorie_stimate != null ? `${pasto.calorie_stimate} kcal` : '-- kcal';
         const p = pasto.proteine_g || 0;
@@ -1820,6 +1840,19 @@ async function salvaModifichePasto() {
     }
 
     try {
+        // Se si modifica in un pasto unico (colazione, pranzo, cena), disattiva eventuale altro pasto attivo con stesso tipo/data
+        const PASTI_UNICI = ['colazione', 'pranzo', 'cena'];
+        if (PASTI_UNICI.includes(tipoVal)) {
+            await supabaseClient
+                .from('nestore_pasti')
+                .update({ attivo: false })
+                .eq('utente_id', currentUser.id)
+                .eq('data_pasto', dataVal)
+                .eq('tipo_pasto', tipoVal)
+                .neq('id', id)
+                .eq('attivo', true);
+        }
+
         const { error } = await supabaseClient
             .from('nestore_pasti')
             .update({
@@ -1863,8 +1896,9 @@ async function confermaEliminaPasto(pastoId, event) {
     if (!pastoId) return;
 
     const pasto = currentDietaData.find(p => String(p.id) === String(pastoId));
+    const tipoDisplay = pasto ? formatTipoPastoDisplay(pasto.tipo_pasto, pasto._snackIndex) : 'pasto';
     const label = pasto 
-        ? `${(pasto.tipo_pasto || 'pasto').toUpperCase()} (${formatDateShort(pasto.data_pasto)})`
+        ? `${tipoDisplay.toUpperCase()} (${formatDateShort(pasto.data_pasto)})`
         : 'questo pasto';
 
     const confermato = confirm(`Sei sicuro di voler eliminare ${label} dallo storico?\nI totali giornalieri e il grafico dei macro verranno ricalcolati.`);
@@ -2282,10 +2316,24 @@ async function confermaESalvaDati(btn, payload, messaggioId) {
                 userPreferenze.altezza_cm = payload.altezza_cm;
             }
         } else if (payload.tipo === 'pasto') {
+            const dataPasto = payload.data || oggi;
+            const tipoPasto = payload.tipo_pasto || 'pranzo';
+            // Pasti unici al giorno (colazione, pranzo, cena): disattiva eventuale pasto precedente
+            const PASTI_UNICI = ['colazione', 'pranzo', 'cena'];
+            if (PASTI_UNICI.includes(tipoPasto)) {
+                await supabaseClient
+                    .from('nestore_pasti')
+                    .update({ attivo: false })
+                    .eq('utente_id', currentUser.id)
+                    .eq('data_pasto', dataPasto)
+                    .eq('tipo_pasto', tipoPasto)
+                    .eq('attivo', true);
+            }
+
             await supabaseClient.from('nestore_pasti').insert({
                 utente_id: currentUser.id,
-                data_pasto: payload.data || oggi,
-                tipo_pasto: payload.tipo_pasto || 'pranzo',
+                data_pasto: dataPasto,
+                tipo_pasto: tipoPasto,
                 descrizione: payload.descrizione || 'Pasto',
                 calorie_stimate: payload.calorie || null,
                 proteine_g: payload.proteine || null,
@@ -2304,16 +2352,24 @@ async function confermaESalvaDati(btn, payload, messaggioId) {
             });
         }
 
-        // Aggiorna metadata del messaggio
+        // Aggiorna metadata del messaggio (preservando dati_estratti e impostando salvato: true)
         if (messaggioId) {
             await supabaseClient
                 .from('nestore_chat_messaggi')
-                .update({ metadata: { salvato: true } })
+                .update({ 
+                    metadata: { 
+                        dati_estratti: payload, 
+                        salvato: true 
+                    } 
+                })
                 .eq('id', messaggioId);
         }
 
         btn.parentElement.innerHTML = `<span style="font-size:10px; color:var(--nst-lime); font-weight:bold; font-family:'Orbitron', sans-serif;">✓ DATI SALVATI CON SUCCESSO</span>`;
         await caricaKpiDashboard();
+        if (typeof renderGraficoDieta === 'function') {
+            await renderGraficoDieta();
+        }
 
         // Ricalcolo asincrono scheda atleta
         fetch('/api/nestore-chat', {
@@ -7517,7 +7573,8 @@ if (typeof module !== 'undefined' && module.exports) {
         chiudiEditPastoModal,
         ricalcolaKcalPastoEdit,
         salvaModifichePasto,
-        confermaEliminaPasto
+        confermaEliminaPasto,
+        formatTipoPastoDisplay
     };
 }
 

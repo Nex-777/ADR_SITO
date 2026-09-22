@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-22] ingest | NESTORE — Fix Duplicazione Pasti: Unicità Giornaliera Pasti Principali, Spuntini Progressivi & RLS Chat Update
+- **Unicità Pasti Giornalieri (`portal/nestore.js`, `api/nestore-chat.js`)**:
+  - Risolto il bug delle cene/pranzi duplicati: per `colazione`, `pranzo` e `cena` il sistema verifica la presenza di un record attivo precedente per la stessa data e lo disattiva tramite soft-delete (`attivo = false`) prima dell'inserimento della versione aggiornata (es. aggiunta alimenti come la banana).
+  - Preservata la libertà di inserire molteplici spuntini/merende al giorno (`snack`).
+- **Numerazione Progressiva Spuntini (`portal/nestore.js`)**:
+  - Introdotta la funzione `formatTipoPastoDisplay(tipo, snackIndex)`: nella tabella storico e nei modali di dettaglio, gli snack consumati nella stessa giornata vengono etichettati automaticamente come *"Spuntino 1"*, *"Spuntino 2"*, ecc., in base all'ordine cronologico di creazione (`creato_il ASC`).
+- **Fix Policy RLS Chat Messaggi (`supabase/migration_nestore_fix_pasti_unicita_e_rls.sql`)**:
+  - Creata e applicata la policy `nst_chat_update_own` su `public.nestore_chat_messaggi` per abilitare `UPDATE` dei metadata (`{ salvato: true }`).
+  - Risolto il bug che faceva riapparire le card di conferma come non salvate al ricaricamento della chat, prevenendo doppi inserimenti accidentali da parte dell'utente.
+- **Testing & QA (`tests/pasto-management.test.js`)**:
+  - Aggiunti test per `formatTipoPastoDisplay`, vincolo `PASTI_UNICI` su client e API, e migrazione RLS. Suite 126/126 test superati con successo (11/11 file).
+
+---
+
 ## [2026-09-22] ingest | NESTORE — Gestione Storico Pasti: Modifica, Cancellazione Soft-Delete & Mobile Long-Press
 - **UI Tabella & Responsive (`portal/nestore.html`, `portal/nestore.css`)**:
   - Aggiunta colonna `Azioni` nella tabella `STORICO PASTI` con pulsanti icona compatti: ✏️ (Modifica) e 🗑️ (Elimina).
