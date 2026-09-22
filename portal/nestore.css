@@ -4585,3 +4585,120 @@ input:checked + .nst-slider:before {
     background: rgba(255, 82, 82, 0.1) !important;
 }
 
+/* Modale Dettaglio Sessione Allenamento & Interazioni Tabella */
+#nst-tbody-allenamenti tr.nst-clickable-row {
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+#nst-tbody-allenamenti tr.nst-clickable-row:hover {
+    background: rgba(0, 229, 255, 0.08) !important;
+}
+
+.nst-session-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nst-session-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nst-session-meta-label {
+    font-size: 10px;
+    font-family: 'Orbitron', sans-serif;
+    color: var(--nst-text-muted);
+    letter-spacing: 0.5px;
+}
+
+.nst-session-meta-val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.nst-session-note-box {
+    background: rgba(0, 229, 255, 0.04);
+    border-left: 3px solid var(--nst-cyan);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.4;
+}
+
+.nst-session-ex-card {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.nst-session-ex-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nst-session-ex-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nst-session-subtable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-top: 6px;
+}
+
+.nst-session-subtable th {
+    text-align: left;
+    padding: 6px 8px;
+    color: var(--nst-text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 10px;
+}
+
+.nst-session-subtable td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    color: #e2e8f0;
+}
+
+.nst-warmup-pill-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 10px;
+}
+
+.nst-warmup-pill {
+    background: rgba(255, 179, 0, 0.1);
+    border: 1px solid rgba(255, 179, 0, 0.25);
+    color: var(--nst-amber);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+

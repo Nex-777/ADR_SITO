@@ -653,6 +653,16 @@ function formatDateShort(dateStr) {
     return dateStr;
 }
 
+function formatDateWithYear(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length === 3) {
+        const yearShort = parts[0].length === 4 ? parts[0].slice(2) : parts[0];
+        return `${parts[2]}/${parts[1]}/${yearShort}`;
+    }
+    return dateStr;
+}
+
 async function impostaRangeCard(tipo, range) {
     rangeFiltri[tipo] = range;
     
@@ -923,15 +933,15 @@ function normalizeExerciseName(rawName) {
 
     if (lower === 'pull' || lower === 'pull up' || lower === 'pull-up' || lower === 'pullup' || lower === 'trazioni') return 'Pull-up';
     if (lower === 'push' || lower === 'push up' || lower === 'push-up' || lower === 'pushup' || lower === 'piegamenti') return 'Push-up';
-    if (lower === 'panca' || lower === 'panca piana' || lower === 'bench' || lower === 'bench press') return 'Panca Piana';
-    if (lower === 'squat' || lower === 'back squat') return 'Squat';
+    if (lower === 'panca' || lower === 'panca piana' || lower === 'bench' || lower === 'bench press' || lower.startsWith('panca piana') || lower.startsWith('panca orizzontale') || lower.includes('bench press')) return 'Panca Piana';
+    if (lower === 'squat' || lower === 'back squat' || lower.startsWith('squat con bilanciere') || lower.startsWith('squat bilanciere')) return 'Squat';
     if (lower === 'leg press' || lower === 'pressa' || lower === 'legpress') return 'Leg Press';
     if (lower === 'addominali' || lower === 'crunch' || lower === 'sit-up' || lower === 'situp' || lower === 'abs') return 'Addominali';
-    if (lower === 'stacco' || lower === 'stacco da terra' || lower === 'deadlift') return 'Stacco da Terra';
-    if (lower === 'military' || lower === 'military press' || lower === 'lento avanti' || lower === 'overhead press' || lower === 'ohp') return 'Military Press';
+    if (lower === 'stacco' || lower === 'stacco da terra' || lower === 'deadlift' || lower.startsWith('stacco') || lower.startsWith('stacchi')) return 'Stacco da Terra';
+    if (lower === 'military' || lower === 'military press' || lower === 'lento avanti' || lower === 'overhead press' || lower === 'ohp' || lower.startsWith('military')) return 'Military Press';
     if (lower === 'dip' || lower === 'dips') return 'Dip';
     if (lower === 'affondi' || lower === 'lunges') return 'Affondi';
-    if (lower === 'rematore' || lower === 'barbell row') return 'Rematore';
+    if (lower === 'rematore' || lower === 'barbell row' || lower.startsWith('rematore')) return 'Rematore';
 
     return clean.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
@@ -961,14 +971,86 @@ function parseExercisesFromWorkout(workout) {
     const date = workout.data_allenamento || '';
 
     // 1. Dati strutturati (scheda_dati JSONB)
-    if (Array.isArray(workout.scheda_dati) && workout.scheda_dati.length > 0) {
-        for (const ex of workout.scheda_dati) {
+    let scheda = workout.scheda_dati;
+    if (typeof scheda === 'string') {
+        try {
+            scheda = JSON.parse(scheda);
+        } catch (e) {
+            scheda = null;
+        }
+    }
+
+    let structuredExercises = null;
+    if (Array.isArray(scheda)) {
+        structuredExercises = scheda;
+    } else if (scheda && typeof scheda === 'object' && Array.isArray(scheda.esercizi)) {
+        structuredExercises = scheda.esercizi;
+    }
+
+    if (structuredExercises && structuredExercises.length > 0) {
+        for (const ex of structuredExercises) {
             if (!ex || !ex.nome) continue;
+
+            const candidateSets = [];
+
+            // Serie allenanti effettive
+            const workSets = Array.isArray(ex.serie_dettaglio) && ex.serie_dettaglio.length > 0
+                ? ex.serie_dettaglio
+                : (Array.isArray(ex.serie_effettive) ? ex.serie_effettive : []);
+
+            for (const s of workSets) {
+                const reps = parseInt(s.ripetizioni !== undefined ? s.ripetizioni : (s.rip_completate !== undefined ? s.rip_completate : s.rip), 10) || 0;
+                const peso = parseFloat(s.peso_kg) || 0;
+                if (reps > 0) {
+                    candidateSets.push({ peso_kg: peso, ripetizioni: reps });
+                }
+            }
+
+            // Serie di riscaldamento / rampa (inclusa la singola 1RM al 100%)
+            const warmupSets = Array.isArray(ex.riscaldamento_effettivo) && ex.riscaldamento_effettivo.length > 0
+                ? ex.riscaldamento_effettivo
+                : (Array.isArray(ex.riscaldamento) ? ex.riscaldamento : []);
+
+            for (const w of warmupSets) {
+                const reps = parseInt(w.rip !== undefined ? w.rip : (w.rip_completate !== undefined ? w.rip_completate : w.ripetizioni), 10) || 0;
+                const peso = parseFloat(w.peso_kg) || 0;
+                if (reps > 0) {
+                    candidateSets.push({ peso_kg: peso, ripetizioni: reps });
+                }
+            }
+
+            // Se non ci sono serie dettagliate, usa i valori a livello esercizio
+            if (candidateSets.length === 0) {
+                const basePeso = parseFloat(ex.peso_kg) || 0;
+                const baseReps = parseInt(ex.ripetizioni || ex.reps || (ex.totale_effettivo > 0 ? ex.totale_effettivo : 1), 10);
+                const baseSerie = parseInt(ex.serie || 1, 10);
+                results.push({
+                    nome: normalizeExerciseName(ex.nome),
+                    peso_kg: basePeso,
+                    ripetizioni: baseReps,
+                    serie: baseSerie,
+                    data: date,
+                    note: ex.note || ''
+                });
+                continue;
+            }
+
+            // Trova la migliore alzata
+            let bestSet = candidateSets[0];
+            for (let j = 1; j < candidateSets.length; j++) {
+                if (isBetterPerformance(candidateSets[j], bestSet)) {
+                    bestSet = candidateSets[j];
+                }
+            }
+
+            // Conta quante serie sono state eseguite con la combinazione vincente
+            const matchingSetsCount = candidateSets.filter(s => s.peso_kg === bestSet.peso_kg && s.ripetizioni === bestSet.ripetizioni).length;
+
             results.push({
                 nome: normalizeExerciseName(ex.nome),
-                peso_kg: parseFloat(ex.peso_kg) || 0,
-                ripetizioni: parseInt(ex.ripetizioni || ex.reps, 10) || 1,
-                serie: parseInt(ex.serie, 10) || 1,
+                peso_kg: bestSet.peso_kg,
+                ripetizioni: bestSet.ripetizioni,
+                serie: matchingSetsCount || 1,
                 data: date,
                 note: ex.note || ''
             });
@@ -1227,11 +1309,207 @@ function renderPrGrid(prList) {
             </div>
             <div class="nst-pr-card-footer">
                 <span>RECORD</span>
-                <span style="color:#cbd5e1; font-weight:600;">${formatDateShort(pr.data)}</span>
+                <span style="color:#cbd5e1; font-weight:600;">${formatDateWithYear(pr.data)}</span>
             </div>
         `;
         container.appendChild(card);
     }
+}
+
+let currentAllenamentiData = [];
+
+function getCurrentAllenamentiData() {
+    return currentAllenamentiData;
+}
+
+function setCurrentAllenamentiData(data) {
+    currentAllenamentiData = Array.isArray(data) ? data : [];
+}
+
+function apriDettaglioAllenamentoModal(workoutId) {
+    const modal = document.getElementById('nst-modal-dettaglio-allenamento');
+    const body = document.getElementById('nst-modal-dettaglio-body');
+    const titolo = document.getElementById('nst-modal-dettaglio-titolo');
+    if (!modal || !body) return;
+
+    const workout = (currentAllenamentiData || []).find(w => String(w.id) === String(workoutId));
+    if (!workout) return;
+
+    if (titolo) {
+        titolo.textContent = `${(workout.corso_disciplina || 'SESSIONE').toUpperCase()} - ${formatDateWithYear(workout.data_allenamento)}`;
+    }
+
+    let scheda = workout.scheda_dati;
+    if (typeof scheda === 'string') {
+        try { scheda = JSON.parse(scheda); } catch (e) { scheda = null; }
+    }
+
+    let esitoGlobale = scheda?.esito_globale || '';
+    let esitoColor = 'var(--nst-cyan)';
+    if (esitoGlobale === 'SUPERATA') esitoColor = 'var(--nst-lime)';
+    else if (esitoGlobale === 'PARZIALE') esitoColor = 'var(--nst-amber)';
+
+    let html = `
+        <div class="nst-session-meta-grid">
+            <div class="nst-session-meta-item">
+                <span class="nst-session-meta-label">DATA</span>
+                <span class="nst-session-meta-val">${formatDateWithYear(workout.data_allenamento)}</span>
+            </div>
+            <div class="nst-session-meta-item">
+                <span class="nst-session-meta-label">DISCIPLINA</span>
+                <span class="nst-session-meta-val" style="color: var(--nst-lime);">${escapeHtml(workout.corso_disciplina || 'Workout')}</span>
+            </div>
+            <div class="nst-session-meta-item">
+                <span class="nst-session-meta-label">DURATA</span>
+                <span class="nst-session-meta-val">${workout.durata_minuti ? workout.durata_minuti + ' min' : '-'}</span>
+            </div>
+            <div class="nst-session-meta-item">
+                <span class="nst-session-meta-label">RPE FATICA</span>
+                <span class="nst-session-meta-val">${workout.rpe_fatica ? workout.rpe_fatica + '/10' : '-'}</span>
+            </div>
+            ${esitoGlobale ? `
+                <div class="nst-session-meta-item">
+                    <span class="nst-session-meta-label">ESITO</span>
+                    <span class="nst-session-meta-val" style="color: ${esitoColor}; font-family: 'Orbitron', monospace;">${esitoGlobale}</span>
+                </div>
+            ` : ''}
+        </div>
+    `;
+
+    if (workout.note && workout.note.trim()) {
+        html += `
+            <div class="nst-session-note-box">
+                <strong style="color: var(--nst-cyan); font-size: 11px; display: block; margin-bottom: 4px;">NOTE SEDUTA:</strong>
+                <div>${escapeHtml(workout.note)}</div>
+            </div>
+        `;
+    }
+
+    // Esercizi
+    const esercizi = Array.isArray(scheda) ? scheda : (scheda?.esercizi || []);
+    if (esercizi && esercizi.length > 0) {
+        html += `<div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--nst-lime); margin-bottom: 10px; letter-spacing: 0.5px;">ESERCIZI SVOLTI</div>`;
+        
+        esercizi.forEach((ex, idx) => {
+            let exEsitoColor = 'var(--nst-cyan)';
+            if (ex.esito === 'SUPERATA') exEsitoColor = 'var(--nst-lime)';
+            else if (ex.esito === 'PARZIALE') exEsitoColor = 'var(--nst-amber)';
+
+            html += `
+                <div class="nst-session-ex-card">
+                    <div class="nst-session-ex-header">
+                        <div class="nst-session-ex-title">
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-lime);">fitness_center</span>
+                            <span>${escapeHtml(ex.nome || `Esercizio ${idx + 1}`)}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            ${ex.target_originario ? `<span style="font-size: 11px; color: var(--nst-text-muted);">Target: ${escapeHtml(ex.target_originario)}</span>` : ''}
+                            ${ex.esito ? `<span style="color: ${exEsitoColor}; font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700; padding: 2px 6px; background: rgba(255,255,255,0.04); border-radius: 4px;">${ex.esito}</span>` : ''}
+                        </div>
+                    </div>
+            `;
+
+            // Riscaldamento / Rampa (se presente)
+            const riscaldamento = ex.riscaldamento_effettivo || [];
+            if (riscaldamento.length > 0) {
+                html += `
+                    <div style="margin-bottom: 10px;">
+                        <span style="font-size: 10px; font-weight: 600; color: var(--nst-amber); text-transform: uppercase;">Riscaldamento &amp; Rampa</span>
+                        <div class="nst-warmup-pill-container">
+                            ${riscaldamento.map(w => `
+                                <div class="nst-warmup-pill">
+                                    <span>${escapeHtml(w.label || `Rampa ${w.serie}`)}</span>: 
+                                    <strong>${w.rip || w.rip_completate || 0} rip @ ${w.peso_kg || 0} kg</strong>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Serie Effettive / Dettaglio
+            const serie = ex.serie_dettaglio || ex.serie_effettive || [];
+            if (serie.length > 0) {
+                html += `
+                    <table class="nst-session-subtable">
+                        <thead>
+                            <tr>
+                                <th>SERIE</th>
+                                <th>CARICO</th>
+                                <th>RIPETIZIONI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${serie.map(s => `
+                                <tr>
+                                    <td style="font-weight: 600;">Serie ${s.serie || '-'}</td>
+                                    <td style="color: var(--nst-lime); font-weight: 600;">${s.peso_kg !== undefined ? s.peso_kg + ' kg' : (ex.peso_kg ? ex.peso_kg + ' kg' : 'Corpo libero')}</td>
+                                    <td style="font-weight: 700;">${s.ripetizioni !== undefined ? s.ripetizioni : (s.rip_completate !== undefined ? s.rip_completate : '-')} rip</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else if (ex.totale_effettivo !== undefined || ex.target_totale !== undefined) {
+                // Metcon exercise
+                html += `
+                    <div style="font-size: 12px; margin-top: 4px;">
+                        <span>Target: <strong>${ex.target_totale || ex.target_val || '-'} ${escapeHtml(ex.unita || '')}</strong></span>
+                        <span style="margin-left: 14px;">Chiuso: <strong style="color: var(--nst-lime);">${ex.totale_effettivo || '-'} ${escapeHtml(ex.unita || '')}</strong></span>
+                    </div>
+                `;
+                if (Array.isArray(ex.giri_dettaglio) && ex.giri_dettaglio.length > 0) {
+                    html += `
+                        <div class="nst-warmup-pill-container" style="margin-top: 8px;">
+                            ${ex.giri_dettaglio.map(g => `
+                                <div class="nst-warmup-pill" style="background: rgba(0, 229, 255, 0.08); border-color: rgba(0, 229, 255, 0.25); color: var(--nst-cyan);">
+                                    <span>Giro ${g.giro}</span>: <strong>${escapeHtml(String(g.effettivo))}</strong>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            } else if (ex.peso_kg || ex.ripetizioni) {
+                html += `
+                    <div style="font-size: 12px; margin-top: 4px;">
+                        <span>Serie: <strong>${ex.serie || 1}</strong></span>
+                        <span style="margin-left: 12px;">Rip: <strong>${ex.ripetizioni || '-'}</strong></span>
+                        ${ex.peso_kg ? `<span style="margin-left: 12px; color: var(--nst-lime);">Carico: <strong>${ex.peso_kg} kg</strong></span>` : ''}
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+        });
+    } else {
+        const parsed = parseExercisesFromWorkout(workout);
+        if (parsed.length > 0) {
+            html += `<div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--nst-lime); margin-bottom: 10px; letter-spacing: 0.5px;">ESERCIZI RILEVATI</div>`;
+            parsed.forEach(ex => {
+                html += `
+                    <div class="nst-session-ex-card" style="padding: 10px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</span>
+                            <span style="color: var(--nst-lime); font-weight: 700;">
+                                ${ex.peso_kg > 0 ? `${ex.peso_kg} kg` : 'Corpo libero'} 
+                                <span style="color: #cbd5e1; font-weight: normal; font-size: 11px;">(${ex.ripetizioni} rip${ex.serie > 1 ? ` x ${ex.serie} serie` : ''})</span>
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            html += `<div style="text-align: center; color: var(--nst-text-muted); font-size: 12px; padding: 20px;">Nessun dettaglio aggiuntivo disponibile per questa sessione.</div>`;
+        }
+    }
+
+    body.innerHTML = html;
+    modal.classList.remove('nst-hidden');
+}
+
+function chiudiDettaglioAllenamentoModal() {
+    const modal = document.getElementById('nst-modal-dettaglio-allenamento');
+    if (modal) modal.classList.add('nst-hidden');
 }
 
 async function renderGraficoAllenamenti() {
@@ -1250,6 +1528,7 @@ async function renderGraficoAllenamenti() {
         const emptyMsg = document.getElementById('nst-empty-allenamenti');
 
         if (error || !allData || allData.length === 0) {
+            currentAllenamentiData = [];
             if (emptyMsg) emptyMsg.classList.remove('nst-hidden');
             const prContainer = document.getElementById('nst-pr-container');
             if (prContainer) prContainer.innerHTML = '';
@@ -1261,6 +1540,8 @@ async function renderGraficoAllenamenti() {
             if (tbody) tbody.innerHTML = '';
             return;
         }
+
+        currentAllenamentiData = allData;
 
         if (emptyMsg) emptyMsg.classList.add('nst-hidden');
 
@@ -1279,7 +1560,7 @@ async function renderGraficoAllenamenti() {
         document.getElementById('nst-training-count').textContent = `${filteredData.length} session${filteredData.length === 1 ? 'e' : 'i'} nel periodo`;
         const ultimo = filteredData.length > 0 ? filteredData[filteredData.length - 1] : allData[allData.length - 1];
         if (ultimo) {
-            document.getElementById('nst-last-workout-name').textContent = `${formatDateShort(ultimo.data_allenamento)}: ${(ultimo.corso_disciplina || 'Workout').toUpperCase()}`;
+            document.getElementById('nst-last-workout-name').textContent = `${formatDateWithYear(ultimo.data_allenamento)}: ${(ultimo.corso_disciplina || 'Workout').toUpperCase()}`;
         } else {
             document.getElementById('nst-last-workout-name').textContent = 'Nessuna sessione nel periodo';
         }
@@ -1291,8 +1572,12 @@ async function renderGraficoAllenamenti() {
             for (let i = filteredData.length - 1; i >= 0; i--) {
                 const item = filteredData[i];
                 const tr = document.createElement('tr');
+                tr.className = 'nst-clickable-row';
+                tr.style.cursor = 'pointer';
+                tr.title = 'Clicca per vedere il dettaglio della sessione';
+                tr.onclick = () => apriDettaglioAllenamentoModal(item.id);
                 tr.innerHTML = `
-                    <td>${formatDateShort(item.data_allenamento)}</td>
+                    <td>${formatDateWithYear(item.data_allenamento)}</td>
                     <td style="color: var(--nst-lime); font-weight: 600;">${(item.corso_disciplina || 'Workout').toUpperCase()}</td>
                     <td>${item.durata_minuti || '-'}</td>
                     <td>${item.rpe_fatica ? item.rpe_fatica + '/10' : '-'}</td>
@@ -7469,11 +7754,23 @@ window.confermaSalvaAllenamentoStandard = confermaSalvaAllenamentoStandard;
 window.chiudiModalWorkoutAttivo = chiudiModalWorkoutAttivo;
 window.escapeHtml = escapeHtml;
 window.isIscrizioneAttiva = isIscrizioneAttiva;
+window.formatDateShort = formatDateShort;
+window.formatDateWithYear = formatDateWithYear;
+window.apriDettaglioAllenamentoModal = apriDettaglioAllenamentoModal;
+window.chiudiDettaglioAllenamentoModal = chiudiDettaglioAllenamentoModal;
+window.getCurrentAllenamentiData = getCurrentAllenamentiData;
+window.setCurrentAllenamentiData = setCurrentAllenamentiData;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         escapeHtml,
         isIscrizioneAttiva,
+        formatDateShort,
+        formatDateWithYear,
+        apriDettaglioAllenamentoModal,
+        chiudiDettaglioAllenamentoModal,
+        getCurrentAllenamentiData,
+        setCurrentAllenamentiData,
         normalizeExerciseName,
         isBetterPerformance,
         parseExercisesFromWorkout,

@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-22] ingest | NESTORE — Fix Calcolo PR (Rampa 1RM & Scheda Dati), Formato Date DD/MM/YY & Modale Dettaglio Sessione
+- **Fix Parsing PR & Carichi di Rampa (`portal/nestore.js`)**:
+  - Risolto il mancato calcolo dei nuovi massimali (es. Panca Piana a 125 kg di Valerio Mannocchi): la funzione `parseExercisesFromWorkout` ora gestisce correttamente `scheda_dati` sia quando è un oggetto (`{ tipo: 'ibrido', esercizi: [...] }`) sia quando è un array.
+  - Estesa la logica di valutazione delle prestazioni per includere sia le serie allenanti (`serie_dettaglio`) sia le serie di rampa/riscaldamento (`riscaldamento_effettivo`), considerando valida qualsiasi alzata chiusa con ripetizioni $> 0$ (es. la singola 1RM al 100% eseguita durante la rampa).
+  - Migliorata la normalizzazione dei nomi degli esercizi in `normalizeExerciseName` per raggruppare varianti descrittive come *"Panca piana con bilanciere"* sotto il massimale canonico *"Panca Piana"*.
+- **Formattazione Date con Anno (`portal/nestore.js`)**:
+  - Introdotta la funzione `formatDateWithYear(dateStr)` che restituisce la data nel formato `DD/MM/YY` (es. `21/09/26`, `09/09/26`).
+  - Applicata alle card della bacheca **Record Personali (All-Time)** e alla tabella **Storico Sessioni**.
+- **Modale Dettaglio Sessione Allenamento (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Le righe della tabella `STORICO SESSIONI` sono ora interattive (`.nst-clickable-row` con cursore pointer ed effetto hover).
+  - Al click viene invocata `apriDettaglioAllenamentoModal(workoutId)` aprendo la nuova modale `#nst-modal-dettaglio-allenamento`.
+  - La modale presenta una griglia di riepilogo metadati (Data, Disciplina, Durata, RPE Fatica, Esito Globale), le note della seduta, e l'elenco degli esercizi svolti con target originari, badge di esito, badge pillola per riscaldamento/rampa e tabella per serie e carichi di lavoro.
+- **Testing & QA (`tests/workout-pr.test.js`)**:
+  - Aggiunti test per `formatDateWithYear`, estrazione del PR da rampa al 100% su oggetto `scheda_dati`, markup HTML/CSS della modale e apertura/chiusura/popolamento di `#nst-modal-dettaglio-allenamento`.
+  - Risultato test suite: 134/134 test passati (12/12 suite).
+
 ## [2026-09-22] ingest | Portal Dashboard — Gestione Certificati Storici Cartacei & Fix Query Dossier Tesserato
 - **Fix Query Dossier Tesserato (`portal/dashboard.js`)**:
   - Risolto il bug in `apriDossierTesserato(utente_id)`: la query verso `registro_tesserati` utilizzava erroneamente `utente_id` anziché la foreign key `anagrafica_id`. I dati di tesseramento CSEN, quota e data richiesta vengono ora recuperati regolarmente.
