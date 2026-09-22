@@ -1307,6 +1307,8 @@ async function renderGraficoAllenamenti() {
     }
 }
 
+let currentDietaData = [];
+
 async function renderGraficoDieta() {
     try {
         const u = currentUser || (typeof window !== 'undefined' ? window.currentUser : null);
@@ -1329,6 +1331,7 @@ async function renderGraficoDieta() {
         const emptyMsg = document.getElementById('nst-empty-dieta');
 
         if (error || !data || data.length === 0) {
+            currentDietaData = [];
             if (emptyMsg) emptyMsg.classList.remove('nst-hidden');
             if (chartDietaInstance) {
                 chartDietaInstance.destroy();
@@ -1340,6 +1343,8 @@ async function renderGraficoDieta() {
             document.getElementById('nst-macro-fat').textContent = '0g';
             return;
         }
+
+        currentDietaData = data;
 
         if (emptyMsg) emptyMsg.classList.add('nst-hidden');
 
@@ -1609,17 +1614,74 @@ async function renderGraficoDieta() {
             for (let i = data.length - 1; i >= 0; i--) {
                 const item = data[i];
                 const tr = document.createElement('tr');
+                tr.setAttribute('data-pasto-id', item.id);
                 tr.innerHTML = `
                     <td>${formatDateShort(item.data_pasto)}</td>
                     <td style="color: #f59e0b; font-weight: 600; text-transform: capitalize;">${escapeHtml(item.tipo_pasto || '-')}</td>
                     <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.descrizione || '')}">${escapeHtml(item.descrizione || '')}</td>
-                    <td>${item.calorie_stimate || '-'}</td>
+                    <td>${item.calorie_stimate != null ? item.calorie_stimate : '-'}</td>
                     <td style="font-size: 10px; color: var(--nst-text-muted);">
                         <span style="color: var(--nst-cyan);">${item.proteine_g || 0}</span> / 
                         <span style="color: var(--nst-amber);">${item.carboidrati_g || 0}</span> / 
                         <span style="color: var(--nst-lime);">${item.grassi_g || 0}</span>
                     </td>
+                    <td class="nst-desktop-only" style="text-align: right; white-space: nowrap;">
+                        <button type="button" class="nst-btn-icon-table" title="Modifica Pasto" onclick="openEditPastoModal('${item.id}', event)">
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-cyan);">edit</span>
+                        </button>
+                        <button type="button" class="nst-btn-icon-table" title="Elimina Pasto" onclick="confermaEliminaPasto('${item.id}', event)">
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: #ef4444;">delete</span>
+                        </button>
+                    </td>
                 `;
+
+                // Gestione Long-Press su Mobile (touch)
+                let pressTimer = null;
+                let startX = 0;
+                let startY = 0;
+
+                const clearPress = () => {
+                    if (pressTimer) {
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }
+                    tr.classList.remove('nst-long-press-active');
+                };
+
+                tr.addEventListener('touchstart', (e) => {
+                    if (e.touches.length !== 1) return;
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                    tr.classList.add('nst-long-press-active');
+                    pressTimer = setTimeout(() => {
+                        tr.classList.remove('nst-long-press-active');
+                        pressTimer = null;
+                        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                            try { navigator.vibrate(40); } catch (_) {}
+                        }
+                        openMobilePastoActions(item.id);
+                    }, 450);
+                }, { passive: true });
+
+                tr.addEventListener('touchmove', (e) => {
+                    if (!pressTimer) return;
+                    const touch = e.touches[0];
+                    if (Math.abs(touch.clientX - startX) > 10 || Math.abs(touch.clientY - startY) > 10) {
+                        clearPress();
+                    }
+                }, { passive: true });
+
+                tr.addEventListener('touchend', clearPress);
+                tr.addEventListener('touchcancel', clearPress);
+
+                tr.addEventListener('contextmenu', (e) => {
+                    if (window.innerWidth <= 768) {
+                        e.preventDefault();
+                        clearPress();
+                        openMobilePastoActions(item.id);
+                    }
+                });
+
                 tbody.appendChild(tr);
             }
         }
@@ -1627,6 +1689,224 @@ async function renderGraficoDieta() {
     } catch (e) {
         console.error("Errore grafico dieta:", e);
     }
+}
+
+// ---------------------------------------------------------------------------
+// GESTIONE MODIFICA ED ELIMINAZIONE PASTI (Storico Dieta)
+// ---------------------------------------------------------------------------
+function openMobilePastoActions(pastoId) {
+    if (!pastoId) return;
+    const pasto = currentDietaData.find(p => String(p.id) === String(pastoId));
+    if (!pasto) return;
+
+    const modal = document.getElementById('nst-modal-pasto-actions');
+    const inputId = document.getElementById('nst-action-pasto-id');
+    const summary = document.getElementById('nst-action-pasto-summary');
+    const meta = document.getElementById('nst-action-pasto-meta');
+
+    if (inputId) inputId.value = pasto.id;
+    if (summary) summary.textContent = `${(pasto.tipo_pasto || 'Pasto').toUpperCase()} - ${formatDateShort(pasto.data_pasto)}`;
+    if (meta) {
+        const kcal = pasto.calorie_stimate != null ? `${pasto.calorie_stimate} kcal` : '-- kcal';
+        const p = pasto.proteine_g || 0;
+        const c = pasto.carboidrati_g || 0;
+        const f = pasto.grassi_g || 0;
+        meta.innerHTML = `<span style="color:#f59e0b; font-weight:600;">${kcal}</span> | Pro: ${p}g - Carb: ${c}g - Grassi: ${f}g<br><span style="color:#cbd5e1; display:inline-block; margin-top:4px;">"${escapeHtml(pasto.descrizione || '')}"</span>`;
+    }
+
+    if (modal) modal.classList.remove('nst-hidden');
+}
+
+function chiudiMobilePastoActions() {
+    const modal = document.getElementById('nst-modal-pasto-actions');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+function eseguiModificaDaActionSheet() {
+    const inputId = document.getElementById('nst-action-pasto-id');
+    const pastoId = inputId ? inputId.value : null;
+    chiudiMobilePastoActions();
+    if (pastoId) {
+        openEditPastoModal(pastoId);
+    }
+}
+
+function eseguiEliminaDaActionSheet() {
+    const inputId = document.getElementById('nst-action-pasto-id');
+    const pastoId = inputId ? inputId.value : null;
+    chiudiMobilePastoActions();
+    if (pastoId) {
+        confermaEliminaPasto(pastoId);
+    }
+}
+
+function openEditPastoModal(pastoId, event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (!pastoId) return;
+    const pasto = currentDietaData.find(p => String(p.id) === String(pastoId));
+    if (!pasto) return;
+
+    const modal = document.getElementById('nst-modal-edit-pasto');
+    if (!modal) return;
+
+    const idInput = document.getElementById('nst-edit-pasto-id');
+    const dataInput = document.getElementById('nst-edit-pasto-data');
+    const tipoSelect = document.getElementById('nst-edit-pasto-tipo');
+    const descInput = document.getElementById('nst-edit-pasto-desc');
+    const kcalInput = document.getElementById('nst-edit-pasto-kcal');
+    const proInput = document.getElementById('nst-edit-pasto-pro');
+    const carbInput = document.getElementById('nst-edit-pasto-carb');
+    const fatInput = document.getElementById('nst-edit-pasto-fat');
+
+    if (idInput) idInput.value = pasto.id;
+    if (dataInput) dataInput.value = pasto.data_pasto || '';
+    if (tipoSelect) tipoSelect.value = pasto.tipo_pasto || 'pranzo';
+    if (descInput) descInput.value = pasto.descrizione || '';
+    if (kcalInput) kcalInput.value = pasto.calorie_stimate != null ? pasto.calorie_stimate : '';
+    if (proInput) proInput.value = pasto.proteine_g != null ? pasto.proteine_g : '';
+    if (carbInput) carbInput.value = pasto.carboidrati_g != null ? pasto.carboidrati_g : '';
+    if (fatInput) fatInput.value = pasto.grassi_g != null ? pasto.grassi_g : '';
+
+    modal.classList.remove('nst-hidden');
+}
+
+function chiudiEditPastoModal() {
+    const modal = document.getElementById('nst-modal-edit-pasto');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+function ricalcolaKcalPastoEdit() {
+    const pro = parseFloat(document.getElementById('nst-edit-pasto-pro')?.value) || 0;
+    const carb = parseFloat(document.getElementById('nst-edit-pasto-carb')?.value) || 0;
+    const fat = parseFloat(document.getElementById('nst-edit-pasto-fat')?.value) || 0;
+    const stimate = Math.round(pro * 4 + carb * 4 + fat * 9);
+    const kcalInput = document.getElementById('nst-edit-pasto-kcal');
+    if (kcalInput) {
+        kcalInput.value = stimate;
+        if (typeof showTimerToast === 'function') {
+            showTimerToast(`Calorie ricalcolate: ${stimate} kcal`);
+        }
+    }
+}
+
+async function salvaModifichePasto() {
+    const id = document.getElementById('nst-edit-pasto-id')?.value;
+    const dataVal = document.getElementById('nst-edit-pasto-data')?.value;
+    const tipoVal = document.getElementById('nst-edit-pasto-tipo')?.value;
+    const descVal = document.getElementById('nst-edit-pasto-desc')?.value?.trim();
+    const kcalRaw = document.getElementById('nst-edit-pasto-kcal')?.value;
+    const proRaw = document.getElementById('nst-edit-pasto-pro')?.value;
+    const carbRaw = document.getElementById('nst-edit-pasto-carb')?.value;
+    const fatRaw = document.getElementById('nst-edit-pasto-fat')?.value;
+
+    if (!id || !dataVal) {
+        alert("Inserisci una data valida per il pasto.");
+        return;
+    }
+    if (!descVal) {
+        alert("Inserisci una descrizione per gli alimenti consumati.");
+        return;
+    }
+
+    const kcal = kcalRaw !== '' && !isNaN(parseInt(kcalRaw, 10)) ? parseInt(kcalRaw, 10) : null;
+    const pro = proRaw !== '' && !isNaN(parseFloat(proRaw)) ? parseFloat(proRaw) : null;
+    const carb = carbRaw !== '' && !isNaN(parseFloat(carbRaw)) ? parseFloat(carbRaw) : null;
+    const fat = fatRaw !== '' && !isNaN(parseFloat(fatRaw)) ? parseFloat(fatRaw) : null;
+
+    const btnSalva = document.getElementById('nst-btn-salva-pasto');
+    if (btnSalva) {
+        btnSalva.disabled = true;
+        btnSalva.innerHTML = `<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> SALVATAGGIO...`;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('nestore_pasti')
+            .update({
+                data_pasto: dataVal,
+                tipo_pasto: tipoVal,
+                descrizione: descVal,
+                calorie_stimate: kcal,
+                proteine_g: pro,
+                carboidrati_g: carb,
+                grassi_g: fat
+            })
+            .eq('id', id);
+
+        if (error) {
+            console.error("Errore aggiornamento pasto:", error);
+            alert("Errore durante il salvataggio: " + (error.message || error));
+            return;
+        }
+
+        chiudiEditPastoModal();
+        if (typeof showTimerToast === 'function') {
+            showTimerToast("✓ Pasto aggiornato con successo!");
+        }
+        await renderGraficoDieta();
+        if (typeof caricaKpiDashboard === 'function') {
+            await caricaKpiDashboard();
+        }
+    } catch (e) {
+        console.error("Eccezione salvataggio pasto:", e);
+        alert("Errore imprevisto durante il salvataggio.");
+    } finally {
+        if (btnSalva) {
+            btnSalva.disabled = false;
+            btnSalva.innerHTML = `<span class="material-symbols-outlined">check</span> <span>SALVA MODIFICHE</span>`;
+        }
+    }
+}
+
+async function confermaEliminaPasto(pastoId, event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (!pastoId) return;
+
+    const pasto = currentDietaData.find(p => String(p.id) === String(pastoId));
+    const label = pasto 
+        ? `${(pasto.tipo_pasto || 'pasto').toUpperCase()} (${formatDateShort(pasto.data_pasto)})`
+        : 'questo pasto';
+
+    const confermato = confirm(`Sei sicuro di voler eliminare ${label} dallo storico?\nI totali giornalieri e il grafico dei macro verranno ricalcolati.`);
+    if (!confermato) return;
+
+    try {
+        // Soft delete nel rispetto delle regole architetturali
+        const { error } = await supabaseClient
+            .from('nestore_pasti')
+            .update({ attivo: false })
+            .eq('id', pastoId);
+
+        if (error) {
+            console.error("Errore cancellazione pasto:", error);
+            alert("Errore durante l'eliminazione: " + (error.message || error));
+            return;
+        }
+
+        if (typeof showTimerToast === 'function') {
+            showTimerToast(`✓ Pasto eliminato dallo storico.`);
+        }
+        await renderGraficoDieta();
+        if (typeof caricaKpiDashboard === 'function') {
+            await caricaKpiDashboard();
+        }
+    } catch (e) {
+        console.error("Eccezione eliminazione pasto:", e);
+        alert("Errore imprevisto durante l'eliminazione.");
+    }
+}
+
+// Esposizione globale per handler inline HTML
+if (typeof window !== 'undefined') {
+    window.openMobilePastoActions = openMobilePastoActions;
+    window.chiudiMobilePastoActions = chiudiMobilePastoActions;
+    window.eseguiModificaDaActionSheet = eseguiModificaDaActionSheet;
+    window.eseguiEliminaDaActionSheet = eseguiEliminaDaActionSheet;
+    window.openEditPastoModal = openEditPastoModal;
+    window.chiudiEditPastoModal = chiudiEditPastoModal;
+    window.ricalcolaKcalPastoEdit = ricalcolaKcalPastoEdit;
+    window.salvaModifichePasto = salvaModifichePasto;
+    window.confermaEliminaPasto = confermaEliminaPasto;
 }
 
 // ---------------------------------------------------------------------------
@@ -7228,7 +7508,16 @@ if (typeof module !== 'undefined' && module.exports) {
         isModalInForzaMode,
         aggiungiRigaSerie,
         rimuoviRigaSerie,
-        aggiornaLayoutEserciziModal
+        aggiornaLayoutEserciziModal,
+        openMobilePastoActions,
+        chiudiMobilePastoActions,
+        eseguiModificaDaActionSheet,
+        eseguiEliminaDaActionSheet,
+        openEditPastoModal,
+        chiudiEditPastoModal,
+        ricalcolaKcalPastoEdit,
+        salvaModifichePasto,
+        confermaEliminaPasto
     };
 }
 

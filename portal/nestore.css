@@ -344,6 +344,14 @@ body.nst-body {
         text-overflow: clip;
         display: block !important;
     }
+
+    .nst-desktop-only {
+        display: none !important;
+    }
+
+    .nst-desktop-hidden {
+        display: inline-block !important;
+    }
 }
 
 /* Sidebar Dashboard KPI */
@@ -561,6 +569,47 @@ body.nst-body {
 
 .nst-history-table tbody tr:nth-child(even) {
     background: rgba(255, 255, 255, 0.02);
+}
+
+.nst-history-table tbody tr {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.nst-history-table tbody tr.nst-long-press-active {
+    background: rgba(245, 158, 11, 0.18) !important;
+    transition: background 0.15s ease;
+}
+
+.nst-btn-icon-table {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.nst-btn-icon-table:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(1.15);
+}
+
+.nst-btn-icon-table:active {
+    transform: scale(0.92);
+}
+
+.nst-desktop-hidden {
+    display: none !important;
+}
+
+.nst-desktop-only {
+    display: table-cell;
 }
 
 /* Cards */

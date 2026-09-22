@@ -107,6 +107,11 @@ Nestore is built as an SPA, transitioning seamlessly between Chat and Data visua
   3. **Daily Nutrition (Stacked Bar Chart with TDEE & Target Overlays)**: Grafico a barre verticali impilate (Stacked Bar Chart) che somma i macronutrienti giornalieri (in kcal) dal basso verso l'alto nell'ordine standard: **Proteine** (Cyan, base), **Grassi** (Lime, centro) e **Carboidrati** (Amber, cima con `borderRadius: 4` sugli angoli superiori). L'asse Y ha `stacked: true` per riflettere l'intake calorico complessivo, integrando due linee orizzontali comparative a tutta larghezza (disegnate edge-to-edge da un custom inline plugin di Chart.js, indipendenti dal numero di giorni registrati):
      - **Linea Rossa Tratteggiata (TDEE Salute)**: Rappresenta il fabbisogno calorico stimato scientificamente (Formula Mifflin-St Jeor) aggregato nella Wiki Atleta.
      - **Linea Verde Tratteggiata (Target Atleta)**: Rappresenta l'obiettivo calorico giornaliero personalizzato dell'atleta (impostabile sia via chat sia tramite l'editor rapido inline `Target: [X] kcal ✏️` nel pannello dieta).
+  4. **Gestione Storico Pasti (Modifica, Cancellazione & Mobile Long-Press)**:
+     - **Desktop**: Colonna "Azioni" con icone Matita (✏️ modifica) e Cestino (🗑️ elimina).
+     - **Mobile / Touch**: Per evitare sovraffollamento visivo, la colonna azioni è nascosta e sostituita da un'interazione con **pressione prolungata (Long-Press ~450ms)** sulla riga del pasto. Il tocco prolungato attiva un feedback tattile (`navigator.vibrate`) e visuale (`.nst-long-press-active`) aprendo un Action Sheet dedicato (`#nst-modal-pasto-actions`).
+     - **Modale di Modifica (`#nst-modal-edit-pasto`)**: Permette di modificare data, tipo pasto (`colazione`, `pranzo`, `cena`, `snack`), descrizione, calorie e macronutrienti (Proteine, Carboidrati, Grassi). Include il pulsante rapido *"Ricalcola dai Macro"* che applica la formula $(Pro \times 4 + Carb \times 4 + Fat \times 9)$.
+     - **Soft-Delete**: L'eliminazione avviene impostando `attivo = false` per preservare la storicizzazione, ricalcolando e aggiornando istantaneamente grafico e totali giornalieri.
 - **Time Horizon Filter Chips**: `7G`, `14G`, `30G`, `ALL` selectors per filtrare i dati di periodo.
 
 ### 5.2. Mobile Tab Switcher Layout & Top-Down Inverted Chat

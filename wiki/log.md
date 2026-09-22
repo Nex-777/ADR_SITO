@@ -2,6 +2,23 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-22] ingest | NESTORE — Gestione Storico Pasti: Modifica, Cancellazione Soft-Delete & Mobile Long-Press
+- **UI Tabella & Responsive (`portal/nestore.html`, `portal/nestore.css`)**:
+  - Aggiunta colonna `Azioni` nella tabella `STORICO PASTI` con pulsanti icona compatti: ✏️ (Modifica) e 🗑️ (Elimina).
+  - Su schermi mobili ($\le 768\text{px}$), la colonna azioni viene nascosta tramite `.nst-desktop-only` per preservare lo spazio e prevenire overflow.
+  - Implementato supporto al **Long-Press (pressione prolungata ~450ms)** sulla riga della tabella touch con feedback tattile (`navigator.vibrate`) e visuale (`.nst-long-press-active`), che apre l'Action Sheet dedicato `#nst-modal-pasto-actions`.
+  - Aggiunto testo guida discreto vicino al titolo: `(tieni premuto per azioni)`.
+- **Modale di Modifica Pasto (`portal/nestore.html`, `portal/nestore.js`)**:
+  - Introdotta la modale `#nst-modal-edit-pasto` per rettificare data, tipo pasto (`colazione`, `pranzo`, `cena`, `snack`), descrizione e macronutrienti.
+  - Aggiunto pulsante di utilità *"Ricalcola dai Macro"* che applica istantaneamente la formula scientifica $(Pro \times 4 + Carb \times 4 + Fat \times 9)$.
+- **Cancellazione & Soft-Delete (`portal/nestore.js`)**:
+  - Implementata la conferma di sicurezza con `confirm()` e l'applicazione rigorosa del **Soft-Delete** (`attivo: false`) in conformità con la direttiva di storicizzazione del progetto.
+  - All'aggiornamento o eliminazione del pasto, la dashboard e il grafico stacked bar dei macro/TDEE vengono ricalcolati e ri-renderizzati all'istante senza ricaricare la pagina.
+- **Testing & QA (`tests/pasto-management.test.js`)**:
+  - Creata suite dedicata per la verifica di modali, responsive design, calcolo macro, gestione soft-delete ed eventi. 123/123 test passati.
+
+---
+
 ## [2026-09-20] ingest | NESTORE — Overhaul Schede Metcon Iterazione 2: Calcolo Giri/Intervalli, Evidenziazione Visiva (Work/Rest), Auto-Avanzamento & Tasto Annulla
 - **Logica Giri vs Intervalli Tabata (`portal/nestore.html`, `portal/nestore.js`)**:
   - Ridefinita la nozione di "Giro": 1 Giro = completamento di tutti gli esercizi del circuito (es. 6 esercizi = 6 turni di lavoro e 6 di riposo).

@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.60">
+    <link rel="stylesheet" href="nestore.css?v=1.05.61">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.60"></script>
+    <script src="config.js?v=1.05.61"></script>
 </head>
 <body class="nst-body">
 
@@ -21,7 +21,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div class="nst-brand-text">
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.60</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.61</span>
             </div>
         </div>
 
@@ -275,7 +275,10 @@
                     <div id="nst-empty-dieta" class="nst-chart-empty-msg nst-hidden">Nessun pasto registrato</div>
                 </div>
 
-                <h4 style="margin: 24px 0 12px; font-family: 'Orbitron', sans-serif; font-size: 12px; color: #f59e0b;">STORICO PASTI</h4>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; margin: 24px 0 12px;">
+                    <h4 style="margin: 0; font-family: 'Orbitron', sans-serif; font-size: 12px; color: #f59e0b;">STORICO PASTI</h4>
+                    <span class="nst-mobile-help-text nst-desktop-hidden" style="font-size: 10px; color: var(--nst-text-muted);">(tieni premuto per azioni)</span>
+                </div>
                 <div class="nst-history-table-container">
                     <table class="nst-history-table">
                         <thead>
@@ -285,6 +288,7 @@
                                 <th>Descrizione</th>
                                 <th>Kcal</th>
                                 <th>P / C / G (g)</th>
+                                <th class="nst-desktop-only" style="text-align: right; width: 80px;">Azioni</th>
                             </tr>
                         </thead>
                         <tbody id="nst-tbody-dieta">
@@ -1652,10 +1656,112 @@ GIORNO 2:
         </div>
     </div>
 
+    <!-- Modale Action Sheet Mobile Pasto (Long-press) -->
+    <div id="nst-modal-pasto-actions" class="nst-modal-overlay nst-hidden" onclick="if(event.target === this) chiudiMobilePastoActions()">
+        <div class="nst-modal-card nst-action-sheet-card" style="max-width: 400px; text-align: center;">
+            <div class="nst-modal-header" style="border-bottom: 1px solid var(--nst-border);">
+                <span class="nst-headline" style="font-size: 13px; color: #f59e0b; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">restaurant</span>
+                    <span>AZIONI PASTO</span>
+                </span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiMobilePastoActions()">✕</button>
+            </div>
+            <div class="nst-modal-body" style="padding: 18px 20px;">
+                <input type="hidden" id="nst-action-pasto-id">
+                <div id="nst-action-pasto-summary" style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 6px;">--</div>
+                <div id="nst-action-pasto-meta" style="font-size: 11px; color: var(--nst-text-muted); margin-bottom: 20px;">--</div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button type="button" class="nst-btn-primary" style="width: 100%; justify-content: center; gap: 8px;" onclick="eseguiModificaDaActionSheet()">
+                        <span class="material-symbols-outlined">edit</span>
+                        <span>MODIFICA PASTO</span>
+                    </button>
+                    <button type="button" class="nst-btn-danger" style="width: 100%; justify-content: center; gap: 8px;" onclick="eseguiEliminaDaActionSheet()">
+                        <span class="material-symbols-outlined">delete</span>
+                        <span>ELIMINA PASTO</span>
+                    </button>
+                    <button type="button" class="nst-btn-ghost-sm" style="width: 100%; margin-top: 4px;" onclick="chiudiMobilePastoActions()">ANNULLA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Modifica Pasto -->
+    <div id="nst-modal-edit-pasto" class="nst-modal-overlay nst-hidden" onclick="if(event.target === this) chiudiEditPastoModal()">
+        <div class="nst-modal-card" style="max-width: 540px;">
+            <div class="nst-modal-header">
+                <span class="nst-headline" style="font-size: 14px; color: var(--nst-cyan); display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">edit_note</span>
+                    <span>MODIFICA PASTO</span>
+                </span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiEditPastoModal()">✕</button>
+            </div>
+
+            <div class="nst-modal-body" style="padding: 20px; max-height: 75vh; overflow-y: auto;">
+                <input type="hidden" id="nst-edit-pasto-id">
+
+                <div class="nst-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">DATA PASTO *</label>
+                        <input type="date" id="nst-edit-pasto-data" class="nst-form-input">
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">TIPO PASTO *</label>
+                        <select id="nst-edit-pasto-tipo" class="nst-form-input">
+                            <option value="colazione">Colazione</option>
+                            <option value="pranzo">Pranzo</option>
+                            <option value="cena">Cena</option>
+                            <option value="snack">Snack / Spuntino</option>
+                        </select>
+                    </div>
+
+                    <div class="nst-form-group" style="grid-column: span 2;">
+                        <label class="nst-form-label">DESCRIZIONE ALIMENTI *</label>
+                        <input type="text" id="nst-edit-pasto-desc" class="nst-form-input" placeholder="Es. 150g petto di pollo, 80g riso basmati, olio evo" maxlength="300">
+                    </div>
+
+                    <div class="nst-form-group" style="grid-column: span 2;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="nst-form-label" style="margin-bottom: 0;">CALORIE STIMATE (KCAL) *</label>
+                            <button type="button" class="nst-btn-link" style="font-size: 10px; color: var(--nst-lime); cursor: pointer; background: none; border: none; text-decoration: underline;" onclick="ricalcolaKcalPastoEdit()">
+                                ⚡ RICALCOLA DAI MACRO
+                            </button>
+                        </div>
+                        <input type="number" id="nst-edit-pasto-kcal" class="nst-form-input" placeholder="Es. 550" min="0" max="10000">
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label" style="color: var(--nst-cyan);">PROTEINE (G)</label>
+                        <input type="number" id="nst-edit-pasto-pro" class="nst-form-input" placeholder="0" min="0" max="1000" step="0.1">
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label" style="color: var(--nst-amber);">CARBOIDRATI (G)</label>
+                        <input type="number" id="nst-edit-pasto-carb" class="nst-form-input" placeholder="0" min="0" max="1000" step="0.1">
+                    </div>
+
+                    <div class="nst-form-group" style="grid-column: span 2;">
+                        <label class="nst-form-label" style="color: var(--nst-lime);">GRASSI (G)</label>
+                        <input type="number" id="nst-edit-pasto-fat" class="nst-form-input" placeholder="0" min="0" max="1000" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="nst-modal-footer" style="padding: 14px 20px; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--nst-border);">
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiEditPastoModal()">ANNULLA</button>
+                <button type="button" class="nst-btn-primary" id="nst-btn-salva-pasto" onclick="salvaModifichePasto()">
+                    <span class="material-symbols-outlined">check</span>
+                    <span>SALVA MODIFICHE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Libreria Grafici Chart.js CDN (v4) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.60"></script>
+    <script src="nestore.js?v=1.05.61"></script>
 </body>
 </html>
