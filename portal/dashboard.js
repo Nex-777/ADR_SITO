@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.62"
+                VERSION: "1.05.63"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -220,8 +220,8 @@
             }
 
             try {
-                if (!filePath) {
-                    showToastNotification("Percorso file non valido o mancante.", "error");
+                if (!filePath || filePath === 'fittizio') {
+                    showToastNotification(filePath === 'fittizio' ? "File non disponibile (Dato cartaceo storico non ancora digitalizzato)." : "Percorso file non valido o mancante.", "warning");
                     if (targetBtn) {
                         targetBtn.innerHTML = originalHtml;
                         targetBtn.disabled = false;
@@ -611,7 +611,7 @@
                     iconColor = "text-red-500";
                     bannerTabTarget = 'user_documento';
                     bannerBtnLabel = "VAI ALLA SEZIONE DOCUMENTO D'IDENTITÀ";
-                } else if (cert && cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || !cert.file_url.startsWith('http'))) {
+                } else if (cert && cert.stato_validazione === 'IN_ATTESA' && (!cert.file_url || cert.file_url.trim() === '' || cert.file_url === 'fittizio')) {
                     bannerTitle = "AZIONE RICHIESTA: AGGIORNAMENTO CERTIFICATO MEDICO (DATO STORICO)";
                     bannerMessage = "Nonostante il certificato che ci hai mandato quando ti sei iscritto alla vecchia piattaforma, non è stato possibile portarlo nella nuova. Ti chiediamo gentilmente di ricaricarlo, così da completare il tuo profilo sulla nuova piattaforma.";
                     bannerColorClass = "border-yellow-500/40 bg-yellow-500/10 border-l-4 border-yellow-500";
@@ -1142,7 +1142,12 @@
                     } else if ((cert && cert.stato_validazione === 'IN_ATTESA') || (idDoc && idDoc.stato_validazione === 'IN_ATTESA')) {
                         if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">folder_shared</span> DOCUMENTAZIONE UTENTE';
                         box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
-                        msg.innerHTML = "🔍 VALIDAZIONE IN CORSO...<br>La documentazione è in fase di elaborazione. Aggiorna la pagina tra qualche minuto.";
+                        if (cert && cert.file_url === 'fittizio') {
+                            msg.innerHTML = "📋 DATO STORICO CARTACEO RILEVATO.<br>Risulta presente una registrazione cartacea pregressa del tuo certificato medico, ma non è ancora stato caricato il file digitale.<br>Ti preghiamo di caricare il file PDF o foto del certificato per completare la regolarizzazione del profilo.";
+                            form.classList.remove('hidden');
+                        } else {
+                            msg.innerHTML = "🔍 VALIDAZIONE IN CORSO...<br>La documentazione è in fase di elaborazione. Aggiorna la pagina tra qualche minuto.";
+                        }
                     } else if ((cert && cert.stato_validazione === 'GIALLO') || (idDoc && idDoc.stato_validazione === 'GIALLO')) {
                         if (userCertTitle) userCertTitle.innerHTML = '<span class="material-symbols-outlined text-sm">folder_shared</span> DOCUMENTAZIONE UTENTE';
                         box.className = "border p-6 space-y-4 bg-yellow-500/5 border-l-4 border-yellow-500";
@@ -7593,7 +7598,11 @@
                         badgeText.textContent = "Scaduto il " + new Date(currentCert.data_scadenza).toLocaleDateString('it-IT');
                     } else if (status === 'IN_ATTESA') {
                         badgeBox.className = "p-3 border-l-4 border-yellow-500 bg-yellow-500/5 text-yellow-500 font-mono text-xs uppercase";
-                        badgeText.textContent = "Elaborazione / Verifica in corso...";
+                        if (currentCert.file_url === 'fittizio') {
+                            badgeText.textContent = "Dato storico cartaceo: carica il file digitale del tuo certificato";
+                        } else {
+                            badgeText.textContent = "Elaborazione / Verifica in corso...";
+                        }
                     } else if (status === 'GIALLO') {
                         badgeBox.className = "p-3 border-l-4 border-yellow-500 bg-yellow-500/5 text-yellow-500 font-mono text-xs uppercase";
                         badgeText.textContent = "In attesa di convalida manuale";
@@ -7626,7 +7635,9 @@
                             <td class="p-3 font-mono">${dataScad}</td>
                             <td class="p-3 font-bold ${badgeClass}">${c.stato_validazione}</td>
                             <td class="p-3 text-right">
-                                <button onclick="openSignedFile('certificati_medici', '${c.file_url}')" class="text-primary hover:underline font-headline font-bold text-[10px]">VISUALIZZA</button>
+                                ${c.file_url === 'fittizio'
+                                    ? '<span class="text-yellow-500/70 font-headline font-bold text-[9px] uppercase">NON DISPONIBILE (CARTACEO)</span>'
+                                    : `<button onclick="openSignedFile('certificati_medici', '${c.file_url}')" class="text-primary hover:underline font-headline font-bold text-[10px]">VISUALIZZA</button>`}
                             </td>
                         </tr>
                     `;
@@ -10260,11 +10271,22 @@ async function apriDossierTesserato(utente_id) {
             .eq('utente_id', utente_id)
             .maybeSingle();
 
-        const { data: tess, error: errTess } = await supabaseClient
-            .from('registro_tesserati')
-            .select('*')
-            .eq('utente_id', utente_id)
-            .maybeSingle();
+        let tess = null;
+        if (ana && ana.id) {
+            try {
+                const { data: tessData, error: errTess } = await supabaseClient
+                    .from('registro_tesserati')
+                    .select('*')
+                    .eq('anagrafica_id', ana.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (errTess) console.error("Errore recupero registro_tesserati dossier:", errTess);
+                tess = tessData;
+            } catch (eTess) {
+                console.error("Errore query registro_tesserati:", eTess);
+            }
+        }
 
         // NOME COGNOME
         document.getElementById('dossier-nome').textContent = `${ut.nome} ${ut.cognome}`;
@@ -10529,6 +10551,10 @@ async function apriDossierTesserato(utente_id) {
                         `;
                     }
 
+                    const viewFileBtnHtml = c.file_url === 'fittizio'
+                        ? `<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-headline text-[9px] font-bold px-2.5 py-1 rounded flex-shrink-0 uppercase">FILE NON DISPONIBILE (CARTACEO)</span>`
+                        : `<button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded flex-shrink-0">VEDI FILE</button>`;
+
                     certHtml += `
                         <div class="flex items-center justify-between border-b border-white/5 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
                             <div>
@@ -10539,7 +10565,7 @@ async function apriDossierTesserato(utente_id) {
                                 <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${escapeHtml(formatToItalianDate(c.data_scadenza))}</div>
                                 ${adminDossierBtns}
                             </div>
-                            <button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded flex-shrink-0">VEDI FILE</button>
+                            ${viewFileBtnHtml}
                         </div>`;
                 });
             }

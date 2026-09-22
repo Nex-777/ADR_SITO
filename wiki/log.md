@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-22] ingest | Portal Dashboard — Gestione Certificati Storici Cartacei & Fix Query Dossier Tesserato
+- **Fix Query Dossier Tesserato (`portal/dashboard.js`)**:
+  - Risolto il bug in `apriDossierTesserato(utente_id)`: la query verso `registro_tesserati` utilizzava erroneamente `utente_id` anziché la foreign key `anagrafica_id`. I dati di tesseramento CSEN, quota e data richiesta vengono ora recuperati regolarmente.
+- **Gestione Certificati Medici Cartacei / Fittizi (`portal/dashboard.js`)**:
+  - Nella dashboard atleta (`loadUserCertificato`, banner panoramica e avviso legacy), i certificati pregressi senza file digitale (`file_url === 'fittizio'`) non mostrano più il fuorviante stato "Verifica in corso", ma richiedono esplicitamente: *"Dato storico cartaceo: carica il file digitale del tuo certificato"*, sbloccando il modulo di caricamento.
+  - Nella tabella storico certificati dell'atleta e nel Dossier Amministrativo, il pulsante *"VEDI FILE"* per i record con `file_url === 'fittizio'` viene disabilitato e sostituito con il badge distintivo `FILE NON DISPONIBILE (CARTACEO)`.
+  - La funzione globale `openSignedFile` include ora un controllo difensivo che intercetta i file con percorso `'fittizio'` mostrando un toast di notifica senza inviare richieste fallimentari verso Supabase Storage.
+- **Testing & QA (`tests/legacy-cert-dossier.test.js`)**:
+  - Aggiunta nuova suite di test automatizzati per validare la query su `anagrafica_id`, i badge di stato e i controlli difensivi.
+  - Test suite globale: 130/130 test superati con successo (12 suite su 12).
+
 ## [2026-09-22] ingest | NESTORE — Fix Duplicazione Pasti: Unicità Giornaliera Pasti Principali, Spuntini Progressivi & RLS Chat Update
 - **Unicità Pasti Giornalieri (`portal/nestore.js`, `api/nestore-chat.js`)**:
   - Risolto il bug delle cene/pranzi duplicati: per `colazione`, `pranzo` e `cena` il sistema verifica la presenza di un record attivo precedente per la stessa data e lo disattiva tramite soft-delete (`attivo = false`) prima dell'inserimento della versione aggiornata (es. aggiunta alimenti come la banana).

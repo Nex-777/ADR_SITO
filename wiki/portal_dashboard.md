@@ -110,4 +110,18 @@ Aggiunta nella versione **1.03.26**:
     -   Visualizza l'elenco delle lezioni passate registrate, con conteggio dei presenti/assenti e l'indicazione dell'operatore che ha effettuato il salvataggio.
     -   Pulsante di modifica per riaprire il registro presenze per quella determinata data.
 
+---
+
+## 🗂️ Dossier Tesserato & Gestione Certificati Storici (Cartacei)
+
+Introdotto/aggiornato nel portale amministrativo e utente:
+- **Dossier Tesserato (`apriDossierTesserato`)**:
+  - Recupera anagrafica, contatti, indirizzi e tesseramento collegando `registro_tesserati` tramite `anagrafica_id` (foreign key di relazione).
+  - Mostra lo stato CSEN, quota associativa, documenti d'identità e contratti firmati con rigenerazione URL sicuri.
+- **Gestione Certificati Legacy (`file_url: 'fittizio'`)**:
+  - Per i certificati importati da cartaceo pregresso senza file digitale (`file_url === 'fittizio'`), la UI atleta non mostra più il generico "Verifica in corso", bensì un avviso esplicito: *"Dato storico cartaceo: carica il file digitale del tuo certificato"*, sbloccando il form di upload.
+  - Nel Dossier Amministrativo, al posto del pulsante non funzionante *"VEDI FILE"* viene visualizzato il badge disabilitato `FILE NON DISPONIBILE (CARTACEO)`.
+  - La funzione di apertura file sicura `openSignedFile` intercetta difensivamente il path `'fittizio'` prevenendo errori 404 verso il bucket Supabase Storage.
+
+
 
