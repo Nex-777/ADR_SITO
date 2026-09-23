@@ -2,6 +2,30 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-23] ingest | NESTORE — Record Personali: Whitelist 8 Esercizi, Griglia Fissa (Opz 1A), Doppio Record Corsa (Opz 2) & Focus Sovraccarico Forza (Opz 3A)
+- **Whitelist Rigida 8 Esercizi (`portal/nestore.js`)**:
+  - Limitato il calcolo e la bacheca dei PR (`calcolaRecordPersonali`) esclusivamente agli 8 movimenti autorizzati: *Panca Piana*, *Squat*, *Stacco da Terra*, *Trazioni*, *Corsa 60m*, *Corsa 100m*, *Corsa 5km*, *Corsa 10km*.
+  - Tutti gli altri esercizi presenti nello storico sessioni (es. Leg Press, Push-up, Addominali) vengono rigorosamente esclusi dai record personali.
+- **Griglia Fissa con Placeholder (Opzione 1A)**:
+  - La griglia `#nst-pr-container` renderizza sempre tutte le 8 card nell'ordine canonico stabilito.
+  - Gli esercizi privi di record mostrano una card tratteggiata `.nst-pr-empty-card` con trattini `--` e dicitura *"Nessun record"*. Il contatore in testata aggiorna dinamicamente la dicitura *"X su 8 registrati"*.
+- **Doppio Record Corsa: Zavorrata vs Corpo Libero (Opzione 2)**:
+  - Per ciascuna corsa vengono tracciati due record indipendenti: uno per il tempo a corpo libero (`peso_kg === 0`) e uno per la corsa con sovraccarico (`peso_kg > 0`).
+  - La card di corsa visualizza le righe sincronizzate `.nst-pr-run-row` (`Libero:` e `Zavorra:` con indicazione del carico `+Xkg`).
+  - Criterio di confronto cronometrico: a parità di carico vince il tempo inferiore in secondi.
+- **Gerarchia Dati Esercizi di Forza (Opzione 3A)**:
+  - Valore principale in grande: **Peso (KG)** corrispondente al puro sovraccarico (senza mai includere il peso corporeo).
+  - Riga secondaria: numero di ripetizioni e serie eseguite.
+  - Per esercizi a corpo libero (0 kg), il valore principale indica le ripetizioni e la riga secondaria specifica `Corpo libero (0 kg)`.
+- **Parser Cronometrico Avanzato & Lookahead Testuale**:
+  - Introdotte le funzioni `parseTimeToSeconds` e `formatSecondsToDisplay` per gestire formati `SS.ms`, `MM:SS`, `HH:MM:SS` e unità testuali (`min`, `sec`, `h`).
+  - Ottimizzato lo split delle note per preservare numeri decimali (es. `11.8s`) ed estrarre carichi e tempi separati da virgola.
+- **Unificazione Vista Coach**:
+  - La visualizzazione dei record personali nella dashboard Coach (`renderCoachAtletaDettaglio`) impiega ora la medesima funzione `renderPrGrid`, garantendo uniformità visuale e tecnica tra atleta e allenatore.
+- **Testing & QA (`tests/workout-pr.test.js`)**:
+  - Aggiornata e ampliata la suite di test con 19 verifiche automatizzate coprendo whitelist a 8, parsing tempi, doppio record corsa, lower-time wins, esclusione del peso corporeo dal sovraccarico e rendering griglia con placeholder.
+  - 149/149 test superati con successo in tutto il repository.
+
 ## [2026-09-23] ingest | NESTORE — Gestione Storico Allenamenti: Modifica Esercizi/Set (Opz 1B), Click Responsive (Opz 2A) & Soft-Delete con Modale Custom (Opz 3A)
 - **UI Tabella Sessioni & Routing Responsive (Opzione 2A)**:
   - Nella tabella `STORICO SESSIONI`, aggiunta la colonna `Azioni` (visibile su desktop) con icone Matita (✏️ Modifica) e Cestino (🗑️ Elimina).

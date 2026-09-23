@@ -926,18 +926,73 @@ async function renderGraficoPesiMisure() {
 // PARSER & CALCOLO RECORD PERSONALI (PR) ALLENAMENTI
 // ---------------------------------------------------------------------------
 
-function normalizeExerciseName(rawName) {
-    if (!rawName) return 'Esercizio';
+const PR_ALLOWED_EXERCISES = [
+    { key: 'panca', name: 'Panca Piana', type: 'strength' },
+    { key: 'squat', name: 'Squat', type: 'strength' },
+    { key: 'stacco', name: 'Stacco da Terra', type: 'strength' },
+    { key: 'trazioni', name: 'Trazioni', type: 'strength' },
+    { key: 'corsa_60m', name: 'Corsa 60m', type: 'running', distanceMeters: 60 },
+    { key: 'corsa_100m', name: 'Corsa 100m', type: 'running', distanceMeters: 100 },
+    { key: 'corsa_5km', name: 'Corsa 5km', type: 'running', distanceMeters: 5000 },
+    { key: 'corsa_10km', name: 'Corsa 10km', type: 'running', distanceMeters: 10000 }
+];
+
+function getCanonicalPrExercise(rawName) {
+    if (!rawName) return null;
     const clean = rawName.trim().replace(/^[-*•\s]+/, '').replace(/[:;,.]+$/, '').trim();
     const lower = clean.toLowerCase();
 
-    if (lower === 'pull' || lower === 'pull up' || lower === 'pull-up' || lower === 'pullup' || lower === 'trazioni') return 'Pull-up';
+    // 1. Corsa 60m
+    if (/^(corsa\s*60\s*m(?:etri)?|sprint\s*60\s*m(?:etri)?|60\s*m(?:etri)?|corsa\s*60)$/i.test(lower)) {
+        return PR_ALLOWED_EXERCISES[4];
+    }
+    // 2. Corsa 100m
+    if (/^(corsa\s*100\s*m(?:etri)?|sprint\s*100\s*m(?:etri)?|100\s*m(?:etri)?|corsa\s*100)$/i.test(lower)) {
+        return PR_ALLOWED_EXERCISES[5];
+    }
+    // 3. Corsa 5km
+    if (/^(corsa\s*5\s*k(?:m)?|corsa\s*5000\s*m(?:etri)?|5\s*k(?:m)?|5000\s*m(?:etri)?|corsa\s*5)$/i.test(lower)) {
+        return PR_ALLOWED_EXERCISES[6];
+    }
+    // 4. Corsa 10km
+    if (/^(corsa\s*10\s*k(?:m)?|corsa\s*10000\s*m(?:etri)?|10\s*k(?:m)?|10000\s*m(?:etri)?|corsa\s*10)$/i.test(lower)) {
+        return PR_ALLOWED_EXERCISES[7];
+    }
+
+    // 5. Panca Piana
+    if (lower === 'panca' || lower === 'panca piana' || lower === 'bench' || lower === 'bench press' || lower.startsWith('panca piana') || lower.startsWith('panca orizzontale') || lower.includes('bench press')) {
+        return PR_ALLOWED_EXERCISES[0];
+    }
+
+    // 6. Squat
+    if (lower === 'squat' || lower === 'back squat' || lower.startsWith('squat con bilanciere') || lower.startsWith('squat bilanciere') || lower === 'front squat') {
+        return PR_ALLOWED_EXERCISES[1];
+    }
+
+    // 7. Stacco da Terra
+    if (lower === 'stacco' || lower === 'stacco da terra' || lower === 'deadlift' || lower.startsWith('stacco') || lower.startsWith('stacchi')) {
+        return PR_ALLOWED_EXERCISES[2];
+    }
+
+    // 8. Trazioni
+    if (lower === 'pull' || lower === 'pull up' || lower === 'pull-up' || lower === 'pullup' || lower === 'trazioni' || lower.startsWith('trazioni') || lower === 'chin up' || lower === 'chin-up') {
+        return PR_ALLOWED_EXERCISES[3];
+    }
+
+    return null;
+}
+
+function normalizeExerciseName(rawName) {
+    if (!rawName) return 'Esercizio';
+    const canonical = getCanonicalPrExercise(rawName);
+    if (canonical) return canonical.name;
+
+    const clean = rawName.trim().replace(/^[-*•\s]+/, '').replace(/[:;,.]+$/, '').trim();
+    const lower = clean.toLowerCase();
+
     if (lower === 'push' || lower === 'push up' || lower === 'push-up' || lower === 'pushup' || lower === 'piegamenti') return 'Push-up';
-    if (lower === 'panca' || lower === 'panca piana' || lower === 'bench' || lower === 'bench press' || lower.startsWith('panca piana') || lower.startsWith('panca orizzontale') || lower.includes('bench press')) return 'Panca Piana';
-    if (lower === 'squat' || lower === 'back squat' || lower.startsWith('squat con bilanciere') || lower.startsWith('squat bilanciere')) return 'Squat';
     if (lower === 'leg press' || lower === 'pressa' || lower === 'legpress') return 'Leg Press';
     if (lower === 'addominali' || lower === 'crunch' || lower === 'sit-up' || lower === 'situp' || lower === 'abs') return 'Addominali';
-    if (lower === 'stacco' || lower === 'stacco da terra' || lower === 'deadlift' || lower.startsWith('stacco') || lower.startsWith('stacchi')) return 'Stacco da Terra';
     if (lower === 'military' || lower === 'military press' || lower === 'lento avanti' || lower === 'overhead press' || lower === 'ohp' || lower.startsWith('military')) return 'Military Press';
     if (lower === 'dip' || lower === 'dips') return 'Dip';
     if (lower === 'affondi' || lower === 'lunges') return 'Affondi';
@@ -946,24 +1001,118 @@ function normalizeExerciseName(rawName) {
     return clean.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+function parseTimeToSeconds(timeVal) {
+    if (timeVal === null || timeVal === undefined || timeVal === '') return 0;
+    if (typeof timeVal === 'number') return timeVal > 0 ? timeVal : 0;
+
+    const str = String(timeVal).trim().toLowerCase();
+    if (!str || str === '--') return 0;
+
+    // Check HH:MM:SS or HH:MM:SS.ms format (e.g. "01:25:30" or "1:25:30.5")
+    const hms = str.match(/^(\d+):([0-5]?\d):([0-5]?\d(?:\.\d+)?)$/);
+    if (hms) {
+        return parseInt(hms[1], 10) * 3600 + parseInt(hms[2], 10) * 60 + parseFloat(hms[3]);
+    }
+
+    // Check MM:SS or MM:SS.ms format (e.g. "21:40" or "09:15.5")
+    const ms = str.match(/^(\d+):([0-5]?\d(?:\.\d+)?)$/);
+    if (ms) {
+        return parseInt(ms[1], 10) * 60 + parseFloat(ms[2]);
+    }
+
+    // Check units in string, e.g. "1h 20m 15s", "21m 40s", "11.8s", "10 sec"
+    let totalSec = 0;
+    let foundUnit = false;
+
+    const hMatch = str.match(/(\d+(?:[.,]\d+)?)\s*(?:h|ore|ora)/i);
+    if (hMatch) {
+        totalSec += parseFloat(hMatch[1].replace(',', '.')) * 3600;
+        foundUnit = true;
+    }
+    const mMatch = str.match(/(\d+(?:[.,]\d+)?)\s*(?:m|min|minuti|minuto)/i);
+    if (mMatch) {
+        totalSec += parseFloat(mMatch[1].replace(',', '.')) * 60;
+        foundUnit = true;
+    }
+    const sMatch = str.match(/(\d+(?:[.,]\d+)?)\s*(?:s|sec|secondi|secondo)/i);
+    if (sMatch) {
+        totalSec += parseFloat(sMatch[1].replace(',', '.'));
+        foundUnit = true;
+    }
+
+    if (foundUnit) return totalSec;
+
+    // Plain decimal or integer string e.g. "11.8" or "11,8"
+    const cleanNum = str.replace(',', '.').replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleanNum);
+    return isNaN(num) ? 0 : num;
+}
+
+function formatSecondsToDisplay(seconds) {
+    if (!seconds || seconds <= 0) return '--';
+    if (seconds < 60) {
+        const rounded = Math.round(seconds * 100) / 100;
+        return `${rounded}s`;
+    }
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    if (mins < 60) {
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    const hours = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return `${hours}:${remMins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
 function isBetterPerformance(candidate, currentBest) {
     if (!currentBest) return true;
+    if (!candidate) return false;
+
+    const candTempo = candidate.tempo_secondi || 0;
+    const bestTempo = currentBest.tempo_secondi || 0;
+
+    // Se almeno uno ha un tempo cronometrato, è una prestazione di corsa
+    if (candTempo > 0 || bestTempo > 0) {
+        if (candTempo <= 0) return false;
+        if (bestTempo <= 0) return true;
+
+        const candPeso = candidate.peso_kg || 0;
+        const bestPeso = currentBest.peso_kg || 0;
+
+        // Se hanno lo stesso sovraccarico (entrambi 0 o stesso kg): vince il tempo più basso
+        if (candPeso === bestPeso) {
+            return candTempo < bestTempo;
+        }
+        // Se carichi diversi (es. zavorrata): vince il sovraccarico maggiore
+        return candPeso > bestPeso;
+    }
+
+    // Altrimenti è forza (peso_kg / ripetizioni / serie)
     const candPeso = candidate.peso_kg || 0;
     const bestPeso = currentBest.peso_kg || 0;
     const candReps = candidate.ripetizioni || candidate.reps || 0;
     const bestReps = currentBest.ripetizioni || currentBest.reps || 0;
+    const candSerie = candidate.serie || 1;
+    const bestSerie = currentBest.serie || 1;
 
     // Se almeno uno dei due ha un sovraccarico (> 0 kg)
     if (candPeso > 0 || bestPeso > 0) {
-        // Criterio 1: Vince il peso più alto
+        // Criterio 1: Vince il peso più alto (sovraccarico)
         if (candPeso > bestPeso) return true;
+        if (candPeso < bestPeso) return false;
+
         // Criterio 2: A parità di peso, vince chi ha più ripetizioni
-        if (candPeso === bestPeso && candReps > bestReps) return true;
-        return false;
+        if (candReps > bestReps) return true;
+        if (candReps < bestReps) return false;
+
+        // Criterio 3: A parità di ripetizioni, vince chi ha più serie
+        return candSerie > bestSerie;
     }
 
-    // Entrambi a corpo libero (peso === 0): vince chi ha più ripetizioni
-    return candReps > bestReps;
+    // Entrambi a corpo libero (peso === 0): vince chi ha più ripetizioni (poi serie)
+    if (candReps > bestReps) return true;
+    if (candReps < bestReps) return false;
+    return candSerie > bestSerie;
 }
 
 function parseExercisesFromWorkout(workout) {
@@ -1000,9 +1149,17 @@ function parseExercisesFromWorkout(workout) {
 
             for (const s of workSets) {
                 const reps = parseInt(s.ripetizioni !== undefined ? s.ripetizioni : (s.rip_completate !== undefined ? s.rip_completate : s.rip), 10) || 0;
-                const peso = parseFloat(s.peso_kg) || 0;
-                if (reps > 0) {
-                    candidateSets.push({ peso_kg: peso, ripetizioni: reps });
+                const peso = parseFloat(s.peso_kg !== undefined ? s.peso_kg : (s.sovraccarico_kg !== undefined ? s.sovraccarico_kg : 0)) || 0;
+                const rawTempo = s.tempo !== undefined ? s.tempo : (s.tempo_sec !== undefined ? s.tempo_sec : s.tempo_secondi);
+                const tempoSec = parseTimeToSeconds(rawTempo);
+
+                if (reps > 0 || tempoSec > 0) {
+                    candidateSets.push({
+                        peso_kg: peso,
+                        ripetizioni: reps,
+                        tempo_secondi: tempoSec,
+                        tempo: rawTempo ? String(rawTempo) : (tempoSec > 0 ? formatSecondsToDisplay(tempoSec) : '')
+                    });
                 }
             }
 
@@ -1013,47 +1170,103 @@ function parseExercisesFromWorkout(workout) {
 
             for (const w of warmupSets) {
                 const reps = parseInt(w.rip !== undefined ? w.rip : (w.rip_completate !== undefined ? w.rip_completate : w.ripetizioni), 10) || 0;
-                const peso = parseFloat(w.peso_kg) || 0;
-                if (reps > 0) {
-                    candidateSets.push({ peso_kg: peso, ripetizioni: reps });
+                const peso = parseFloat(w.peso_kg !== undefined ? w.peso_kg : (w.sovraccarico_kg !== undefined ? w.sovraccarico_kg : 0)) || 0;
+                const rawTempo = w.tempo !== undefined ? w.tempo : (w.tempo_sec !== undefined ? w.tempo_sec : w.tempo_secondi);
+                const tempoSec = parseTimeToSeconds(rawTempo);
+
+                if (reps > 0 || tempoSec > 0) {
+                    candidateSets.push({
+                        peso_kg: peso,
+                        ripetizioni: reps,
+                        tempo_secondi: tempoSec,
+                        tempo: rawTempo ? String(rawTempo) : (tempoSec > 0 ? formatSecondsToDisplay(tempoSec) : '')
+                    });
                 }
             }
 
             // Se non ci sono serie dettagliate, usa i valori a livello esercizio
             if (candidateSets.length === 0) {
-                const basePeso = parseFloat(ex.peso_kg) || 0;
-                const baseReps = parseInt(ex.ripetizioni || ex.reps || (ex.totale_effettivo > 0 ? ex.totale_effettivo : 1), 10);
+                const basePeso = parseFloat(ex.peso_kg !== undefined ? ex.peso_kg : (ex.sovraccarico_kg !== undefined ? ex.sovraccarico_kg : 0)) || 0;
+                const baseReps = parseInt(ex.ripetizioni || ex.reps || (ex.totale_effettivo > 0 ? ex.totale_effettivo : 0), 10) || 0;
+                const rawTempo = ex.tempo !== undefined ? ex.tempo : (ex.tempo_sec !== undefined ? ex.tempo_sec : ex.tempo_secondi);
+                const baseTempo = parseTimeToSeconds(rawTempo);
                 const baseSerie = parseInt(ex.serie || 1, 10);
                 results.push({
                     nome: normalizeExerciseName(ex.nome),
                     peso_kg: basePeso,
-                    ripetizioni: baseReps,
+                    ripetizioni: baseReps || (baseTempo > 0 ? 1 : 0),
                     serie: baseSerie,
+                    tempo_secondi: baseTempo,
+                    tempo: rawTempo ? String(rawTempo) : (baseTempo > 0 ? formatSecondsToDisplay(baseTempo) : ''),
                     data: date,
                     note: ex.note || ''
                 });
                 continue;
             }
 
-            // Trova la migliore alzata
-            let bestSet = candidateSets[0];
-            for (let j = 1; j < candidateSets.length; j++) {
-                if (isBetterPerformance(candidateSets[j], bestSet)) {
-                    bestSet = candidateSets[j];
+            const normName = normalizeExerciseName(ex.nome);
+            const canonical = getCanonicalPrExercise(normName);
+            const isRunning = canonical && canonical.type === 'running';
+
+            if (isRunning) {
+                // Separa corpo libero e zavorrato
+                const clSets = candidateSets.filter(s => (s.peso_kg || 0) === 0 && (s.tempo_secondi || 0) > 0);
+                if (clSets.length > 0) {
+                    let bestCl = clSets[0];
+                    for (let j = 1; j < clSets.length; j++) {
+                        if (isBetterPerformance(clSets[j], bestCl)) bestCl = clSets[j];
+                    }
+                    results.push({
+                        nome: normName,
+                        peso_kg: 0,
+                        ripetizioni: 1,
+                        serie: 1,
+                        tempo_secondi: bestCl.tempo_secondi,
+                        tempo: bestCl.tempo,
+                        data: date,
+                        note: ex.note || ''
+                    });
                 }
+                const zavSets = candidateSets.filter(s => (s.peso_kg || 0) > 0 && (s.tempo_secondi || 0) > 0);
+                if (zavSets.length > 0) {
+                    let bestZav = zavSets[0];
+                    for (let j = 1; j < zavSets.length; j++) {
+                        if (isBetterPerformance(zavSets[j], bestZav)) bestZav = zavSets[j];
+                    }
+                    results.push({
+                        nome: normName,
+                        peso_kg: bestZav.peso_kg,
+                        ripetizioni: 1,
+                        serie: 1,
+                        tempo_secondi: bestZav.tempo_secondi,
+                        tempo: bestZav.tempo,
+                        data: date,
+                        note: ex.note || ''
+                    });
+                }
+            } else {
+                // Esercizio di forza: trova la migliore alzata della sessione
+                let bestSet = candidateSets[0];
+                for (let j = 1; j < candidateSets.length; j++) {
+                    if (isBetterPerformance(candidateSets[j], bestSet)) {
+                        bestSet = candidateSets[j];
+                    }
+                }
+
+                // Conta quante serie sono state eseguite con la combinazione vincente
+                const matchingSetsCount = candidateSets.filter(s => s.peso_kg === bestSet.peso_kg && s.ripetizioni === bestSet.ripetizioni).length;
+
+                results.push({
+                    nome: normName,
+                    peso_kg: bestSet.peso_kg || 0,
+                    ripetizioni: bestSet.ripetizioni || 0,
+                    serie: matchingSetsCount || 1,
+                    tempo_secondi: bestSet.tempo_secondi || 0,
+                    tempo: bestSet.tempo || '',
+                    data: date,
+                    note: ex.note || ''
+                });
             }
-
-            // Conta quante serie sono state eseguite con la combinazione vincente
-            const matchingSetsCount = candidateSets.filter(s => s.peso_kg === bestSet.peso_kg && s.ripetizioni === bestSet.ripetizioni).length;
-
-            results.push({
-                nome: normalizeExerciseName(ex.nome),
-                peso_kg: bestSet.peso_kg,
-                ripetizioni: bestSet.ripetizioni,
-                serie: matchingSetsCount || 1,
-                data: date,
-                note: ex.note || ''
-            });
         }
         return results;
     }
@@ -1062,7 +1275,7 @@ function parseExercisesFromWorkout(workout) {
     const note = workout.note || '';
     if (!note || typeof note !== 'string') return results;
 
-    const sentences = note.split(/[.;\n]+/).map(s => s.trim()).filter(Boolean);
+    const sentences = note.split(/\r?\n|;|\.(?:\s+|$)/).map(s => s.trim()).filter(Boolean);
 
     for (const sentence of sentences) {
         const colonIdx = sentence.indexOf(':');
@@ -1073,6 +1286,52 @@ function parseExercisesFromWorkout(workout) {
 
             if (!isGenericKey && potentialName.length > 1) {
                 const exName = normalizeExerciseName(potentialName);
+                const canonical = getCanonicalPrExercise(exName);
+
+                if (canonical && canonical.type === 'running') {
+                    // Parsing specifico per sessioni di corsa (es. "11.8s", "10kg, 13.5s", "13.5s, 10kg", "11.8s, 10kg, 13.5s")
+                    const rawParts = rest.split(',').map(s => s.trim()).filter(Boolean);
+                    let pendingWeight = 0;
+
+                    for (let i = 0; i < rawParts.length; i++) {
+                        const part = rawParts[i];
+                        if (/(fallit|fail|non\s*chius)/i.test(part)) continue;
+
+                        const mWeight = part.match(/(?:\+)?(\d+(?:[.,]\d+)?)\s*kg/i);
+                        const weightInPart = mWeight ? parseFloat(mWeight[1].replace(',', '.')) : null;
+
+                        const partNoWeight = part.replace(/(?:\+)?\d+(?:[.,]\d+)?\s*kg(?:[\w\s]*)?/i, '').trim();
+                        const mTime = partNoWeight.match(/(\d+:\d+(?::\d+)?(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:s|sec|secondi|m|min|minuti|h|ore)(?:\s*\d+(?:[.,]\d+)?\s*(?:s|sec|secondi)?)?|\d+(?:[.,]\d+)?)/i);
+                        const timeSec = mTime ? parseTimeToSeconds(mTime[1]) : 0;
+
+                        if (timeSec > 0) {
+                            const finalWeight = weightInPart !== null ? weightInPart : pendingWeight;
+                            results.push({
+                                nome: canonical.name,
+                                serie: 1,
+                                ripetizioni: 1,
+                                peso_kg: finalWeight,
+                                tempo_secondi: timeSec,
+                                tempo: formatSecondsToDisplay(timeSec),
+                                data: date
+                            });
+                            pendingWeight = 0;
+                        } else if (weightInPart !== null) {
+                            const remainingHasTime = rawParts.slice(i + 1).some(p => {
+                                const pNoW = p.replace(/(?:\+)?\d+(?:[.,]\d+)?\s*kg(?:[\w\s]*)?/i, '').trim();
+                                const m = pNoW.match(/(\d+:\d+(?::\d+)?(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:s|sec|secondi|m|min|minuti|h|ore)(?:\s*\d+(?:[.,]\d+)?\s*(?:s|sec|secondi)?)?|\d+(?:[.,]\d+)?)/i);
+                                return m && parseTimeToSeconds(m[1]) > 0;
+                            });
+                            if (!remainingHasTime && results.length > 0 && results[results.length - 1].nome === canonical.name) {
+                                results[results.length - 1].peso_kg = weightInPart;
+                            } else {
+                                pendingWeight = weightInPart;
+                            }
+                        }
+                    }
+                    continue;
+                }
+
                 const sets = rest.split(',').map(s => s.trim()).filter(Boolean);
                 for (const setStr of sets) {
                     // Ignora le serie fallite
@@ -1134,9 +1393,30 @@ function parseExercisesFromWorkout(workout) {
             }
         }
 
-        // Se non ha i due punti, cerca pattern per corpo libero o serie singole
+        // Se non ha i due punti, cerca pattern per corsa o corpo libero
         const commaParts = sentence.split(',').map(s => s.trim()).filter(Boolean);
         for (const part of commaParts) {
+            // Controlla se la frase menziona una corsa
+            const mCorsa = part.match(/(?:corsa|sprint)\s*(60\s*m|100\s*m|5\s*k(?:m)?|10\s*k(?:m)?)(?:.*?in\s*|[:\s]+)([0-9:.,\s]+(?:s|sec|min|m)?)/i);
+            if (mCorsa) {
+                const canonical = getCanonicalPrExercise(`Corsa ${mCorsa[1]}`);
+                if (canonical) {
+                    const sec = parseTimeToSeconds(mCorsa[2]);
+                    if (sec > 0) {
+                        results.push({
+                            nome: canonical.name,
+                            serie: 1,
+                            ripetizioni: 1,
+                            peso_kg: 0,
+                            tempo_secondi: sec,
+                            tempo: formatSecondsToDisplay(sec),
+                            data: date
+                        });
+                        continue;
+                    }
+                }
+            }
+
             const mBw = part.match(/(?:totale\s*:?\s*)?(\d+)\s+([a-zA-Z\s\-]+)/i);
             if (mBw) {
                 const count = parseInt(mBw[1], 10);
@@ -1157,25 +1437,106 @@ function parseExercisesFromWorkout(workout) {
 }
 
 function calcolaRecordPersonali(allWorkouts) {
-    const prMap = {};
+    if (!Array.isArray(allWorkouts)) return [];
+
+    // Mappa pre-popolata con gli 8 esercizi autorizzati
+    const recordsMap = {
+        'panca': { key: 'panca', nome: 'Panca Piana', type: 'strength', peso_kg: 0, ripetizioni: 0, serie: 0, data: '', hasRecord: false },
+        'squat': { key: 'squat', nome: 'Squat', type: 'strength', peso_kg: 0, ripetizioni: 0, serie: 0, data: '', hasRecord: false },
+        'stacco': { key: 'stacco', nome: 'Stacco da Terra', type: 'strength', peso_kg: 0, ripetizioni: 0, serie: 0, data: '', hasRecord: false },
+        'trazioni': { key: 'trazioni', nome: 'Trazioni', type: 'strength', peso_kg: 0, ripetizioni: 0, serie: 0, data: '', hasRecord: false },
+        'corsa_60m': { key: 'corsa_60m', nome: 'Corsa 60m', type: 'running', corpo_libero: null, zavorrata: null, hasRecord: false },
+        'corsa_100m': { key: 'corsa_100m', nome: 'Corsa 100m', type: 'running', corpo_libero: null, zavorrata: null, hasRecord: false },
+        'corsa_5km': { key: 'corsa_5km', nome: 'Corsa 5km', type: 'running', corpo_libero: null, zavorrata: null, hasRecord: false },
+        'corsa_10km': { key: 'corsa_10km', nome: 'Corsa 10km', type: 'running', corpo_libero: null, zavorrata: null, hasRecord: false }
+    };
 
     for (const w of allWorkouts) {
         const exercises = parseExercisesFromWorkout(w);
         for (const ex of exercises) {
-            const key = ex.nome;
-            if (!prMap[key]) {
-                prMap[key] = ex;
-            } else {
-                if (isBetterPerformance(ex, prMap[key])) {
-                    prMap[key] = ex;
+            const canonical = getCanonicalPrExercise(ex.nome);
+            if (!canonical) continue; // STRICT WHITELIST: Ignora tutti gli altri esercizi
+
+            const target = recordsMap[canonical.key];
+
+            if (canonical.type === 'strength') {
+                if (!target.hasRecord) {
+                    target.peso_kg = ex.peso_kg || 0;
+                    target.ripetizioni = ex.ripetizioni || 0;
+                    target.serie = ex.serie || 1;
+                    target.data = ex.data || '';
+                    target.hasRecord = true;
+                } else {
+                    if (isBetterPerformance(ex, target)) {
+                        target.peso_kg = ex.peso_kg || 0;
+                        target.ripetizioni = ex.ripetizioni || 0;
+                        target.serie = ex.serie || 1;
+                        target.data = ex.data || '';
+                    }
                 }
+            } else if (canonical.type === 'running') {
+                const tempoSec = ex.tempo_secondi || 0;
+                if (tempoSec <= 0) continue;
+
+                const pesoKg = ex.peso_kg || 0;
+                if (pesoKg === 0) {
+                    // Corpo libero
+                    if (!target.corpo_libero) {
+                        target.corpo_libero = {
+                            tempo: ex.tempo || formatSecondsToDisplay(tempoSec),
+                            tempo_secondi: tempoSec,
+                            peso_kg: 0,
+                            data: ex.data || ''
+                        };
+                        target.hasRecord = true;
+                    } else if (tempoSec < target.corpo_libero.tempo_secondi) {
+                        target.corpo_libero = {
+                            tempo: ex.tempo || formatSecondsToDisplay(tempoSec),
+                            tempo_secondi: tempoSec,
+                            peso_kg: 0,
+                            data: ex.data || ''
+                        };
+                    }
+                } else {
+                    // Con sovraccarico / zavorrata
+                    if (!target.zavorrata) {
+                        target.zavorrata = {
+                            tempo: ex.tempo || formatSecondsToDisplay(tempoSec),
+                            tempo_secondi: tempoSec,
+                            peso_kg: pesoKg,
+                            data: ex.data || ''
+                        };
+                        target.hasRecord = true;
+                    } else {
+                        // Vince peso più alto; a parità di peso, tempo più basso
+                        if (pesoKg > target.zavorrata.peso_kg || (pesoKg === target.zavorrata.peso_kg && tempoSec < target.zavorrata.tempo_secondi)) {
+                            target.zavorrata = {
+                                tempo: ex.tempo || formatSecondsToDisplay(tempoSec),
+                                tempo_secondi: tempoSec,
+                                peso_kg: pesoKg,
+                                data: ex.data || ''
+                            };
+                        }
+                    }
+                }
+
+                // Campi di compatibilità
+                target.data = target.zavorrata?.data || target.corpo_libero?.data || '';
+                target.peso_kg = target.zavorrata?.peso_kg || 0;
             }
         }
     }
 
-    const prList = Object.values(prMap);
-    prList.sort((a, b) => a.nome.localeCompare(b.nome));
-    return prList;
+    return [
+        recordsMap['panca'],
+        recordsMap['squat'],
+        recordsMap['stacco'],
+        recordsMap['trazioni'],
+        recordsMap['corsa_60m'],
+        recordsMap['corsa_100m'],
+        recordsMap['corsa_5km'],
+        recordsMap['corsa_10km']
+    ];
 }
 
 async function ottieniBaseMassimaleEsercizio(nomeEsercizio) {
@@ -1272,46 +1633,125 @@ async function ottieniBaseMassimaleEsercizio(nomeEsercizio) {
     return { baseKg: massimale, fonte };
 }
 
-function renderPrGrid(prList) {
-    const container = document.getElementById('nst-pr-container');
+function renderPrGrid(prList, customContainer = null) {
+    const container = customContainer || document.getElementById('nst-pr-container');
     const prCountEl = document.getElementById('nst-pr-count');
-    if (prCountEl) {
-        prCountEl.textContent = `${prList.length} eserciz${prList.length === 1 ? 'io' : 'i'}`;
+
+    if (prCountEl && Array.isArray(prList)) {
+        const recordedCount = prList.filter(p => p && p.hasRecord).length;
+        prCountEl.textContent = `${recordedCount} su 8 registrat${recordedCount === 1 ? 'o' : 'i'}`;
     }
+
     if (!container) return;
     container.innerHTML = '';
 
-    if (prList.length === 0) {
+    if (!Array.isArray(prList) || prList.length === 0) {
         container.innerHTML = `<div class="nst-pr-empty" style="grid-column: 1 / -1; padding: 20px; text-align: center; color: var(--nst-text-muted); font-size: 11px; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">Nessun esercizio rilevato nello storico sessioni.</div>`;
         return;
     }
 
     for (const pr of prList) {
+        if (!pr) continue;
         const card = document.createElement('div');
-        card.className = 'nst-pr-card';
 
-        let bestValHtml = '';
-        let subValHtml = '';
+        if (pr.type === 'strength') {
+            if (!pr.hasRecord) {
+                // Placeholder card per forza non registrata
+                card.className = 'nst-pr-card nst-pr-empty-card';
+                card.innerHTML = `
+                    <div class="nst-pr-exercise-name" title="${escapeHtml(pr.nome)}">${escapeHtml(pr.nome)}</div>
+                    <div class="nst-pr-card-body">
+                        <div class="nst-pr-best-val" style="color: #64748b;">--</div>
+                        <div class="nst-pr-sub-val" style="color: #64748b;">Nessun record</div>
+                    </div>
+                    <div class="nst-pr-card-footer">
+                        <span>RECORD</span>
+                        <span style="color:#64748b;">--/--/--</span>
+                    </div>
+                `;
+            } else {
+                card.className = 'nst-pr-card';
+                let bestValHtml = '';
+                let subValHtml = '';
 
-        if (pr.peso_kg > 0) {
-            bestValHtml = `${pr.peso_kg} <span style="font-size:11px;">KG</span>`;
-            subValHtml = `${pr.ripetizioni} rep${pr.ripetizioni > 1 ? 's' : ''}${pr.serie > 1 ? ` (${pr.serie} serie)` : ''}`;
-        } else {
-            bestValHtml = `${pr.ripetizioni} <span style="font-size:11px;">REP</span>`;
-            subValHtml = `Corpo libero`;
+                if (pr.peso_kg > 0) {
+                    bestValHtml = `${pr.peso_kg} <span style="font-size:11px;">KG</span>`;
+                    subValHtml = `${pr.ripetizioni} rep${pr.ripetizioni > 1 ? 's' : ''}${pr.serie > 1 ? ` (${pr.serie} serie)` : ''}`;
+                } else {
+                    bestValHtml = `${pr.ripetizioni} <span style="font-size:11px;">REP</span>`;
+                    subValHtml = `Corpo libero (0 kg)`;
+                }
+
+                card.innerHTML = `
+                    <div class="nst-pr-exercise-name" title="${escapeHtml(pr.nome)}">${escapeHtml(pr.nome)}</div>
+                    <div class="nst-pr-card-body">
+                        <div class="nst-pr-best-val">${bestValHtml}</div>
+                        <div class="nst-pr-sub-val">${escapeHtml(subValHtml)}</div>
+                    </div>
+                    <div class="nst-pr-card-footer">
+                        <span>RECORD</span>
+                        <span style="color:#cbd5e1; font-weight:600;">${formatDateWithYear(pr.data)}</span>
+                    </div>
+                `;
+            }
+        } else if (pr.type === 'running') {
+            if (!pr.hasRecord) {
+                // Placeholder card per corsa non registrata
+                card.className = 'nst-pr-card nst-pr-empty-card';
+                card.innerHTML = `
+                    <div class="nst-pr-exercise-name" title="${escapeHtml(pr.nome)}">${escapeHtml(pr.nome)}</div>
+                    <div class="nst-pr-card-body">
+                        <div class="nst-pr-run-row">
+                            <span class="nst-pr-run-label">Libero:</span>
+                            <span class="nst-pr-run-val nst-empty">--</span>
+                        </div>
+                        <div class="nst-pr-run-row">
+                            <span class="nst-pr-run-label">Zavorra:</span>
+                            <span class="nst-pr-run-val nst-empty">--</span>
+                        </div>
+                    </div>
+                    <div class="nst-pr-card-footer">
+                        <span>RECORD</span>
+                        <span style="color:#64748b;">--/--/--</span>
+                    </div>
+                `;
+            } else {
+                card.className = 'nst-pr-card';
+                const cl = pr.corpo_libero;
+                const zav = pr.zavorrata;
+
+                const clValHtml = cl ? `${escapeHtml(cl.tempo)}` : `<span class="nst-empty">--</span>`;
+                const zavValHtml = zav ? `${escapeHtml(zav.tempo)} <span style="font-size:9.5px; font-weight:600; color:#94a3b8;">(+${zav.peso_kg}kg)</span>` : `<span class="nst-empty">--</span>`;
+
+                let dateFooter = '--/--/--';
+                if (cl && zav) {
+                    dateFooter = `${formatDateWithYear(cl.data)} | ${formatDateWithYear(zav.data)}`;
+                } else if (cl) {
+                    dateFooter = formatDateWithYear(cl.data);
+                } else if (zav) {
+                    dateFooter = formatDateWithYear(zav.data);
+                }
+
+                card.innerHTML = `
+                    <div class="nst-pr-exercise-name" title="${escapeHtml(pr.nome)}">${escapeHtml(pr.nome)}</div>
+                    <div class="nst-pr-card-body">
+                        <div class="nst-pr-run-row" title="${cl ? `Corpo libero: ${cl.tempo} (${formatDateWithYear(cl.data)})` : 'Nessun record a corpo libero'}">
+                            <span class="nst-pr-run-label">Libero:</span>
+                            <span class="nst-pr-run-val">${clValHtml}</span>
+                        </div>
+                        <div class="nst-pr-run-row" title="${zav ? `Zavorrata (+${zav.peso_kg}kg): ${zav.tempo} (${formatDateWithYear(zav.data)})` : 'Nessun record con sovraccarico'}">
+                            <span class="nst-pr-run-label">Zavorra:</span>
+                            <span class="nst-pr-run-val">${zavValHtml}</span>
+                        </div>
+                    </div>
+                    <div class="nst-pr-card-footer">
+                        <span>RECORD</span>
+                        <span style="color:#cbd5e1; font-weight:600; font-size: 8.5px;">${dateFooter}</span>
+                    </div>
+                `;
+            }
         }
 
-        card.innerHTML = `
-            <div class="nst-pr-exercise-name" title="${escapeHtml(pr.nome)}">${escapeHtml(pr.nome)}</div>
-            <div class="nst-pr-card-body">
-                <div class="nst-pr-best-val">${bestValHtml}</div>
-                <div class="nst-pr-sub-val">${escapeHtml(subValHtml)}</div>
-            </div>
-            <div class="nst-pr-card-footer">
-                <span>RECORD</span>
-                <span style="color:#cbd5e1; font-weight:600;">${formatDateWithYear(pr.data)}</span>
-            </div>
-        `;
         container.appendChild(card);
     }
 }
@@ -3957,29 +4397,7 @@ async function caricaDatiAtletaPerCoach(atletaId) {
         if (allData && allData.length > 0) {
             const records = calcolaRecordPersonali(allData);
             if (prGrid) {
-                const keys = Object.keys(records);
-                if (keys.length > 0) {
-                    prGrid.innerHTML = keys.map(k => {
-                        const rec = records[k];
-                        const bestValStr = rec.tipo === 'carico' ? `${rec.peso} kg` : `${rec.ripetizioni} reps`;
-                        const subValStr = rec.tipo === 'carico' ? `(${rec.ripetizioni} reps)` : '(corpo libero)';
-                        return `
-                            <div class="nst-pr-card">
-                                <div class="nst-pr-exercise-name" title="${escapeHtml(k)}">${escapeHtml(k)}</div>
-                                <div class="nst-pr-card-body">
-                                    <div class="nst-pr-best-val">${bestValStr}</div>
-                                    <div class="nst-pr-sub-val">${subValStr}</div>
-                                </div>
-                                <div class="nst-pr-card-footer">
-                                    <span>${formatDate(rec.data)}</span>
-                                    <span>⚡ PR</span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    prGrid.innerHTML = '<div style="color:var(--nst-text-muted); font-size:12px;">Nessun esercizio strutturato rilevato.</div>';
-                }
+                renderPrGrid(records, prGrid);
             }
 
             if (allTbody) {
@@ -8216,6 +8634,11 @@ window.normalizeExerciseName = normalizeExerciseName;
 window.isBetterPerformance = isBetterPerformance;
 window.parseExercisesFromWorkout = parseExercisesFromWorkout;
 window.calcolaRecordPersonali = calcolaRecordPersonali;
+window.renderPrGrid = renderPrGrid;
+window.parseTimeToSeconds = parseTimeToSeconds;
+window.formatSecondsToDisplay = formatSecondsToDisplay;
+window.PR_ALLOWED_EXERCISES = PR_ALLOWED_EXERCISES;
+window.getCanonicalPrExercise = getCanonicalPrExercise;
 window.salvaAltezzaRapida = salvaAltezzaRapida;
 window.modificaAltezzaPrompt = modificaAltezzaPrompt;
 window.caricaSchedaAtletaUI = caricaSchedaAtletaUI;
@@ -8307,6 +8730,11 @@ if (typeof module !== 'undefined' && module.exports) {
         isBetterPerformance,
         parseExercisesFromWorkout,
         calcolaRecordPersonali,
+        renderPrGrid,
+        parseTimeToSeconds,
+        formatSecondsToDisplay,
+        PR_ALLOWED_EXERCISES,
+        getCanonicalPrExercise,
         salvaAltezzaRapida,
         modificaAltezzaPrompt,
         modificaTargetCalorie,

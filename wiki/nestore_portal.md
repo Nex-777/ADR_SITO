@@ -389,6 +389,31 @@ Riorganizza il flusso dei programmi Forza in due fasi concettualmente separate e
    - Badge visivo evidenziato nella schermata di salvataggio (`#nst-ibrido-esito-badge`) con indicazioni sul mantenimento o incremento del carico.
    - Persistenza in `nestore_allenamenti.scheda_dati` con `esito_globale`, `serie_target`, `rip_target`, `peso_target_kg`, `serie_effettive` e alimentazione della bacheca PR.
 
+### 9.9. Bacheca Record Personali (PR) — Griglia Fissa a 8 Esercizi & Corsa Zavorrata vs Corpo Libero (v1.05.66)
+Introdotta nella versione **1.05.66**:
+Riforma organica della bacheca dei Record Personali (`RECORD PERSONALI (ALL-TIME)`) visibile nella sezione Allenamenti dell'atleta e nella vista Coach:
+1. **Whitelist Rigida a 8 Esercizi Canonici**:
+   - Vengono tracciati e mostrati **esclusivamente** i record per 8 movimenti ufficiali:
+     - **Forza**: *Panca Piana*, *Squat*, *Stacco da Terra*, *Trazioni*.
+     - **Corsa**: *Corsa 60m*, *Corsa 100m*, *Corsa 5km*, *Corsa 10km*.
+   - Qualsiasi altro esercizio presente nei log o nelle note (es. Leg Press, Push-up, Addominali, Dip) viene escluso dal calcolo dei PR.
+2. **Griglia Fissa con Placeholder (Opzione 1A)**:
+   - La griglia mostra sempre e costantemente tutte le 8 card nell'ordine canonico stabilito.
+   - Se un esercizio non ha ancora un record registrato, viene renderizzata una card placeholder stilizzata (`.nst-pr-empty-card`) con valori tratteggiati (`--`), stato *"Nessun record"* e contatore KPI dinamico (*"X su 8 registrati"*).
+3. **Doppio Record per la Corsa (Opzione 2)**:
+   - Per ciascuna distanza di corsa (60m, 100m, 5km, 10km) vengono tracciati **due record distinti**:
+     - **Corpo Libero** (`peso_kg === 0`): miglior tempo in secondi (vince il tempo più basso).
+     - **Con Sovraccarico / Zavorrata** (`peso_kg > 0`): carico di zavorra e miglior tempo associato (vince il carico maggiore; a parità di carico vince il tempo più basso).
+   - Card a due righe sincronizzate (`.nst-pr-run-row`) con label `Libero:` e `Zavorra:`.
+4. **Gerarchia Dati per la Forza (Opzione 3A)**:
+   - Valore grande primario: **Peso Sovraccarico in KG** (es. `125 KG`).
+   - Riga secondaria: **Ripetizioni e Serie** (es. `1 rep (1 serie)`).
+   - Se l'esercizio è svolto a corpo libero (0 kg di sovraccarico), il valore grande espone le ripetizioni con la dicitura esplicita `Corpo libero (0 kg)`.
+5. **Regola del Sovraccarico Puro**:
+   - Per peso si intende rigorosamente solo ed esclusivamente il carico aggiunto (zavorra, bilanciere o dischi), senza mai sommare il peso corporeo dell'atleta (es. 10 kg di zavorra su corsa o trazioni = 10 kg registrati).
+6. **Parser Cronometrico Multi-Formato & Decimale**:
+   - Funzioni dedicate `parseTimeToSeconds` e `formatSecondsToDisplay` per estrarre e formattare tempi da stringhe `11.8s`, `21:40`, `01:05:20`, `22m 15s`, preservando i decimali con lookahead sicuro sul parsing testuale.
+
 ---
 
 ## 10. Related Concept Pages

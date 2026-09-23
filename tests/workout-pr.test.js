@@ -30,6 +30,11 @@ const {
     parseExercisesFromWorkout,
     calcolaRecordPersonali,
     formatDateWithYear,
+    parseTimeToSeconds,
+    formatSecondsToDisplay,
+    renderPrGrid,
+    PR_ALLOWED_EXERCISES,
+    getCanonicalPrExercise,
     apriDettaglioAllenamentoModal,
     chiudiDettaglioAllenamentoModal,
     setCurrentAllenamentiData
@@ -103,7 +108,7 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
             const exercises = parseExercisesFromWorkout(workout);
             expect(exercises.length).toBe(3);
 
-            const pull = exercises.find(e => e.nome === 'Pull-up');
+            const pull = exercises.find(e => e.nome === 'Trazioni');
             expect(pull).toBeDefined();
             expect(pull.ripetizioni).toBe(50);
             expect(pull.peso_kg).toBe(0);
@@ -128,14 +133,14 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
 
             const exercises = parseExercisesFromWorkout(workout);
             expect(exercises.length).toBe(1);
-            expect(exercises[0].nome).toBe('Stacco da Terra');
+            expect(exercises[0].nome === 'Stacco da Terra').toBe(true);
             expect(exercises[0].peso_kg).toBe(190);
             expect(exercises[0].ripetizioni).toBe(3);
         });
     });
 
-    describe('calcolaRecordPersonali (All-Time PR Aggregator)', () => {
-        it('calculates the exact all-time PRs across multiple sessions', () => {
+    describe('calcolaRecordPersonali (Whitelist 8 Esercizi)', () => {
+        it('calculates the exact all-time PRs for only the 8 whitelisted exercises', () => {
             const workouts = [
                 {
                     data_allenamento: '2026-09-09',
@@ -150,36 +155,40 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
             ];
 
             const prs = calcolaRecordPersonali(workouts);
+            expect(prs.length).toBe(8);
+
             const prMap = Object.fromEntries(prs.map(p => [p.nome, p]));
 
             // Panca: best is 1x110kg on 2026-09-09
             expect(prMap['Panca Piana']).toBeDefined();
+            expect(prMap['Panca Piana'].hasRecord).toBe(true);
             expect(prMap['Panca Piana'].peso_kg).toBe(110);
             expect(prMap['Panca Piana'].ripetizioni).toBe(1);
             expect(prMap['Panca Piana'].data).toBe('2026-09-09');
 
-            // Leg Press: best is 180kg x 10 reps
-            expect(prMap['Leg Press']).toBeDefined();
-            expect(prMap['Leg Press'].peso_kg).toBe(180);
-            expect(prMap['Leg Press'].ripetizioni).toBe(10);
-
             // Squat: 200 reps on 2026-09-11
             expect(prMap['Squat']).toBeDefined();
+            expect(prMap['Squat'].hasRecord).toBe(true);
             expect(prMap['Squat'].peso_kg).toBe(0);
             expect(prMap['Squat'].ripetizioni).toBe(200);
             expect(prMap['Squat'].data).toBe('2026-09-11');
 
-            // Pull-up: 50 reps
-            expect(prMap['Pull-up']).toBeDefined();
-            expect(prMap['Pull-up'].ripetizioni).toBe(50);
+            // Trazioni: 50 reps
+            expect(prMap['Trazioni']).toBeDefined();
+            expect(prMap['Trazioni'].hasRecord).toBe(true);
+            expect(prMap['Trazioni'].ripetizioni).toBe(50);
 
-            // Push-up: 100 reps
-            expect(prMap['Push-up']).toBeDefined();
-            expect(prMap['Push-up'].ripetizioni).toBe(100);
+            // Excluded non-whitelisted exercises MUST NOT be present in PR list
+            expect(prMap['Leg Press']).toBeUndefined();
+            expect(prMap['Push-up']).toBeUndefined();
+            expect(prMap['Addominali']).toBeUndefined();
 
-            // Addominali: 50 reps
-            expect(prMap['Addominali']).toBeDefined();
-            expect(prMap['Addominali'].ripetizioni).toBe(50);
+            // Unrecorded whitelisted exercises remain in grid as empty placeholders
+            expect(prMap['Stacco da Terra'].hasRecord).toBe(false);
+            expect(prMap['Corsa 60m'].hasRecord).toBe(false);
+            expect(prMap['Corsa 100m'].hasRecord).toBe(false);
+            expect(prMap['Corsa 5km'].hasRecord).toBe(false);
+            expect(prMap['Corsa 10km'].hasRecord).toBe(false);
         });
     });
 
@@ -354,6 +363,184 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
             // Close modal
             chiudiDettaglioAllenamentoModal();
             expect(modalEl.classList.contains('nst-hidden')).toBe(true);
+
+            global.document.getElementById = origGetById;
+        });
+    });
+
+    describe('Running Time Parsers & Helpers', () => {
+        it('correctly parses running time strings into seconds', () => {
+            expect(parseTimeToSeconds('11.8s')).toBe(11.8);
+            expect(parseTimeToSeconds('11.8 sec')).toBe(11.8);
+            expect(parseTimeToSeconds('21:40')).toBe(1300);
+            expect(parseTimeToSeconds('01:05:20')).toBe(3920);
+            expect(parseTimeToSeconds('22m 15s')).toBe(1335);
+            expect(parseTimeToSeconds('7.5')).toBe(7.5);
+            expect(parseTimeToSeconds('')).toBe(0);
+        });
+
+        it('formats seconds into human readable running times', () => {
+            expect(formatSecondsToDisplay(11.8)).toBe('11.8s');
+            expect(formatSecondsToDisplay(1300)).toBe('21:40');
+            expect(formatSecondsToDisplay(3920)).toBe('1:05:20');
+            expect(formatSecondsToDisplay(0)).toBe('--');
+        });
+    });
+
+    describe('Running PR Dual Tracking (Corpo Libero vs Zavorrata)', () => {
+        it('tracks both bodyweight and weighted PRs separately for running exercises', () => {
+            const workouts = [
+                {
+                    data_allenamento: '2026-09-10',
+                    scheda_dati: [],
+                    note: 'Corsa 100m: 11.8s' // Corpo libero
+                },
+                {
+                    data_allenamento: '2026-09-12',
+                    scheda_dati: [],
+                    note: 'Corsa 100m: 10kg, 13.5s' // Zavorrata (+10kg sovraccarico)
+                }
+            ];
+
+            const prs = calcolaRecordPersonali(workouts);
+            const prMap = Object.fromEntries(prs.map(p => [p.nome, p]));
+
+            const run100 = prMap['Corsa 100m'];
+            expect(run100).toBeDefined();
+            expect(run100.hasRecord).toBe(true);
+
+            // Both records exist
+            expect(run100.corpo_libero).toBeDefined();
+            expect(run100.corpo_libero.tempo_secondi).toBe(11.8);
+            expect(run100.corpo_libero.tempo).toBe('11.8s');
+            expect(run100.corpo_libero.peso_kg).toBe(0);
+            expect(run100.corpo_libero.data).toBe('2026-09-10');
+
+            expect(run100.zavorrata).toBeDefined();
+            expect(run100.zavorrata.tempo_secondi).toBe(13.5);
+            expect(run100.zavorrata.tempo).toBe('13.5s');
+            expect(run100.zavorrata.peso_kg).toBe(10);
+            expect(run100.zavorrata.data).toBe('2026-09-12');
+        });
+
+        it('updates running PR when a lower time is achieved (Lower Time Wins)', () => {
+            const workouts = [
+                {
+                    data_allenamento: '2026-09-10',
+                    scheda_dati: [],
+                    note: 'Corsa 5km: 22:30'
+                },
+                {
+                    data_allenamento: '2026-09-15',
+                    scheda_dati: [],
+                    note: 'Corsa 5km: 21:40' // Faster time
+                },
+                {
+                    data_allenamento: '2026-09-18',
+                    scheda_dati: [],
+                    note: 'Corsa 5km: 23:10' // Slower time, should NOT overwrite
+                }
+            ];
+
+            const prs = calcolaRecordPersonali(workouts);
+            const prMap = Object.fromEntries(prs.map(p => [p.nome, p]));
+
+            const run5k = prMap['Corsa 5km'];
+            expect(run5k.hasRecord).toBe(true);
+            expect(run5k.corpo_libero.tempo_secondi).toBe(1300); // 21:40
+            expect(run5k.corpo_libero.tempo).toBe('21:40');
+            expect(run5k.corpo_libero.data).toBe('2026-09-15');
+        });
+
+        it('never counts athlete bodyweight into overload (sovraccarico only)', () => {
+            const workout = {
+                data_allenamento: '2026-09-20',
+                scheda_dati: [
+                    {
+                        nome: 'Corsa 60m',
+                        sovraccarico_kg: 10,
+                        tempo: '8.2s'
+                    }
+                ]
+            };
+
+            const prs = calcolaRecordPersonali([workout]);
+            const run60 = prs.find(p => p.nome === 'Corsa 60m');
+
+            expect(run60.zavorrata.peso_kg).toBe(10); // Exactly 10kg overload, NOT 70+10kg
+            expect(run60.corpo_libero).toBeNull();
+        });
+    });
+
+    describe('renderPrGrid with Placeholders & Dual Running Layout', () => {
+        it('renders exactly 8 cards with empty placeholders and dual running rows', () => {
+            const container = {
+                innerHTML: '',
+                children: [],
+                appendChild(el) {
+                    this.children.push(el);
+                }
+            };
+            const countEl = { textContent: '' };
+
+            const origGetById = global.document.getElementById;
+            global.document.getElementById = (id) => {
+                if (id === 'nst-pr-container') return container;
+                if (id === 'nst-pr-count') return countEl;
+                return origGetById ? origGetById(id) : null;
+            };
+
+            // Call renderPrGrid with 1 strength record and 1 running record
+            const mockPrs = [
+                { key: 'panca', nome: 'Panca Piana', type: 'strength', peso_kg: 125, ripetizioni: 1, serie: 1, data: '2026-09-21', hasRecord: true },
+                { key: 'squat', nome: 'Squat', type: 'strength', peso_kg: 0, ripetizioni: 0, serie: 0, data: '', hasRecord: false },
+                { key: 'stacco', nome: 'Stacco da Terra', type: 'strength', peso_kg: 0, ripetizioni: 0, serie: 0, data: '', hasRecord: false },
+                { key: 'trazioni', nome: 'Trazioni', type: 'strength', peso_kg: 0, ripetizioni: 0, serie: 0, data: '', hasRecord: false },
+                { key: 'corsa_60m', nome: 'Corsa 60m', type: 'running', corpo_libero: null, zavorrata: null, hasRecord: false },
+                {
+                    key: 'corsa_100m',
+                    nome: 'Corsa 100m',
+                    type: 'running',
+                    corpo_libero: { tempo: '11.8s', tempo_secondi: 11.8, peso_kg: 0, data: '2026-09-10' },
+                    zavorrata: { tempo: '13.5s', tempo_secondi: 13.5, peso_kg: 10, data: '2026-09-12' },
+                    hasRecord: true
+                },
+                { key: 'corsa_5km', nome: 'Corsa 5km', type: 'running', corpo_libero: null, zavorrata: null, hasRecord: false },
+                { key: 'corsa_10km', nome: 'Corsa 10km', type: 'running', corpo_libero: null, zavorrata: null, hasRecord: false }
+            ];
+
+            renderPrGrid(mockPrs, container);
+
+            expect(container.children.length).toBe(8);
+            expect(countEl.textContent).toBe('2 su 8 registrati');
+
+            // 1. Panca Piana (Recorded Strength)
+            const pancaCard = container.children[0];
+            expect(pancaCard.className).toBe('nst-pr-card');
+            expect(pancaCard.innerHTML).toContain('125 <span style="font-size:11px;">KG</span>');
+            expect(pancaCard.innerHTML).toContain('1 rep');
+            expect(pancaCard.innerHTML).toContain('21/09/26');
+
+            // 2. Squat (Empty Placeholder Strength)
+            const squatCard = container.children[1];
+            expect(squatCard.className).toContain('nst-pr-empty-card');
+            expect(squatCard.innerHTML).toContain('--');
+            expect(squatCard.innerHTML).toContain('Nessun record');
+
+            // 6. Corsa 100m (Recorded Running with both Bodyweight & Ballast)
+            const corsaCard = container.children[5];
+            expect(corsaCard.className).toBe('nst-pr-card');
+            expect(corsaCard.innerHTML).toContain('Libero:');
+            expect(corsaCard.innerHTML).toContain('11.8s');
+            expect(corsaCard.innerHTML).toContain('Zavorra:');
+            expect(corsaCard.innerHTML).toContain('13.5s');
+            expect(corsaCard.innerHTML).toContain('(+10kg)');
+
+            // 7. Corsa 5km (Empty Placeholder Running)
+            const corsa5kCard = container.children[6];
+            expect(corsa5kCard.className).toContain('nst-pr-empty-card');
+            expect(corsa5kCard.innerHTML).toContain('Libero:');
+            expect(corsa5kCard.innerHTML).toContain('Zavorra:');
 
             global.document.getElementById = origGetById;
         });
