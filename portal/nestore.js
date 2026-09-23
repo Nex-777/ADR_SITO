@@ -1773,192 +1773,6 @@ function setCurrentAllenamentiData(data) {
     currentAllenamentiData = Array.isArray(data) ? data : [];
 }
 
-function apriDettaglioAllenamentoModal(workoutId) {
-    const modal = document.getElementById('nst-modal-dettaglio-allenamento');
-    const body = document.getElementById('nst-modal-dettaglio-body');
-    const titolo = document.getElementById('nst-modal-dettaglio-titolo');
-    if (!modal || !body) return;
-
-    const workout = (currentAllenamentiData || []).find(w => String(w.id) === String(workoutId));
-    if (!workout) return;
-
-    if (titolo) {
-        titolo.textContent = `${(workout.corso_disciplina || 'SESSIONE').toUpperCase()} - ${formatDateWithYear(workout.data_allenamento)}`;
-    }
-
-    let scheda = workout.scheda_dati;
-    if (typeof scheda === 'string') {
-        try { scheda = JSON.parse(scheda); } catch (e) { scheda = null; }
-    }
-
-    let esitoGlobale = scheda?.esito_globale || '';
-    let esitoColor = 'var(--nst-cyan)';
-    if (esitoGlobale === 'SUPERATA') esitoColor = 'var(--nst-lime)';
-    else if (esitoGlobale === 'PARZIALE') esitoColor = 'var(--nst-amber)';
-
-    let html = `
-        <div class="nst-session-meta-grid">
-            <div class="nst-session-meta-item">
-                <span class="nst-session-meta-label">DATA</span>
-                <span class="nst-session-meta-val">${formatDateWithYear(workout.data_allenamento)}</span>
-            </div>
-            <div class="nst-session-meta-item">
-                <span class="nst-session-meta-label">DISCIPLINA</span>
-                <span class="nst-session-meta-val" style="color: var(--nst-lime);">${escapeHtml(workout.corso_disciplina || 'Workout')}</span>
-            </div>
-            <div class="nst-session-meta-item">
-                <span class="nst-session-meta-label">DURATA</span>
-                <span class="nst-session-meta-val">${workout.durata_minuti ? workout.durata_minuti + ' min' : '-'}</span>
-            </div>
-            <div class="nst-session-meta-item">
-                <span class="nst-session-meta-label">RPE FATICA</span>
-                <span class="nst-session-meta-val">${workout.rpe_fatica ? workout.rpe_fatica + '/10' : '-'}</span>
-            </div>
-            ${esitoGlobale ? `
-                <div class="nst-session-meta-item">
-                    <span class="nst-session-meta-label">ESITO</span>
-                    <span class="nst-session-meta-val" style="color: ${esitoColor}; font-family: 'Orbitron', monospace;">${esitoGlobale}</span>
-                </div>
-            ` : ''}
-        </div>
-    `;
-
-    if (workout.note && workout.note.trim()) {
-        html += `
-            <div class="nst-session-note-box">
-                <strong style="color: var(--nst-cyan); font-size: 11px; display: block; margin-bottom: 4px;">NOTE SEDUTA:</strong>
-                <div>${escapeHtml(workout.note)}</div>
-            </div>
-        `;
-    }
-
-    // Esercizi
-    const esercizi = Array.isArray(scheda) ? scheda : (scheda?.esercizi || []);
-    if (esercizi && esercizi.length > 0) {
-        html += `<div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--nst-lime); margin-bottom: 10px; letter-spacing: 0.5px;">ESERCIZI SVOLTI</div>`;
-        
-        esercizi.forEach((ex, idx) => {
-            let exEsitoColor = 'var(--nst-cyan)';
-            if (ex.esito === 'SUPERATA') exEsitoColor = 'var(--nst-lime)';
-            else if (ex.esito === 'PARZIALE') exEsitoColor = 'var(--nst-amber)';
-
-            html += `
-                <div class="nst-session-ex-card">
-                    <div class="nst-session-ex-header">
-                        <div class="nst-session-ex-title">
-                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-lime);">fitness_center</span>
-                            <span>${escapeHtml(ex.nome || `Esercizio ${idx + 1}`)}</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            ${ex.target_originario ? `<span style="font-size: 11px; color: var(--nst-text-muted);">Target: ${escapeHtml(ex.target_originario)}</span>` : ''}
-                            ${ex.esito ? `<span style="color: ${exEsitoColor}; font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700; padding: 2px 6px; background: rgba(255,255,255,0.04); border-radius: 4px;">${ex.esito}</span>` : ''}
-                        </div>
-                    </div>
-            `;
-
-            // Riscaldamento / Rampa (se presente)
-            const riscaldamento = ex.riscaldamento_effettivo || [];
-            if (riscaldamento.length > 0) {
-                html += `
-                    <div style="margin-bottom: 10px;">
-                        <span style="font-size: 10px; font-weight: 600; color: var(--nst-amber); text-transform: uppercase;">Riscaldamento &amp; Rampa</span>
-                        <div class="nst-warmup-pill-container">
-                            ${riscaldamento.map(w => `
-                                <div class="nst-warmup-pill">
-                                    <span>${escapeHtml(w.label || `Rampa ${w.serie}`)}</span>: 
-                                    <strong>${w.rip || w.rip_completate || 0} rip @ ${w.peso_kg || 0} kg</strong>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Serie Effettive / Dettaglio
-            const serie = ex.serie_dettaglio || ex.serie_effettive || [];
-            if (serie.length > 0) {
-                html += `
-                    <table class="nst-session-subtable">
-                        <thead>
-                            <tr>
-                                <th>SERIE</th>
-                                <th>CARICO</th>
-                                <th>RIPETIZIONI</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${serie.map(s => `
-                                <tr>
-                                    <td style="font-weight: 600;">Serie ${s.serie || '-'}</td>
-                                    <td style="color: var(--nst-lime); font-weight: 600;">${s.peso_kg !== undefined ? s.peso_kg + ' kg' : (ex.peso_kg ? ex.peso_kg + ' kg' : 'Corpo libero')}</td>
-                                    <td style="font-weight: 700;">${s.ripetizioni !== undefined ? s.ripetizioni : (s.rip_completate !== undefined ? s.rip_completate : '-')} rip</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
-            } else if (ex.totale_effettivo !== undefined || ex.target_totale !== undefined) {
-                // Metcon exercise
-                html += `
-                    <div style="font-size: 12px; margin-top: 4px;">
-                        <span>Target: <strong>${ex.target_totale || ex.target_val || '-'} ${escapeHtml(ex.unita || '')}</strong></span>
-                        <span style="margin-left: 14px;">Chiuso: <strong style="color: var(--nst-lime);">${ex.totale_effettivo || '-'} ${escapeHtml(ex.unita || '')}</strong></span>
-                    </div>
-                `;
-                if (Array.isArray(ex.giri_dettaglio) && ex.giri_dettaglio.length > 0) {
-                    html += `
-                        <div class="nst-warmup-pill-container" style="margin-top: 8px;">
-                            ${ex.giri_dettaglio.map(g => `
-                                <div class="nst-warmup-pill" style="background: rgba(0, 229, 255, 0.08); border-color: rgba(0, 229, 255, 0.25); color: var(--nst-cyan);">
-                                    <span>Giro ${g.giro}</span>: <strong>${escapeHtml(String(g.effettivo))}</strong>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                }
-            } else if (ex.peso_kg || ex.ripetizioni) {
-                html += `
-                    <div style="font-size: 12px; margin-top: 4px;">
-                        <span>Serie: <strong>${ex.serie || 1}</strong></span>
-                        <span style="margin-left: 12px;">Rip: <strong>${ex.ripetizioni || '-'}</strong></span>
-                        ${ex.peso_kg ? `<span style="margin-left: 12px; color: var(--nst-lime);">Carico: <strong>${ex.peso_kg} kg</strong></span>` : ''}
-                    </div>
-                `;
-            }
-
-            html += `</div>`;
-        });
-    } else {
-        const parsed = parseExercisesFromWorkout(workout);
-        if (parsed.length > 0) {
-            html += `<div style="font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--nst-lime); margin-bottom: 10px; letter-spacing: 0.5px;">ESERCIZI RILEVATI</div>`;
-            parsed.forEach(ex => {
-                html += `
-                    <div class="nst-session-ex-card" style="padding: 10px 14px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: 600; color: #fff;">${escapeHtml(ex.nome)}</span>
-                            <span style="color: var(--nst-lime); font-weight: 700;">
-                                ${ex.peso_kg > 0 ? `${ex.peso_kg} kg` : 'Corpo libero'} 
-                                <span style="color: #cbd5e1; font-weight: normal; font-size: 11px;">(${ex.ripetizioni} rip${ex.serie > 1 ? ` x ${ex.serie} serie` : ''})</span>
-                            </span>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            html += `<div style="text-align: center; color: var(--nst-text-muted); font-size: 12px; padding: 20px;">Nessun dettaglio aggiuntivo disponibile per questa sessione.</div>`;
-        }
-    }
-
-    body.innerHTML = html;
-    modal.classList.remove('nst-hidden');
-}
-
-function chiudiDettaglioAllenamentoModal() {
-    const modal = document.getElementById('nst-modal-dettaglio-allenamento');
-    if (modal) modal.classList.add('nst-hidden');
-}
-
 async function renderGraficoAllenamenti() {
     try {
         const u = currentUser || (typeof window !== 'undefined' ? window.currentUser : null);
@@ -2021,15 +1835,9 @@ async function renderGraficoAllenamenti() {
                 const tr = document.createElement('tr');
                 tr.className = 'nst-clickable-row';
                 tr.style.cursor = 'pointer';
-                tr.title = 'Clicca per opzioni o dettaglio sessione';
+                tr.title = 'Clicca per modificare la sessione';
                 tr.onclick = (e) => {
-                    // Se su mobile (<= 768px), apri l'Action Sheet a 3 voci
-                    if (window.innerWidth <= 768) {
-                        openMobileAllenamentoActions(item.id);
-                    } else {
-                        // Su desktop (> 768px), apri direttamente il dettaglio
-                        apriDettaglioAllenamentoModal(item.id);
-                    }
+                    openEditAllenamentoModal(item.id, e);
                 };
                 tr.innerHTML = `
                     <td>${formatDateWithYear(item.data_allenamento)}</td>
@@ -2038,9 +1846,6 @@ async function renderGraficoAllenamenti() {
                     <td>${item.rpe_fatica ? item.rpe_fatica + '/10' : '-'}</td>
                     <td style="max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.note || '')}">${escapeHtml(item.note || '')}</td>
                     <td class="nst-desktop-only" style="text-align: right; white-space: nowrap;">
-                        <button type="button" class="nst-btn-icon-table" title="Modifica Allenamento" onclick="event.stopPropagation(); openEditAllenamentoModal('${item.id}', event)">
-                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-cyan);">edit</span>
-                        </button>
                         <button type="button" class="nst-btn-icon-table" title="Elimina Allenamento" onclick="event.stopPropagation(); apriModaleConfermaDeleteAllenamento('${item.id}', event)">
                             <span class="material-symbols-outlined" style="font-size: 16px; color: #ef4444;">delete</span>
                         </button>
@@ -2059,57 +1864,12 @@ async function renderGraficoAllenamenti() {
 // GESTIONE AZIONI E MODIFICA ALLENAMENTI (Storico Sessioni)
 // ---------------------------------------------------------------------------
 
-function openMobileAllenamentoActions(workoutId) {
+function eseguiEliminaDaModalEdit() {
+    const inputId = document.getElementById('nst-edit-allenamento-id');
+    const workoutId = inputId ? inputId.value : null;
     if (!workoutId) return;
-    const workout = (currentAllenamentiData || []).find(w => String(w.id) === String(workoutId));
-    if (!workout) return;
-
-    const modal = document.getElementById('nst-modal-allenamento-actions');
-    const inputId = document.getElementById('nst-action-allenamento-id');
-    const summary = document.getElementById('nst-action-allenamento-summary');
-    const meta = document.getElementById('nst-action-allenamento-meta');
-
-    if (inputId) inputId.value = workout.id;
-    if (summary) summary.textContent = `${(workout.corso_disciplina || 'WORKOUT').toUpperCase()} - ${formatDateWithYear(workout.data_allenamento)}`;
-    if (meta) {
-        const durata = workout.durata_minuti ? `${workout.durata_minuti} min` : '-- min';
-        const rpe = workout.rpe_fatica ? `RPE ${workout.rpe_fatica}/10` : 'RPE --';
-        meta.innerHTML = `<span style="color:var(--nst-lime); font-weight:600;">${durata}</span> | ${rpe}${workout.note ? `<br><span style="color:#cbd5e1; display:inline-block; margin-top:4px;">"${escapeHtml(workout.note)}"</span>` : ''}`;
-    }
-
-    if (modal) modal.classList.remove('nst-hidden');
-}
-
-function chiudiMobileAllenamentoActions() {
-    const modal = document.getElementById('nst-modal-allenamento-actions');
-    if (modal) modal.classList.add('nst-hidden');
-}
-
-function eseguiDettaglioAllenamentoDaActionSheet() {
-    const inputId = document.getElementById('nst-action-allenamento-id');
-    const workoutId = inputId ? inputId.value : null;
-    chiudiMobileAllenamentoActions();
-    if (workoutId) {
-        apriDettaglioAllenamentoModal(workoutId);
-    }
-}
-
-function eseguiModificaAllenamentoDaActionSheet() {
-    const inputId = document.getElementById('nst-action-allenamento-id');
-    const workoutId = inputId ? inputId.value : null;
-    chiudiMobileAllenamentoActions();
-    if (workoutId) {
-        openEditAllenamentoModal(workoutId);
-    }
-}
-
-function eseguiEliminaAllenamentoDaActionSheet() {
-    const inputId = document.getElementById('nst-action-allenamento-id');
-    const workoutId = inputId ? inputId.value : null;
-    chiudiMobileAllenamentoActions();
-    if (workoutId) {
-        apriModaleConfermaDeleteAllenamento(workoutId);
-    }
+    chiudiEditAllenamentoModal();
+    apriModaleConfermaDeleteAllenamento(workoutId, null);
 }
 
 // ---------------------------------------------------------------------------
@@ -8809,15 +8569,9 @@ window.escapeHtml = escapeHtml;
 window.isIscrizioneAttiva = isIscrizioneAttiva;
 window.formatDateShort = formatDateShort;
 window.formatDateWithYear = formatDateWithYear;
-window.apriDettaglioAllenamentoModal = apriDettaglioAllenamentoModal;
-window.chiudiDettaglioAllenamentoModal = chiudiDettaglioAllenamentoModal;
 window.getCurrentAllenamentiData = getCurrentAllenamentiData;
 window.setCurrentAllenamentiData = setCurrentAllenamentiData;
-window.openMobileAllenamentoActions = openMobileAllenamentoActions;
-window.chiudiMobileAllenamentoActions = chiudiMobileAllenamentoActions;
-window.eseguiDettaglioAllenamentoDaActionSheet = eseguiDettaglioAllenamentoDaActionSheet;
-window.eseguiModificaAllenamentoDaActionSheet = eseguiModificaAllenamentoDaActionSheet;
-window.eseguiEliminaAllenamentoDaActionSheet = eseguiEliminaAllenamentoDaActionSheet;
+window.eseguiEliminaDaModalEdit = eseguiEliminaDaModalEdit;
 window.apriModaleConfermaDeleteAllenamento = apriModaleConfermaDeleteAllenamento;
 window.chiudiModaleConfermaDeleteAllenamento = chiudiModaleConfermaDeleteAllenamento;
 window.eseguiSoftDeleteAllenamento = eseguiSoftDeleteAllenamento;
@@ -8836,15 +8590,9 @@ if (typeof module !== 'undefined' && module.exports) {
         isIscrizioneAttiva,
         formatDateShort,
         formatDateWithYear,
-        apriDettaglioAllenamentoModal,
-        chiudiDettaglioAllenamentoModal,
         getCurrentAllenamentiData,
         setCurrentAllenamentiData,
-        openMobileAllenamentoActions,
-        chiudiMobileAllenamentoActions,
-        eseguiDettaglioAllenamentoDaActionSheet,
-        eseguiModificaAllenamentoDaActionSheet,
-        eseguiEliminaAllenamentoDaActionSheet,
+        eseguiEliminaDaModalEdit,
         apriModaleConfermaDeleteAllenamento,
         chiudiModaleConfermaDeleteAllenamento,
         eseguiSoftDeleteAllenamento,

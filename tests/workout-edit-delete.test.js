@@ -17,15 +17,12 @@ describe('Gestione Allenamenti: Modifica Esercizi/Set (Opz 1B), Click Responsive
         expect(html).toContain('<th class="nst-desktop-only" style="text-align: right; width: 80px;">Azioni</th>');
     });
 
-    it('contiene la modale Action Sheet Mobile per gli allenamenti con 3 voci (Dettaglio, Modifica, Elimina)', () => {
-        expect(html).toContain('id="nst-modal-allenamento-actions"');
-        expect(html).toContain('id="nst-action-allenamento-id"');
-        expect(html).toContain('id="nst-action-allenamento-summary"');
-        expect(html).toContain('id="nst-action-allenamento-meta"');
-        expect(html).toContain('eseguiDettaglioAllenamentoDaActionSheet()');
-        expect(html).toContain('eseguiModificaAllenamentoDaActionSheet()');
-        expect(html).toContain('eseguiEliminaAllenamentoDaActionSheet()');
-        expect(html).toContain('chiudiMobileAllenamentoActions()');
+    it('contiene la modale di Modifica Allenamento con pulsante di eliminazione diretta (Opzione 1B & 2A)', () => {
+        expect(html).toContain('id="nst-modal-edit-allenamento"');
+        expect(html).toContain('id="nst-btn-delete-da-edit"');
+        expect(html).toContain('eseguiEliminaDaModalEdit()');
+        expect(html).not.toContain('id="nst-modal-allenamento-actions"');
+        expect(html).not.toContain('id="nst-modal-dettaglio-allenamento"');
     });
 
     it('contiene la modale di Conferma Eliminazione Allenamento custom (Opzione 3A - doppio controllo)', () => {
@@ -62,11 +59,7 @@ describe('Gestione Allenamenti: Modifica Esercizi/Set (Opz 1B), Click Responsive
     });
 
     it('esporta tutte le funzioni JavaScript necessarie per la gestione allenamenti', () => {
-        expect(js).toContain('function openMobileAllenamentoActions');
-        expect(js).toContain('function chiudiMobileAllenamentoActions');
-        expect(js).toContain('function eseguiDettaglioAllenamentoDaActionSheet');
-        expect(js).toContain('function eseguiModificaAllenamentoDaActionSheet');
-        expect(js).toContain('function eseguiEliminaAllenamentoDaActionSheet');
+        expect(js).toContain('function eseguiEliminaDaModalEdit');
         expect(js).toContain('function apriModaleConfermaDeleteAllenamento');
         expect(js).toContain('function chiudiModaleConfermaDeleteAllenamento');
         expect(js).toContain('function eseguiSoftDeleteAllenamento');
@@ -80,10 +73,10 @@ describe('Gestione Allenamenti: Modifica Esercizi/Set (Opz 1B), Click Responsive
         expect(js).toContain('function salvaModificheAllenamento');
     });
 
-    it('implementa il routing desktop vs mobile al click sulla riga (Opzione 2A)', () => {
-        // Su mobile apre l'Action Sheet, su desktop apre il Dettaglio
-        expect(js).toMatch(/window\.innerWidth\s*<=\s*768\s*\)\s*\{\s*openMobileAllenamentoActions/);
-        expect(js).toMatch(/apriDettaglioAllenamentoModal\(item\.id\)/);
+    it('implementa l\'apertura diretta della modale Edit al click sulla riga e lascia solo il cestino nella colonna azioni (Opz 1B & 2A)', () => {
+        expect(js).toMatch(/openEditAllenamentoModal\(item\.id,\s*e\)/);
+        expect(html).toContain('id="nst-btn-delete-da-edit"');
+        expect(html).toContain('eseguiEliminaDaModalEdit()');
     });
 
     it('implementa il soft-delete su nestore_allenamenti impostando attivo a false (Opzione 3A)', () => {

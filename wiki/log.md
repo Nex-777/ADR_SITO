@@ -3767,3 +3767,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
  -   A g g i u n t e   T a b e l l e   C r o n o l o g i c h e   ( S t o r i c o   R i l e v a z i o n i )   d i n a m i c h e   s o t t o   a i   g r a f i c i . 
  -   A g g i o r n a t a   M o b i l e   T a b   B a r   c o n   s c o r r i m e n t o   o r i z z o n t a l e   a   4   v o c i .  
  
+## [2026-09-23] ingest | Storico Allenamenti: Unificazione Modale Modifica & Fix Database Invictus
+- **Unificazione UX Storico (Opzioni 1B & 2A)**: Rimossa la modale statica di sola lettura (`#nst-modal-dettaglio-allenamento`) e l'Action Sheet mobile (`#nst-modal-allenamento-actions`). Il click/tap sulla riga apre direttamente l'editor completo della seduta (`#nst-modal-edit-allenamento`).
+- **Pulsante Elimina Sessione in Modifica**: Aggiunto il pulsante rosso *"Elimina Sessione"* nel footer della modale di modifica, collegato alla doppia conferma di cancellazione soft-delete (`attivo: false`).
+- **Colonna Azioni Desktop Semplificata**: Rimossa l'icona Matita; lasciata solo l'icona Cestino per la cancellazione diretta.
+- **Correzione Database Storico Invictus (Opzione 3A)**: Aggiornata la sessione Invictus del 22/09/2026 (`c02b3922-ee2a-440b-afa2-72f7add94ee4`) ripartendo il tempo totale di 39 minuti su 20 lap calcolati (01:57 a giro) e ricostruendo i 20 set di 5 pull-up, 10 push-up e 20 air squat in `scheda_dati` e nel report dettagliato in `note`.

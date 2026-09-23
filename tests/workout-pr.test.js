@@ -35,8 +35,8 @@ const {
     renderPrGrid,
     PR_ALLOWED_EXERCISES,
     getCanonicalPrExercise,
-    apriDettaglioAllenamentoModal,
-    chiudiDettaglioAllenamentoModal,
+    openEditAllenamentoModal,
+    chiudiEditAllenamentoModal,
     setCurrentAllenamentiData,
     isCalisthenicsWithOverload,
     ottieniBaseMassimaleEsercizio
@@ -286,19 +286,18 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
             expect(css).toContain('.nst-pr-section');
         });
 
-        it('confirms workout detail modal markup and CSS exist', () => {
-            expect(html).toContain('id="nst-modal-dettaglio-allenamento"');
-            expect(html).toContain('id="nst-modal-dettaglio-titolo"');
-            expect(html).toContain('id="nst-modal-dettaglio-body"');
-            expect(css).toContain('.nst-session-meta-grid');
-            expect(css).toContain('.nst-session-ex-card');
-            expect(css).toContain('.nst-warmup-pill');
+        it('confirms workout edit modal markup and CSS exist', () => {
+            expect(html).toContain('id="nst-modal-edit-allenamento"');
+            expect(html).toContain('id="nst-edit-allenamento-esercizi-container"');
+            expect(html).toContain('id="nst-btn-delete-da-edit"');
+            expect(css).toContain('.nst-edit-ex-card');
+            expect(css).toContain('.nst-edit-set-row');
             expect(css).toContain('#nst-tbody-allenamenti tr.nst-clickable-row');
         });
     });
 
-    describe('Workout Detail Modal Controller', () => {
-        it('opens, renders breakdown with warmup ramp, and closes properly', () => {
+    describe('Workout Edit Modal Controller', () => {
+        it('opens, populates fields and exercises, and closes properly', () => {
             const modalEl = {
                 classList: {
                     classes: new Set(['nst-hidden']),
@@ -307,16 +306,39 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
                     contains(c) { return this.classes.has(c); }
                 }
             };
-            const bodyEl = { innerHTML: '' };
-            const titleEl = { textContent: '' };
+            const inputs = {
+                'nst-modal-edit-allenamento': modalEl,
+                'nst-edit-allenamento-id': { value: '' },
+                'nst-edit-allenamento-data': { value: '' },
+                'nst-edit-allenamento-disciplina': { value: '' },
+                'nst-edit-allenamento-durata': { value: '' },
+                'nst-edit-allenamento-rpe': { value: '' },
+                'nst-edit-allenamento-note': { value: '' },
+                'nst-edit-allenamento-esercizi-container': {
+                    innerHTML: '',
+                    children: [],
+                    appendChild(child) { this.children.push(child); }
+                }
+            };
 
             const origGetById = global.document.getElementById;
-            global.document.getElementById = (id) => {
-                if (id === 'nst-modal-dettaglio-allenamento') return modalEl;
-                if (id === 'nst-modal-dettaglio-body') return bodyEl;
-                if (id === 'nst-modal-dettaglio-titolo') return titleEl;
-                return null;
-            };
+            const origCreateElement = global.document.createElement;
+
+            global.document.getElementById = (id) => inputs[id] || null;
+            global.document.createElement = (tag) => ({
+                setAttribute: () => {},
+                appendChild: () => {},
+                querySelector: () => ({
+                    appendChild: () => {},
+                    querySelectorAll: () => [],
+                    value: '',
+                    classList: { add: () => {}, remove: () => {} }
+                }),
+                querySelectorAll: () => [],
+                classList: { add: () => {}, remove: () => {} },
+                textContent: '',
+                innerHTML: ''
+            });
 
             const sampleWorkout = {
                 id: 'sess-valerio-123',
@@ -347,26 +369,22 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
             setCurrentAllenamentiData([sampleWorkout]);
 
             // Open modal
-            apriDettaglioAllenamentoModal('sess-valerio-123');
+            openEditAllenamentoModal('sess-valerio-123');
 
             expect(modalEl.classList.contains('nst-hidden')).toBe(false);
-            expect(titleEl.textContent).toContain('IBRIDO - FORZA 1');
-            expect(titleEl.textContent).toContain('21/09/26');
-
-            // Check rendered content in modal body
-            expect(bodyEl.innerHTML).toContain('21/09/26');
-            expect(bodyEl.innerHTML).toContain('48 min');
-            expect(bodyEl.innerHTML).toContain('9/10');
-            expect(bodyEl.innerHTML).toContain('Ottima spinta su panca');
-            expect(bodyEl.innerHTML).toContain('Panca piana con bilanciere');
-            expect(bodyEl.innerHTML).toContain('125 kg');
-            expect(bodyEl.innerHTML).toContain('110 kg');
+            expect(inputs['nst-edit-allenamento-id'].value).toBe('sess-valerio-123');
+            expect(inputs['nst-edit-allenamento-data'].value).toBe('2026-09-21');
+            expect(inputs['nst-edit-allenamento-disciplina'].value).toBe('Ibrido - Forza 1');
+            expect(inputs['nst-edit-allenamento-durata'].value).toBe(48);
+            expect(inputs['nst-edit-allenamento-rpe'].value).toBe(9);
+            expect(inputs['nst-edit-allenamento-note'].value).toBe('Ottima spinta su panca, test 125kg riuscito!');
 
             // Close modal
-            chiudiDettaglioAllenamentoModal();
+            chiudiEditAllenamentoModal();
             expect(modalEl.classList.contains('nst-hidden')).toBe(true);
 
             global.document.getElementById = origGetById;
+            global.document.createElement = origCreateElement;
         });
     });
 
