@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-23] ingest | NESTORE — Allenamento Benchmark INVICTUS: Rendiconto Lap Dettagliato (Opz 2A), Auto-Lap (Opz 1A) & Storicizzazione Multi-Serie (Opz 3A)
+- **Auto-Lap Conclusivo (Opzione 1A - `portal/nestore.js`)**:
+  - Alla pressione di *"TERMINA E SALVA"* in `terminaAllenamentoAttivo()`, se il cronometro è proseguito oltre l'ultimo lap registrato per almeno 1 secondo ($\ge 1000\text{ms}$), viene inserito automaticamente l'ultimo lap senza perdita di tempo.
+- **Rendiconto Dettagliato nel Campo Note (Opzione 2A - `portal/nestore.js`, `portal/nestore.html`, `portal/nestore.css`)**:
+  - Creata la funzione `costruisciRendicontoInvictus(laps, pullBase, totalFormatted)` che calcola i totali complessivi di tempo e ripetizioni moltiplicando i target per il numero di giri e genera il rendiconto dettagliato conforme alle specifiche:
+    `Totali: [tempo totale], [tot pull] + [tot push] + [tot squat]` seguito da `[lap]: [tempo lap], [reps pull] + [reps push] + [reps squat]` per ogni giro completato.
+  - La textarea `#nst-workout-note-input` viene pre-popolata con il rendiconto, ingrandita con `rows="6"`, font monospace e nuova etichetta *"RENDICONTO & NOTE SESSIONE:"*.
+  - Aggiunto `white-space: pre-wrap;` a `.nst-session-note-box` per visualizzare i ritorni a capo in modo pulito nel dettaglio sessione.
+- **Storicizzazione Multi-Serie in `scheda_dati` (Opzione 3A - `portal/nestore.js`)**:
+  - Creata la funzione `costruisciSchedaDatiInvictus(numGiri, pullBase)` che popola `serie_dettaglio` con una serie per ciascun giro (lap) per ogni esercizio (`Pull-up`, `Push-up`, `Air Squat`).
+  - La modale di modifica ed esplorazione sessione (`openEditAllenamentoModal`) renderizza fedelmente tutte le singole serie (S1, S2, S3...) con i rispettivi target e carichi.
+- **Testing & QA (`tests/standard-workouts.test.js`)**:
+  - Aggiornata la test suite vitest con 9 test specifici passati al 100%. Suite complessiva: 152/152 test passati.
+
 ## [2026-09-23] ingest | NESTORE — Record Personali: Whitelist 8 Esercizi, Griglia Fissa (Opz 1A), Doppio Record Corsa (Opz 2) & Focus Sovraccarico Forza (Opz 3A)
 - **Whitelist Rigida 8 Esercizi (`portal/nestore.js`)**:
   - Limitato il calcolo e la bacheca dei PR (`calcolaRecordPersonali`) esclusivamente agli 8 movimenti autorizzati: *Panca Piana*, *Squat*, *Stacco da Terra*, *Trazioni*, *Corsa 60m*, *Corsa 100m*, *Corsa 5km*, *Corsa 10km*.

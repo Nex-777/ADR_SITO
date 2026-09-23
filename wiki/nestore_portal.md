@@ -261,9 +261,11 @@ Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione d
     - **Giro (Lap)**: Registrazione degli intertempi con split parziale e totale progressivo.
     - **Termina e Salva**: Arresta il cronometro e apre il form di completamento.
     - **Pulsante ANNULLA con Blocco di Sicurezza**: Sostituita la precedente "✕" con un pulsante esplicito `[ANNULLA]` con stile ghost rosso (`.nst-btn-danger-ghost`), provvisto di dialogo di conferma obbligatorio per impedire la perdita accidentale della sessione (anche quando il timer si trova in stato di pausa).
-- **Salvataggio Persistente & Alimentazione Record Personali**:
-  - Inserimento diretto in `public.nestore_allenamenti` con disciplina `'Invictus'`, durata in minuti, campo note libero e payload strutturato in `scheda_dati` con gli esercizi svolti (`Pull-up`, `Push-up`, `Air Squat`, `peso_kg: 0`).
-  - Questo aggiorna istantaneamente la bacheca dei **Record Personali (PR Grid)** dell'atleta nel tab Allenamenti.
+- **Salvataggio Persistente, Rendiconto Dettagliato & Multi-Serie**:
+  - **Auto-Lap Conclusivo**: Alla pressione di *"TERMINA E SALVA"*, se il cronometro è proseguito oltre l'ultimo lap registrato ($\ge 1$s), il sistema registra automaticamente il tempo residuo come ultimo lap.
+  - **Rendiconto Lap-by-Lap nelle Note**: Generazione automatica di un report strutturato multiriga pre-popolato nel campo note (`Totali: [tempo], [tot Pull] + [tot Push] + [tot Squat] \n 1: [tempo lap], [reps]...`), salvato su database e visualizzato con ritorni a capo sia nel form di completamento che nel dettaglio sessione.
+  - **Storicizzazione Multi-Serie (`scheda_dati`)**: Per ogni giro (lap) completato, viene generata una specifica serie in `serie_dettaglio` per ciascuno dei tre esercizi a corpo libero (`Pull-up`, `Push-up`, `Air Squat`), consentendo la corretta consultazione analitica e la tracciatura della progressione storica.
+  - Inserimento diretto in `public.nestore_allenamenti` con disciplina `'Invictus'`, durata in minuti, note complete e alimentazione della bacheca **Record Personali (PR Grid)**.
 
 ### 9.4. Programmi Ufficiali Corso Ibrido Base (Metcon 1-4 & Forza 1-4)
 Aggiunto nella versione **1.05.44**, perfezionato in **1.05.45**:

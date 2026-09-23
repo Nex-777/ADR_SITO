@@ -5848,6 +5848,82 @@ window.tabataEngine = tabataEngine;
 
 let invictusPullBase = 5;
 
+function getInvictusPullBase() {
+    return invictusPullBase;
+}
+
+function setInvictusPullBase(val) {
+    invictusPullBase = Math.max(1, Math.min(100, val || 5));
+}
+
+function costruisciRendicontoInvictus(laps = [], pullBase = 5, totalFormatted = null) {
+    const numGiri = Math.max(1, laps.length);
+    const pullReps = pullBase;
+    const pushReps = pullBase * 2;
+    const squatReps = pullBase * 4;
+
+    const totPull = pullReps * numGiri;
+    const totPush = pushReps * numGiri;
+    const totSquat = squatReps * numGiri;
+
+    // laps in timerEngine sono memorizzati con unshift (laps[0] è il più recente).
+    // Per il rendiconto ordiniamo per lap.number crescente (1, 2, 3...)
+    const lapsCrono = laps.slice().sort((a, b) => (a.number || 0) - (b.number || 0));
+
+    const tempoTotaleStr = totalFormatted?.main || (laps.length > 0 && typeof timerEngine !== 'undefined' ? timerEngine.formatTime(laps[0].totalMs).main : '00:00');
+    let testo = `Totali: ${tempoTotaleStr}, ${totPull} Pull-up + ${totPush} Push-up + ${totSquat} Air Squat`;
+
+    if (lapsCrono.length > 0) {
+        lapsCrono.forEach(l => {
+            const splitFmt = typeof timerEngine !== 'undefined' ? timerEngine.formatTime(l.splitMs || 0) : { main: '00:00' };
+            testo += `\n${l.number}: ${splitFmt.main}, ${pullReps} Pull-up + ${pushReps} Push-up + ${squatReps} Air Squat`;
+        });
+    }
+
+    return testo;
+}
+
+function costruisciSchedaDatiInvictus(numGiri = 1, pullBase = 5) {
+    const giri = Math.max(1, numGiri);
+    const pullReps = pullBase;
+    const pushReps = pullBase * 2;
+    const squatReps = pullBase * 4;
+
+    const pullSeries = [];
+    const pushSeries = [];
+    const squatSeries = [];
+
+    for (let i = 1; i <= giri; i++) {
+        pullSeries.push({ serie: i, ripetizioni: pullReps, peso_kg: 0 });
+        pushSeries.push({ serie: i, ripetizioni: pushReps, peso_kg: 0 });
+        squatSeries.push({ serie: i, ripetizioni: squatReps, peso_kg: 0 });
+    }
+
+    return [
+        {
+            nome: 'Pull-up',
+            ripetizioni: pullReps * giri,
+            serie: giri,
+            peso_kg: 0,
+            serie_dettaglio: pullSeries
+        },
+        {
+            nome: 'Push-up',
+            ripetizioni: pushReps * giri,
+            serie: giri,
+            peso_kg: 0,
+            serie_dettaglio: pushSeries
+        },
+        {
+            nome: 'Air Squat',
+            ripetizioni: squatReps * giri,
+            serie: giri,
+            peso_kg: 0,
+            serie_dettaglio: squatSeries
+        }
+    ];
+}
+
 function modificaInvictusPull(delta) {
     invictusPullBase = Math.max(1, Math.min(100, invictusPullBase + delta));
     const pullEl = document.getElementById('nst-invictus-pull-val');
@@ -5978,19 +6054,56 @@ function aggiornaModalWorkoutAttivo() {
 }
 
 function terminaAllenamentoAttivo() {
-    // 1. Pausa il cronometro
+    // 1. Controlla se c'è un giro finale non registrato (Auto-Lap)
+    const elapsedMs = timerEngine.getElapsedMs();
+    const lastLapTotal = timerEngine.state.laps.length > 0 ? timerEngine.state.laps[0].totalMs : 0;
+    const remainingLapMs = elapsedMs - lastLapTotal;
+
+    // Se è rimasto del tempo (>= 1 secondo), aggiungiamo automaticamente l'ultimo lap prima di chiudere
+    if (remainingLapMs >= 1000) {
+        const lapNumber = timerEngine.state.laps.length + 1;
+        timerEngine.state.laps.unshift({
+            number: lapNumber,
+            splitMs: remainingLapMs,
+            totalMs: elapsedMs,
+            timestamp: Date.now()
+        });
+        timerEngine.saveState();
+        renderModalLapsList();
+    }
+
+    // 2. Pausa il cronometro
     timerEngine.pause();
 
-    // 2. Prepara riepilogo
-    const elapsedMs = timerEngine.getElapsedMs();
+    // 3. Prepara riepilogo
+    const laps = timerEngine.state.laps || [];
+    const numGiri = Math.max(1, laps.length);
     const formatted = timerEngine.formatTime(elapsedMs);
+
     const timeFinalEl = document.getElementById('nst-save-final-time');
     if (timeFinalEl) timeFinalEl.textContent = `${formatted.main}${formatted.sub}`;
 
     const repsFinalEl = document.getElementById('nst-save-final-reps');
-    if (repsFinalEl) repsFinalEl.textContent = `${invictusPullBase} Pull-up / ${invictusPullBase * 2} Push-up / ${invictusPullBase * 4} Air Squat`;
+    if (repsFinalEl) {
+        const totPull = invictusPullBase * numGiri;
+        const totPush = (invictusPullBase * 2) * numGiri;
+        const totSquat = (invictusPullBase * 4) * numGiri;
+        repsFinalEl.textContent = `${totPull} Pull / ${totPush} Push / ${totSquat} Squat (${numGiri} ${numGiri === 1 ? 'Giro' : 'Giri'})`;
+    }
 
-    // 3. Commuta vista modale
+    // 4. Popola note con rendiconto dettagliato
+    const noteInput = document.getElementById('nst-workout-note-input');
+    if (noteInput) {
+        const rendiconto = costruisciRendicontoInvictus(laps, invictusPullBase, formatted);
+        const curVal = noteInput.value.trim();
+        if (curVal && !curVal.startsWith('Totali:')) {
+            noteInput.value = `${rendiconto}\n\n${curVal}`;
+        } else {
+            noteInput.value = rendiconto;
+        }
+    }
+
+    // 5. Commuta vista modale
     const runningView = document.getElementById('nst-workout-running-view');
     const saveView = document.getElementById('nst-workout-save-view');
     if (runningView) runningView.classList.add('nst-hidden');
@@ -6016,15 +6129,10 @@ async function confermaSalvaAllenamentoStandard() {
         const durataMinuti = Math.max(1, Math.round(elapsedMs / 60000));
         const oggi = new Date().toISOString().split('T')[0];
 
-        const pullReps = invictusPullBase;
-        const pushReps = invictusPullBase * 2;
-        const squatReps = invictusPullBase * 4;
+        const laps = timerEngine.state.laps || [];
+        const numGiri = Math.max(1, laps.length);
 
-        const schedaDati = [
-            { nome: 'Pull-up', ripetizioni: pullReps, serie: 1, peso_kg: 0 },
-            { nome: 'Push-up', ripetizioni: pushReps, serie: 1, peso_kg: 0 },
-            { nome: 'Air Squat', ripetizioni: squatReps, serie: 1, peso_kg: 0 }
-        ];
+        const schedaDati = costruisciSchedaDatiInvictus(numGiri, invictusPullBase);
 
         const noteInput = document.getElementById('nst-workout-note-input');
         const userNote = noteInput ? noteInput.value.trim() : '';
@@ -8666,6 +8774,10 @@ window.copiaTestoSchedaModal = copiaTestoSchedaModal;
 window.modificaTargetCalorie = modificaTargetCalorie;
 window.renderGraficoDieta = renderGraficoDieta;
 window.modificaInvictusPull = modificaInvictusPull;
+window.getInvictusPullBase = getInvictusPullBase;
+window.setInvictusPullBase = setInvictusPullBase;
+window.costruisciRendicontoInvictus = costruisciRendicontoInvictus;
+window.costruisciSchedaDatiInvictus = costruisciSchedaDatiInvictus;
 window.apriAnteprimaInvictus = apriAnteprimaInvictus;
 window.chiudiAnteprimaInvictus = chiudiAnteprimaInvictus;
 window.avviaAllenamentoInvictus = avviaAllenamentoInvictus;
@@ -8747,6 +8859,10 @@ if (typeof module !== 'undefined' && module.exports) {
         caricaAdminDashboard,
         caricaSchedeAtleta,
         modificaInvictusPull,
+        getInvictusPullBase,
+        setInvictusPullBase,
+        costruisciRendicontoInvictus,
+        costruisciSchedaDatiInvictus,
         apriAnteprimaInvictus,
         chiudiAnteprimaInvictus,
         avviaAllenamentoInvictus,

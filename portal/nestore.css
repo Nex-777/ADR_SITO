@@ -4675,6 +4675,7 @@ input:checked + .nst-slider:before {
     font-size: 12px;
     color: #cbd5e1;
     line-height: 1.4;
+    white-space: pre-wrap;
 }
 
 .nst-session-ex-card {

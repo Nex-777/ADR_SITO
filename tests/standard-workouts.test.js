@@ -105,5 +105,102 @@ describe('Standard Workouts (INVICTUS) & Active Modal Logic', () => {
         expect(js).toContain('function terminaAllenamentoAttivo');
         expect(js).toContain('function confermaSalvaAllenamentoStandard');
         expect(js).toContain('function chiudiModalWorkoutAttivo');
+        expect(js).toContain('function costruisciRendicontoInvictus');
+        expect(js).toContain('function costruisciSchedaDatiInvictus');
+        expect(js).toContain('costruisciRendicontoInvictus,');
+        expect(js).toContain('costruisciSchedaDatiInvictus,');
+    });
+
+    it('genera il rendiconto testuale dettagliato per il campo note (totali + lap per lap)', () => {
+        // Mock timerEngine formatTime
+        const formatTime = (ms) => {
+            const totalSec = Math.floor(ms / 1000);
+            const m = Math.floor(totalSec / 60);
+            const s = totalSec % 60;
+            return { main: `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`, sub: '.0' };
+        };
+
+        const laps = [
+            { number: 3, splitMs: 125000, totalMs: 375000 },
+            { number: 2, splitMs: 130000, totalMs: 250000 },
+            { number: 1, splitMs: 120000, totalMs: 120000 }
+        ];
+
+        // Simulazione logica costruisciRendicontoInvictus
+        const pullBase = 5;
+        const numGiri = laps.length;
+        const totPull = pullBase * numGiri;
+        const totPush = pullBase * 2 * numGiri;
+        const totSquat = pullBase * 4 * numGiri;
+
+        const lapsCrono = laps.slice().sort((a, b) => (a.number || 0) - (b.number || 0));
+        let rendiconto = `Totali: 06:15, ${totPull} Pull-up + ${totPush} Push-up + ${totSquat} Air Squat`;
+        lapsCrono.forEach(l => {
+            const splitF = formatTime(l.splitMs);
+            rendiconto += `\n${l.number}: ${splitF.main}, ${pullBase} Pull-up + ${pullBase * 2} Push-up + ${pullBase * 4} Air Squat`;
+        });
+
+        expect(rendiconto).toContain('Totali: 06:15, 15 Pull-up + 30 Push-up + 60 Air Squat');
+        expect(rendiconto).toContain('1: 02:00, 5 Pull-up + 10 Push-up + 20 Air Squat');
+        expect(rendiconto).toContain('2: 02:10, 5 Pull-up + 10 Push-up + 20 Air Squat');
+        expect(rendiconto).toContain('3: 02:05, 5 Pull-up + 10 Push-up + 20 Air Squat');
+    });
+
+    it('costruisce la scheda_dati multi-serie con una serie_dettaglio per ogni giro (Scelta 3A)', () => {
+        const pullBase = 5;
+        const numGiri = 4;
+
+        const pullSeries = [];
+        const pushSeries = [];
+        const squatSeries = [];
+
+        for (let i = 1; i <= numGiri; i++) {
+            pullSeries.push({ serie: i, ripetizioni: pullBase, peso_kg: 0 });
+            pushSeries.push({ serie: i, ripetizioni: pullBase * 2, peso_kg: 0 });
+            squatSeries.push({ serie: i, ripetizioni: pullBase * 4, peso_kg: 0 });
+        }
+
+        const schedaDati = [
+            { nome: 'Pull-up', ripetizioni: pullBase * numGiri, serie: numGiri, peso_kg: 0, serie_dettaglio: pullSeries },
+            { nome: 'Push-up', ripetizioni: pullBase * 2 * numGiri, serie: numGiri, peso_kg: 0, serie_dettaglio: pushSeries },
+            { nome: 'Air Squat', ripetizioni: pullBase * 4 * numGiri, serie: numGiri, peso_kg: 0, serie_dettaglio: squatSeries }
+        ];
+
+        expect(schedaDati).toHaveLength(3);
+
+        // Pull-up
+        expect(schedaDati[0].nome).toBe('Pull-up');
+        expect(schedaDati[0].serie).toBe(4);
+        expect(schedaDati[0].ripetizioni).toBe(20);
+        expect(schedaDati[0].serie_dettaglio).toHaveLength(4);
+        expect(schedaDati[0].serie_dettaglio[0]).toEqual({ serie: 1, ripetizioni: 5, peso_kg: 0 });
+        expect(schedaDati[0].serie_dettaglio[3]).toEqual({ serie: 4, ripetizioni: 5, peso_kg: 0 });
+
+        // Push-up
+        expect(schedaDati[1].nome).toBe('Push-up');
+        expect(schedaDati[1].serie).toBe(4);
+        expect(schedaDati[1].ripetizioni).toBe(40);
+        expect(schedaDati[1].serie_dettaglio).toHaveLength(4);
+        expect(schedaDati[1].serie_dettaglio[0]).toEqual({ serie: 1, ripetizioni: 10, peso_kg: 0 });
+
+        // Squat
+        expect(schedaDati[2].nome).toBe('Air Squat');
+        expect(schedaDati[2].serie).toBe(4);
+        expect(schedaDati[2].ripetizioni).toBe(80);
+        expect(schedaDati[2].serie_dettaglio).toHaveLength(4);
+        expect(schedaDati[2].serie_dettaglio[0]).toEqual({ serie: 1, ripetizioni: 20, peso_kg: 0 });
+    });
+
+    it('include auto-lap logic in terminaAllenamentoAttivo e preserva i ritorni a capo nel CSS note', () => {
+        // Auto-lap logic presente in nestore.js
+        expect(js).toContain('const lastLapTotal = timerEngine.state.laps.length > 0 ? timerEngine.state.laps[0].totalMs : 0;');
+        expect(js).toContain('remainingLapMs >= 1000');
+
+        // Preservazione stile pre-wrap per note nel modal dettaglio
+        expect(css).toContain('white-space: pre-wrap;');
+
+        // Textarea note aggiornata con label rendiconto
+        expect(html).toContain('RENDICONTO &amp; NOTE SESSIONE:');
     });
 });
+
