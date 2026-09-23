@@ -4702,3 +4702,170 @@ input:checked + .nst-slider:before {
     font-weight: 600;
 }
 
+/* ===========================================================================
+   EDITOR DINAMICO ESERCIZI MODALE ALLENAMENTO (Opzione 1.B)
+   =========================================================================== */
+
+.nst-edit-ex-card {
+    background: rgba(6, 12, 24, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 14px;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.nst-edit-ex-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.nst-edit-ex-header .nst-form-input {
+    flex-grow: 1;
+    font-weight: 700;
+    color: #fff;
+    border-color: rgba(118, 255, 3, 0.3);
+}
+
+.nst-edit-ex-header .nst-form-input:focus {
+    border-color: var(--nst-lime);
+}
+
+.nst-btn-remove-ex {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.nst-btn-remove-ex:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+.nst-edit-sets-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.nst-edit-sets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.nst-btn-add-mini {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.nst-btn-add-mini.warmup {
+    color: var(--nst-amber);
+    border-color: rgba(255, 179, 0, 0.3);
+    background: rgba(255, 179, 0, 0.08);
+}
+
+.nst-btn-add-mini.warmup:hover {
+    background: rgba(255, 179, 0, 0.2);
+}
+
+.nst-btn-add-mini.work {
+    color: var(--nst-lime);
+    border-color: rgba(118, 255, 3, 0.3);
+    background: rgba(118, 255, 3, 0.08);
+}
+
+.nst-btn-add-mini.work:hover {
+    background: rgba(118, 255, 3, 0.2);
+}
+
+.nst-edit-set-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.nst-edit-set-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 45px;
+    text-align: center;
+}
+
+.nst-edit-set-badge.warmup {
+    color: var(--nst-amber);
+}
+
+.nst-edit-set-badge.work {
+    color: var(--nst-lime);
+}
+
+.nst-edit-set-input {
+    background: var(--nst-bg-alt);
+    border: 1px solid var(--nst-border);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 6px;
+    text-align: center;
+    width: 70px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.nst-edit-set-input:focus {
+    border-color: var(--nst-cyan);
+}
+
+.nst-btn-remove-set {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    margin-left: auto;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.nst-btn-remove-set:hover {
+    background: rgba(239, 68, 68, 0.15);
+    transform: scale(1.15);
+}
+
+

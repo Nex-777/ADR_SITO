@@ -2,6 +2,24 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-23] ingest | NESTORE — Gestione Storico Allenamenti: Modifica Esercizi/Set (Opz 1B), Click Responsive (Opz 2A) & Soft-Delete con Modale Custom (Opz 3A)
+- **UI Tabella Sessioni & Routing Responsive (Opzione 2A)**:
+  - Nella tabella `STORICO SESSIONI`, aggiunta la colonna `Azioni` (visibile su desktop) con icone Matita (✏️ Modifica) e Cestino (🗑️ Elimina).
+  - Al click sulla riga: su Desktop ($> 768\text{px}$) apre direttamente la modale di dettaglio (`#nst-modal-dettaglio-allenamento`); su Mobile ($\le 768\text{px}$) apre l'Action Sheet dedicato a 3 voci (`#nst-modal-allenamento-actions`).
+  - Inserito suggerimento per mobile `(tocca per azioni)`.
+- **Action Sheet Mobile (`portal/nestore.html`, `portal/nestore.js`)**:
+  - Modale `#nst-modal-allenamento-actions` con riepilogo seduta e 3 opzioni operative: *Dettaglio Sessione*, *Modifica Sessione*, *Elimina Sessione* oltre al pulsante Annulla.
+- **Modale Conferma Eliminazione Custom (Opzione 3A)**:
+  - Introdotta la modale `#nst-modal-conferma-delete-allenamento` con doppio controllo per prevenire cancellazioni accidentali.
+  - Implementato rigorosamente il **Soft-Delete** (`attivo: false`) su `nestore_allenamenti` in conformità alle regole di storicizzazione Epika/Adrenalina. Ricalcola istantaneamente PR e KPI alla cancellazione.
+- **Modale di Modifica Completa Dinamica (Opzione 1B)**:
+  - Introdotta la modale `#nst-modal-edit-allenamento` per modificare sia i metadati di sessione (data, disciplina, durata, RPE, note) sia i singoli esercizi e serie contenuti nel campo JSONB `scheda_dati`.
+  - Generatore DOM dinamico (`aggiungiEsercizioEdit`, `aggiungiWarmupSetEdit`, `aggiungiWorkSetEdit`, `rimuoviSetEdit`, `rimuoviEsercizioEdit`) per gestire liste arbitrarie di esercizi, serie di riscaldamento (Rampa) e serie target/effettive (kg, reps, RPE).
+  - Serializzazione fedele del JSON con preservazione dei campi accessori (`wod_id`, `esito_globale`, ecc.), update asincrono su Supabase e ri-rendering istantaneo dei record personali e della tabella.
+- **Testing & QA (`tests/workout-edit-delete.test.js`)**:
+  - Creata suite con 9 test unitari per validare il markup delle modali, stili CSS, funzioni JS esportate, routing responsive desktop/mobile, logica di soft-delete e serializzazione JSON.
+  - Tutti i 143 test del repository superati (13 suite su 13).
+
 ## [2026-09-22] ingest | NESTORE — Fix Calcolo PR (Rampa 1RM & Scheda Dati), Formato Date DD/MM/YY & Modale Dettaglio Sessione
 - **Fix Parsing PR & Carichi di Rampa (`portal/nestore.js`)**:
   - Risolto il mancato calcolo dei nuovi massimali (es. Panca Piana a 125 kg di Valerio Mannocchi): la funzione `parseExercisesFromWorkout` ora gestisce correttamente `scheda_dati` sia quando è un oggetto (`{ tipo: 'ibrido', esercizi: [...] }`) sia quando è un array.

@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.64">
+    <link rel="stylesheet" href="nestore.css?v=1.05.65">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.64"></script>
+    <script src="config.js?v=1.05.65"></script>
 </head>
 <body class="nst-body">
 
@@ -21,7 +21,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div class="nst-brand-text">
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.64</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.65</span>
             </div>
         </div>
 
@@ -220,7 +220,10 @@
                     <div id="nst-empty-allenamenti" class="nst-chart-empty-msg nst-hidden">Nessun esercizio o allenamento registrato</div>
                 </div>
 
-                <h4 style="margin: 24px 0 12px; font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--nst-lime);">STORICO SESSIONI</h4>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; margin: 24px 0 12px;">
+                    <h4 style="margin: 0; font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--nst-lime);">STORICO SESSIONI</h4>
+                    <span class="nst-mobile-help-text nst-desktop-hidden" style="font-size: 10px; color: var(--nst-text-muted);">(tocca per azioni)</span>
+                </div>
                 <div class="nst-history-table-container">
                     <table class="nst-history-table">
                         <thead>
@@ -230,6 +233,7 @@
                                 <th>Durata (min)</th>
                                 <th>RPE</th>
                                 <th>Note</th>
+                                <th class="nst-desktop-only" style="text-align: right; width: 80px;">Azioni</th>
                             </tr>
                         </thead>
                         <tbody id="nst-tbody-allenamenti">
@@ -1779,10 +1783,141 @@ GIORNO 2:
         </div>
     </div>
 
+    <!-- Modale Action Sheet Mobile Allenamento -->
+    <div id="nst-modal-allenamento-actions" class="nst-modal-overlay nst-hidden" onclick="if(event.target === this) chiudiMobileAllenamentoActions()">
+        <div class="nst-modal-card nst-action-sheet-card" style="max-width: 400px; text-align: center;">
+            <div class="nst-modal-header" style="border-bottom: 1px solid var(--nst-border);">
+                <span class="nst-headline" style="font-size: 13px; color: var(--nst-lime); display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">fitness_center</span>
+                    <span>AZIONI SESSIONE</span>
+                </span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiMobileAllenamentoActions()">✕</button>
+            </div>
+            <div class="nst-modal-body" style="padding: 18px 20px;">
+                <input type="hidden" id="nst-action-allenamento-id">
+                <div id="nst-action-allenamento-summary" style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 6px;">--</div>
+                <div id="nst-action-allenamento-meta" style="font-size: 11px; color: var(--nst-text-muted); margin-bottom: 20px;">--</div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button type="button" class="nst-btn-primary" style="width: 100%; justify-content: center; gap: 8px;" onclick="eseguiDettaglioAllenamentoDaActionSheet()">
+                        <span class="material-symbols-outlined">visibility</span>
+                        <span>DETTAGLIO SESSIONE</span>
+                    </button>
+                    <button type="button" class="nst-btn-primary" style="width: 100%; justify-content: center; gap: 8px; background: linear-gradient(135deg, #00e5ff 0%, #0099ff 100%);" onclick="eseguiModificaAllenamentoDaActionSheet()">
+                        <span class="material-symbols-outlined">edit</span>
+                        <span>MODIFICA SESSIONE</span>
+                    </button>
+                    <button type="button" class="nst-btn-danger" style="width: 100%; justify-content: center; gap: 8px;" onclick="eseguiEliminaAllenamentoDaActionSheet()">
+                        <span class="material-symbols-outlined">delete</span>
+                        <span>ELIMINA SESSIONE</span>
+                    </button>
+                    <button type="button" class="nst-btn-ghost-sm" style="width: 100%; margin-top: 4px;" onclick="chiudiMobileAllenamentoActions()">ANNULLA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Conferma Eliminazione Allenamento (Doppio Controllo) -->
+    <div id="nst-modal-conferma-delete-allenamento" class="nst-modal-overlay nst-hidden" onclick="if(event.target === this) chiudiModaleConfermaDeleteAllenamento()">
+        <div class="nst-modal-card" style="max-width: 440px; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 0 25px rgba(239, 68, 68, 0.2);">
+            <div class="nst-modal-header" style="border-bottom: 1px solid rgba(239, 68, 68, 0.2);">
+                <span class="nst-headline" style="font-size: 13px; color: #ef4444; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="color: #ef4444;">warning</span>
+                    <span>CONFERMA ELIMINAZIONE</span>
+                </span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiModaleConfermaDeleteAllenamento()">✕</button>
+            </div>
+            <div class="nst-modal-body" style="padding: 18px 20px;">
+                <input type="hidden" id="nst-delete-allenamento-id">
+                <p style="font-size: 13px; color: #fff; line-height: 1.5; margin-bottom: 14px;">
+                    Sei sicuro di voler eliminare questa sessione di allenamento dallo storico?
+                </p>
+                <div id="nst-delete-allenamento-preview" style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 12px; margin-bottom: 14px; font-size: 12px; color: #cbd5e1;">
+                    <!-- Riempito dinamicamente -->
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; padding: 8px 12px; border-radius: 0 4px 4px 0;">
+                    ⚠️ I record personali (PR) e i conteggi della dashboard verranno ricalcolati automaticamente. I dati rimarranno archiviati in sicurezza (soft-delete).
+                </div>
+            </div>
+            <div class="nst-modal-footer" style="padding: 12px 20px; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--nst-border);">
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiModaleConfermaDeleteAllenamento()">ANNULLA</button>
+                <button type="button" class="nst-btn-danger" id="nst-btn-conferma-delete-allenamento" onclick="eseguiSoftDeleteAllenamento()">
+                    <span class="material-symbols-outlined">delete_forever</span>
+                    <span>ELIMINA DEFINITIVAMENTE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Modifica Allenamento (Metadati + Scheda Esercizi) -->
+    <div id="nst-modal-edit-allenamento" class="nst-modal-overlay nst-hidden" onclick="if(event.target === this) chiudiEditAllenamentoModal()">
+        <div class="nst-modal-card" style="max-width: 680px; width: 95%;">
+            <div class="nst-modal-header">
+                <span class="nst-headline" style="font-size: 14px; color: var(--nst-cyan); display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">edit_note</span>
+                    <span>MODIFICA SESSIONE ALLENAMENTO</span>
+                </span>
+                <button type="button" class="nst-btn-icon-close" onclick="chiudiEditAllenamentoModal()">✕</button>
+            </div>
+            <div class="nst-modal-body" style="padding: 20px; max-height: 75vh; overflow-y: auto;">
+                <input type="hidden" id="nst-edit-allenamento-id">
+
+                <!-- Metadati Sessione -->
+                <div class="nst-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">DATA ALLENAMENTO *</label>
+                        <input type="date" id="nst-edit-allenamento-data" class="nst-form-input">
+                    </div>
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">DISCIPLINA / TITOLO *</label>
+                        <input type="text" id="nst-edit-allenamento-disciplina" class="nst-form-input" placeholder="Es. FORZA, IBRIDO, CROSSFIT...">
+                    </div>
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">DURATA (MINUTI)</label>
+                        <input type="number" id="nst-edit-allenamento-durata" class="nst-form-input" placeholder="Es. 60" min="0" max="600">
+                    </div>
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">INTENSITÀ PERCEPITA (RPE 1-10)</label>
+                        <input type="number" id="nst-edit-allenamento-rpe" class="nst-form-input" placeholder="Es. 8" min="1" max="10" step="0.5">
+                    </div>
+                    <div class="nst-form-group" style="grid-column: span 2;">
+                        <label class="nst-form-label">NOTE DELLA SESSIONE</label>
+                        <textarea id="nst-edit-allenamento-note" class="nst-form-input" rows="2" placeholder="Sensazioni, carichi, note tecniche..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Sezione Esercizi Dinamici -->
+                <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span class="nst-form-label" style="font-size: 11px; color: var(--nst-lime); display: flex; align-items: center; gap: 6px;">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">fitness_center</span>
+                            <span>DETTAGLIO ESERCIZI &amp; SERIE</span>
+                        </span>
+                        <button type="button" class="nst-btn-ghost-sm" style="color: var(--nst-lime); border-color: rgba(118, 255, 3, 0.4);" onclick="aggiungiEsercizioEdit()">
+                            + AGGIUNGI ESERCIZIO
+                        </button>
+                    </div>
+
+                    <div id="nst-edit-allenamento-esercizi-container" style="display: flex; flex-direction: column; gap: 14px;">
+                        <!-- Generato dinamicamente via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="nst-modal-footer" style="padding: 14px 20px; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--nst-border);">
+                <button type="button" class="nst-btn-ghost-sm" onclick="chiudiEditAllenamentoModal()">ANNULLA</button>
+                <button type="button" class="nst-btn-primary" id="nst-btn-salva-allenamento" onclick="salvaModificheAllenamento()">
+                    <span class="material-symbols-outlined">check</span>
+                    <span>SALVA MODIFICHE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Libreria Grafici Chart.js CDN (v4) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.64"></script>
+    <script src="nestore.js?v=1.05.65"></script>
 </body>
 </html>

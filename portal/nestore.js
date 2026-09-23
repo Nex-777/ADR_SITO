@@ -1574,14 +1574,30 @@ async function renderGraficoAllenamenti() {
                 const tr = document.createElement('tr');
                 tr.className = 'nst-clickable-row';
                 tr.style.cursor = 'pointer';
-                tr.title = 'Clicca per vedere il dettaglio della sessione';
-                tr.onclick = () => apriDettaglioAllenamentoModal(item.id);
+                tr.title = 'Clicca per opzioni o dettaglio sessione';
+                tr.onclick = (e) => {
+                    // Se su mobile (<= 768px), apri l'Action Sheet a 3 voci
+                    if (window.innerWidth <= 768) {
+                        openMobileAllenamentoActions(item.id);
+                    } else {
+                        // Su desktop (> 768px), apri direttamente il dettaglio
+                        apriDettaglioAllenamentoModal(item.id);
+                    }
+                };
                 tr.innerHTML = `
                     <td>${formatDateWithYear(item.data_allenamento)}</td>
                     <td style="color: var(--nst-lime); font-weight: 600;">${(item.corso_disciplina || 'Workout').toUpperCase()}</td>
                     <td>${item.durata_minuti || '-'}</td>
                     <td>${item.rpe_fatica ? item.rpe_fatica + '/10' : '-'}</td>
                     <td style="max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.note || '')}">${escapeHtml(item.note || '')}</td>
+                    <td class="nst-desktop-only" style="text-align: right; white-space: nowrap;">
+                        <button type="button" class="nst-btn-icon-table" title="Modifica Allenamento" onclick="event.stopPropagation(); openEditAllenamentoModal('${item.id}', event)">
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-cyan);">edit</span>
+                        </button>
+                        <button type="button" class="nst-btn-icon-table" title="Elimina Allenamento" onclick="event.stopPropagation(); apriModaleConfermaDeleteAllenamento('${item.id}', event)">
+                            <span class="material-symbols-outlined" style="font-size: 16px; color: #ef4444;">delete</span>
+                        </button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             }
@@ -1591,6 +1607,490 @@ async function renderGraficoAllenamenti() {
         console.error("Errore bacheca allenamenti e record:", e);
     }
 }
+
+// ---------------------------------------------------------------------------
+// GESTIONE AZIONI E MODIFICA ALLENAMENTI (Storico Sessioni)
+// ---------------------------------------------------------------------------
+
+function openMobileAllenamentoActions(workoutId) {
+    if (!workoutId) return;
+    const workout = (currentAllenamentiData || []).find(w => String(w.id) === String(workoutId));
+    if (!workout) return;
+
+    const modal = document.getElementById('nst-modal-allenamento-actions');
+    const inputId = document.getElementById('nst-action-allenamento-id');
+    const summary = document.getElementById('nst-action-allenamento-summary');
+    const meta = document.getElementById('nst-action-allenamento-meta');
+
+    if (inputId) inputId.value = workout.id;
+    if (summary) summary.textContent = `${(workout.corso_disciplina || 'WORKOUT').toUpperCase()} - ${formatDateWithYear(workout.data_allenamento)}`;
+    if (meta) {
+        const durata = workout.durata_minuti ? `${workout.durata_minuti} min` : '-- min';
+        const rpe = workout.rpe_fatica ? `RPE ${workout.rpe_fatica}/10` : 'RPE --';
+        meta.innerHTML = `<span style="color:var(--nst-lime); font-weight:600;">${durata}</span> | ${rpe}${workout.note ? `<br><span style="color:#cbd5e1; display:inline-block; margin-top:4px;">"${escapeHtml(workout.note)}"</span>` : ''}`;
+    }
+
+    if (modal) modal.classList.remove('nst-hidden');
+}
+
+function chiudiMobileAllenamentoActions() {
+    const modal = document.getElementById('nst-modal-allenamento-actions');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+function eseguiDettaglioAllenamentoDaActionSheet() {
+    const inputId = document.getElementById('nst-action-allenamento-id');
+    const workoutId = inputId ? inputId.value : null;
+    chiudiMobileAllenamentoActions();
+    if (workoutId) {
+        apriDettaglioAllenamentoModal(workoutId);
+    }
+}
+
+function eseguiModificaAllenamentoDaActionSheet() {
+    const inputId = document.getElementById('nst-action-allenamento-id');
+    const workoutId = inputId ? inputId.value : null;
+    chiudiMobileAllenamentoActions();
+    if (workoutId) {
+        openEditAllenamentoModal(workoutId);
+    }
+}
+
+function eseguiEliminaAllenamentoDaActionSheet() {
+    const inputId = document.getElementById('nst-action-allenamento-id');
+    const workoutId = inputId ? inputId.value : null;
+    chiudiMobileAllenamentoActions();
+    if (workoutId) {
+        apriModaleConfermaDeleteAllenamento(workoutId);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MODALE CONFERMA ELIMINAZIONE ALLENAMENTO (Soft-Delete & Doppio Controllo)
+// ---------------------------------------------------------------------------
+
+function apriModaleConfermaDeleteAllenamento(workoutId, event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (!workoutId) return;
+
+    const workout = (currentAllenamentiData || []).find(w => String(w.id) === String(workoutId));
+    if (!workout) return;
+
+    const modal = document.getElementById('nst-modal-conferma-delete-allenamento');
+    const inputId = document.getElementById('nst-delete-allenamento-id');
+    const previewEl = document.getElementById('nst-delete-allenamento-preview');
+
+    if (inputId) inputId.value = workout.id;
+    if (previewEl) {
+        previewEl.innerHTML = `
+            <div style="font-weight:700; color:#fff; font-size:13px; margin-bottom:4px;">
+                ${(workout.corso_disciplina || 'SESSIONE').toUpperCase()} — ${formatDateWithYear(workout.data_allenamento)}
+            </div>
+            <div style="color:var(--nst-text-muted); font-size:11px;">
+                Durata: <strong>${workout.durata_minuti ? workout.durata_minuti + ' min' : '-'}</strong> | 
+                RPE: <strong>${workout.rpe_fatica ? workout.rpe_fatica + '/10' : '-'}</strong>
+            </div>
+            ${workout.note ? `<div style="margin-top:6px; color:#cbd5e1; font-style:italic; font-size:11px;">"${escapeHtml(workout.note)}"</div>` : ''}
+        `;
+    }
+
+    if (modal) modal.classList.remove('nst-hidden');
+}
+
+function chiudiModaleConfermaDeleteAllenamento() {
+    const modal = document.getElementById('nst-modal-conferma-delete-allenamento');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+async function eseguiSoftDeleteAllenamento() {
+    const inputId = document.getElementById('nst-delete-allenamento-id');
+    const workoutId = inputId ? inputId.value : null;
+    if (!workoutId || !supabaseClient) return;
+
+    const btn = document.getElementById('nst-btn-conferma-delete-allenamento');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> ELIMINAZIONE...`;
+    }
+
+    try {
+        // Soft delete nel pieno rispetto delle linee guida Epika / ADR_SITO
+        const { error } = await supabaseClient
+            .from('nestore_allenamenti')
+            .update({ attivo: false })
+            .eq('id', workoutId);
+
+        if (error) {
+            console.error("Errore soft delete allenamento:", error);
+            alert("Errore durante l'eliminazione: " + (error.message || error));
+            return;
+        }
+
+        chiudiModaleConfermaDeleteAllenamento();
+        if (typeof showTimerToast === 'function') {
+            showTimerToast("✓ Sessione di allenamento eliminata dallo storico");
+        }
+        await renderGraficoAllenamenti();
+        if (typeof caricaKpiDashboard === 'function') {
+            await caricaKpiDashboard();
+        }
+    } catch (e) {
+        console.error("Eccezione soft delete allenamento:", e);
+        alert("Errore imprevisto durante l'eliminazione della sessione.");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<span class="material-symbols-outlined">delete_forever</span> <span>ELIMINA DEFINITIVAMENTE</span>`;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MODALE MODIFICA ALLENAMENTO & BUILDER DINAMICO ESERCIZI (Opzione 1.B)
+// ---------------------------------------------------------------------------
+
+function openEditAllenamentoModal(workoutId, event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    if (!workoutId) return;
+
+    const workout = (currentAllenamentiData || []).find(w => String(w.id) === String(workoutId));
+    if (!workout) return;
+
+    const modal = document.getElementById('nst-modal-edit-allenamento');
+    if (!modal) return;
+
+    // Popola Metadati Form
+    const idInput = document.getElementById('nst-edit-allenamento-id');
+    const dataInput = document.getElementById('nst-edit-allenamento-data');
+    const discInput = document.getElementById('nst-edit-allenamento-disciplina');
+    const durataInput = document.getElementById('nst-edit-allenamento-durata');
+    const rpeInput = document.getElementById('nst-edit-allenamento-rpe');
+    const noteInput = document.getElementById('nst-edit-allenamento-note');
+
+    if (idInput) idInput.value = workout.id;
+    if (dataInput) dataInput.value = workout.data_allenamento || '';
+    if (discInput) discInput.value = workout.corso_disciplina || '';
+    if (durataInput) durataInput.value = workout.durata_minuti != null ? workout.durata_minuti : '';
+    if (rpeInput) rpeInput.value = workout.rpe_fatica != null ? workout.rpe_fatica : '';
+    if (noteInput) noteInput.value = workout.note || '';
+
+    // Popola Esercizi Dinamici da scheda_dati
+    const container = document.getElementById('nst-edit-allenamento-esercizi-container');
+    if (container) {
+        container.innerHTML = '';
+        let scheda = workout.scheda_dati;
+        if (typeof scheda === 'string') {
+            try { scheda = JSON.parse(scheda); } catch (e) { scheda = null; }
+        }
+        const esercizi = Array.isArray(scheda) ? scheda : (scheda?.esercizi || []);
+        if (esercizi && esercizi.length > 0) {
+            esercizi.forEach(ex => aggiungiEsercizioEdit(ex));
+        } else {
+            // Se non ci sono esercizi strutturati, aggiungi un esercizio vuoto di default
+            aggiungiEsercizioEdit();
+        }
+    }
+
+    modal.classList.remove('nst-hidden');
+}
+
+function chiudiEditAllenamentoModal() {
+    const modal = document.getElementById('nst-modal-edit-allenamento');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+function aggiungiEsercizioEdit(exData = null) {
+    const container = document.getElementById('nst-edit-allenamento-esercizi-container');
+    if (!container) return;
+
+    const exCard = document.createElement('div');
+    exCard.className = 'nst-edit-ex-card';
+
+    const exNome = exData?.nome || '';
+    const exTarget = exData?.target_originario || '';
+    const exEsito = exData?.esito || '';
+
+    exCard.innerHTML = `
+        <div class="nst-edit-ex-header">
+            <input type="text" class="nst-form-input nst-edit-ex-nome" placeholder="Nome esercizio (es. Panca Piana, Squat...)" value="${escapeHtml(exNome)}">
+            <button type="button" class="nst-btn-remove-ex" onclick="rimuoviEsercizioEdit(this)" title="Rimuovi esercizio">
+                <span class="material-symbols-outlined" style="font-size: 15px;">close</span> Rimuovi
+            </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <input type="text" class="nst-form-input nst-edit-ex-target" placeholder="Target / Note (es. 4x8 @ 80kg)" value="${escapeHtml(exTarget)}" style="font-size: 11px;">
+            <select class="nst-form-input nst-edit-ex-esito" style="font-size: 11px;">
+                <option value="" ${!exEsito ? 'selected' : ''}>-- Esito --</option>
+                <option value="SUPERATA" ${exEsito === 'SUPERATA' ? 'selected' : ''}>SUPERATA</option>
+                <option value="PARZIALE" ${exEsito === 'PARZIALE' ? 'selected' : ''}>PARZIALE</option>
+                <option value="FALLITA" ${exEsito === 'FALLITA' ? 'selected' : ''}>FALLITA</option>
+            </select>
+        </div>
+
+        <!-- Sezione Warmup / Ramping -->
+        <div class="nst-edit-sets-section">
+            <div class="nst-edit-sets-header">
+                <span style="font-size: 10px; font-weight: 700; color: var(--nst-amber); font-family: 'Orbitron', sans-serif;">
+                    RISCALDAMENTO &amp; RAMPA
+                </span>
+                <button type="button" class="nst-btn-add-mini warmup" onclick="aggiungiWarmupSetEdit(this)">
+                    + WARMUP
+                </button>
+            </div>
+            <div class="nst-edit-warmup-container"></div>
+        </div>
+
+        <!-- Sezione Serie Target / Effettive -->
+        <div class="nst-edit-sets-section">
+            <div class="nst-edit-sets-header">
+                <span style="font-size: 10px; font-weight: 700; color: var(--nst-lime); font-family: 'Orbitron', sans-serif;">
+                    SERIE TARGET / EFFETTIVE
+                </span>
+                <button type="button" class="nst-btn-add-mini work" onclick="aggiungiWorkSetEdit(this)">
+                    + SERIE
+                </button>
+            </div>
+            <div class="nst-edit-work-container"></div>
+        </div>
+    `;
+
+    container.appendChild(exCard);
+
+    // Popola serie di riscaldamento se presenti
+    const warmupContainer = exCard.querySelector('.nst-edit-warmup-container');
+    const warmupData = exData?.riscaldamento_effettivo || [];
+    warmupData.forEach(w => {
+        aggiungiWarmupSetEditRow(warmupContainer, w.peso_kg, w.rip != null ? w.rip : w.rip_completate);
+    });
+
+    // Popola serie effettive se presenti
+    const workContainer = exCard.querySelector('.nst-edit-work-container');
+    const serieData = exData?.serie_dettaglio || exData?.serie_effettive || [];
+    if (serieData.length > 0) {
+        serieData.forEach(s => {
+            aggiungiWorkSetEditRow(workContainer, s.peso_kg, s.ripetizioni != null ? s.ripetizioni : s.rip_completate, s.rpe);
+        });
+    } else if (exData && (exData.peso_kg || exData.ripetizioni)) {
+        // Fallback singolo set
+        aggiungiWorkSetEditRow(workContainer, exData.peso_kg, exData.ripetizioni);
+    } else {
+        // Inizializza con una serie vuota
+        aggiungiWorkSetEditRow(workContainer);
+    }
+}
+
+function rimuoviEsercizioEdit(btnEl) {
+    const card = btnEl.closest('.nst-edit-ex-card');
+    if (card) card.remove();
+}
+
+function aggiungiWarmupSetEdit(btnEl) {
+    const card = btnEl.closest('.nst-edit-ex-card');
+    if (!card) return;
+    const container = card.querySelector('.nst-edit-warmup-container');
+    if (container) aggiungiWarmupSetEditRow(container);
+}
+
+function aggiungiWarmupSetEditRow(container, kg = '', reps = '') {
+    const count = container.querySelectorAll('.nst-edit-set-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'nst-edit-set-row';
+    row.innerHTML = `
+        <span class="nst-edit-set-badge warmup">R${count}</span>
+        <input type="number" step="0.5" class="nst-edit-set-input nst-warmup-kg" placeholder="Kg" value="${kg !== '' ? kg : ''}">
+        <span style="font-size: 11px; color: var(--nst-text-muted);">kg</span>
+        <input type="number" step="1" class="nst-edit-set-input nst-warmup-reps" placeholder="Reps" value="${reps !== '' ? reps : ''}">
+        <span style="font-size: 11px; color: var(--nst-text-muted);">rep</span>
+        <button type="button" class="nst-btn-remove-set" onclick="rimuoviSetEdit(this, 'warmup')" title="Elimina serie">✕</button>
+    `;
+    container.appendChild(row);
+}
+
+function aggiungiWorkSetEdit(btnEl) {
+    const card = btnEl.closest('.nst-edit-ex-card');
+    if (!card) return;
+    const container = card.querySelector('.nst-edit-work-container');
+    if (container) aggiungiWorkSetEditRow(container);
+}
+
+function aggiungiWorkSetEditRow(container, kg = '', reps = '', rpe = '') {
+    const count = container.querySelectorAll('.nst-edit-set-row').length + 1;
+    const row = document.createElement('div');
+    row.className = 'nst-edit-set-row';
+    row.innerHTML = `
+        <span class="nst-edit-set-badge work">S${count}</span>
+        <input type="number" step="0.5" class="nst-edit-set-input nst-work-kg" placeholder="Kg" value="${kg !== '' ? kg : ''}">
+        <span style="font-size: 11px; color: var(--nst-text-muted);">kg</span>
+        <input type="number" step="1" class="nst-edit-set-input nst-work-reps" placeholder="Reps" value="${reps !== '' ? reps : ''}">
+        <span style="font-size: 11px; color: var(--nst-text-muted);">rep</span>
+        <input type="number" step="0.5" min="1" max="10" class="nst-edit-set-input nst-work-rpe" placeholder="RPE" value="${rpe !== '' && rpe != null ? rpe : ''}" style="width: 50px;">
+        <button type="button" class="nst-btn-remove-set" onclick="rimuoviSetEdit(this, 'work')" title="Elimina serie">✕</button>
+    `;
+    container.appendChild(row);
+}
+
+function rimuoviSetEdit(btnEl, type) {
+    const row = btnEl.closest('.nst-edit-set-row');
+    const container = row ? row.parentElement : null;
+    if (row) row.remove();
+
+    // Ricalcola i badge numerici
+    if (container && type) {
+        const rows = container.querySelectorAll('.nst-edit-set-row');
+        const prefix = type === 'warmup' ? 'R' : 'S';
+        rows.forEach((r, idx) => {
+            const badge = r.querySelector('.nst-edit-set-badge');
+            if (badge) badge.textContent = `${prefix}${idx + 1}`;
+        });
+    }
+}
+
+async function salvaModificheAllenamento() {
+    const id = document.getElementById('nst-edit-allenamento-id')?.value;
+    const dataVal = document.getElementById('nst-edit-allenamento-data')?.value;
+    const discVal = document.getElementById('nst-edit-allenamento-disciplina')?.value?.trim();
+    const durataRaw = document.getElementById('nst-edit-allenamento-durata')?.value;
+    const rpeRaw = document.getElementById('nst-edit-allenamento-rpe')?.value;
+    const noteVal = document.getElementById('nst-edit-allenamento-note')?.value?.trim() || '';
+
+    if (!id || !dataVal) {
+        alert("Inserisci una data valida per l'allenamento.");
+        return;
+    }
+    if (!discVal) {
+        alert("Inserisci il nome della disciplina o sessione.");
+        return;
+    }
+
+    const durataVal = durataRaw !== '' && !isNaN(parseInt(durataRaw, 10)) ? parseInt(durataRaw, 10) : null;
+    const rpeVal = rpeRaw !== '' && !isNaN(parseFloat(rpeRaw)) ? parseFloat(rpeRaw) : null;
+
+    // Ricostruisci Esercizi & Set da DOM
+    const exCards = document.querySelectorAll('#nst-edit-allenamento-esercizi-container .nst-edit-ex-card');
+    const listaEsercizi = [];
+
+    exCards.forEach((card) => {
+        const nome = card.querySelector('.nst-edit-ex-nome')?.value?.trim();
+        if (!nome) return; // Salta esercizi senza nome
+
+        const target = card.querySelector('.nst-edit-ex-target')?.value?.trim() || null;
+        const esito = card.querySelector('.nst-edit-ex-esito')?.value || null;
+
+        // Warmup
+        const warmupRows = card.querySelectorAll('.nst-edit-warmup-container .nst-edit-set-row');
+        const riscaldamento = [];
+        warmupRows.forEach((wr, wIdx) => {
+            const kg = parseFloat(wr.querySelector('.nst-warmup-kg')?.value) || 0;
+            const reps = parseInt(wr.querySelector('.nst-warmup-reps')?.value, 10) || 0;
+            riscaldamento.push({
+                serie: wIdx + 1,
+                label: `Rampa ${wIdx + 1}`,
+                peso_kg: kg,
+                rip: reps,
+                rip_completate: reps
+            });
+        });
+
+        // Work sets
+        const workRows = card.querySelectorAll('.nst-edit-work-container .nst-edit-set-row');
+        const serieDettaglio = [];
+        let maxKg = 0;
+        let totalReps = 0;
+
+        workRows.forEach((sr, sIdx) => {
+            const kg = parseFloat(sr.querySelector('.nst-work-kg')?.value) || 0;
+            const reps = parseInt(sr.querySelector('.nst-work-reps')?.value, 10) || 0;
+            const rpeStr = sr.querySelector('.nst-work-rpe')?.value;
+            const rpe = rpeStr !== '' && !isNaN(parseFloat(rpeStr)) ? parseFloat(rpeStr) : null;
+
+            if (kg > maxKg) maxKg = kg;
+            totalReps += reps;
+
+            serieDettaglio.push({
+                serie: sIdx + 1,
+                peso_kg: kg,
+                ripetizioni: reps,
+                rip_completate: reps,
+                rpe: rpe
+            });
+        });
+
+        if (maxKg === 0 && riscaldamento.length > 0) {
+            riscaldamento.forEach(w => { if (w.peso_kg > maxKg) maxKg = w.peso_kg; });
+        }
+
+        const avgReps = serieDettaglio.length > 0 ? Math.round(totalReps / serieDettaglio.length) : 0;
+
+        listaEsercizi.push({
+            nome: nome,
+            target_originario: target,
+            esito: esito,
+            riscaldamento_effettivo: riscaldamento,
+            serie_dettaglio: serieDettaglio,
+            serie: serieDettaglio.length || 1,
+            peso_kg: maxKg,
+            ripetizioni: serieDettaglio.length > 0 ? (serieDettaglio[0].ripetizioni || avgReps) : avgReps
+        });
+    });
+
+    // Recupera eventuale scheda_dati originaria per preservare metadati aggiuntivi (es. wod_id, esito_globale)
+    const workoutOrig = (currentAllenamentiData || []).find(w => String(w.id) === String(id));
+    let schedaOrig = workoutOrig?.scheda_dati;
+    if (typeof schedaOrig === 'string') {
+        try { schedaOrig = JSON.parse(schedaOrig); } catch (e) { schedaOrig = {}; }
+    }
+    if (!schedaOrig || typeof schedaOrig !== 'object') schedaOrig = {};
+
+    const nuovaSchedaDati = {
+        ...schedaOrig,
+        esercizi: listaEsercizi
+    };
+
+    const btnSalva = document.getElementById('nst-btn-salva-allenamento');
+    if (btnSalva) {
+        btnSalva.disabled = true;
+        btnSalva.innerHTML = `<span class="material-symbols-outlined" style="animation: spin 1s linear infinite;">sync</span> SALVATAGGIO...`;
+    }
+
+    try {
+        const { error } = await supabaseClient
+            .from('nestore_allenamenti')
+            .update({
+                data_allenamento: dataVal,
+                corso_disciplina: discVal,
+                durata_minuti: durataVal,
+                rpe_fatica: rpeVal,
+                note: noteVal,
+                scheda_dati: nuovaSchedaDati
+            })
+            .eq('id', id);
+
+        if (error) {
+            console.error("Errore salvataggio allenamento:", error);
+            alert("Errore durante il salvataggio: " + (error.message || error));
+            return;
+        }
+
+        chiudiEditAllenamentoModal();
+        if (typeof showTimerToast === 'function') {
+            showTimerToast("✓ Sessione di allenamento aggiornata con successo!");
+        }
+        await renderGraficoAllenamenti();
+        if (typeof caricaKpiDashboard === 'function') {
+            await caricaKpiDashboard();
+        }
+    } catch (e) {
+        console.error("Eccezione salvataggio allenamento:", e);
+        alert("Errore imprevisto durante il salvataggio.");
+    } finally {
+        if (btnSalva) {
+            btnSalva.disabled = false;
+            btnSalva.innerHTML = `<span class="material-symbols-outlined">check</span> <span>SALVA MODIFICHE</span>`;
+        }
+    }
+}
+
 
 let currentDietaData = [];
 
@@ -7760,6 +8260,22 @@ window.apriDettaglioAllenamentoModal = apriDettaglioAllenamentoModal;
 window.chiudiDettaglioAllenamentoModal = chiudiDettaglioAllenamentoModal;
 window.getCurrentAllenamentiData = getCurrentAllenamentiData;
 window.setCurrentAllenamentiData = setCurrentAllenamentiData;
+window.openMobileAllenamentoActions = openMobileAllenamentoActions;
+window.chiudiMobileAllenamentoActions = chiudiMobileAllenamentoActions;
+window.eseguiDettaglioAllenamentoDaActionSheet = eseguiDettaglioAllenamentoDaActionSheet;
+window.eseguiModificaAllenamentoDaActionSheet = eseguiModificaAllenamentoDaActionSheet;
+window.eseguiEliminaAllenamentoDaActionSheet = eseguiEliminaAllenamentoDaActionSheet;
+window.apriModaleConfermaDeleteAllenamento = apriModaleConfermaDeleteAllenamento;
+window.chiudiModaleConfermaDeleteAllenamento = chiudiModaleConfermaDeleteAllenamento;
+window.eseguiSoftDeleteAllenamento = eseguiSoftDeleteAllenamento;
+window.openEditAllenamentoModal = openEditAllenamentoModal;
+window.chiudiEditAllenamentoModal = chiudiEditAllenamentoModal;
+window.aggiungiEsercizioEdit = aggiungiEsercizioEdit;
+window.rimuoviEsercizioEdit = rimuoviEsercizioEdit;
+window.aggiungiWarmupSetEdit = aggiungiWarmupSetEdit;
+window.aggiungiWorkSetEdit = aggiungiWorkSetEdit;
+window.rimuoviSetEdit = rimuoviSetEdit;
+window.salvaModificheAllenamento = salvaModificheAllenamento;
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -7771,6 +8287,22 @@ if (typeof module !== 'undefined' && module.exports) {
         chiudiDettaglioAllenamentoModal,
         getCurrentAllenamentiData,
         setCurrentAllenamentiData,
+        openMobileAllenamentoActions,
+        chiudiMobileAllenamentoActions,
+        eseguiDettaglioAllenamentoDaActionSheet,
+        eseguiModificaAllenamentoDaActionSheet,
+        eseguiEliminaAllenamentoDaActionSheet,
+        apriModaleConfermaDeleteAllenamento,
+        chiudiModaleConfermaDeleteAllenamento,
+        eseguiSoftDeleteAllenamento,
+        openEditAllenamentoModal,
+        chiudiEditAllenamentoModal,
+        aggiungiEsercizioEdit,
+        rimuoviEsercizioEdit,
+        aggiungiWarmupSetEdit,
+        aggiungiWorkSetEdit,
+        rimuoviSetEdit,
+        salvaModificheAllenamento,
         normalizeExerciseName,
         isBetterPerformance,
         parseExercisesFromWorkout,
