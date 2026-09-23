@@ -3489,6 +3489,60 @@ input:checked + .nst-slider:before {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* ==========================================================================
+   CONTATORI ALLENAMENTI COMPLETATI (IBRIDO & BENCHMARK)
+   ========================================================================== */
+.nst-workout-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    border-radius: 50%;
+    font-family: 'Orbitron', monospace, sans-serif;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    flex-shrink: 0;
+    margin: 0 auto;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.nst-workout-counter-zero {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.nst-workout-counter-active {
+    background: rgba(255, 179, 0, 0.15);
+    border: 1px solid var(--nst-amber, #ffb300);
+    color: var(--nst-amber, #ffb300);
+    box-shadow: 0 0 8px rgba(255, 179, 0, 0.35);
+}
+
+.nst-ibrido-card.metcon .nst-workout-counter-active {
+    background: rgba(0, 229, 255, 0.15);
+    border: 1px solid var(--nst-cyan, #00e5ff);
+    color: var(--nst-cyan, #00e5ff);
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
+}
+
+.nst-ibrido-card.forza .nst-workout-counter-active {
+    background: rgba(255, 179, 0, 0.15);
+    border: 1px solid var(--nst-amber, #ffb300);
+    color: var(--nst-amber, #ffb300);
+    box-shadow: 0 0 8px rgba(255, 179, 0, 0.35);
+}
+
+.nst-standard-card-compact .nst-standard-card-header {
+    align-items: center;
+}
+
 .nst-ibrido-card-desc {
     font-size: 11px;
     color: var(--nst-text-muted);

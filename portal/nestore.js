@@ -1771,6 +1771,9 @@ function getCurrentAllenamentiData() {
 
 function setCurrentAllenamentiData(data) {
     currentAllenamentiData = Array.isArray(data) ? data : [];
+    if (typeof renderCatalogoIbrido === 'function') {
+        renderCatalogoIbrido();
+    }
 }
 
 async function renderGraficoAllenamenti() {
@@ -1790,19 +1793,27 @@ async function renderGraficoAllenamenti() {
 
         if (error || !allData || allData.length === 0) {
             currentAllenamentiData = [];
+            if (typeof renderCatalogoIbrido === 'function') {
+                renderCatalogoIbrido();
+            }
             if (emptyMsg) emptyMsg.classList.remove('nst-hidden');
             const prContainer = document.getElementById('nst-pr-container');
             if (prContainer) prContainer.innerHTML = '';
             const prCountEl = document.getElementById('nst-pr-count');
             if (prCountEl) prCountEl.textContent = '0 esercizi';
-            document.getElementById('nst-training-count').textContent = '0 sessioni nel periodo';
-            document.getElementById('nst-last-workout-name').textContent = 'Nessuna sessione';
+            const trainingCountEl = document.getElementById('nst-training-count');
+            if (trainingCountEl) trainingCountEl.textContent = '0 sessioni nel periodo';
+            const lastWorkoutEl = document.getElementById('nst-last-workout-name');
+            if (lastWorkoutEl) lastWorkoutEl.textContent = 'Nessuna sessione';
             const tbody = document.getElementById('nst-tbody-allenamenti');
             if (tbody) tbody.innerHTML = '';
             return;
         }
 
         currentAllenamentiData = allData;
+        if (typeof renderCatalogoIbrido === 'function') {
+            renderCatalogoIbrido();
+        }
 
         if (emptyMsg) emptyMsg.classList.add('nst-hidden');
 
@@ -1818,12 +1829,18 @@ async function renderGraficoAllenamenti() {
             : allData;
 
         // Aggiorna riassunto sessioni nel periodo
-        document.getElementById('nst-training-count').textContent = `${filteredData.length} session${filteredData.length === 1 ? 'e' : 'i'} nel periodo`;
-        const ultimo = filteredData.length > 0 ? filteredData[filteredData.length - 1] : allData[allData.length - 1];
-        if (ultimo) {
-            document.getElementById('nst-last-workout-name').textContent = `${formatDateWithYear(ultimo.data_allenamento)}: ${(ultimo.corso_disciplina || 'Workout').toUpperCase()}`;
-        } else {
-            document.getElementById('nst-last-workout-name').textContent = 'Nessuna sessione nel periodo';
+        const trainingCountEl = document.getElementById('nst-training-count');
+        if (trainingCountEl) {
+            trainingCountEl.textContent = `${filteredData.length} session${filteredData.length === 1 ? 'e' : 'i'} nel periodo`;
+        }
+        const lastWorkoutEl = document.getElementById('nst-last-workout-name');
+        if (lastWorkoutEl) {
+            const ultimo = filteredData.length > 0 ? filteredData[filteredData.length - 1] : allData[allData.length - 1];
+            if (ultimo) {
+                lastWorkoutEl.textContent = `${formatDateWithYear(ultimo.data_allenamento)}: ${(ultimo.corso_disciplina || 'Workout').toUpperCase()}`;
+            } else {
+                lastWorkoutEl.textContent = 'Nessuna sessione nel periodo';
+            }
         }
 
         // Genera Tabella Storico Sessioni
@@ -6345,7 +6362,89 @@ function aggiungiSerieExtraForza(exIdx) {
     tbody.appendChild(tr);
 }
 
+function calcolaCompletamentiProgrammi(allenamenti) {
+    const counts = { invictus: 0 };
+    const catalogo = (typeof window !== 'undefined' && window.IBRIDO_PROGRAMMI_CATALOGO)
+        ? window.IBRIDO_PROGRAMMI_CATALOGO
+        : (typeof IBRIDO_PROGRAMMI_CATALOGO !== 'undefined' ? IBRIDO_PROGRAMMI_CATALOGO : []);
+
+    catalogo.forEach(p => {
+        if (p.id) counts[p.id] = 0;
+        if (p.codice) counts[p.codice] = 0;
+    });
+
+    if (!Array.isArray(allenamenti)) return counts;
+
+    allenamenti.forEach(item => {
+        if (!item || item.attivo === false) return;
+
+        let sd = item.scheda_dati;
+        if (typeof sd === 'string') {
+            try { sd = JSON.parse(sd); } catch (_) { sd = null; }
+        }
+
+        const cdRaw = (item.corso_disciplina || '').trim();
+        const cd = cdRaw.toLowerCase();
+
+        // Controllo Invictus
+        if (cd === 'invictus' || cd.includes('invictus') || (sd && (sd.benchmark === 'invictus' || sd.tipo === 'invictus'))) {
+            counts.invictus = (counts.invictus || 0) + 1;
+            return;
+        }
+
+        // Controllo Ibrido
+        for (const p of catalogo) {
+            const pId = p.id || p.codice;
+            const pNome = (p.nome || '').trim().toLowerCase();
+            const cdStandard = ('ibrido — ' + pNome).toLowerCase();
+            const cdDash = ('ibrido - ' + pNome).toLowerCase();
+
+            const isMatch = (
+                (sd && sd.programma_id && (sd.programma_id === p.id || sd.programma_id === p.codice)) ||
+                (sd && sd.programma_nome && sd.programma_nome.trim().toLowerCase() === pNome) ||
+                cd === cdStandard ||
+                cd === cdDash ||
+                cd === pNome ||
+                (cd.startsWith('ibrido') && cd.includes(pNome))
+            );
+
+            if (isMatch) {
+                if (pId) counts[pId] = (counts[pId] || 0) + 1;
+                if (p.id && p.id !== pId) counts[p.id] = (counts[p.id] || 0) + 1;
+                if (p.codice && p.codice !== pId) counts[p.codice] = (counts[p.codice] || 0) + 1;
+                break;
+            }
+        }
+    });
+
+    return counts;
+}
+
+function aggiornaContatoreInvictus(count) {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('nst-invictus-counter');
+    if (!el) return;
+    const n = (typeof count === 'number' && !isNaN(count)) ? count : 0;
+    el.textContent = n;
+    el.title = `${n} session${n === 1 ? 'e' : 'i'} registrat${n === 1 ? 'a' : 'e'}`;
+    if (n > 0) {
+        el.classList.remove('nst-workout-counter-zero');
+        el.classList.add('nst-workout-counter-active');
+    } else {
+        el.classList.remove('nst-workout-counter-active');
+        el.classList.add('nst-workout-counter-zero');
+    }
+}
+
 function renderCatalogoIbrido() {
+    if (typeof document === 'undefined') return;
+
+    const rawData = (typeof window !== 'undefined' && window.currentAllenamentiData)
+        ? window.currentAllenamentiData
+        : (typeof currentAllenamentiData !== 'undefined' ? currentAllenamentiData : []);
+    const counts = calcolaCompletamentiProgrammi(rawData);
+    aggiornaContatoreInvictus(counts.invictus || 0);
+
     const grid = document.getElementById('nst-ibrido-programmi-grid');
     if (!grid) return;
 
@@ -6359,11 +6458,15 @@ function renderCatalogoIbrido() {
         const typeClass = isMetcon ? 'metcon' : 'forza';
         const badgeLabel = isMetcon ? 'METCON' : 'FORZA';
         const progKey = p.id || p.codice;
+        const count = counts[progKey] || (p.id && counts[p.id]) || (p.codice && counts[p.codice]) || 0;
+        const countClass = count > 0 ? 'nst-workout-counter-active' : 'nst-workout-counter-zero';
+        const countTitle = `${count} session${count === 1 ? 'e' : 'i'} registrat${count === 1 ? 'a' : 'e'}`;
 
         return `
             <div class="nst-ibrido-card ${typeClass}" onclick="apriAnteprimaIbrido('${progKey}')" role="button" tabindex="0" title="Apri scheda ${escapeHtml(p.nome)}">
                 <div class="nst-ibrido-card-header">
                     <span class="nst-ibrido-card-title">${escapeHtml(p.nome)}</span>
+                    <span class="nst-workout-counter ${countClass}" title="${countTitle}">${count}</span>
                     <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
                 </div>
             </div>
@@ -7731,7 +7834,7 @@ async function confermaSalvaIbridoSeduta() {
             await caricaKpiDashboard();
         }
 
-        if (typeof renderGraficoAllenamenti === 'function' && typeof document !== 'undefined' && document.getElementById('nst-chart-allenamenti')) {
+        if (typeof renderGraficoAllenamenti === 'function') {
             await renderGraficoAllenamenti();
         }
 
@@ -8570,6 +8673,8 @@ window.aggiornaLayoutEserciziModal = aggiornaLayoutEserciziModal;
 
 window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
 window.renderCatalogoIbrido = renderCatalogoIbrido;
+window.calcolaCompletamentiProgrammi = calcolaCompletamentiProgrammi;
+window.aggiornaContatoreInvictus = aggiornaContatoreInvictus;
 window.apriAnteprimaIbrido = apriAnteprimaIbrido;
 window.chiudiAnteprimaIbrido = chiudiAnteprimaIbrido;
 window.modificaIbridoParam = modificaIbridoParam;
@@ -8738,6 +8843,8 @@ if (typeof module !== 'undefined' && module.exports) {
         chiudiModalWorkoutAttivo,
         IBRIDO_PROGRAMMI_CATALOGO,
         renderCatalogoIbrido,
+        calcolaCompletamentiProgrammi,
+        aggiornaContatoreInvictus,
         apriAnteprimaIbrido,
         chiudiAnteprimaIbrido,
         modificaIbridoParam,

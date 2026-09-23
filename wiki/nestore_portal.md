@@ -254,6 +254,7 @@ Aggiunto nella versione **1.05.41**:
 Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione dedicata agli **Allenamenti Standard & Benchmark WOD**:
 - **WOD INVICTUS**:
   - Sequenza strutturata: **Pull-up** $\rightarrow$ **Push-up** $\rightarrow$ **Air Squat** con proporzione fissa **1 : 2 : 4**.
+  - **Contatore Completamenti**: Badge circolare (`#nst-invictus-counter`, `.nst-workout-counter`) posizionato tra il blocco titolo e il badge `BENCHMARK WOD`, aggiornato retroattivamente sullo storico dell'atleta.
   - **Stepper Interattivo**: L'atleta imposta il numero base di Pull-up (default 5); il sistema calcola istantaneamente i target correlati (es. 5 Pull $\rightarrow$ 10 Push $\rightarrow$ 20 Squat).
 - **Modale Esecuzione Attiva (`#nst-active-workout-modal`)**:
   - Premendo *"AVVIA PROGRAMMA"*, si apre una modale focalizzata con display cronometro gigante, checklist dei target da chiudere e controlli di corsa:
@@ -268,12 +269,14 @@ Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione d
   - Inserimento diretto in `public.nestore_allenamenti` con disciplina `'Invictus'`, durata in minuti, note complete e alimentazione della bacheca **Record Personali (PR Grid)**.
 
 ### 9.4. Programmi Ufficiali Corso Ibrido Base (Metcon 1-4 & Forza 1-4)
-Aggiunto nella versione **1.05.44**, perfezionato in **1.05.45**:
+Aggiunto nella versione **1.05.44**, perfezionato in **1.05.45** e **1.05.71**:
 Nel pannello `SCHEDE` dell'atleta (`#nst-schede-panel`) è presente la sezione `#nst-ibrido-programmi-section` con il catalogo dei **8 Programmi Ufficiali Ibrido Base**:
-- **Design Ultra-Compatto (v1.05.45)**:
-  - Le 8 card sono disposte su griglia a 4 colonne (2 righe compatte), mostrando unicamente il **Nome** (es. `Metcon 1`, `Forza 1`) e il **Badge di Tipologia** (`METCON` in ciano, `FORZA` in ambra).
+- **Design Ultra-Compatto con Contatori di Completamento (v1.05.71)**:
+  - Le 8 card sono disposte su griglia a 4 colonne (2 righe compatte), mostrando il **Nome** (es. `Metcon 1`, `Forza 1`), il **Contatore Cerchiato** (`.nst-workout-counter`) al centro e il **Badge di Tipologia** (`METCON` in ciano, `FORZA` in ambra).
+  - Il contatore viene calcolato retroattivamente sui dati storici (`currentAllenamentiData` da `nestore_allenamenti`) tramite `calcolaCompletamentiProgrammi`.
+  - Se il valore è 0, il badge cerchiato appare con stile tenue/disattivato (`.nst-workout-counter-zero`). Al completamento di sessioni ($>0$), il badge si illumina con colore dedicato (`.nst-workout-counter-active` ciano per Metcon, ambra per Forza e Invictus).
   - Rimossi i pulsanti statici e i testi prolissi dal riepilogo: l'intera card è cliccabile (`cursor: pointer` con hover glow) per aprire istantaneamente la modale di anteprima.
-  - Lo stesso principio si applica a **INVICTUS** (`#nst-standard-card-compact`), la cui card è stata ridotta ad altezza minima e il cui stepper di configurazione pull-up è accessibile via modale popup dedicata (`#nst-invictus-preview-modal`).
+  - Lo stesso principio si applica a **INVICTUS** (`#nst-standard-card-compact`), la cui card include il contatore cerchiato `#nst-invictus-counter`.
 - **Metcon 1-4 (Conditioning Metabolico)**:
   - **Metcon 1, 2, 4**: integrano il motore `tabataEngine` con intervalli lavoro/riposo preimpostati (es. 30" work + 30" rest o 25" work + 35" rest), con possibilità per l'atleta di modificare i parametri di work, rest e rounds prima dell'avvio.
   - **Metcon 3**: programma Unbroken a 20 giri no time limit (tempo target 40'), integrato con il cronometro `timerEngine` (supporto a pause e lap).

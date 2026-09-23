@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-23] ingest | NESTORE — Contatori Completamenti su Card Ibrido e Benchmark Invictus (v1.05.71)
+- **UI & Layout Card (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
+  - Aggiunto contatore circolare (`.nst-workout-counter`) al centro dell'header di ciascuna card Ibrido (Metcon 1-4, Forza 1-4) tra il nome del programma e il badge di tipologia.
+  - Aggiunto contatore circolare analogo (`#nst-invictus-counter`) sulla card Benchmark WOD Invictus.
+  - Stato a zero (`.nst-workout-counter-zero`): cerchio con sfondo e bordo traslucidi a bassa opacità e testo grigio tenue.
+  - Stato attivo ($>0$, `.nst-workout-counter-active`): bordo e sfondo illuminati con glow dedicato (ciano per Metcon, ambra per Forza e Invictus).
+- **Calcolo Storico Retroattivo (`portal/nestore.js`)**:
+  - Implementata la funzione `calcolaCompletamentiProgrammi(allenamenti)` che analizza retroattivamente lo storico all-time `nestore_allenamenti` (`currentAllenamentiData`), supportando discipline sia in formato standard (`Ibrido — [Nome]`), sia varianti con trattino, sia match espliciti su `scheda_dati.programma_id` o `scheda_dati.programma_nome`, escludendo i record soft-deleted (`attivo: false`).
+  - Implementata `aggiornaContatoreInvictus(count)` per l'aggiornamento dinamico del DOM.
+  - Aggiornato `renderCatalogoIbrido()` e `renderGraficoAllenamenti()` per mantenere i contatori sincronizzati al caricamento e dopo ogni salvataggio di seduta (inclusa la correzione del controllo obsoleto su `nst-chart-allenamenti` in `confermaSalvaIbridoSeduta()`).
+- **Testing & QA (`tests/workout-counters.test.js`)**:
+  - Creata una nuova test suite con 9 test unitari per validare il calcolo su dati vuoti, soft-deleted, corrispondenze Invictus/Ibrido, e rendering dinamico del DOM.
+  - Test suite globale vitest: 170/170 test superati (14 suite su 14).
+
 ## [2026-09-23] ingest | NESTORE — Schede Forza: Click-to-Cycle Stato Serie (Cornice Verde/Gialla/Rossa) & Storicizzazione (v1.05.70)
 - **UI & Interazione Click-to-Cycle (`portal/nestore.js`, `portal/nestore.css`)**:
   - Implementata la logica di transizione a 4 stati al tap/click su una riga di serie (`.nst-active-set-row` sia per riscaldamento specifico sia per serie allenanti/extra):

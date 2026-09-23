@@ -11,10 +11,14 @@
             "id": "6433fc196d5c2717",
             "type": "leaf",
             "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Vista grafo"
+              "type": "markdown",
+              "state": {
+                "file": "wiki/index.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "index"
             }
           }
         ]
@@ -180,6 +184,9 @@
   },
   "active": "6433fc196d5c2717",
   "lastOpenFiles": [
+    "wiki/index.md",
+    "node_modules/qs/LICENSE.md",
+    "node_modules/@mistralai/mistralai/README.md",
     "node_modules/pdf-lib/README.md",
     "2026-05-28.md",
     "Senza nome.canvas"
