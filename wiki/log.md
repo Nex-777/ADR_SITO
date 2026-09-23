@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-23] ingest | NESTORE — Schede Forza: Click-to-Cycle Stato Serie (Cornice Verde/Gialla/Rossa) & Storicizzazione (v1.05.70)
+- **UI & Interazione Click-to-Cycle (`portal/nestore.js`, `portal/nestore.css`)**:
+  - Implementata la logica di transizione a 4 stati al tap/click su una riga di serie (`.nst-active-set-row` sia per riscaldamento specifico sia per serie allenanti/extra):
+    1. Tap 1: Cornice Verde brillante (`.status-done`, `.status-fatta`, `data-set-status="fatta"`), serie completata.
+    2. Tap 2: Cornice Gialla ambra (`.status-partial`, `.status-parziale`, `data-set-status="parziale"`), serie parziale.
+    3. Tap 3: Cornice Rossa pericolo (`.status-skipped`, `.status-saltata`, `data-set-status="saltata"`), serie saltata.
+    4. Tap 4: Cornice rimossa e attributo resettato (`null`), ciclo pronto a ripartire al tap successivo.
+  - Ignorati i click sui controlli interattivi (`input`, `button`, `select`, `textarea`) tramite `gestisciClickRigaSerieForza`, garantendo che l'atleta possa inserire o correggere i carichi (kg) e le ripetizioni (rip) senza innescare involontariamente il ciclo della cornice.
+  - Aggiunti stili con `cursor: pointer;` ed effetti glow sui bordi per feedback tattile immediato.
+- **Persistenza & Storicizzazione Non Distruttiva (`portal/nestore.js`)**:
+  - In `terminaIbridoSeduta()`, estratto lo `stato_esecutivo` da ciascuna riga DOM di riscaldamento e allenante.
+  - In `confermaSalvaIbridoSeduta()`, salvato `stato_esecutivo` in `riscaldamento_effettivo` e `serie_effettive`/`serie_dettaglio` all'interno del payload `scheda_dati` su Supabase.
+- **Testing & QA (`tests/forza-schede.test.js`)**:
+  - Aggiunti 5 nuovi test unitari a copertura dell'intero ciclo a 4 stati, dell'isolamento click su input, dell'estrazione dello stato esecutivo e della persistenza del payload.
+  - Test suite globale vitest: 161/161 test superati senza errori.
+
 ## [2026-09-23] ingest | NESTORE — Fix Falso PR Trazioni: Isolamento Sovraccarico Calisthenics (Opz 2A) & Bonifica Record DB (Opz 1A)
 - **Isolamento Fallback Carichi per Calisthenics (`portal/nestore.js`)**:
   - Introdotta la funzione helper `isCalisthenicsWithOverload(nome)` per intercettare trazioni, pull up, chin up, dip, piegamenti, muscle up.

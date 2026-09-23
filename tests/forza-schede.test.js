@@ -582,4 +582,185 @@ describe('NESTORE — Schede Allenamento Forza & Flusso Personalizzato', () => {
         expect(css).toContain('grid-template-columns: 1fr 1fr 1fr');
         expect(css).toContain('.nst-workout-actions-row .nst-action-btn-text');
     });
+
+    describe('Click-to-Cycle Stato Serie Forza (Cornice Verde/Gialla/Rossa)', () => {
+        const createMockRow = (initialStatus = '') => {
+            const classSet = new Set();
+            const dataset = {};
+            if (initialStatus) {
+                dataset.setStatus = initialStatus;
+                if (initialStatus === 'fatta') classSet.add('status-done').add('status-fatta');
+                if (initialStatus === 'parziale') classSet.add('status-partial').add('status-parziale');
+                if (initialStatus === 'saltata') classSet.add('status-skipped').add('status-saltata');
+            }
+            return {
+                classList: {
+                    add: vi.fn((...cls) => cls.forEach(c => classSet.add(c))),
+                    remove: vi.fn((...cls) => cls.forEach(c => classSet.delete(c))),
+                    contains: vi.fn((c) => classSet.has(c))
+                },
+                dataset,
+                getAttribute: vi.fn((attr) => attr === 'data-set-status' ? dataset.setStatus || null : null),
+                setAttribute: vi.fn((attr, val) => { if (attr === 'data-set-status') dataset.setStatus = val; }),
+                removeAttribute: vi.fn((attr) => { if (attr === 'data-set-status') delete dataset.setStatus; })
+            };
+        };
+
+        it('cicla correttamente la sequenza di 4 stati: non impostato -> fatta -> parziale -> saltata -> reset', () => {
+            const row = createMockRow();
+
+            // 1° tap: Fatta (Cornice Verde)
+            const s1 = nestore.ciclaStatoSerieForza(row);
+            expect(s1).toBe('fatta');
+            expect(row.dataset.setStatus).toBe('fatta');
+            expect(row.classList.contains('status-done')).toBe(true);
+
+            // 2° tap: Parziale (Cornice Gialla)
+            const s2 = nestore.ciclaStatoSerieForza(row);
+            expect(s2).toBe('parziale');
+            expect(row.dataset.setStatus).toBe('parziale');
+            expect(row.classList.contains('status-partial')).toBe(true);
+            expect(row.classList.contains('status-done')).toBe(false);
+
+            // 3° tap: Saltata (Cornice Rossa)
+            const s3 = nestore.ciclaStatoSerieForza(row);
+            expect(s3).toBe('saltata');
+            expect(row.dataset.setStatus).toBe('saltata');
+            expect(row.classList.contains('status-skipped')).toBe(true);
+            expect(row.classList.contains('status-partial')).toBe(false);
+
+            // 4° tap: Reset (nessuna cornice)
+            const s4 = nestore.ciclaStatoSerieForza(row);
+            expect(s4).toBeNull();
+            expect(row.dataset.setStatus).toBeUndefined();
+            expect(row.classList.contains('status-skipped')).toBe(false);
+
+            // 5° tap: Riparte da Fatta
+            const s5 = nestore.ciclaStatoSerieForza(row);
+            expect(s5).toBe('fatta');
+            expect(row.dataset.setStatus).toBe('fatta');
+            expect(row.classList.contains('status-done')).toBe(true);
+        });
+
+        it('gestisciClickRigaSerieForza non cicla lo stato se il click avviene su un input', () => {
+            const row = createMockRow();
+            const inputTarget = {
+                closest: vi.fn((selector) => {
+                    if (selector.includes('input')) return {};
+                    if (selector === '.nst-active-set-row') return row;
+                    return null;
+                })
+            };
+
+            nestore.gestisciClickRigaSerieForza({ target: inputTarget });
+            expect(row.dataset.setStatus).toBeUndefined();
+            expect(row.classList.add).not.toHaveBeenCalled();
+        });
+
+        it('gestisciClickRigaSerieForza cicla lo stato se il click avviene sulla riga (o etichetta/spazio vuoto)', () => {
+            const row = createMockRow();
+            const labelTarget = {
+                closest: vi.fn((selector) => {
+                    if (selector.includes('input')) return null;
+                    if (selector === '.nst-active-set-row') return row;
+                    return null;
+                })
+            };
+
+            nestore.gestisciClickRigaSerieForza({ target: labelTarget });
+            expect(row.dataset.setStatus).toBe('fatta');
+            expect(row.classList.contains('status-done')).toBe(true);
+        });
+
+        it('terminaIbridoSeduta include stato_esecutivo in riscaldamento_effettivo e serie_effettive', async () => {
+            const mockWarmupRow = createMockRow('fatta');
+            const mockWorkRow1 = createMockRow('parziale');
+            const mockWorkRow2 = createMockRow('saltata');
+            const mockWorkRow3 = createMockRow('');
+            const mockWorkRow4 = createMockRow('');
+
+            const modalMock = { classList: { remove: vi.fn(), add: vi.fn(), contains: vi.fn(() => false) } };
+            const runningView = { classList: { remove: vi.fn(), add: vi.fn() } };
+            const saveView = { classList: { remove: vi.fn(), add: vi.fn() } };
+            const esitoBadgeMock = { className: '', innerHTML: '', classList: { remove: vi.fn(), add: vi.fn() } };
+            const summaryMock = { innerHTML: '' };
+            const tableContainerMock = { innerHTML: '' };
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-ibrido-active-modal') return modalMock;
+                if (id === 'nst-ibrido-running-view') return runningView;
+                if (id === 'nst-ibrido-save-view') return saveView;
+                if (id === 'nst-ibrido-esito-badge') return esitoBadgeMock;
+                if (id === 'nst-ibrido-save-ex-summary') return summaryMock;
+                if (id === 'nst-ibrido-active-ex-table-container') return tableContainerMock;
+                if (id === 'nst-ibrido-final-duration-input') return { value: '45' };
+                if (id === 'nst-ibrido-save-prog-name') return { textContent: '' };
+                if (id && id.startsWith('nst-active-warmup-tbody-ex-')) {
+                    return { querySelectorAll: vi.fn(() => [mockWarmupRow]) };
+                }
+                if (id && id.startsWith('nst-active-tbody-ex-')) {
+                    return { querySelectorAll: vi.fn(() => [mockWorkRow1, mockWorkRow2, mockWorkRow3, mockWorkRow4]) };
+                }
+                if (id && id.startsWith('nst-ibrido-ex-rip-')) return { value: '4' };
+                if (id && id.startsWith('nst-ibrido-ex-peso-')) return { value: '80' };
+                if (id && id.startsWith('nst-ibrido-warmup-rip-')) return { value: '10' };
+                if (id && id.startsWith('nst-ibrido-warmup-peso-')) return { value: '40' };
+                return null;
+            });
+
+            nestore.apriAnteprimaIbrido('ibrido_forza_1');
+            await nestore.avviaIbridoSeduta();
+            nestore.terminaIbridoSeduta();
+
+            const cfg = nestore.getIbridoConfigurazionePersonalizzata();
+            expect(cfg).toBeDefined();
+            const summary = cfg.summaryEsercizi;
+            expect(summary).toBeDefined();
+            expect(summary.length).toBeGreaterThan(0);
+
+            const ex0 = summary[0];
+            expect(ex0.riscaldamento_effettivo[0].stato_esecutivo).toBe('fatta');
+            expect(ex0.serie_effettive[0].stato_esecutivo).toBe('parziale');
+            expect(ex0.serie_effettive[1].stato_esecutivo).toBe('saltata');
+            expect(ex0.serie_effettive[2].stato_esecutivo).toBeNull();
+
+            // Salva seduta e verifica inserimento in Supabase
+            let insertedPayload = null;
+            const mockQueryBuilder = {
+                select: vi.fn().mockReturnThis(),
+                eq: vi.fn().mockReturnThis(),
+                order: vi.fn().mockReturnThis(),
+                gte: vi.fn().mockReturnThis(),
+                insert: vi.fn(async (payload) => {
+                    insertedPayload = payload;
+                    return { error: null };
+                })
+            };
+            global.window.supabaseClient = { from: vi.fn(() => mockQueryBuilder) };
+            global.window.currentUser = { id: 'usr-forza-tester' };
+            global.currentUser = { id: 'usr-forza-tester' };
+
+            await nestore.confermaSalvaIbridoSeduta();
+            expect(insertedPayload).not.toBeNull();
+            const savedEx = insertedPayload.scheda_dati.esercizi[0];
+            expect(savedEx.riscaldamento_effettivo[0].stato_esecutivo).toBe('fatta');
+            expect(savedEx.serie_dettaglio[0].stato_esecutivo).toBe('parziale');
+            expect(savedEx.serie_dettaglio[1].stato_esecutivo).toBe('saltata');
+            expect(savedEx.serie_dettaglio[2].stato_esecutivo).toBeNull();
+        });
+
+        it('verifica che nestore.css contenga le regole di cornice verde, gialla e rossa per le righe attive', async () => {
+            const fs = await import('fs');
+            const path = await import('path');
+            const css = fs.readFileSync(path.resolve(__dirname, '../portal/nestore.css'), 'utf-8');
+
+            expect(css).toContain('.nst-active-set-row.status-done');
+            expect(css).toContain('.nst-active-set-row.status-partial');
+            expect(css).toContain('.nst-active-set-row.status-skipped');
+            expect(css).toContain('#10b981'); // verde
+            expect(css).toContain('#f59e0b'); // giallo
+            expect(css).toContain('#ef4444'); // rosso
+            expect(css).toContain('cursor: pointer');
+        });
+    });
 });

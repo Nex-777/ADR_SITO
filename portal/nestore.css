@@ -4215,6 +4215,13 @@ input:checked + .nst-slider:before {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid transparent;
     transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.nst-active-set-row input {
+    cursor: text;
+    user-select: auto;
 }
 
 .nst-active-set-row:hover {
@@ -4235,6 +4242,28 @@ input:checked + .nst-slider:before {
 .nst-active-set-row.extra-row {
     background: rgba(118, 255, 3, 0.04);
     border-left: 3px solid var(--nst-lime);
+}
+
+/* Stati Esecuzione Serie Forza (Click-to-Cycle) */
+.nst-active-set-row.status-done,
+.nst-active-set-row.status-fatta {
+    border: 2px solid #10b981 !important;
+    background: rgba(16, 185, 129, 0.08) !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.nst-active-set-row.status-partial,
+.nst-active-set-row.status-parziale {
+    border: 2px solid #f59e0b !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
+}
+
+.nst-active-set-row.status-skipped,
+.nst-active-set-row.status-saltata {
+    border: 2px solid #ef4444 !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
 }
 
 .nst-active-set-label {

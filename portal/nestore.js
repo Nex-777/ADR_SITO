@@ -6158,6 +6158,10 @@ function getIbridoMetconSummary() {
     return ibridoMetconSummary;
 }
 
+function getIbridoConfigurazionePersonalizzata() {
+    return ibridoConfigurazionePersonalizzata;
+}
+
 function getIbridoSessionMinimized() {
     return ibridoSessionMinimized;
 }
@@ -6229,6 +6233,86 @@ function verificaForzaMaxStorico(exIdx, maxStorico) {
     } else {
         badgeEl.classList.add('nst-hidden');
     }
+}
+
+/**
+ * Cicla lo stato di esecuzione visivo di una serie Forza (Riscaldamento o Serie Allenante):
+ * - 1 tap: Fatta (cornice verde)
+ * - 2 tap: Parziale (cornice gialla)
+ * - 3 tap: Saltata (cornice rossa)
+ * - 4 tap: Reset (cornice rimossa, ciclo azzerato)
+ * I tap influiscono solo sullo stato/cornice visiva e non modificano i numeri negli input.
+ */
+function ciclaStatoSerieForza(rowEl) {
+    if (!rowEl) return null;
+    const currentStatus = (rowEl.dataset && rowEl.dataset.setStatus)
+        ? rowEl.dataset.setStatus
+        : (typeof rowEl.getAttribute === 'function' ? (rowEl.getAttribute('data-set-status') || '') : '');
+
+    let nextStatus = '';
+    if (!currentStatus) {
+        nextStatus = 'fatta';
+    } else if (currentStatus === 'fatta') {
+        nextStatus = 'parziale';
+    } else if (currentStatus === 'parziale') {
+        nextStatus = 'saltata';
+    } else {
+        nextStatus = '';
+    }
+
+    if (rowEl.classList && typeof rowEl.classList.remove === 'function') {
+        rowEl.classList.remove(
+            'status-done', 'status-fatta',
+            'status-partial', 'status-parziale',
+            'status-skipped', 'status-saltata'
+        );
+    }
+
+    if (nextStatus) {
+        if (rowEl.dataset) {
+            rowEl.dataset.setStatus = nextStatus;
+        }
+        if (typeof rowEl.setAttribute === 'function') {
+            rowEl.setAttribute('data-set-status', nextStatus);
+        }
+
+        if (rowEl.classList && typeof rowEl.classList.add === 'function') {
+            if (nextStatus === 'fatta') {
+                rowEl.classList.add('status-done', 'status-fatta');
+            } else if (nextStatus === 'parziale') {
+                rowEl.classList.add('status-partial', 'status-parziale');
+            } else if (nextStatus === 'saltata') {
+                rowEl.classList.add('status-skipped', 'status-saltata');
+            }
+        }
+    } else {
+        if (rowEl.dataset) {
+            delete rowEl.dataset.setStatus;
+        }
+        if (typeof rowEl.removeAttribute === 'function') {
+            rowEl.removeAttribute('data-set-status');
+        }
+    }
+
+    return nextStatus || null;
+}
+
+function gestisciClickRigaSerieForza(e) {
+    if (!e || !e.target) return;
+    // Non intercettare click su input, textarea, select o bottoni (l'utente deve poter digitare liberamente)
+    if (typeof e.target.closest === 'function') {
+        if (e.target.closest('input, button, select, textarea')) {
+            return;
+        }
+        const rowEl = e.target.closest('.nst-active-set-row');
+        if (rowEl) {
+            ciclaStatoSerieForza(rowEl);
+        }
+    }
+}
+
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('click', gestisciClickRigaSerieForza);
 }
 
 function aggiungiSerieExtraForza(exIdx) {
@@ -7129,11 +7213,17 @@ function terminaIbridoSeduta() {
 
             // 1. Raccolta dati Riscaldamento Specifico (se presente e non a corpo libero)
             if (!ex.isBw && ex.riscaldamento && ex.riscaldamento.length > 0) {
+                const warmupTbody = document.getElementById(`nst-active-warmup-tbody-ex-${exIdx}`);
+                const warmupRows = warmupTbody ? warmupTbody.querySelectorAll('tr') : [];
+
                 ex.riscaldamento.forEach((w, wIdx) => {
                     const ripInput = document.getElementById(`nst-ibrido-warmup-rip-${exIdx}-${wIdx}`);
                     const pesoInput = document.getElementById(`nst-ibrido-warmup-peso-${exIdx}-${wIdx}`);
                     const ripVal = ripInput ? (parseInt(ripInput.value, 10) || 0) : w.rip;
                     const pesoVal = pesoInput ? (parseFloat(pesoInput.value) || 0) : (w.peso_kg || 0);
+
+                    const wRow = warmupRows[wIdx];
+                    const statoEsecutivo = wRow ? (wRow.dataset?.setStatus || (typeof wRow.getAttribute === 'function' ? wRow.getAttribute('data-set-status') : null) || null) : null;
 
                     riscaldamentoEffettivo.push({
                         serie: wIdx + 1,
@@ -7141,7 +7231,8 @@ function terminaIbridoSeduta() {
                         rip: ripVal,
                         rip_target: w.rip,
                         peso_kg: pesoVal,
-                        pct: w.pct
+                        pct: w.pct,
+                        stato_esecutivo: statoEsecutivo
                     });
 
                     sumCompletedReps += ripVal;
@@ -7156,16 +7247,19 @@ function terminaIbridoSeduta() {
             }
 
             // 2. Raccolta dati Serie Allenanti
-            rows.forEach((_, sIdx) => {
+            rows.forEach((row, sIdx) => {
                 const ripInput = document.getElementById(`nst-ibrido-ex-rip-${exIdx}-${sIdx}`);
                 const pesoInput = document.getElementById(`nst-ibrido-ex-peso-${exIdx}-${sIdx}`);
                 const ripVal = ripInput ? (parseInt(ripInput.value, 10) || 0) : ex.rip_target;
                 const pesoVal = pesoInput ? (parseFloat(pesoInput.value) || 0) : (ex.isBw ? 0 : (ex.peso_target_kg || 0));
 
+                const statoEsecutivo = row ? (row.dataset?.setStatus || (typeof row.getAttribute === 'function' ? row.getAttribute('data-set-status') : null) || null) : null;
+
                 serieEffettive.push({
                     serie: sIdx + 1,
                     rip_completate: ripVal,
-                    peso_kg: pesoVal
+                    peso_kg: pesoVal,
+                    stato_esecutivo: statoEsecutivo
                 });
 
                 sumCompletedReps += ripVal;
@@ -7539,7 +7633,8 @@ async function confermaSalvaIbridoSeduta() {
                         serie_dettaglio: ex.serie_effettive.map(s => ({
                             serie: s.serie,
                             peso_kg: typeof s.peso_kg === 'number' ? s.peso_kg : maxPeso,
-                            ripetizioni: s.rip_completate
+                            ripetizioni: s.rip_completate,
+                            stato_esecutivo: s.stato_esecutivo || null
                         })),
                         target_originario: ex.target_descrittivo
                     };
@@ -8508,6 +8603,9 @@ window.setCurrentMetconDisplayedRound = setCurrentMetconDisplayedRound;
 window.getLastActiveTimerGiro = getLastActiveTimerGiro;
 window.setLastActiveTimerGiro = setLastActiveTimerGiro;
 window.getIbridoMetconSummary = getIbridoMetconSummary;
+window.getIbridoConfigurazionePersonalizzata = getIbridoConfigurazionePersonalizzata;
+window.ciclaStatoSerieForza = ciclaStatoSerieForza;
+window.gestisciClickRigaSerieForza = gestisciClickRigaSerieForza;
 
 window.gestisciTimerPrimaryClick = gestisciTimerPrimaryClick;
 window.gestisciTimerResetClick = gestisciTimerResetClick;
@@ -8659,6 +8757,7 @@ if (typeof module !== 'undefined' && module.exports) {
         getLastActiveTimerGiro,
         setLastActiveTimerGiro,
         getIbridoMetconSummary,
+        getIbridoConfigurazionePersonalizzata,
         avviaIbridoSeduta,
         aggiornaIbridoModalAttivo,
         gestisciIbridoActionPause,
@@ -8701,6 +8800,8 @@ if (typeof module !== 'undefined' && module.exports) {
         recuperaUltimaSessioneProgramma,
         verificaForzaMaxStorico,
         aggiungiSerieExtraForza,
+        ciclaStatoSerieForza,
+        gestisciClickRigaSerieForza,
         isModalInForzaMode,
         aggiungiRigaSerie,
         rimuoviRigaSerie,

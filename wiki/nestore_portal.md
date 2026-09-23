@@ -427,6 +427,21 @@ Introdotta nella versione **1.05.68**:
 3. **Bonifica Dati Storici su Supabase**:
    - Corretto il record sessione `93c95e54-1481-4ce2-ac93-49387afdf3ee` del 19/09/2026 azzerando le ripetizioni delle serie di riscaldamento fittizie di Trazioni Pesate. Questo permette al PR reale dell'atleta (4 serie x 4 rip con 22 kg del 21/09/2026) di emergere correttamente e senza distorsioni nella bacheca.
 
+### 9.11. Schede Forza: Click-to-Cycle Stato Esecuzione Serie (Cornice Verde/Gialla/Rossa) & Storicizzazione (v1.05.70)
+Introdotta nella versione **1.05.70**:
+Consente all'atleta di tracciare visivamente l'esito di ogni serie (Riscaldamento specifico e Serie Allenanti) durante l'allenamento attivo Forza tramite tap/click diretto sulla riga:
+1. **Sequenza Ciclica a 4 Stati (`ciclaStatoSerieForza`)**:
+   - **1° Tap**: Cornice **Verde** (`.status-done`, `.status-fatta`, `data-set-status="fatta"`), indica serie eseguita con successo.
+   - **2° Tap**: Cornice **Gialla** (`.status-partial`, `.status-parziale`, `data-set-status="parziale"`), indica serie eseguita parzialmente.
+   - **3° Tap**: Cornice **Rossa** (`.status-skipped`, `.status-saltata`, `data-set-status="saltata"`), indica serie saltata.
+   - **4° Tap**: Reset (cornice rimossa, attributo rimosso), ciclo azzerato pronto a ripartire al tap successivo.
+2. **Protezione Input e Zero Effetti Collaterali**:
+   - I click effettuati all'interno delle caselle numeriche dei carichi (`kg`) o ripetizioni (`rip`) vengono ignorati (`gestisciClickRigaSerieForza`), consentendo all'atleta di digitare liberamente senza alterare la cornice.
+   - I tap influiscono esclusivamente sull'aspetto visivo e sullo stato esecutivo; non alterano i valori numerici inseriti.
+3. **Storicizzazione Robusta e Compatibile (`terminaIbridoSeduta` & `confermaSalvaIbridoSeduta`)**:
+   - Lo stato esecutivo viene estratto dalle righe DOM e persistito nel payload JSON `scheda_dati` in `riscaldamento_effettivo` e `serie_effettive` / `serie_dettaglio` come `stato_esecutivo: 'fatta' | 'parziale' | 'saltata' | null`.
+   - Garantita retrocompatibilità totale con la visualizzazione cronologica, i record personali e le viste di dettaglio/modifica.
+
 ---
 
 ## 10. Related Concept Pages
