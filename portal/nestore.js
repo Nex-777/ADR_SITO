@@ -1583,51 +1583,58 @@ async function ottieniBaseMassimaleEsercizio(nomeEsercizio) {
         }
     }
 
-    // 2. Se nessun massimale, cerca il peso dell'atleta
+    // 2. Se nessun massimale, cerca il peso dell'atleta (tranne per calisthenics dove il sovraccarico base è 0)
     if (!massimale) {
-        const pesoKgVal = (typeof window !== 'undefined' && window.currentUserPesoKg !== undefined)
-            ? window.currentUserPesoKg
-            : (typeof currentUserPesoKg !== 'undefined' ? currentUserPesoKg : null);
+        if (!isCalisthenicsWithOverload(nomeEsercizio)) {
+            const pesoKgVal = (typeof window !== 'undefined' && window.currentUserPesoKg !== undefined)
+                ? window.currentUserPesoKg
+                : (typeof currentUserPesoKg !== 'undefined' ? currentUserPesoKg : null);
 
-        if (typeof pesoKgVal === 'number' && pesoKgVal > 0) {
-            massimale = pesoKgVal;
-            fonte = `Peso atleta: ${massimale} kg`;
-        } else if (typeof document !== 'undefined' && document) {
-            const weightEl = document.getElementById('nst-current-weight');
-            const wVal = parseFloat(weightEl?.textContent);
-            if (!isNaN(wVal) && wVal > 0) {
-                massimale = wVal;
-                currentUserPesoKg = massimale;
-                if (typeof window !== 'undefined') window.currentUserPesoKg = massimale;
+            if (typeof pesoKgVal === 'number' && pesoKgVal > 0) {
+                massimale = pesoKgVal;
                 fonte = `Peso atleta: ${massimale} kg`;
-            }
-        }
-
-        if (!massimale && client && user?.id && typeof client.from === 'function') {
-            try {
-                const { data: pesi } = await client
-                    .from('nestore_pesi_misure')
-                    .select('peso_kg')
-                    .eq('utente_id', user.id)
-                    .eq('attivo', true)
-                    .order('data_rilevazione', { ascending: false })
-                    .limit(1);
-                if (pesi && pesi.length > 0 && pesi[0].peso_kg > 0) {
-                    massimale = Number(pesi[0].peso_kg);
+            } else if (typeof document !== 'undefined' && document) {
+                const weightEl = document.getElementById('nst-current-weight');
+                const wVal = parseFloat(weightEl?.textContent);
+                if (!isNaN(wVal) && wVal > 0) {
+                    massimale = wVal;
                     currentUserPesoKg = massimale;
                     if (typeof window !== 'undefined') window.currentUserPesoKg = massimale;
                     fonte = `Peso atleta: ${massimale} kg`;
                 }
-            } catch (e) {
-                console.warn("Impossibile recuperare peso atleta:", e);
+            }
+
+            if (!massimale && client && user?.id && typeof client.from === 'function') {
+                try {
+                    const { data: pesi } = await client
+                        .from('nestore_pesi_misure')
+                        .select('peso_kg')
+                        .eq('utente_id', user.id)
+                        .eq('attivo', true)
+                        .order('data_rilevazione', { ascending: false })
+                        .limit(1);
+                    if (pesi && pesi.length > 0 && pesi[0].peso_kg > 0) {
+                        massimale = Number(pesi[0].peso_kg);
+                        currentUserPesoKg = massimale;
+                        if (typeof window !== 'undefined') window.currentUserPesoKg = massimale;
+                        fonte = `Peso atleta: ${massimale} kg`;
+                    }
+                } catch (e) {
+                    console.warn("Impossibile recuperare peso atleta:", e);
+                }
             }
         }
     }
 
     // 3. Fallback standard se nessun massimale e nessun peso corporeo
     if (!massimale || massimale <= 0) {
-        massimale = 70;
-        fonte = `Default: 70 kg`;
+        if (isCalisthenicsWithOverload(nomeEsercizio)) {
+            massimale = 0;
+            fonte = `Sovraccarico base: 0 kg`;
+        } else {
+            massimale = 70;
+            fonte = `Default: 70 kg`;
+        }
     }
 
     return { baseKg: massimale, fonte };
@@ -6405,6 +6412,13 @@ function isPureBodyweight(nome) {
     return n.includes('jump') || n.includes('salto') || n.includes('corsa') || n.includes('air squat');
 }
 
+function isCalisthenicsWithOverload(nome) {
+    const n = (nome || '').trim().toLowerCase();
+    return n.includes('trazion') || n.includes('pull up') || n.includes('chin up') ||
+           n.includes('dip') || n.includes('piegament') || n.includes('muscle up') ||
+           n.includes('calisthenic') || n.includes('zavorr');
+}
+
 function ottieniMassimoStoricoEsercizio(nomeEsercizio) {
     const nomeNorm = (nomeEsercizio || '').trim().toLowerCase();
     const prList = (typeof window !== 'undefined' && Array.isArray(window.currentUserPrList))
@@ -6548,6 +6562,9 @@ function renderForzaAnteprimaEsercizi(p, exListEl, ultimaSessione) {
         if (maxStorico > 0) {
             baseKg = maxStorico;
             fonte = `PR: ${maxStorico} kg`;
+        } else if (isCalisthenicsWithOverload(ex.nome)) {
+            baseKg = 0;
+            fonte = 'Sovraccarico base: 0 kg';
         } else {
             const pesoKgVal = (typeof window !== 'undefined' && window.currentUserPesoKg !== undefined)
                 ? window.currentUserPesoKg
@@ -8686,6 +8703,7 @@ window.ottieniBaseMassimaleEsercizio = ottieniBaseMassimaleEsercizio;
 window.DEFAULT_FORZA_SERIE = DEFAULT_FORZA_SERIE;
 window.DEFAULT_FORZA_WARMUP = DEFAULT_FORZA_WARMUP;
 window.isPureBodyweight = isPureBodyweight;
+window.isCalisthenicsWithOverload = isCalisthenicsWithOverload;
 window.ottieniMassimoStoricoEsercizio = ottieniMassimoStoricoEsercizio;
 window.recuperaUltimaSessioneProgramma = recuperaUltimaSessioneProgramma;
 window.verificaForzaMaxStorico = verificaForzaMaxStorico;
@@ -8930,6 +8948,7 @@ if (typeof module !== 'undefined' && module.exports) {
         WakeLockManager,
         toggleIbridoNoteInSession,
         isPureBodyweight,
+        isCalisthenicsWithOverload,
         ottieniMassimoStoricoEsercizio,
         recuperaUltimaSessioneProgramma,
         verificaForzaMaxStorico,

@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-23] ingest | NESTORE — Fix Falso PR Trazioni: Isolamento Sovraccarico Calisthenics (Opz 2A) & Bonifica Record DB (Opz 1A)
+- **Isolamento Fallback Carichi per Calisthenics (`portal/nestore.js`)**:
+  - Introdotta la funzione helper `isCalisthenicsWithOverload(nome)` per intercettare trazioni, pull up, chin up, dip, piegamenti, muscle up.
+  - In `ottieniBaseMassimaleEsercizio`: se l'esercizio rientra nei calisthenics e non è presente un PR registrato, il massimale di base non ripiega più sul peso corporeo dell'atleta (`currentUserPesoKg`, es. 76 kg), ma viene impostato a `0 kg` (`fonte: 'Sovraccarico base: 0 kg'`).
+  - Nel builder di anteprima sessioni Forza (`renderAnteprimaSessioneIbrido`): se `maxStorico` è assente e l'esercizio è calisthenico, `baseKg` viene impostato a `0 kg`, prevenendo la generazione di serie di rampa o riscaldamento con sovraccarichi fittizi e sproporzionati.
+- **Bonifica Record DB su Supabase (Opzione 1A)**:
+  - Eseguita pulizia mirata sul record `nestore_allenamenti` ID `93c95e54-1481-4ce2-ac93-49387afdf3ee` (sessione del 19/09/2026): azzerate le ripetizioni (`rip: 0`, `peso_kg: 0`) delle 5 serie di riscaldamento generate erroneamente per "Trazioni Pesate" e normalizzate le ripetizioni complessive a 24.
+  - Il motore dei Record Personali (`calcolaRecordPersonali`) legge ora correttamente l'effettivo record all-time dell'atleta: **4 serie x 4 ripetizioni con 22 kg** (stabilito nella seduta del 21/09/2026).
+- **Testing & QA (`tests/workout-pr.test.js`)**:
+  - Aggiunta suite di 4 test unitari per validare il riconoscimento calisthenics con sovraccarico, il fallback a 0 kg, il fallback sul peso corporeo preservato per esercizi bilanciere (Squat/Panca) e l'applicazione prioritaria dei PR storici.
+  - Test suite globale vitest: 156/156 test superati (13 suite su 13).
+
 ## [2026-09-23] ingest | NESTORE — Allenamento Benchmark INVICTUS: Rendiconto Lap Dettagliato (Opz 2A), Auto-Lap (Opz 1A) & Storicizzazione Multi-Serie (Opz 3A)
 - **Auto-Lap Conclusivo (Opzione 1A - `portal/nestore.js`)**:
   - Alla pressione di *"TERMINA E SALVA"* in `terminaAllenamentoAttivo()`, se il cronometro è proseguito oltre l'ultimo lap registrato per almeno 1 secondo ($\ge 1000\text{ms}$), viene inserito automaticamente l'ultimo lap senza perdita di tempo.

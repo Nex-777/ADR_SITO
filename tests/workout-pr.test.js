@@ -37,7 +37,9 @@ const {
     getCanonicalPrExercise,
     apriDettaglioAllenamentoModal,
     chiudiDettaglioAllenamentoModal,
-    setCurrentAllenamentiData
+    setCurrentAllenamentiData,
+    isCalisthenicsWithOverload,
+    ottieniBaseMassimaleEsercizio
 } = global.window;
 
 describe('Nestore Workout PR & Personal Records Engine', () => {
@@ -545,4 +547,50 @@ describe('Nestore Workout PR & Personal Records Engine', () => {
             global.document.getElementById = origGetById;
         });
     });
+
+    describe('Calisthenics PR & Massimale Base Fallback', () => {
+        it('identifies bodyweight/calisthenics exercises with overload', () => {
+            expect(isCalisthenicsWithOverload('Trazioni')).toBe(true);
+            expect(isCalisthenicsWithOverload('Trazioni Pesate')).toBe(true);
+            expect(isCalisthenicsWithOverload('Pull Up')).toBe(true);
+            expect(isCalisthenicsWithOverload('Chin Up')).toBe(true);
+            expect(isCalisthenicsWithOverload('Dips')).toBe(true);
+            expect(isCalisthenicsWithOverload('Dip Parallele')).toBe(true);
+            expect(isCalisthenicsWithOverload('Muscle Up')).toBe(true);
+            expect(isCalisthenicsWithOverload('Piegamenti')).toBe(true);
+
+            expect(isCalisthenicsWithOverload('Panca Piana')).toBe(false);
+            expect(isCalisthenicsWithOverload('Squat')).toBe(false);
+            expect(isCalisthenicsWithOverload('Stacco da Terra')).toBe(false);
+            expect(isCalisthenicsWithOverload('Corsa 100m')).toBe(false);
+        });
+
+        it('defaults calisthenics base overload to 0 kg instead of athlete bodyweight when no PR exists', async () => {
+            global.window.currentUserPesoKg = 76;
+            global.window.currentUserPrList = [];
+
+            const result = await ottieniBaseMassimaleEsercizio('Trazioni Pesate');
+            expect(result.baseKg).toBe(0);
+            expect(result.fonte).toContain('Sovraccarico base: 0 kg');
+        });
+
+        it('still uses athlete bodyweight as fallback for barbell exercises when no PR exists', async () => {
+            global.window.currentUserPesoKg = 76;
+            global.window.currentUserPrList = [];
+
+            const result = await ottieniBaseMassimaleEsercizio('Squat');
+            expect(result.baseKg).toBe(76);
+            expect(result.fonte).toContain('Peso atleta: 76 kg');
+        });
+
+        it('uses existing PR for calisthenics if available', async () => {
+            global.window.currentUserPesoKg = 76;
+            global.window.currentUserPrList = [{ nome: 'Trazioni Pesate', peso_kg: 22 }];
+
+            const result = await ottieniBaseMassimaleEsercizio('Trazioni Pesate');
+            expect(result.baseKg).toBe(22);
+            expect(result.fonte).toContain('PR: 22 kg');
+        });
+    });
 });
+

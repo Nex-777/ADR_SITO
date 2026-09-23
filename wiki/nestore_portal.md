@@ -416,6 +416,17 @@ Riforma organica della bacheca dei Record Personali (`RECORD PERSONALI (ALL-TIME
 6. **Parser Cronometrico Multi-Formato & Decimale**:
    - Funzioni dedicate `parseTimeToSeconds` e `formatSecondsToDisplay` per estrarre e formattare tempi da stringhe `11.8s`, `21:40`, `01:05:20`, `22m 15s`, preservando i decimali con lookahead sicuro sul parsing testuale.
 
+### 9.10. Calisthenics con Sovraccarico: Isolamento Fallback Carichi & Pulizia Record (v1.05.68)
+Introdotta nella versione **1.05.68**:
+1. **Isolamento Fallback Sovraccarico per Calisthenics (`isCalisthenicsWithOverload`)**:
+   - Per esercizi a corpo libero zavorrabili (*Trazioni*, *Pull up*, *Chin up*, *Dip*, *Piegamenti*, *Muscle up*), il sovraccarico di base in assenza di uno storico o PR registrato è impostato rigorosamente a `0 kg` (`fonte: 'Sovraccarico base: 0 kg'`).
+   - Evitato il fallback automatico sul peso corporeo dell'atleta (`currentUserPesoKg`, es. 76 kg), che generava carichi di riscaldamento e rampa irrealistici (es. singola 1RM proposta a 76 kg di zavorra).
+   - Per gli esercizi di pesistica con bilanciere (*Panca Piana*, *Squat*, *Stacco*) resta invece attivo il fallback sul peso corporeo come stima iniziale standard quando non vi siano PR pregressi.
+2. **Aggiornamento Setup Forza & Rampa Warmup**:
+   - Sia in `ottieniBaseMassimaleEsercizio` sia nel generatore del setup per sessioni Forza (`renderAnteprimaSessioneIbrido`), gli esercizi calisthenics non applicano percentuali al peso corporeo dell'atleta, azzerando le serie di riscaldamento finché l'atleta non imposta esplicitamente un carico o registra un PR.
+3. **Bonifica Dati Storici su Supabase**:
+   - Corretto il record sessione `93c95e54-1481-4ce2-ac93-49387afdf3ee` del 19/09/2026 azzerando le ripetizioni delle serie di riscaldamento fittizie di Trazioni Pesate. Questo permette al PR reale dell'atleta (4 serie x 4 rip con 22 kg del 21/09/2026) di emergere correttamente e senza distorsioni nella bacheca.
+
 ---
 
 ## 10. Related Concept Pages
