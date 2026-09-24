@@ -12,3 +12,11 @@ scratch/
 check.js
 check_users.js
 file da non usare ENV.txt
+
+# ─── Backup Storage locale (generati da npm run backup:storage) ───────────
+local_backup/
+backup_storage_manifest.json
+*.dump
+*.dump.enc
+*.zip.enc
+storage_monthly_export/

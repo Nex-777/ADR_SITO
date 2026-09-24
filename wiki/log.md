@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-24] ingest | Sistema di Backup Automatico — Database + Storage (v1.05.72)
+- **Architettura**: Implementato sistema di backup a due layer: (1) backup DB PostgreSQL notturno (ore 02:00 IT) con `pg_dump --format=custom` su Session Pooler Supabase porta 5432; (2) backup Storage mensile (1° di ogni mese) dei file PDF (certificati medici, ricevute, documenti).
+- **Sicurezza & GDPR**: Ogni file di backup viene cifrato con `openssl enc -aes-256-cbc -pbkdf2 -iter 100000` usando `BACKUP_PASSPHRASE` nei GitHub Secrets. Il dump in chiaro viene eliminato dal runner immediatamente dopo la cifratura. Nessun dato sensibile viene mai committato nel codice sorgente.
+- **File creati**:
+  - `.github/workflows/backup_db.yml` — Workflow cron notturno: `pg_dump` → cifratura AES-256 → GitHub Release con tag `backup/YYYY-MM-DD`, rotazione automatica a 60 giorni.
+  - `.github/workflows/backup_storage_monthly.yml` — Workflow cron mensile: download Storage Supabase filtrato per ultimo mese → ZIP → cifratura AES-256 → GitHub Release con tag `storage-backup/YYYY-MM`, rotazione automatica a 12 mesi.
+  - `scripts/backup_storage.js` — Script Node.js per download locale on-demand e differenziale (manifest-based) dei file Supabase Storage.
+  - `wiki/backup_system.md` — Pagina Wiki con architettura, istruzioni operative e procedura di Disaster Recovery completa.
+- **File modificati**:
+  - `.gitignore` — Aggiunta esclusione `local_backup/`, `backup_storage_manifest.json`, `*.dump`, `*.dump.enc`, `*.zip.enc`, `storage_monthly_export/`.
+  - `package.json` — Aggiunto script `backup:storage` (`node scripts/backup_storage.js`).
+  - `wiki/index.md` — Aggiunta sezione `🛡️ Operations & Maintenance` con link a `backup_system.md`.
+- **GitHub Secrets richiesti** (aggiunti manualmente dall'operatore): `SUPABASE_DB_URL` (Session Pooler :5432), `BACKUP_PASSPHRASE`.
+
 ## [2026-09-23] ingest | NESTORE — Contatori Completamenti su Card Ibrido e Benchmark Invictus (v1.05.71)
 - **UI & Layout Card (`portal/nestore.html`, `portal/nestore.css`, `portal/nestore.js`)**:
   - Aggiunto contatore circolare (`.nst-workout-counter`) al centro dell'header di ciascuna card Ibrido (Metcon 1-4, Forza 1-4) tra il nome del programma e il badge di tipologia.

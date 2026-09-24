@@ -1,0 +1,169 @@
+name: 🗄️ Backup Storage Mensile
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 1 * *' # Il 1° di ogni mese alle 02:00 UTC (04:00 ora italiana CEST)
+
+jobs:
+  backup_storage_monthly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Verifica ambiente
+        run: |
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "SUPABASE_URL set: ${{ secrets.SUPABASE_URL != '' }}"
+          echo "SUPABASE_SERVICE_ROLE_KEY set: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}"
+          echo "BACKUP_PASSPHRASE set: ${{ secrets.BACKUP_PASSPHRASE != '' }}"
+
+      - name: Scarica file Storage del mese corrente
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BACKUP_MODE: monthly
+        run: |
+          MONTH=$(date +%Y-%m)
+          echo "📅 Backup mensile per il mese: ${MONTH}"
+
+          # Script inline che scarica tutti i file modificati nell'ultimo mese
+          node --input-type=module << 'EOF'
+          import { createClient } from '@supabase/supabase-js';
+          import fs from 'fs/promises';
+          import path from 'path';
+          import { existsSync, mkdirSync } from 'fs';
+
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          );
+
+          const BACKUP_DIR = './storage_monthly_export';
+          const ONE_MONTH_AGO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+          function ensureDir(p) {
+            if (!existsSync(p)) mkdirSync(p, { recursive: true });
+          }
+
+          async function listFilesRecursive(bucket, folder = '') {
+            const { data, error } = await supabase.storage
+              .from(bucket)
+              .list(folder, { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
+            if (error || !data) return [];
+            const files = [];
+            for (const item of data) {
+              if (item.id === null) {
+                const sub = folder ? `${folder}/${item.name}` : item.name;
+                files.push(...await listFilesRecursive(bucket, sub));
+              } else {
+                const filePath = folder ? `${folder}/${item.name}` : item.name;
+                files.push({ path: filePath, updated_at: item.updated_at, size: item.metadata?.size ?? 0 });
+              }
+            }
+            return files;
+          }
+
+          const { data: buckets } = await supabase.storage.listBuckets();
+          if (!buckets || buckets.length === 0) {
+            console.log('Nessun bucket trovato.');
+            process.exit(0);
+          }
+
+          let total = 0;
+          for (const bucket of buckets) {
+            console.log(`\n📦 Bucket: ${bucket.name}`);
+            const files = await listFilesRecursive(bucket.name);
+
+            // Filtra solo file nuovi/modificati nell'ultimo mese
+            const recent = files.filter(f => f.updated_at && f.updated_at > ONE_MONTH_AGO);
+            console.log(`   File totali: ${files.length} | Recenti (ultimo mese): ${recent.length}`);
+
+            for (const file of recent) {
+              const destPath = path.join(BACKUP_DIR, bucket.name, file.path);
+              ensureDir(path.dirname(destPath));
+              const { data: blob, error: dlErr } = await supabase.storage.from(bucket.name).download(file.path);
+              if (dlErr) { console.warn(`   ❌ ${file.path}: ${dlErr.message}`); continue; }
+              await fs.writeFile(destPath, Buffer.from(await blob.arrayBuffer()));
+              total++;
+              console.log(`   ✅ ${file.path} (${(file.size/1024).toFixed(1)} KB)`);
+            }
+          }
+
+          console.log(`\n✅ Totale file scaricati: ${total}`);
+          if (total === 0) {
+            // Crea un file placeholder per non fallire il job se non ci sono nuovi file
+            ensureDir(BACKUP_DIR);
+            await fs.writeFile(path.join(BACKUP_DIR, 'no_new_files.txt'), `Nessun file nuovo nel mese corrente.\n`);
+          }
+          EOF
+
+          echo "MONTH=${MONTH}" >> $GITHUB_ENV
+
+      - name: Crea archivio ZIP del backup Storage
+        run: |
+          ZIP_NAME="storage_backup_${{ env.MONTH }}.zip"
+          zip -r "${ZIP_NAME}" ./storage_monthly_export/
+          echo "✅ Archivio ZIP creato: ${ZIP_NAME} ($(du -sh ${ZIP_NAME} | cut -f1))"
+          echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
+
+      - name: Cifra archivio ZIP con AES-256-CBC (PBKDF2)
+        run: |
+          ENC_ZIP="${{ env.ZIP_NAME }}.enc"
+
+          openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
+            -in "${{ env.ZIP_NAME }}" \
+            -out "${ENC_ZIP}" \
+            -pass pass:"${{ secrets.BACKUP_PASSPHRASE }}"
+
+          if [ ! -s "${ENC_ZIP}" ]; then
+            echo "❌ ERRORE: File cifrato vuoto o mancante!"
+            exit 1
+          fi
+
+          echo "✅ Cifratura completata: ${ENC_ZIP} ($(du -sh ${ENC_ZIP} | cut -f1))"
+          rm -f "${{ env.ZIP_NAME }}"
+          echo "ENC_ZIP=${ENC_ZIP}" >> $GITHUB_ENV
+
+      - name: Crea GitHub Release mensile e allega backup cifrato
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: storage-backup/${{ env.MONTH }}
+          name: "🗄️ Storage Backup — ${{ env.MONTH }}"
+          body: |
+            Backup mensile automatico dei file Supabase Storage (PDF certificati medici, ricevute, documenti).
+
+            **Contenuto**: File caricati o modificati nel mese di ${{ env.MONTH }}
+            **Bucket**: Tutti i bucket del progetto
+            **Formato**: ZIP cifrato con AES-256-CBC (PBKDF2, 100k iter)
+            **Data generazione**: ${{ env.MONTH }}
+
+            ⚠️ **File cifrato** — richiede `BACKUP_PASSPHRASE` per il ripristino.
+            Vedi `wiki/backup_system.md` per la procedura di Disaster Recovery.
+          files: ${{ env.ENC_ZIP }}
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Elimina release storage-backup più vecchie di 12 mesi
+        uses: dev-drprasad/delete-older-releases@v0.3.4
+        with:
+          keep_latest: 12
+          delete_tag_pattern: storage-backup/
+          delete_prerelease_only: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

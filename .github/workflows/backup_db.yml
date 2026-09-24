@@ -1,0 +1,105 @@
+name: 🛡️ Backup Database Notturno
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # Ogni notte alle 00:00 UTC (02:00 ora italiana CEST)
+
+jobs:
+  backup_database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Installa postgresql-client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Verifica dipendenze
+        run: |
+          pg_dump --version
+          openssl version
+          echo "SUPABASE_DB_URL set: ${{ secrets.SUPABASE_DB_URL != '' }}"
+          echo "BACKUP_PASSPHRASE set: ${{ secrets.BACKUP_PASSPHRASE != '' }}"
+
+      - name: Genera dump database (formato custom)
+        env:
+          PGPASSWORD: '' # Non usata — la password è nella connection string
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          FILENAME="backup_${DATE}.dump"
+
+          echo "⏳ Avvio pg_dump..."
+          pg_dump \
+            "${{ secrets.SUPABASE_DB_URL }}" \
+            --format=custom \
+            --no-owner \
+            --no-privileges \
+            --schema=public \
+            --schema=auth \
+            --file="${FILENAME}"
+
+          echo "✅ Dump completato. Dimensione:"
+          du -sh "${FILENAME}"
+          echo "DUMP_FILENAME=${FILENAME}" >> $GITHUB_ENV
+          echo "DATE=${DATE}" >> $GITHUB_ENV
+
+      - name: Cifra dump con AES-256-CBC (PBKDF2)
+        run: |
+          ENC_FILENAME="${{ env.DUMP_FILENAME }}.enc"
+
+          openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
+            -in "${{ env.DUMP_FILENAME }}" \
+            -out "${ENC_FILENAME}" \
+            -pass pass:"${{ secrets.BACKUP_PASSPHRASE }}"
+
+          # Verifica integrità: il file cifrato deve esistere e avere dimensione > 0
+          if [ ! -s "${ENC_FILENAME}" ]; then
+            echo "❌ ERRORE: File cifrato vuoto o mancante!"
+            exit 1
+          fi
+
+          echo "✅ Cifratura completata. Dimensione file cifrato:"
+          du -sh "${ENC_FILENAME}"
+          echo "ENC_FILENAME=${ENC_FILENAME}" >> $GITHUB_ENV
+
+          # Rimuovi il dump in chiaro immediatamente dopo la cifratura
+          rm -f "${{ env.DUMP_FILENAME }}"
+          echo "🗑️ Dump in chiaro eliminato dalla memoria del runner."
+
+      - name: Crea GitHub Release e allega backup cifrato
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: backup/${{ env.DATE }}
+          name: "🛡️ DB Backup — ${{ env.DATE }}"
+          body: |
+            Backup automatico notturno del database Adrenalina Club.
+
+            **Contenuto**: Schema `public` (Core + EPIKA + NESTORE) + Schema `auth`
+            **Formato**: `pg_dump --format=custom` cifrato con AES-256-CBC (PBKDF2, 100k iter)
+            **Data**: ${{ env.DATE }}
+
+            ⚠️ **File cifrato** — richiede `BACKUP_PASSPHRASE` per il ripristino.
+            Vedi `wiki/backup_system.md` per la procedura di Disaster Recovery.
+          files: ${{ env.ENC_FILENAME }}
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Elimina release backup più vecchie di 60 giorni
+        uses: dev-drprasad/delete-older-releases@v0.3.4
+        with:
+          keep_latest: 60
+          delete_tag_pattern: backup/
+          delete_prerelease_only: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notifica fallimento (opzionale — log di errore)
+        if: failure()
+        run: |
+          echo "❌ BACKUP FALLITO il ${{ env.DATE }}"
+          echo "Controlla i log del workflow per dettagli."
+          exit 1

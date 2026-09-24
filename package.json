@@ -1,6 +1,6 @@
 {
   "name": "adr-sito",
-  "version": "1.05.71",
+  "version": "1.05.72",
   "type": "module",
   "dependencies": {
     "@mistralai/mistralai": "^2.5.0",
@@ -27,7 +27,8 @@
   "scripts": {
     "bump": "node scripts/bump-version.js",
     "knip": "knip",
-    "test": "vitest run"
+    "test": "vitest run",
+    "backup:storage": "node scripts/backup_storage.js"
   },
   "repository": {
     "type": "git",
