@@ -3,7 +3,7 @@ name: 🛡️ Backup Database Notturno
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *' # Ogni notte alle 00:00 UTC (02:00 ora italiana CEST)
+    - cron: '0 1 * * *' # Ogni notte alle 01:00 UTC (03:00 ora italiana CEST) — dopo il CSEN sync delle 02:00 IT
 
 jobs:
   backup_database:
