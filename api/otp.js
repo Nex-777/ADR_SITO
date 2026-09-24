@@ -80,11 +80,12 @@ export default async function handler(req, res) {
         
         // 2b. Verifica Cloudflare Turnstile (Anti-Bot & Salvaguardia quota Resend - Fail-Closed)
         const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-        const isDev = process.env.NODE_ENV === 'development' || (!process.env.VERCEL && !process.env.NODE_ENV);
+        // isDev=true in locale (no VERCEL) o su Vercel Preview/Development (non production)
+        const isDev = process.env.VERCEL_ENV !== 'production';
 
         if (!turnstileSecret) {
             if (isDev) {
-                console.warn('⚠️ [DEV] TURNSTILE_SECRET_KEY non configurata. Verifica anti-bot bypassata in sviluppo locale.');
+                console.warn('⚠️ [DEV/PREVIEW] TURNSTILE_SECRET_KEY non configurata. Verifica anti-bot bypassata in ambiente non-production.');
             } else {
                 console.error('❌ Configurazione TURNSTILE_SECRET_KEY mancante su server di produzione.');
                 return res.status(500).json({ error: 'Errore di configurazione del server.' });

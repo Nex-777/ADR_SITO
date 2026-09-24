@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-24] refactor | Fix A/B/C da secondo audit WFTEST — Passphrase & VERCEL_ENV (v1.05.76)
+- **FIX-A (`backup_db.yml`)**: Rimossa interpolazione shell della passphrase OpenSSL. `BACKUP_PASSPHRASE` ora è passata come env var dello step e usata con `-pass env:BACKUP_PASSPHRASE`.
+- **FIX-B (`backup_storage_monthly.yml`)**: Stesso fix del FIX-A applicato al workflow di backup mensile Storage.
+- **FIX-C (`api/otp.js`)**: Migliorata detection dell'ambiente non-production. Sostituito `!process.env.VERCEL && !process.env.NODE_ENV` con `process.env.VERCEL_ENV !== 'production'` per coprire correttamente anche i Vercel Preview Deployments, evitando che errori di configurazione blocchino i test E2E su branch feature.
+
 ## [2026-09-24] refactor | Audit WFTEST & Fix Correttivi di Sicurezza/Robustezza (v1.05.75)
 - **Fix Alerting (`scripts/notify_alert.sh`)**:
   - Risolta vulnerabilità di iniezione caratteri e shell quote-splitting passando tutti i parametri a Node tramite `process.env` (payload JSON Telegram e Resend strutturati in modo rigoroso).

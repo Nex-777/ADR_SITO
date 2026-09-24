@@ -49,13 +49,15 @@ jobs:
           echo "DATE=${DATE}" >> $GITHUB_ENV
 
       - name: Cifra dump con AES-256-CBC (PBKDF2)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           ENC_FILENAME="${{ env.DUMP_FILENAME }}.enc"
 
           openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
             -in "${{ env.DUMP_FILENAME }}" \
             -out "${ENC_FILENAME}" \
-            -pass pass:"${{ secrets.BACKUP_PASSPHRASE }}"
+            -pass env:BACKUP_PASSPHRASE
 
           # Verifica integrità: il file cifrato deve esistere e avere dimensione > 0
           if [ ! -s "${ENC_FILENAME}" ]; then

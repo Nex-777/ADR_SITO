@@ -121,13 +121,15 @@ jobs:
           echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
 
       - name: Cifra archivio ZIP con AES-256-CBC (PBKDF2)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
         run: |
           ENC_ZIP="${{ env.ZIP_NAME }}.enc"
 
           openssl enc -aes-256-cbc -pbkdf2 -iter 100000 \
             -in "${{ env.ZIP_NAME }}" \
             -out "${ENC_ZIP}" \
-            -pass pass:"${{ secrets.BACKUP_PASSPHRASE }}"
+            -pass env:BACKUP_PASSPHRASE
 
           if [ ! -s "${ENC_ZIP}" ]; then
             echo "❌ ERRORE: File cifrato vuoto o mancante!"
