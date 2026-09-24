@@ -11,6 +11,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Installa postgresql-client
         run: |
           sudo apt-get update -qq
@@ -97,9 +100,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Notifica fallimento (opzionale — log di errore)
+      - name: 🚨 Notifica Fallimento (Telegram + Email)
         if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
         run: |
-          echo "❌ BACKUP FALLITO il ${{ env.DATE }}"
-          echo "Controlla i log del workflow per dettagli."
-          exit 1
+          bash scripts/notify_alert.sh "Backup Database Notturno" "failure" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+

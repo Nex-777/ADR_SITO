@@ -23,7 +23,7 @@ Il sistema di backup si articola su **due layer distinti**:
 **File**: [`.github/workflows/backup_db.yml`](../.github/workflows/backup_db.yml)
 
 ### 2.1 Trigger
-- **Automatico**: ogni notte alle `00:00 UTC` (= `02:00 ora italiana CEST`)
+- **Automatico**: ogni notte alle `01:00 UTC` (= `03:00 ora italiana CEST`), scaglionato dopo il CSEN sync delle 02:00 IT
 - **Manuale**: Actions → `🛡️ Backup Database Notturno` → `Run workflow`
 
 ### 2.2 Flusso di esecuzione
@@ -186,3 +186,55 @@ Il sistema è conforme alle direttive [SECURITY.md](../SECURITY.md) e al GDPR (A
 - ✅ **Secrets esclusivamente in GitHub Secrets** — mai nel codice sorgente
 - ✅ **Repository privato** — i release assets non sono accessibili pubblicamente
 - ✅ **Backup locale escluso da git** — `local_backup/` e manifest in `.gitignore`
+
+---
+
+## 8. Smoke Test & Validazione Integrità (Disaster Recovery Drill)
+
+**File script**: [`scripts/test_backup_restore.js`](../scripts/test_backup_restore.js)  
+**File workflow**: [`.github/workflows/smoke_test_backup.yml`](../.github/workflows/smoke_test_backup.yml)
+
+Per evitare che i backup rimangano solo un'illusione non verificata, il sistema include una suite di Smoke Test:
+
+### 8.1 Esecuzione Locale On-Demand
+```bash
+# Test su un file specifico scaricato:
+npm run test:backup path/to/backup_2026-09-24.dump.enc
+
+# Oppure test automatico scaricando l'ultima Release da GitHub:
+npm run test:backup -- --latest
+```
+
+### 8.2 Validazioni Eseguite dallo Script
+1. Decifra il file `.dump.enc` in memoria temporanea con OpenSSL e `BACKUP_PASSPHRASE`.
+2. Esegue `pg_restore --list` sul dump per ispezionare il TOC (Table of Contents).
+3. Verifica la presenza tassativa delle tabelle critiche:
+   - `utenti`, `anagrafiche`, `atti_adesione`
+   - `registro_approvazioni`, `ricevute_pagamenti`
+   - `epika_profili`, `epika_gruppi_storici`
+   - `nestore_pesi_misure`, `nestore_allenamenti`, `nestore_pasti`
+4. Rimuove immediatamente il dump in chiaro al termine della verifica.
+
+### 8.3 Smoke Test Settimanale Automatico
+Ogni domenica alle `04:00 UTC` (`06:00 IT`), GitHub Actions scarica l'ultima release e valida la consistenza del catalogo. In caso di esito negativo o dump non leggibile, parte un'allerta immediata su Telegram ed Email.
+
+---
+
+## 9. Sistema di Allerta Guasti su Telegram ed Email
+
+**File script**: [`scripts/notify_alert.sh`](../scripts/notify_alert.sh)
+
+Tutti i workflow critici (`backup_db.yml`, `csen_sync.yml`, `backup_storage_monthly.yml`, `smoke_test_backup.yml`) implementano lo step terminale `if: failure()`.
+
+### 9.1 Canali di Notifica
+1. **Push Telegram**: Notifica istantanea su smartphone inviata al bot admin con link diretto al run GitHub Actions e identificativo del workflow fallito.
+2. **Email Resend**: Email HTML inviata all'indirizzo dell'amministratore/presidente per tracciabilità formale.
+
+### 9.2 Secrets Richiesti per le Allerte
+| Secret | Descrizione |
+|:---|:---|
+| `TELEGRAM_BOT_TOKEN` | Token del bot Telegram creato tramite @BotFather |
+| `TELEGRAM_CHAT_ID` | ID della chat o del gruppo Telegram ricevente |
+| `ALERT_EMAIL_TO` | Email di destinazione per le notifiche di errore |
+| `RESEND_API_KEY` | Chiave API Resend (già configurata per il portale) |
+

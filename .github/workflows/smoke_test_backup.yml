@@ -1,0 +1,46 @@
+name: 🧪 Smoke Test Ripristino Backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 0' # Ogni domenica alle 04:00 UTC (06:00 ora italiana CEST)
+
+jobs:
+  smoke_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Installa postgresql-client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Esegui Smoke Test su ultima release di backup
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node scripts/test_backup_restore.js --latest
+
+      - name: 🚨 Notifica Fallimento Smoke Test (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+        run: |
+          bash scripts/notify_alert.sh "Smoke Test Ripristino Backup" "failure" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

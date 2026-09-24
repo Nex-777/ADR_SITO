@@ -76,9 +76,40 @@ export default async function handler(req, res) {
         
         const utenteId = user.id;
         const email = user.email;
-        
-        // Rate limiting check
         const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+        
+        // 2b. Verifica Cloudflare Turnstile (Anti-Bot & Salvaguardia quota Resend)
+        const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+        const { turnstile_token } = req.body || {};
+
+        if (turnstileSecret) {
+            if (!turnstile_token) {
+                return res.status(403).json({ error: 'Verifica di sicurezza anti-bot richiesta.' });
+            }
+
+            try {
+                const cfVerifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secret: turnstileSecret,
+                        response: turnstile_token,
+                        remoteip: clientIp !== 'unknown' ? clientIp : undefined
+                    })
+                });
+
+                const cfResult = await cfVerifyRes.json();
+                if (!cfResult.success) {
+                    console.warn('❌ Verifica Turnstile fallita:', cfResult['error-codes']);
+                    return res.status(403).json({ error: 'Verifica anti-bot fallita. Ricarica la pagina e riprova.' });
+                }
+            } catch (cfErr) {
+                console.error('Errore chiamata Cloudflare Turnstile:', cfErr);
+                return res.status(500).json({ error: 'Impossibile completare la verifica di sicurezza.' });
+            }
+        }
+
+        // Rate limiting check
         const { data: allowed } = await supabase.rpc('check_rate_limit', {
             p_key: `otp:${clientIp}`,
             p_max_requests: 3,

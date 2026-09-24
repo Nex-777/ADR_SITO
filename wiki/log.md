@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-24] ingest | Alerting Automatico (Telegram+Email), Smoke Test Backup & Cloudflare Turnstile Anti-Bot (v1.05.74)
+- **Alerting sui Workflow Notturni**:
+  - Creato `scripts/notify_alert.sh` centralizzato per inviare notifiche push immediate su Telegram e via email con Resend in caso di fallimento (`if: failure()`).
+  - Aggiornati `.github/workflows/backup_db.yml`, `.github/workflows/csen_sync.yml`, `.github/workflows/backup_storage_monthly.yml` per includere step di allerta automatica e checkout repository.
+- **Smoke Test & Validazione Integrità Disaster Recovery**:
+  - Creato `scripts/test_backup_restore.js` per decifrare dump cifrati (`.dump.enc`) ed eseguire `pg_restore --list` validando la presenza di tutte le 10 tabelle critiche (`utenti`, `anagrafiche`, `atti_adesione`, `registro_approvazioni`, `ricevute_pagamenti`, `epika_*`, `nestore_*`).
+  - Aggiunto comando `npm run test:backup` in `package.json`.
+  - Creato `.github/workflows/smoke_test_backup.yml` per esecuzione automatica settimanale (ogni domenica alle 04:00 UTC) sull'ultima release.
+- **Protezione Anti-Bot & Anti-Spam (Cloudflare Turnstile)**:
+  - Integrato widget Cloudflare Turnstile (`0x4AAAAAAFCpEjPr0QeArFVv`) invisibile in `portal/registrazione.html` e `portal/registrazione.js` prima della richiesta OTP.
+  - Implementata validazione server-side token su `api/otp.js` tramite endpoint Turnstile siteverify (`https://challenges.cloudflare.com/turnstile/v0/siteverify`) prima della generazione OTP e invio Resend.
+  - Aggiornata la CSP in `vercel.json` autorizzando `challenges.cloudflare.com` per `script-src`, `frame-src` e `connect-src`.
+- **Documentazione**: Aggiornato `wiki/backup_system.md` con sezioni 8 (Smoke Test) e 9 (Alerting).
+
 ## [2026-09-24] ingest | Sistema di Backup Automatico — Database + Storage (v1.05.72)
 - **Architettura**: Implementato sistema di backup a due layer: (1) backup DB PostgreSQL notturno (ore 02:00 IT) con `pg_dump --format=custom` su Session Pooler Supabase porta 5432; (2) backup Storage mensile (1° di ogni mese) dei file PDF (certificati medici, ricevute, documenti).
 - **Sicurezza & GDPR**: Ogni file di backup viene cifrato con `openssl enc -aes-256-cbc -pbkdf2 -iter 100000` usando `BACKUP_PASSPHRASE` nei GitHub Secrets. Il dump in chiaro viene eliminato dal runner immediatamente dopo la cifratura. Nessun dato sensibile viene mai committato nel codice sorgente.

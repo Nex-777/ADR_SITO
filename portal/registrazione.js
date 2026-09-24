@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.73"
+                VERSION: "1.05.74"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1106,6 +1106,28 @@ function togglePasswordVisibility(inputId, buttonEl) {
             }, 1000);
         }
 
+        function getTurnstileToken() {
+            try {
+                if (window.turnstile && typeof window.turnstile.getResponse === 'function') {
+                    const token = window.turnstile.getResponse();
+                    if (token) return token;
+                }
+            } catch (e) {
+                console.warn("Turnstile getResponse error:", e);
+            }
+            return document.querySelector('[name="cf-turnstile-response"]')?.value || '';
+        }
+
+        function resetTurnstile() {
+            try {
+                if (window.turnstile && typeof window.turnstile.reset === 'function') {
+                    window.turnstile.reset();
+                }
+            } catch (e) {
+                console.warn("Turnstile reset error:", e);
+            }
+        }
+
         async function rinviaOtp(btn) {
             btn.disabled = true;
             btn.textContent = "INVIO IN CORSO...";
@@ -1117,12 +1139,22 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     if (createdUserSession) createdUserSession.access_token = jwtToken;
                 }
 
+                let turnstileToken = getTurnstileToken();
+                if (!turnstileToken) {
+                    resetTurnstile();
+                    await new Promise(r => setTimeout(r, 600));
+                    turnstileToken = getTurnstileToken();
+                }
+
                 const response = await fetch(`${API_BASE}/api/otp.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${jwtToken || createdUserSession?.access_token}`
-                    }
+                    },
+                    body: JSON.stringify({
+                        turnstile_token: turnstileToken
+                    })
                 });
 
                 if (!response.ok) {
@@ -1140,6 +1172,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 startOtpTimer();
             } catch (err) {
                 console.error("API OTP error:", err);
+                resetTurnstile();
                 alert("Errore nell'invio del nuovo codice OTP: " + err.message);
             } finally {
                 btn.disabled = false;
@@ -1697,12 +1730,23 @@ function togglePasswordVisibility(inputId, buttonEl) {
             // Invio OTP
             try {
                 btnInviaOtp.textContent = "INVIO CODICE OTP...";
+
+                let turnstileToken = getTurnstileToken();
+                if (!turnstileToken) {
+                    resetTurnstile();
+                    await new Promise(r => setTimeout(r, 600));
+                    turnstileToken = getTurnstileToken();
+                }
+
                 const response = await fetch(`${API_BASE}/api/otp.js`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${jwtToken}`
-                    }
+                    },
+                    body: JSON.stringify({
+                        turnstile_token: turnstileToken
+                    })
                 });
 
                 if (!response.ok) {
@@ -1729,6 +1773,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 startOtpTimer();
             } catch (err) {
                 console.error("API OTP error:", err);
+                resetTurnstile();
                 alert("Errore nell'invio del codice OTP: " + err.message);
                 btnInviaOtp.disabled = false;
                 btnInviaOtp.textContent = "INVIA CODICE OTP";

@@ -75,3 +75,14 @@ jobs:
             csen_error_*.png
             csen_page_source.html
 
+      - name: 🚨 Notifica Fallimento (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+        run: |
+          bash scripts/notify_alert.sh "CSEN Active Sync" "failure" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+
