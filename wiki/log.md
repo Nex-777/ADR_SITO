@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-24] refactor | Audit WFTEST & Fix Correttivi di Sicurezza/Robustezza (v1.05.75)
+- **Fix Alerting (`scripts/notify_alert.sh`)**:
+  - Risolta vulnerabilità di iniezione caratteri e shell quote-splitting passando tutti i parametri a Node tramite `process.env` (payload JSON Telegram e Resend strutturati in modo rigoroso).
+  - Impostato bit di esecuzione (`chmod +x`) nel repository git per l'interprete bash.
+- **Fix Smoke Test (`scripts/test_backup_restore.js`)**:
+  - Risolto conflitto di autenticazione su redirect S3 per repository privati: download via API `/releases/assets/{id}` con `redirect: manual` e strip dell'header `Authorization` sull'URL presigned S3.
+  - Rimossa interpolazione shell della passphrase OpenSSL: passaggio tramite `-pass env:BACKUP_PASSPHRASE` isolato nell'environment del processo child.
+- **Fix Anti-Bot (`api/otp.js`)**:
+  - Reso il controllo Cloudflare Turnstile rigorosamente **fail-closed** in produzione (blocco con errore 500 se `TURNSTILE_SECRET_KEY` manca su server di produzione/Vercel, consentendo il bypass solo in ambiente di sviluppo locale).
+
 ## [2026-09-24] ingest | Alerting Automatico (Telegram+Email), Smoke Test Backup & Cloudflare Turnstile Anti-Bot (v1.05.74)
 - **Alerting sui Workflow Notturni**:
   - Creato `scripts/notify_alert.sh` centralizzato per inviare notifiche push immediate su Telegram e via email con Resend in caso di fallimento (`if: failure()`).

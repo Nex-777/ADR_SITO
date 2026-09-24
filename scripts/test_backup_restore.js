@@ -51,7 +51,34 @@ async function getLatestReleaseAsset(repo, token) {
     const downloadPath = path.join(process.cwd(), encAsset.name);
     console.log(`⬇️ Scaricamento asset: ${encAsset.name} (${(encAsset.size / 1024).toFixed(1)} KB)...`);
 
-    const assetRes = await fetch(encAsset.browser_download_url, { headers });
+    const assetApiUrl = `https://api.github.com/repos/${repo}/releases/assets/${encAsset.id}`;
+    const assetHeaders = {
+        'User-Agent': 'ADR-Backup-Smoke-Test',
+        'Accept': 'application/octet-stream'
+    };
+    if (token) {
+        assetHeaders['Authorization'] = `token ${token}`;
+    }
+
+    let downloadUrl = assetApiUrl;
+    let finalHeaders = assetHeaders;
+
+    const initialRes = await fetch(assetApiUrl, {
+        headers: assetHeaders,
+        redirect: 'manual'
+    });
+
+    if (initialRes.status === 302 || initialRes.status === 301) {
+        downloadUrl = initialRes.headers.get('location');
+        finalHeaders = { 'User-Agent': 'ADR-Backup-Smoke-Test' };
+    } else if (!initialRes.ok) {
+        throw new Error(`Errore API download asset (${initialRes.status}): ${await initialRes.text()}`);
+    }
+
+    const assetRes = (downloadUrl === assetApiUrl)
+        ? initialRes
+        : await fetch(downloadUrl, { headers: finalHeaders });
+
     if (!assetRes.ok) {
         throw new Error(`Errore download asset (${assetRes.status}): ${await assetRes.text()}`);
     }
@@ -114,8 +141,11 @@ async function main() {
         // 1. Decifratura OpenSSL
         console.log("🔓 Decifratura AES-256-CBC (PBKDF2, 100k iter)...");
         execSync(
-            `openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -d -in "${targetEncFile}" -out "${decryptedFile}" -pass pass:"${passphrase}"`,
-            { stdio: 'pipe' }
+            `openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -d -in "${targetEncFile}" -out "${decryptedFile}" -pass env:BACKUP_PASSPHRASE`,
+            {
+                stdio: 'pipe',
+                env: { ...process.env, BACKUP_PASSPHRASE: passphrase }
+            }
         );
 
         if (!fs.existsSync(decryptedFile) || fs.statSync(decryptedFile).size === 0) {

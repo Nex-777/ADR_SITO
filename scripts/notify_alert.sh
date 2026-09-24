@@ -10,62 +10,67 @@ TIMESTAMP=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
 echo "📢 [ALERT] Avvio procedura di notifica allerta: ${WORKFLOW_NAME} (${STATUS})"
 
 # ==============================================================================
-# 1. NOTIFICA TELEGRAM
+# 1. NOTIFICA TELEGRAM (JSON sicuro via environment)
 # ==============================================================================
 if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
   echo "📱 Invio messaggio Telegram..."
-  TG_TEXT="🚨 *ALLERTA SISTEMA ADR_SITO* 🚨%0A%0A"
-  TG_TEXT+="*Workflow:* ${WORKFLOW_NAME}%0A"
-  TG_TEXT+="*Stato:* FALLITO ❌%0A"
-  TG_TEXT+="*Data/Ora:* ${TIMESTAMP}%0A"
-  TG_TEXT+="*Log:* [Apri esecuzione GitHub Actions](${RUN_URL})%0A%0A"
-  TG_TEXT+="⚠️ Verificare i log per prevenire disallineamenti di dati o coperture mancanti."
+  
+  TG_JSON=$(WORKFLOW_NAME="$WORKFLOW_NAME" RUN_URL="$RUN_URL" TIMESTAMP="$TIMESTAMP" TELEGRAM_CHAT_ID="$TELEGRAM_CHAT_ID" node -e '
+    const text = `🚨 *ALLERTA SISTEMA ADR_SITO* 🚨\n\n` +
+      `*Workflow:* ${process.env.WORKFLOW_NAME}\n` +
+      `*Stato:* FALLITO ❌\n` +
+      `*Data/Ora:* ${process.env.TIMESTAMP}\n` +
+      `*Log:* [Apri esecuzione GitHub Actions](${process.env.RUN_URL})\n\n` +
+      `⚠️ Verificare i log per prevenire disallineamenti di dati o coperture mancanti.`;
+    console.log(JSON.stringify({
+      chat_id: process.env.TELEGRAM_CHAT_ID,
+      text: text,
+      parse_mode: "Markdown",
+      disable_web_page_preview: true
+    }));
+  ')
 
   curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-    -d "chat_id=${TELEGRAM_CHAT_ID}" \
-    -d "text=${TG_TEXT}" \
-    -d "parse_mode=Markdown" \
-    -d "disable_web_page_preview=true" > /dev/null 2>&1
+    -H "Content-Type: application/json" \
+    -d "${TG_JSON}" > /dev/null 2>&1
   echo "✅ Richiesta Telegram inviata."
 else
   echo "ℹ️ Notifica Telegram saltata: TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID non definiti nei secrets."
 fi
 
 # ==============================================================================
-# 2. NOTIFICA EMAIL RESEND
+# 2. NOTIFICA EMAIL RESEND (JSON sicuro via environment)
 # ==============================================================================
 if [ -n "$RESEND_API_KEY" ] && [ -n "$ALERT_EMAIL_TO" ]; then
   echo "📧 Invio email di allerta a ${ALERT_EMAIL_TO}..."
-  EMAIL_SUBJECT="🚨 [ALLERTA] Fallimento: ${WORKFLOW_NAME}"
-  
-  EMAIL_HTML="<div style=\"font-family: Arial, sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; border-radius: 8px;\">"
-  EMAIL_HTML+="<h2 style=\"color: #df293e; margin-top: 0;\">🚨 Allerta Sistema Adrenalina Club</h2>"
-  EMAIL_HTML+="<p style=\"font-size: 15px; color: #eeeeee;\">Il seguente processo notturno automatico è <strong>FALLITO</strong>:</p>"
-  EMAIL_HTML+="<div style=\"background-color: #1a1a1a; padding: 18px; border-left: 4px solid #df293e; margin: 20px 0; border-radius: 4px;\">"
-  EMAIL_HTML+="<p style=\"margin: 6px 0;\"><strong>Workflow:</strong> ${WORKFLOW_NAME}</p>"
-  EMAIL_HTML+="<p style=\"margin: 6px 0;\"><strong>Stato:</strong> Fallito (Exit code non-zero o timeout)</p>"
-  EMAIL_HTML+="<p style=\"margin: 6px 0;\"><strong>Data/Ora:</strong> ${TIMESTAMP}</p>"
-  EMAIL_HTML+="<p style=\"margin: 6px 0;\"><strong>Log GitHub:</strong> <a href=\"${RUN_URL}\" style=\"color: #58a6ff;\">Visualizza Log Run</a></p>"
-  EMAIL_HTML+="</div>"
-  EMAIL_HTML+="<p style=\"color: #adaaaa; font-size: 13px;\">Si prega di verificare i log per garantire la tempestiva riconciliazione dei tesserati e la validità dei backup.</p>"
-  EMAIL_HTML+="</div>"
 
-  JSON_PAYLOAD=$(node -e "
-    const to = process.env.ALERT_EMAIL_TO;
-    const sub = process.argv[1];
-    const html = process.argv[2];
+  EMAIL_JSON=$(WORKFLOW_NAME="$WORKFLOW_NAME" RUN_URL="$RUN_URL" TIMESTAMP="$TIMESTAMP" ALERT_EMAIL_TO="$ALERT_EMAIL_TO" node -e '
+    const subject = `🚨 [ALLERTA] Fallimento: ${process.env.WORKFLOW_NAME}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; border-radius: 8px;">
+        <h2 style="color: #df293e; margin-top: 0;">🚨 Allerta Sistema Adrenalina Club</h2>
+        <p style="font-size: 15px; color: #eeeeee;">Il seguente processo notturno automatico è <strong>FALLITO</strong>:</p>
+        <div style="background-color: #1a1a1a; padding: 18px; border-left: 4px solid #df293e; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 6px 0;"><strong>Workflow:</strong> ${process.env.WORKFLOW_NAME}</p>
+          <p style="margin: 6px 0;"><strong>Stato:</strong> Fallito (Exit code non-zero o timeout)</p>
+          <p style="margin: 6px 0;"><strong>Data/Ora:</strong> ${process.env.TIMESTAMP}</p>
+          <p style="margin: 6px 0;"><strong>Log GitHub:</strong> <a href="${process.env.RUN_URL}" style="color: #58a6ff;">Visualizza Log Run</a></p>
+        </div>
+        <p style="color: #adaaaa; font-size: 13px;">Si prega di verificare i log per garantire la tempestiva riconciliazione dei tesserati e la validità dei backup.</p>
+      </div>
+    `.trim();
     console.log(JSON.stringify({
-      from: 'Adrenalina Club Ops <noreply@adrenalinaclub.it>',
-      to: [to],
-      subject: sub,
+      from: "Adrenalina Club Ops <noreply@adrenalinaclub.it>",
+      to: [process.env.ALERT_EMAIL_TO],
+      subject: subject,
       html: html
     }));
-  " "${EMAIL_SUBJECT}" "${EMAIL_HTML}")
+  ')
 
   curl -s -X POST "https://api.resend.com/emails" \
     -H "Authorization: Bearer ${RESEND_API_KEY}" \
     -H "Content-Type: application/json" \
-    -d "${JSON_PAYLOAD}" > /dev/null 2>&1
+    -d "${EMAIL_JSON}" > /dev/null 2>&1
   echo "✅ Richiesta Email inviata."
 else
   echo "ℹ️ Notifica Email saltata: RESEND_API_KEY o ALERT_EMAIL_TO non definiti nei secrets."

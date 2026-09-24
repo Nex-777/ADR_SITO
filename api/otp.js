@@ -78,11 +78,19 @@ export default async function handler(req, res) {
         const email = user.email;
         const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
         
-        // 2b. Verifica Cloudflare Turnstile (Anti-Bot & Salvaguardia quota Resend)
+        // 2b. Verifica Cloudflare Turnstile (Anti-Bot & Salvaguardia quota Resend - Fail-Closed)
         const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-        const { turnstile_token } = req.body || {};
+        const isDev = process.env.NODE_ENV === 'development' || (!process.env.VERCEL && !process.env.NODE_ENV);
 
-        if (turnstileSecret) {
+        if (!turnstileSecret) {
+            if (isDev) {
+                console.warn('⚠️ [DEV] TURNSTILE_SECRET_KEY non configurata. Verifica anti-bot bypassata in sviluppo locale.');
+            } else {
+                console.error('❌ Configurazione TURNSTILE_SECRET_KEY mancante su server di produzione.');
+                return res.status(500).json({ error: 'Errore di configurazione del server.' });
+            }
+        } else {
+            const { turnstile_token } = req.body || {};
             if (!turnstile_token) {
                 return res.status(403).json({ error: 'Verifica di sicurezza anti-bot richiesta.' });
             }
