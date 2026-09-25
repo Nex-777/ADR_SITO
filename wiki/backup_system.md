@@ -29,7 +29,7 @@ Il sistema di backup si articola su **due layer distinti**:
 ### 2.2 Flusso di esecuzione
 ```
 1. ubuntu-latest runner
-2. Installa postgresql-client-16 (pg_dump)
+2. Installa postgresql-client-17 (pg_dump)
 3. pg_dump su Session Pooler Supabase (porta 5432)
    → backup_YYYY-MM-DD.dump (formato custom, compresso)
 4. openssl enc -aes-256-cbc -pbkdf2 -iter 100000
