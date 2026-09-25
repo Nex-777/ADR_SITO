@@ -104,7 +104,7 @@ async function main() {
 
     if (args.includes('--latest')) {
         const repo = process.env.GITHUB_REPOSITORY || 'Nex-777/ADR_SITO';
-        const token = process.env.GITHUB_TOKEN;
+        const token = process.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN_REPO;
         const result = await getLatestReleaseAsset(repo, token);
         targetEncFile = result.filePath;
         isTempDownload = result.isTempDownload;
