@@ -9,6 +9,8 @@ jobs:
   smoke_test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read # Necessario per scaricare le release di backup con GITHUB_TOKEN
 
     steps:
       - name: Checkout repository

@@ -157,7 +157,8 @@ async function main() {
 
         // 2. Lettura catalogo pg_restore --list
         console.log("📋 Lettura catalogo PostgreSQL (pg_restore --list)...");
-        const catalogOutput = execSync(`pg_restore --list "${decryptedFile}"`, {
+        const pgRestoreCmd = process.platform === 'linux' ? '/usr/lib/postgresql/17/bin/pg_restore' : 'pg_restore';
+        const catalogOutput = execSync(`${pgRestoreCmd} --list "${decryptedFile}"`, {
             encoding: 'utf-8',
             maxBuffer: 10 * 1024 * 1024
         });
