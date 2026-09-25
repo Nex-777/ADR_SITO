@@ -1,6 +1,6 @@
 {
   "name": "adr-sito",
-  "version": "1.05.79",
+  "version": "1.05.80",
   "type": "module",
   "dependencies": {
     "@mistralai/mistralai": "^2.5.0",
