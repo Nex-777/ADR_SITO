@@ -16,27 +16,30 @@ jobs:
 
       - name: Installa postgresql-client-17
         run: |
+          # Rimuove il client v16 pre-installato per evitare conflitti di versione con Supabase v17
+          sudo apt-get remove -y postgresql-client-16 postgresql-client-common 2>/dev/null || true
+          # Aggiunge il repository ufficiale PGDG
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc &>/dev/null
           sudo apt-get update -qq
           sudo apt-get install -y postgresql-client-17
+          echo "pg_dump path: $(which pg_dump)"
+          /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Verifica dipendenze
         run: |
-          pg_dump --version
+          /usr/lib/postgresql/17/bin/pg_dump --version
           openssl version
           echo "SUPABASE_DB_URL set: ${{ secrets.SUPABASE_DB_URL != '' }}"
           echo "BACKUP_PASSPHRASE set: ${{ secrets.BACKUP_PASSPHRASE != '' }}"
 
       - name: Genera dump database (formato custom)
-        env:
-          PGPASSWORD: '' # Non usata — la password è nella connection string
         run: |
           DATE=$(date +%Y-%m-%d)
           FILENAME="backup_${DATE}.dump"
 
           echo "⏳ Avvio pg_dump..."
-          pg_dump \
+          /usr/lib/postgresql/17/bin/pg_dump \
             "${{ secrets.SUPABASE_DB_URL }}" \
             --format=custom \
             --no-owner \

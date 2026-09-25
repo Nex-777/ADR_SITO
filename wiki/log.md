@@ -2,8 +2,8 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
-## [2026-09-25] refactor | Aggiornamento pg_dump a PostgreSQL 17 (v1.05.78)
-- **Fix Compatibility (`backup_db.yml`)**: Supabase ha aggiornato i cluster alla versione PostgreSQL 17.6. Modificato il workflow per installare esplicitamente `postgresql-client-17` dal repository ufficiale `apt.postgresql.org` invece del pacchetto default di Ubuntu 24.04 (v16), risolvendo l'errore `aborting because of server version mismatch`.
+## [2026-09-25] refactor | Fix path esplicito /usr/lib/postgresql/17/bin/pg_dump (v1.05.78)
+- **Fix Compatibility Round 2 (`backup_db.yml`)**: Il "re-run" di GitHub Actions riutilizzava l'immagine runner già cachata con pg16. Il problema è che Ubuntu 24.04 pre-installa `postgresql-client-16` e il symlink `/usr/bin/pg_dump` rimane puntato a v16 anche dopo aver installato pg17. Fix definitivo: rimozione esplicita di `postgresql-client-16` prima dell'installazione di pg17, e uso del path assoluto `/usr/lib/postgresql/17/bin/pg_dump` in tutti gli step, rendendo il workflow immune ai conflitti di versione.
 
 ## [2026-09-25] feat | Diagnostica SUPABASE_DB_URL, Test Telegram/Email e Logging Allarmi Esteso (v1.05.77)
 - **Diagnostica Connection Pooler (`scripts/test_db_connection.js`)**:
