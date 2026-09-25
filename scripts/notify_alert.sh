@@ -30,10 +30,19 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
     }));
   ')
 
-  curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+  TG_RESP=$(curl -s -w "\n%{http_code}" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
     -H "Content-Type: application/json" \
-    -d "${TG_JSON}" > /dev/null 2>&1
-  echo "✅ Richiesta Telegram inviata."
+    -d "${TG_JSON}")
+  
+  TG_CODE=$(echo "$TG_RESP" | tail -n1)
+  TG_BODY=$(echo "$TG_RESP" | sed '$d')
+
+  if [ "$TG_CODE" -ge 200 ] && [ "$TG_CODE" -lt 300 ]; then
+    echo "✅ Notifica Telegram inviata con successo (HTTP ${TG_CODE})."
+  else
+    echo "❌ Errore invio Telegram (HTTP ${TG_CODE}): ${TG_BODY}"
+    echo "💡 Nota: assicurati che il bot sia stato avviato (premendo /start nella chat Telegram del bot) e che il TELEGRAM_CHAT_ID sia corretto."
+  fi
 else
   echo "ℹ️ Notifica Telegram saltata: TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID non definiti nei secrets."
 fi
@@ -67,11 +76,19 @@ if [ -n "$RESEND_API_KEY" ] && [ -n "$ALERT_EMAIL_TO" ]; then
     }));
   ')
 
-  curl -s -X POST "https://api.resend.com/emails" \
+  RESEND_RESP=$(curl -s -w "\n%{http_code}" -X POST "https://api.resend.com/emails" \
     -H "Authorization: Bearer ${RESEND_API_KEY}" \
     -H "Content-Type: application/json" \
-    -d "${EMAIL_JSON}" > /dev/null 2>&1
-  echo "✅ Richiesta Email inviata."
+    -d "${EMAIL_JSON}")
+  
+  RESEND_CODE=$(echo "$RESEND_RESP" | tail -n1)
+  RESEND_BODY=$(echo "$RESEND_RESP" | sed '$d')
+
+  if [ "$RESEND_CODE" -ge 200 ] && [ "$RESEND_CODE" -lt 300 ]; then
+    echo "✅ Notifica Email inviata con successo (HTTP ${RESEND_CODE})."
+  else
+    echo "❌ Errore invio Email (HTTP ${RESEND_CODE}): ${RESEND_BODY}"
+  fi
 else
   echo "ℹ️ Notifica Email saltata: RESEND_API_KEY o ALERT_EMAIL_TO non definiti nei secrets."
 fi

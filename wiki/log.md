@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-25] feat | Diagnostica SUPABASE_DB_URL, Test Telegram/Email e Logging Allarmi Esteso (v1.05.77)
+- **Diagnostica Connection Pooler (`scripts/test_db_connection.js`)**:
+  - Creato script diagnostico per validare la stringa `SUPABASE_DB_URL`: rileva automaticamente discrepanze nel formato utente (`postgres.zpategmkelqmexetpaot` vs `postgres`), porta Session Pooler (5432) e raggiungibilità TCP.
+- **Strumenti di Test Canali di Notifica (`scripts/test_alert.js`)**:
+  - Creato script CLI interattivo `npm run test:alert` per verificare token bot Telegram (tramite `getMe`), consegna messaggi e invio email Resend, con suggerimenti per permessi chat Telegram (/start).
+- **Logging Trasparente su GitHub Actions (`scripts/notify_alert.sh`)**:
+  - Eliminato il silenziamento su `/dev/null`: ora registra codice di stato HTTP e messaggi di errore restituiti dalle API Telegram e Resend per immediata visibilità nei log dei workflow.
+- **NPM Scripts**: Aggiunti comandi `npm run test:alert` e `npm run test:db`.
+
 ## [2026-09-24] refactor | Fix A/B/C da secondo audit WFTEST — Passphrase & VERCEL_ENV (v1.05.76)
 - **FIX-A (`backup_db.yml`)**: Rimossa interpolazione shell della passphrase OpenSSL. `BACKUP_PASSPHRASE` ora è passata come env var dello step e usata con `-pass env:BACKUP_PASSPHRASE`.
 - **FIX-B (`backup_storage_monthly.yml`)**: Stesso fix del FIX-A applicato al workflow di backup mensile Storage.

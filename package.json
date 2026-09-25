@@ -1,6 +1,6 @@
 {
   "name": "adr-sito",
-  "version": "1.05.76",
+  "version": "1.05.77",
   "type": "module",
   "dependencies": {
     "@mistralai/mistralai": "^2.5.0",
@@ -29,7 +29,9 @@
     "knip": "knip",
     "test": "vitest run",
     "backup:storage": "node scripts/backup_storage.js",
-    "test:backup": "node scripts/test_backup_restore.js"
+    "test:backup": "node scripts/test_backup_restore.js",
+    "test:alert": "node scripts/test_alert.js",
+    "test:db": "node scripts/test_db_connection.js"
   },
   "repository": {
     "type": "git",
