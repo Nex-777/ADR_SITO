@@ -104,9 +104,33 @@ Registrato: Pranzo — 200g pesce fritto (~1015 kcal).
         expect(content).toContain('ctx.lineTo(chartArea.right, yPos)');
         expect(content).toContain('plugins: [fullWidthTargetLinesPlugin]');
 
-        // 6. Verifica che le linee TDEE e Target abbiano showLine: false per evitare sovrapposizioni parziali
-        expect(content).toMatch(/label:\s*`TDEE Salute[\s\S]*?showLine:\s*false/);
-        expect(content).toMatch(/label:\s*`Target[\s\S]*?showLine:\s*false/);
+        // 6. Verifica che le 4 linee (TDEE, Target Calorie, Target Grassi, Target Proteine) siano configurate correttamente
+        expect(content).toMatch(/label:\s*`TDEE Salute[\s\S]*?borderColor:\s*'#ff1744'/);
+        expect(content).toMatch(/label:\s*`Target \(.*?kcal\)[\s\S]*?borderColor:\s*'#94a3b8'/);
+        expect(content).toMatch(/label:\s*`Target Grassi[\s\S]*?borderColor:\s*'#76ff03'/);
+        expect(content).toMatch(/label:\s*`Target Proteine[\s\S]*?borderColor:\s*'#00e5ff'/);
+
+        // 7. Verifica funzioni modale target nutrizionali
+        expect(content).toContain('apriModalTargetNutrizionali');
+        expect(content).toContain('chiudiModalTargetNutrizionali');
+        expect(content).toContain('aggiornaTargetCarbModal');
+        expect(content).toContain('salvaTargetNutrizionali');
+    });
+
+    it('verifica presenza della modale e badge target macro in portal/nestore.html', async () => {
+        const fs = await import('fs');
+        const path = await import('path');
+        const htmlPath = path.resolve(__dirname, '../portal/nestore.html');
+        const html = fs.readFileSync(htmlPath, 'utf8');
+
+        expect(html).toContain('id="nst-target-fat-badge"');
+        expect(html).toContain('id="nst-target-pro-badge"');
+        expect(html).toContain('id="nst-target-carb-badge"');
+        expect(html).toContain('id="nst-modal-target-nutrizionali"');
+        expect(html).toContain('id="nst-target-kcal-input"');
+        expect(html).toContain('id="nst-target-fat-input"');
+        expect(html).toContain('id="nst-target-pro-input"');
+        expect(html).toContain('id="nst-target-carb-input"');
     });
 });
 

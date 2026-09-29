@@ -2,6 +2,24 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] feat | NESTORE — Target Macro (Grassi, Proteine, Carboidrati Auto) e Linee Orizzontali Dedicate nel Grafico Dieta
+- **Database Schema Migration (`supabase/migration_nestore_v3_macro_targets.sql`)**:
+  - Aggiunte le colonne `grassi_target_pct NUMERIC(4,1) DEFAULT 25.0` e `proteine_target_pct NUMERIC(4,1) DEFAULT 35.0` alla tabella `public.nestore_preferenze`.
+- **Interfaccia Utente & Nuova Modale Target (`portal/nestore.html`, `portal/nestore.js`)**:
+  - Aggiornato `#nst-target-container` con badge dedicati per visualizzare la ripartizione target dei macronutrienti: `Fat: 25%` (Lime), `Pro: 35%` (Cyan), `Carb: 40%` (Amber, calcolato in automatico per differenza).
+  - Implementata la nuova modale `#nst-modal-target-nutrizionali` accessibile dall'icona ✏️, consentendo all'utente di configurare Kcal target, % Grassi e % Proteine con validazione anti-overflow ($Fat\% + Pro\% \le 100$) e ricalcolo in tempo reale del badge carboidrati.
+  - Salvataggio asincrono su Supabase in `nestore_preferenze` e aggiornamento istantaneo del grafico e delle card.
+- **Linee di Riferimento Orizzontali nel Grafico Dieta (`portal/nestore.js`)**:
+  - Modificato il colore della linea tratteggiata del *Target Calorie* in **Grigio** (`#94a3b8`) per allinearsi visivamente alla colonna Calorie Totali.
+  - Mantenuta la linea del *TDEE Salute* in **Rosso** (`#ff1744`).
+  - Aggiunte 2 nuove linee tratteggiate orizzontali comparative a tutta larghezza:
+    - **Target Grassi**: linea tratteggiata **Lime** (`#76ff03`) calcolata in Kcal ($Target \times Fat\%$).
+    - **Target Proteine**: linea tratteggiata **Ciano** (`#00e5ff`) calcolata in Kcal ($Target \times Pro\%$).
+  - Esteso il plugin custom `fullWidthTargetLinesPlugin` per disegnare tutte e 4 le linee edge-to-edge con rispetto della visibilità/toggle da legenda.
+- **Testing & QA (`tests/diet-chart-target.test.js`)**:
+  - Aggiunti test di conformità per validare la presenza della modale, gli input numerici, i badge percentuali e la configurazione corretta delle 4 linee tratteggiate nel grafico.
+  - Test suite globale vitest: 188/188 test superati con successo (15 file su 15).
+
 ## [2026-09-29] feat | NESTORE — Grafico Dieta & Macro a 4 Colonne Affiancate
 - **Refactoring Grafico Dieta (`portal/nestore.js`)**:
   - Trasformato il grafico dei pasti da colonna singola stacked a grafico a 4 colonne affiancate raggruppate per giornata (`stacked: false`).

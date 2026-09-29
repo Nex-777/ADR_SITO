@@ -410,40 +410,136 @@ async function caricaPreferenze() {
             if (heightBanner) heightBanner.classList.remove('nst-hidden');
         }
 
-        // Aggiorna indicatore calorie target
+        // Aggiorna indicatore calorie target e macro %
         const targetValEl = document.getElementById('nst-target-val');
         if (targetValEl) {
             targetValEl.textContent = userPreferenze.calorie_target || 2200;
         }
+        const fatPct = Number(userPreferenze.grassi_target_pct ?? 25);
+        const proPct = Number(userPreferenze.proteine_target_pct ?? 35);
+        const carbPct = Math.max(0, Math.round((100 - fatPct - proPct) * 10) / 10);
+
+        const fatBadge = document.getElementById('nst-target-fat-badge');
+        const proBadge = document.getElementById('nst-target-pro-badge');
+        const carbBadge = document.getElementById('nst-target-carb-badge');
+        if (fatBadge) fatBadge.textContent = `${fatPct}%`;
+        if (proBadge) proBadge.textContent = `${proPct}%`;
+        if (carbBadge) carbBadge.textContent = `${carbPct}%`;
     } catch (e) {
         console.error("Eccezione preferenze:", e);
     }
 }
 
-async function modificaTargetCalorie() {
-    const curr = userPreferenze?.calorie_target || 2200;
-    const nuovo = prompt("Imposta il tuo obiettivo calorico giornaliero (kcal):", curr);
-    if (nuovo === null) return;
-    const val = parseInt(nuovo, 10);
-    if (!val || isNaN(val) || val < 800 || val > 6000) {
-        alert("Inserisci un valore valido compreso tra 800 e 6000 kcal.");
+function modificaTargetCalorie() {
+    apriModalTargetNutrizionali();
+}
+
+function apriModalTargetNutrizionali() {
+    const modal = document.getElementById('nst-modal-target-nutrizionali');
+    if (!modal) return;
+
+    const kcalInput = document.getElementById('nst-target-kcal-input');
+    const fatInput = document.getElementById('nst-target-fat-input');
+    const proInput = document.getElementById('nst-target-pro-input');
+    const warning = document.getElementById('nst-target-modal-warning');
+
+    if (warning) warning.classList.add('nst-hidden');
+
+    const currKcal = userPreferenze?.calorie_target || 2200;
+    const currFat = userPreferenze?.grassi_target_pct ?? 25;
+    const currPro = userPreferenze?.proteine_target_pct ?? 35;
+
+    if (kcalInput) kcalInput.value = currKcal;
+    if (fatInput) fatInput.value = currFat;
+    if (proInput) proInput.value = currPro;
+
+    aggiornaTargetCarbModal();
+    modal.classList.remove('nst-hidden');
+}
+
+function chiudiModalTargetNutrizionali() {
+    const modal = document.getElementById('nst-modal-target-nutrizionali');
+    if (modal) modal.classList.add('nst-hidden');
+}
+
+function aggiornaTargetCarbModal() {
+    const fatInput = document.getElementById('nst-target-fat-input');
+    const proInput = document.getElementById('nst-target-pro-input');
+    const carbInput = document.getElementById('nst-target-carb-input');
+    const warning = document.getElementById('nst-target-modal-warning');
+
+    const fat = parseFloat(fatInput?.value || 0) || 0;
+    const pro = parseFloat(proInput?.value || 0) || 0;
+    const carb = Math.round((100 - fat - pro) * 10) / 10;
+
+    if (carbInput) {
+        carbInput.value = `${carb}%`;
+        if (carb < 0) {
+            carbInput.style.color = '#ff1744';
+            if (warning) warning.classList.remove('nst-hidden');
+        } else {
+            carbInput.style.color = '#ffb300';
+            if (warning) warning.classList.add('nst-hidden');
+        }
+    }
+}
+
+async function salvaTargetNutrizionali() {
+    const kcalInput = document.getElementById('nst-target-kcal-input');
+    const fatInput = document.getElementById('nst-target-fat-input');
+    const proInput = document.getElementById('nst-target-pro-input');
+
+    const kcal = parseInt(kcalInput?.value, 10);
+    const fat = parseFloat(fatInput?.value);
+    const pro = parseFloat(proInput?.value);
+
+    if (isNaN(kcal) || kcal < 800 || kcal > 6000) {
+        alert("Inserisci un valore calorico valido compreso tra 800 e 6000 kcal.");
+        return;
+    }
+    if (isNaN(fat) || fat < 5 || fat > 80) {
+        alert("La percentuale dei Grassi deve essere compresa tra 5% e 80%.");
+        return;
+    }
+    if (isNaN(pro) || pro < 5 || pro > 80) {
+        alert("La percentuale delle Proteine deve essere compresa tra 5% e 80%.");
+        return;
+    }
+    if (fat + pro > 100) {
+        alert("La somma di Grassi e Proteine non può superare il 100%.");
         return;
     }
 
     try {
-        userPreferenze.calorie_target = val;
+        userPreferenze.calorie_target = kcal;
+        userPreferenze.grassi_target_pct = fat;
+        userPreferenze.proteine_target_pct = pro;
+
         const targetEl = document.getElementById('nst-target-val');
-        if (targetEl) targetEl.textContent = val;
+        if (targetEl) targetEl.textContent = kcal;
+
+        const fatBadge = document.getElementById('nst-target-fat-badge');
+        const proBadge = document.getElementById('nst-target-pro-badge');
+        const carbBadge = document.getElementById('nst-target-carb-badge');
+        const carbPct = Math.round((100 - fat - pro) * 10) / 10;
+
+        if (fatBadge) fatBadge.textContent = `${fat}%`;
+        if (proBadge) proBadge.textContent = `${pro}%`;
+        if (carbBadge) carbBadge.textContent = `${carbPct}%`;
 
         await supabaseClient
             .from('nestore_preferenze')
             .upsert({
                 utente_id: currentUser.id,
-                calorie_target: val,
+                calorie_target: kcal,
+                grassi_target_pct: fat,
+                proteine_target_pct: pro,
                 aggiornato_il: new Date().toISOString()
             });
 
-        // Ricarica il grafico per aggiornare la linea verde del target
+        chiudiModalTargetNutrizionali();
+
+        // Ricarica il grafico per aggiornare la linea del target e dei macro
         await renderGraficoDieta();
 
         // Notifica o ricalcola scheda atleta per sincronizzare i target
@@ -451,8 +547,8 @@ async function modificaTargetCalorie() {
             aggiornaSchedaManuale().catch(() => {});
         }
     } catch (e) {
-        console.error("Errore salvataggio target calorie:", e);
-        alert("Errore durante il salvataggio del target calorico.");
+        console.error("Errore salvataggio target nutrizionali:", e);
+        alert("Errore durante il salvataggio dei target nutrizionali.");
     }
 }
 
@@ -2436,10 +2532,24 @@ async function renderGraficoDieta() {
         const serieCarb = dateOrdinate.map(d => Math.round(aggregati[d].carbKcal));
         const serieKcalTot = dateOrdinate.map(d => Math.round(aggregati[d].totKcal || (aggregati[d].fatKcal + aggregati[d].proKcal + aggregati[d].carbKcal)));
 
-        // Calcolo o recupero TDEE e Calorie Target
+        // Calcolo o recupero TDEE e Calorie Target + Macro Target
         const targetVal = Number(userPreferenze?.calorie_target || currentSchedaAtleta?.nutrizione?.calorie_target || 2200);
         const targetValEl = document.getElementById('nst-target-val');
         if (targetValEl) targetValEl.textContent = Math.round(targetVal);
+
+        const fatPct = Number(userPreferenze?.grassi_target_pct ?? 25);
+        const proPct = Number(userPreferenze?.proteine_target_pct ?? 35);
+        const carbPct = Math.max(0, Math.round((100 - fatPct - proPct) * 10) / 10);
+
+        const targetFatKcal = Math.round(targetVal * (fatPct / 100));
+        const targetProKcal = Math.round(targetVal * (proPct / 100));
+
+        const fatBadge = document.getElementById('nst-target-fat-badge');
+        const proBadge = document.getElementById('nst-target-pro-badge');
+        const carbBadge = document.getElementById('nst-target-carb-badge');
+        if (fatBadge) fatBadge.textContent = `${fatPct}%`;
+        if (proBadge) proBadge.textContent = `${proPct}%`;
+        if (carbBadge) carbBadge.textContent = `${carbPct}%`;
 
         let tdeeVal = Number(currentSchedaAtleta?.biometria?.tdee_stimato || 0);
         if (!tdeeVal) {
@@ -2505,6 +2615,8 @@ async function renderGraficoDieta() {
 
         let tdeeDatasetIndex = -1;
         let targetDatasetIndex = -1;
+        let targetFatDatasetIndex = -1;
+        let targetProDatasetIndex = -1;
 
         if (labels.length > 0) {
             // Linea Rossa: TDEE Linee Guida Salute
@@ -2524,14 +2636,48 @@ async function renderGraficoDieta() {
                 order: 1
             });
 
-            // Linea Verde: Target Calorie Atleta
+            // Linea Grigia: Target Calorie Atleta
             targetDatasetIndex = datasets.length;
             datasets.push({
                 type: 'line',
                 label: `Target (${Math.round(targetVal)} kcal)`,
                 data: labels.map(() => Math.round(targetVal)),
-                borderColor: '#00e676', // Green
-                backgroundColor: '#00e676',
+                borderColor: '#94a3b8', // Gray (modificato da verde a grigio)
+                backgroundColor: '#94a3b8',
+                borderWidth: 2,
+                borderDash: [3, 3],
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                showLine: false,
+                fill: false,
+                order: 1
+            });
+
+            // Linea Lime: Target Grassi Atleta
+            targetFatDatasetIndex = datasets.length;
+            datasets.push({
+                type: 'line',
+                label: `Target Grassi (${Math.round(targetFatKcal)} kcal)`,
+                data: labels.map(() => Math.round(targetFatKcal)),
+                borderColor: '#76ff03', // Lime
+                backgroundColor: '#76ff03',
+                borderWidth: 2,
+                borderDash: [3, 3],
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                showLine: false,
+                fill: false,
+                order: 1
+            });
+
+            // Linea Ciano: Target Proteine Atleta
+            targetProDatasetIndex = datasets.length;
+            datasets.push({
+                type: 'line',
+                label: `Target Proteine (${Math.round(targetProKcal)} kcal)`,
+                data: labels.map(() => Math.round(targetProKcal)),
+                borderColor: '#00e5ff', // Cyan
+                backgroundColor: '#00e5ff',
                 borderWidth: 2,
                 borderDash: [3, 3],
                 pointRadius: 0,
@@ -2565,7 +2711,7 @@ async function renderGraficoDieta() {
                     }
                 }
 
-                // Target Line (Verde a tutta ampiezza)
+                // Target Calorie Line (Grigia a tutta ampiezza)
                 if (targetDatasetIndex !== -1 && (!chart.isDatasetVisible || chart.isDatasetVisible(targetDatasetIndex))) {
                     const yPos = y.getPixelForValue(targetVal);
                     if (yPos >= chartArea.top - 5 && yPos <= chartArea.bottom + 5) {
@@ -2575,7 +2721,39 @@ async function renderGraficoDieta() {
                         ctx.moveTo(chartArea.left, yPos);
                         ctx.lineTo(chartArea.right, yPos);
                         ctx.lineWidth = 2;
-                        ctx.strokeStyle = '#00e676';
+                        ctx.strokeStyle = '#94a3b8';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+
+                // Target Grassi Line (Lime a tutta ampiezza)
+                if (targetFatDatasetIndex !== -1 && (!chart.isDatasetVisible || chart.isDatasetVisible(targetFatDatasetIndex))) {
+                    const yPos = y.getPixelForValue(targetFatKcal);
+                    if (yPos >= chartArea.top - 5 && yPos <= chartArea.bottom + 5) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([3, 3]);
+                        ctx.moveTo(chartArea.left, yPos);
+                        ctx.lineTo(chartArea.right, yPos);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#76ff03';
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+
+                // Target Proteine Line (Ciano a tutta ampiezza)
+                if (targetProDatasetIndex !== -1 && (!chart.isDatasetVisible || chart.isDatasetVisible(targetProDatasetIndex))) {
+                    const yPos = y.getPixelForValue(targetProKcal);
+                    if (yPos >= chartArea.top - 5 && yPos <= chartArea.bottom + 5) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([3, 3]);
+                        ctx.moveTo(chartArea.left, yPos);
+                        ctx.lineTo(chartArea.right, yPos);
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#00e5ff';
                         ctx.stroke();
                         ctx.restore();
                     }
@@ -9505,6 +9683,10 @@ window.apriModalSchedaTesto = apriModalSchedaTesto;
 window.chiudiModalSchedaTesto = chiudiModalSchedaTesto;
 window.copiaTestoSchedaModal = copiaTestoSchedaModal;
 window.modificaTargetCalorie = modificaTargetCalorie;
+window.apriModalTargetNutrizionali = apriModalTargetNutrizionali;
+window.chiudiModalTargetNutrizionali = chiudiModalTargetNutrizionali;
+window.aggiornaTargetCarbModal = aggiornaTargetCarbModal;
+window.salvaTargetNutrizionali = salvaTargetNutrizionali;
 window.renderGraficoDieta = renderGraficoDieta;
 window.modificaInvictusPull = modificaInvictusPull;
 window.getInvictusPullBase = getInvictusPullBase;
@@ -9571,6 +9753,10 @@ if (typeof module !== 'undefined' && module.exports) {
         salvaAltezzaRapida,
         modificaAltezzaPrompt,
         modificaTargetCalorie,
+        apriModalTargetNutrizionali,
+        chiudiModalTargetNutrizionali,
+        aggiornaTargetCarbModal,
+        salvaTargetNutrizionali,
         renderGraficoDieta,
         caricaSchedaAtletaUI,
         aggiornaSchedaManuale,

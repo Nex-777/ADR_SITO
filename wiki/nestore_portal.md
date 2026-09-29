@@ -43,6 +43,7 @@ Stores athlete-specific assistant preferences.
 - `utente_id` (UUID PK, FK `utenti.id`)
 - `conferma_preventiva` (BOOLEAN DEFAULT true): When `true`, Nestore asks for manual confirmation before persisting data; when `false`, data is saved directly.
 - `calorie_target`, `proteine_target_g`, `peso_target_kg`
+- `grassi_target_pct` (NUMERIC DEFAULT 25.0), `proteine_target_pct` (NUMERIC DEFAULT 35.0)
 - `creato_il`, `aggiornato_il`
 
 ### 3.2. `public.nestore_pesi_misure`
@@ -114,9 +115,12 @@ Nestore is built as an SPA, transitioning seamlessly between Chat and Data visua
       - **Colonna 3 - Carboidrati**: Totale carboidrati giornalieri in Kcal ($g \times 4$) in colore Amber (`#ffb300`).
       - **Colonna 4 (Destra) - Calorie Totali**: Apporto energetico complessivo della giornata in Kcal in colore Grigio (`#94a3b8`).
       - Ciascuna colonna dispone di angoli arrotondati (`borderRadius: 3`) e il tooltip interattivo espone sia le Kcal sia i grammi corrispondenti per i macronutrienti.
-      - Il grafico integra due linee orizzontali comparative a tutta larghezza (disegnate edge-to-edge da un custom inline plugin di Chart.js, indipendenti dal numero di giorni registrati):
-     - **Linea Rossa Tratteggiata (TDEE Salute)**: Rappresenta il fabbisogno calorico stimato scientificamente (Formula Mifflin-St Jeor) aggregato nella Wiki Atleta.
-     - **Linea Verde Tratteggiata (Target Atleta)**: Rappresenta l'obiettivo calorico giornaliero personalizzato dell'atleta (impostabile sia via chat sia tramite l'editor rapido inline `Target: [X] kcal ✏️` nel pannello dieta).
+      - Il grafico integra quattro linee orizzontali comparative a tutta larghezza (disegnate edge-to-edge da un custom inline plugin di Chart.js, indipendenti dal numero di giorni registrati):
+        - **Linea Rossa Tratteggiata (TDEE Salute)**: Rappresenta il fabbisogno calorico stimato scientificamente (Formula Mifflin-St Jeor) aggregato nella Wiki Atleta.
+        - **Linea Grigia Tratteggiata (Target Calorie)**: Rappresenta l'obiettivo calorico giornaliero personalizzato dell'atleta.
+        - **Linea Lime Tratteggiata (Target Grassi)**: Quota calorica target per i grassi calcolata automaticamente ($Target \times Fat\%$).
+        - **Linea Ciano Tratteggiata (Target Proteine)**: Quota calorica target per le proteine calcolata automaticamente ($Target \times Pro\%$).
+      - **Modale Target Nutrizionali (`#nst-modal-target-nutrizionali`)**: Accessibile cliccando sull'icona ✏️ accanto al target, consente di configurare l'obiettivo calorico giornaliero, la percentuale di grassi (default 25%) e proteine (default 35%), con calcolo automatico in tempo reale dei carboidrati ($100\% - Fat\% - Pro\%$) e salvataggio persistente in `nestore_preferenze`.
   4. **Gestione Storico Pasti (Modifica, Cancellazione & Mobile Long-Press)**:
      - **Desktop**: Colonna "Azioni" con icone Matita (✏️ modifica) e Cestino (🗑️ elimina).
      - **Mobile / Touch**: Per evitare sovraffollamento visivo, la colonna azioni è nascosta e sostituita da un'interazione con **pressione prolungata (Long-Press ~450ms)** sulla riga del pasto. Il tocco prolungato attiva un feedback tattile (`navigator.vibrate`) e visuale (`.nst-long-press-active`) aprendo un Action Sheet dedicato (`#nst-modal-pasto-actions`).
