@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] fix | NESTORE — Matching Robusto Multi-Pass Esercizi Metcon & Ottimizzazioni Mobile Tabella Comparativa (v1.05.92)
+- **Matching Multi-Pass Esercizi Storici (`portal/nestore.js`)**:
+  - Implementate `normalizzaNomeEsercizioPerMatch` e `trovaEsercizioInSessione` per eliminare i falsi positivi da `.includes()` parziali tra esercizi affini (es. `Stacchi` vs `Stacchi Rumeni`).
+  - L'algoritmo effettua: 1. match esatto diretto; 2. match normalizzato ignorando sovraccarichi nel nome (es. `Stacchi 95kg` matcha `Stacchi 90kg`); 3. fallback controllato su stringhe base $\ge 4$ caratteri.
+- **Ottimizzazioni Layout & Usabilità Mobile Tabella Comparativa (`portal/nestore.css`)**:
+  - Impostato `min-width: 460px` su `.nst-metcon-compare-table` (e `min-width: 440px` a viewport $\le 600px$) per evitare lo schiacciamento delle 4 colonne su smartphone.
+  - Implementata scrollbar orizzontale dedicata sottile (`4px`, gradiente ciano `.nst-ex-preview-container`) su mobile.
+  - Aumentato il touch target degli input `.nst-metcon-cfg-input` (`min-height: 34px`, `font-size: 13px`) su schermi touch.
+- **Testing & QA (`tests/metcon-schede.test.js`)**:
+  - Aggiunti test unitari di validazione per il matching multi-pass, variazione carichi e prevenzione falsi positivi.
+  - Test suite globale: 193/193 superati con successo (15 file su 15).
+
 ## [2026-09-29] feat | NESTORE — Personalizzazione Pre-Seduta Metcon e Tabella Comparativa Storico (Best / Last / Today) (v1.05.91)
 - **Tabella Comparativa a 4 Colonne nell'Anteprima Metcon (`portal/nestore.js`, `portal/nestore.css`)**:
   - Implementata `renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSessione)` che renderizza la nuova tabella comparativa responsive: `ESERCIZIO`, `MIGLIORE 🏆`, `ULTIMA SEDUTA`, `OGGI (TARGET)`.

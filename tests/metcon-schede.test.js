@@ -643,6 +643,33 @@ describe('NESTORE — METCON Schede Overhaul & Giro Corrente', () => {
             expect(results[0][1].target_val).toBe('5');
             expect(results[0][1].peso_kg).toBe(95);
         });
+
+        it('normalizzaNomeEsercizioPerMatch e trovaEsercizioInSessione eseguono matching multi-pass robusto senza falsi positivi', () => {
+            expect(nestore.normalizzaNomeEsercizioPerMatch('Stacchi 90kg')).toBe('stacchi');
+            expect(nestore.normalizzaNomeEsercizioPerMatch('Stacchi 95.5kg')).toBe('stacchi');
+            expect(nestore.normalizzaNomeEsercizioPerMatch('C+J Manubrio 20kg')).toBe('cjmanubrio');
+            expect(nestore.normalizzaNomeEsercizioPerMatch('PULL')).toBe('pull');
+
+            const sessioneEsercizi = [
+                { nome: 'Stacchi 95kg', target_val: '5', totale_effettivo: 30 },
+                { nome: 'Stacchi Rumeni 60kg', target_val: '10', totale_effettivo: 40 },
+                { nome: 'PULL', target_val: '15', totale_effettivo: 90 }
+            ];
+
+            // 1. Match con carico diverso dello stesso esercizio
+            const matchStacchi = nestore.trovaEsercizioInSessione(sessioneEsercizi, 'Stacchi 90kg');
+            expect(matchStacchi).toBeDefined();
+            expect(matchStacchi.nome).toBe('Stacchi 95kg');
+
+            // 2. Nessun falso positivo tra "Stacchi" e "Stacchi Rumeni"
+            const matchRumeni = nestore.trovaEsercizioInSessione(sessioneEsercizi, 'Stacchi Rumeni 60kg');
+            expect(matchRumeni).toBeDefined();
+            expect(matchRumeni.nome).toBe('Stacchi Rumeni 60kg');
+
+            // 3. Esercizio non presente restituisce null
+            const matchAssente = nestore.trovaEsercizioInSessione(sessioneEsercizi, 'Assault Bike');
+            expect(matchAssente).toBeNull();
+        });
     });
 });
 

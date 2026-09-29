@@ -6770,6 +6770,42 @@ function estraiPesoDaEsercizioMetcon(ex) {
     return null;
 }
 
+function normalizzaNomeEsercizioPerMatch(nome) {
+    if (!nome) return '';
+    return String(nome)
+        .toLowerCase()
+        .replace(/\d+(?:[.,]\d+)?\s*kg/gi, '')
+        .replace(/[^a-z0-9]/gi, '')
+        .trim();
+}
+
+function trovaEsercizioInSessione(eserciziSessione, nomeCercato) {
+    if (!Array.isArray(eserciziSessione) || !nomeCercato) return null;
+    const nomeNorm = String(nomeCercato).trim().toLowerCase();
+    
+    // 1. Match esatto diretto (case-insensitive, trimmed)
+    let found = eserciziSessione.find(e => (e.nome || '').trim().toLowerCase() === nomeNorm);
+    if (found) return found;
+
+    // 2. Match esatto dopo normalizzazione senza carico kg (es. "Stacchi 95kg" matcha "Stacchi 90kg")
+    const baseNorm = normalizzaNomeEsercizioPerMatch(nomeCercato);
+    if (baseNorm) {
+        found = eserciziSessione.find(e => normalizzaNomeEsercizioPerMatch(e.nome) === baseNorm);
+        if (found) return found;
+    }
+
+    // 3. Fallback: match per inclusione bidirezionale controllato (solo se base >= 4 caratteri)
+    if (baseNorm && baseNorm.length >= 4) {
+        found = eserciziSessione.find(e => {
+            const eBase = normalizzaNomeEsercizioPerMatch(e.nome);
+            return eBase && (eBase.includes(baseNorm) || baseNorm.includes(eBase));
+        });
+        if (found) return found;
+    }
+
+    return null;
+}
+
 async function recuperaStoricoSessioniProgramma(progId, progNome) {
     const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
     const user = (typeof window !== 'undefined' && window.currentUser) ? window.currentUser : (typeof currentUser !== 'undefined' ? currentUser : null);
@@ -7522,14 +7558,14 @@ function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSess
         const defaultTargetVal = parsed.targetVal || '15';
         const defaultUnita = parsed.unita || 'rip';
 
-        // Ricerca esercizio in ultimaSessione
-        const lastEx = (ultimaSessione && ultimaSessione.scheda_dati && Array.isArray(ultimaSessione.scheda_dati.esercizi))
-            ? ultimaSessione.scheda_dati.esercizi.find(e => (e.nome || '').trim().toLowerCase().includes((ex.nome || '').trim().toLowerCase()) || (ex.nome || '').trim().toLowerCase().includes((e.nome || '').trim().toLowerCase()))
+        // Ricerca esercizio in ultimaSessione con algoritmo robusto multi-pass
+        const lastEx = (ultimaSessione && ultimaSessione.scheda_dati)
+            ? trovaEsercizioInSessione(ultimaSessione.scheda_dati.esercizi, ex.nome)
             : null;
 
-        // Ricerca esercizio in miglioreSessione
-        const bestEx = (miglioreSessione && miglioreSessione.scheda_dati && Array.isArray(miglioreSessione.scheda_dati.esercizi))
-            ? miglioreSessione.scheda_dati.esercizi.find(e => (e.nome || '').trim().toLowerCase().includes((ex.nome || '').trim().toLowerCase()) || (ex.nome || '').trim().toLowerCase().includes((e.nome || '').trim().toLowerCase()))
+        // Ricerca esercizio in miglioreSessione con algoritmo robusto multi-pass
+        const bestEx = (miglioreSessione && miglioreSessione.scheda_dati)
+            ? trovaEsercizioInSessione(miglioreSessione.scheda_dati.esercizi, ex.nome)
             : null;
 
         // Formattazione MIGLIORE
@@ -9849,6 +9885,8 @@ window.renderMetconAnteprimaEsercizi = renderMetconAnteprimaEsercizi;
 window.recuperaStoricoSessioniProgramma = recuperaStoricoSessioniProgramma;
 window.recuperaMiglioreSessioneProgramma = recuperaMiglioreSessioneProgramma;
 window.estraiPesoDaEsercizioMetcon = estraiPesoDaEsercizioMetcon;
+window.normalizzaNomeEsercizioPerMatch = normalizzaNomeEsercizioPerMatch;
+window.trovaEsercizioInSessione = trovaEsercizioInSessione;
 window.ciclaStatoSerieForza = ciclaStatoSerieForza;
 window.gestisciClickRigaSerieForza = gestisciClickRigaSerieForza;
 
@@ -10019,6 +10057,8 @@ if (typeof module !== 'undefined' && module.exports) {
         recuperaStoricoSessioniProgramma,
         recuperaMiglioreSessioneProgramma,
         estraiPesoDaEsercizioMetcon,
+        normalizzaNomeEsercizioPerMatch,
+        trovaEsercizioInSessione,
         avviaIbridoSeduta,
         aggiornaIbridoModalAttivo,
         gestisciIbridoActionPause,
