@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] fix | NESTORE — Risoluzione Compressione Verticale e Ripristino Scroll Pannello Schede Desktop (v1.05.88)
+- **Fix Compressione Schede & Troncamento Contenuti Desktop (`portal/nestore.css`)**:
+  - Risolto il difetto per cui le card dei programmi nel pannello Schede (`#nst-schede-panel`) venivano compresse e schiacciate verticalmente nella vista desktop a causa del comportamento implicito `flex-shrink: 1` di Flexbox dentro `.nst-data-panel`.
+  - Applicato `flex-shrink: 0; min-height: max-content;` alla classe base `.nst-card`, garantendo il rispetto dell'altezza naturale per tutti i blocchi (Base a 4 colonne su 2 righe, Avanzato, Benchmark, Personali).
+  - Aggiunto `overflow-x: hidden;`, `padding-right: 4px;` e scrollbar dedicate a `.nst-data-panel` per un'esperienza di scroll verticale fluida e nativa.
+  - Aggiunto `padding-bottom: 32px;` specifico a `#nst-schede-panel` e `flex-shrink: 0;` a `.nst-course-tabs-nav` e `.nst-course-gift-banner`.
+- **Testing & QA (`tests/course-programs-restructuring.test.js`)**:
+  - Aggiunti test di regressione CSS per validare `flex-shrink: 0`, `min-height: max-content`, e il corretto overflow scroll di `.nst-data-panel`.
+  - Suite vitest: 187/187 test passati con successo (15 file di test su 15).
+
 ## [2026-09-29] fix | NESTORE — Isolamento Rigoroso Benchmark Invictus, Ridenominazione Sezione e Rifinitura UI Desktop (v1.05.87)
 - **Isolamento WOD Invictus & Ripristino Griglia 8 Programmi Ibrido Base (`portal/nestore.js`)**:
   - Implementata la funzione di discriminazione `isProgrammaBenchmark(p)` che analizza programmaticamente il programma per raggruppamento (`benchmark`), tipo (`invictus`), codice (`invictus_base`) o nome (`Invictus`).

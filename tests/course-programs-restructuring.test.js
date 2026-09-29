@@ -235,4 +235,23 @@ describe('Course-Based Workout Programs Restructuring', () => {
         // Compact card has min-height and padding
         expect(css).toMatch(/\.nst-standard-card-compact\s*\{[^}]*min-height:\s*68px;/);
     });
+
+    it('verifies .nst-card has flex-shrink: 0 to prevent vertical squishing and .nst-data-panel has overflow scrolling', () => {
+        const css = fs.readFileSync(path.resolve(__dirname, '../portal/nestore.css'), 'utf-8');
+
+        // .nst-card must not shrink inside flex panels
+        expect(css).toMatch(/\.nst-card\s*\{[^}]*flex-shrink:\s*0;/);
+        expect(css).toMatch(/\.nst-card\s*\{[^}]*min-height:\s*max-content;/);
+
+        // .nst-data-panel must have overflow-y auto and overflow-x hidden
+        expect(css).toMatch(/\.nst-data-panel\s*\{[^}]*overflow-y:\s*auto;/);
+        expect(css).toMatch(/\.nst-data-panel\s*\{[^}]*overflow-x:\s*hidden;/);
+
+        // #nst-schede-panel padding bottom
+        expect(css).toMatch(/#nst-schede-panel\s*\{[^}]*padding-bottom:\s*32px;/);
+
+        // course tabs nav and gift banner must not shrink
+        expect(css).toMatch(/\.nst-course-tabs-nav\s*\{[^}]*flex-shrink:\s*0;/);
+        expect(css).toMatch(/\.nst-course-gift-banner\s*\{[^}]*flex-shrink:\s*0;/);
+    });
 });
