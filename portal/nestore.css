@@ -1840,6 +1840,12 @@ input:checked + .nst-slider:before {
     border-color: var(--nst-cyan);
 }
 
+.nst-dock-btn.close:hover {
+    background: rgba(239, 68, 68, 0.25) !important;
+    border-color: var(--nst-danger) !important;
+    color: #ffffff !important;
+}
+
 @media (max-width: 768px) {
     .nst-floating-dock {
         bottom: 12px;

@@ -2,6 +2,18 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] feat | NESTORE — Pulsante di Chiusura & Reset con Conferma sul Floating Timer Dock (v1.05.93)
+- **Aggiunta Tasto Chiudi e Resetta (`portal/nestore.html`, `portal/timer-dock.js`)**:
+  - Introdotto il terzo pulsante `✕` (`#nst-dock-close-btn` e `#adr-dock-close-btn`) all'interno del widget fluttuante del cronometro/timer, posizionato a destra del tasto di espansione.
+  - Stilizzato con colore di sicurezza rosso (`--nst-danger`, `#ef4444`) e stato hover attivo (`rgba(239, 68, 68, 0.25)`).
+- **Logica di Reset & Protezione Chiusure Accidentali (`portal/nestore.js`, `portal/timer-dock.js`)**:
+  - Implementate le funzioni `dockCloseTimer()` (dock locale di Nestore) e `closeGlobalTimer()` (dock globale del portale).
+  - Integrata richiesta esplicita di conferma (`confirm("Sei sicuro di voler chiudere e azzerare il cronometro?")`) prima di effettuare qualsiasi cancellazione dello stato.
+  - Al click confermato, azzera in tempo reale cronometro, timer a ritroso, tabata o workout minimizzato (azzerando sia gli engine in memoria che i record `adr_*_state` in `localStorage`), e nasconde immediatamente il dock dallo schermo.
+- **Testing & QA (`tests/timer-tabata.test.js`)**:
+  - Aggiunta test suite `Floating Dock Close & Reset Functionality` con verifica della presenza del markup in `nestore.html`, implementazione di `dockCloseTimer` con conferma in `nestore.js`, e reset storage in `timer-dock.js`.
+  - Test suite globale vitest: 196/196 superati con successo (15 file su 15).
+
 ## [2026-09-29] fix | NESTORE — Matching Robusto Multi-Pass Esercizi Metcon & Ottimizzazioni Mobile Tabella Comparativa (v1.05.92)
 - **Matching Multi-Pass Esercizi Storici (`portal/nestore.js`)**:
   - Implementate `normalizzaNomeEsercizioPerMatch` e `trovaEsercizioInSessione` per eliminare i falsi positivi da `.includes()` parziali tra esercizi affini (es. `Stacchi` vs `Stacchi Rumeni`).

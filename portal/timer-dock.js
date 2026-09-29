@@ -140,6 +140,15 @@
                 background: linear-gradient(135deg, rgba(0, 229, 255, 0.25) 0%, rgba(118, 255, 3, 0.25) 100%);
                 border-color: #00e5ff;
             }
+            .adr-dock-btn.close {
+                color: #ef4444;
+                border-color: rgba(239, 68, 68, 0.35);
+            }
+            .adr-dock-btn.close:hover {
+                background: rgba(239, 68, 68, 0.25) !important;
+                border-color: #ef4444 !important;
+                color: #ffffff !important;
+            }
             @media (max-width: 768px) {
                 #nst-timer-dock-global {
                     bottom: 80px; /* Sopra la mobile bottom nav */
@@ -173,6 +182,9 @@
                 <button type="button" class="adr-dock-btn expand" id="adr-dock-expand-btn" title="Apri Timer Nestore">
                     <span class="material-symbols-outlined" style="font-size: 18px;">open_in_full</span>
                 </button>
+                <button type="button" class="adr-dock-btn close" id="adr-dock-close-btn" title="Chiudi e Resetta">
+                    <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+                </button>
             </div>
         `;
         document.body.appendChild(dock);
@@ -182,6 +194,47 @@
         document.getElementById('adr-dock-expand-btn').addEventListener('click', () => {
             window.location.href = 'nestore.html#timer';
         });
+        document.getElementById('adr-dock-close-btn').addEventListener('click', closeGlobalTimer);
+    }
+
+    // Chiudi e resetta timer attivo da localStorage
+    function closeGlobalTimer() {
+        if (!confirm("Sei sicuro di voler chiudere e azzerare il cronometro?")) return;
+        const mode = localStorage.getItem('adr_timer_mode') || 'stopwatch';
+        if (mode === 'stopwatch') {
+            try {
+                const raw = localStorage.getItem('adr_stopwatch_state');
+                const state = raw ? JSON.parse(raw) : {};
+                state.running = false;
+                state.startTimestamp = null;
+                state.elapsedBeforePause = 0;
+                state.laps = [];
+                localStorage.setItem('adr_stopwatch_state', JSON.stringify(state));
+            } catch (e) {}
+        } else if (mode === 'countdown') {
+            try {
+                const raw = localStorage.getItem('adr_countdown_state');
+                const state = raw ? JSON.parse(raw) : {};
+                state.running = false;
+                state.startTimestamp = null;
+                state.elapsedBeforePause = 0;
+                state.laps = [];
+                localStorage.setItem('adr_countdown_state', JSON.stringify(state));
+            } catch (e) {}
+        } else if (mode === 'tabata') {
+            try {
+                const raw = localStorage.getItem('adr_tabata_state');
+                const state = raw ? JSON.parse(raw) : {};
+                state.running = false;
+                state.phase = 'prep';
+                state.phaseStartTimestamp = null;
+                state.phaseElapsedBeforePause = 0;
+                state.currentRound = 1;
+                state.currentSet = 1;
+                localStorage.setItem('adr_tabata_state', JSON.stringify(state));
+            } catch (e) {}
+        }
+        updateDock();
     }
 
     // Toggle timer attivo da localStorage

@@ -440,5 +440,42 @@ describe('Timer & Tabata Engine Core Tests', () => {
             expect(localStorage.getItem('adr_timer_sound_profile')).toBe('bell');
         });
     });
+
+    describe('Floating Dock Close & Reset Functionality', () => {
+        it('verifica la presenza del tasto di chiusura nel dock di portal/nestore.html', async () => {
+            const fs = await import('fs');
+            const path = await import('path');
+            const htmlPath = path.resolve(__dirname, '../portal/nestore.html');
+            const html = fs.readFileSync(htmlPath, 'utf8');
+
+            expect(html).toContain('id="nst-dock-close-btn"');
+            expect(html).toContain('onclick="dockCloseTimer()"');
+            expect(html).toContain('title="Chiudi e Resetta"');
+        });
+
+        it('verifica la funzione dockCloseTimer in portal/nestore.js con richiesta di conferma', async () => {
+            const fs = await import('fs');
+            const path = await import('path');
+            const jsPath = path.resolve(__dirname, '../portal/nestore.js');
+            const js = fs.readFileSync(jsPath, 'utf8');
+
+            expect(js).toContain('function dockCloseTimer()');
+            expect(js).toContain('confirm(');
+            expect(js).toContain('window.dockCloseTimer = dockCloseTimer');
+            expect(js).toContain('dockCloseTimer');
+        });
+
+        it('verifica la presenza del tasto di chiusura e logica di reset in portal/timer-dock.js', async () => {
+            const fs = await import('fs');
+            const path = await import('path');
+            const jsPath = path.resolve(__dirname, '../portal/timer-dock.js');
+            const js = fs.readFileSync(jsPath, 'utf8');
+
+            expect(js).toContain('id="adr-dock-close-btn"');
+            expect(js).toContain('function closeGlobalTimer()');
+            expect(js).toContain('confirm(');
+            expect(js).toContain('adr_stopwatch_state');
+        });
+    });
 });
 

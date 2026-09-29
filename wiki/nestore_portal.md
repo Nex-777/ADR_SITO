@@ -183,7 +183,8 @@ Nestore include un pannello sportivo interattivo ad alta precisione dedicato all
   - Display del tempo in tempo reale
   - Indicatore di fase/modalità (es. `TABATA: WORK`, `CRONOMETRO`, `TIMER RITROSO`)
   - Tasto Pausa/Riprendi rapido
-  - Tasto Espandi a tutto schermo per riaprire istantaneamente `nestore.html#timer`.
+  - Tasto Espandi a tutto schermo per riaprire istantaneamente `nestore.html#timer`
+  - **Tasto Chiudi e Resetta (`✕`)**: Presente sia nel dock locale (`#nst-dock-close-btn`) sia nel dock globale (`#adr-dock-close-btn`), con colorazione di sicurezza rossa (`--nst-danger`) ed hover dinamico. Previa **richiesta di conferma** (`confirm`), interrompe e azzera completamente il cronometro/timer/workout in memoria e in `localStorage`, facendo sparire all'istante il widget dallo schermo.
 - Il dock globale gestisce autonomamente il loop temporale e i suoni a scadenza anche al di fuori di Nestore.
 
 ---

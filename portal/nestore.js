@@ -6074,6 +6074,29 @@ function dockExpandTimer() {
     }
 }
 
+function dockCloseTimer() {
+    if (ibridoSelezionato && ibridoSessionMinimized) {
+        if (!confirm("Sei sicuro di voler chiudere e azzerare l'allenamento in corso?")) return;
+        ibridoSessionMinimized = false;
+        if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
+        if (typeof chiudiModalWorkoutAttivo === 'function') chiudiModalWorkoutAttivo();
+        timerEngine.reset();
+        aggiornaVisibilitaDock();
+        return;
+    }
+
+    if (!confirm("Sei sicuro di voler chiudere e azzerare il cronometro?")) return;
+
+    if (currentTimerMode === 'stopwatch') {
+        timerEngine.reset();
+    } else if (currentTimerMode === 'countdown') {
+        countdownEngine.reset();
+    } else {
+        tabataEngine.reset();
+    }
+    aggiornaVisibilitaDock();
+}
+
 // --- 5. Render Loop Master (RAF + Background Interval) ---
 function masterTimerLoop() {
     if (timerEngine.state.running) {
@@ -9897,6 +9920,7 @@ window.aggiornaConfigDaInput = aggiornaConfigDaInput;
 window.tabataApplyPreset = tabataApplyPreset;
 window.dockToggleTimer = dockToggleTimer;
 window.dockExpandTimer = dockExpandTimer;
+window.dockCloseTimer = dockCloseTimer;
 window.normalizeExerciseName = normalizeExerciseName;
 window.isBetterPerformance = isBetterPerformance;
 window.parseExercisesFromWorkout = parseExercisesFromWorkout;
@@ -10128,7 +10152,10 @@ if (typeof module !== 'undefined' && module.exports) {
         selezionaCorsoSchede,
         renderSchedeCorsoAttivo,
         popolaSelectFiltroCorsiCoach,
-        popolaSelectCorsiModal
+        popolaSelectCorsiModal,
+        dockToggleTimer,
+        dockExpandTimer,
+        dockCloseTimer
     };
 }
 
