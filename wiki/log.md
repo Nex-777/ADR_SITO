@@ -3877,3 +3877,8 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - **Pulsante Elimina Sessione in Modifica**: Aggiunto il pulsante rosso *"Elimina Sessione"* nel footer della modale di modifica, collegato alla doppia conferma di cancellazione soft-delete (`attivo: false`).
 - **Colonna Azioni Desktop Semplificata**: Rimossa l'icona Matita; lasciata solo l'icona Cestino per la cancellazione diretta.
 - **Correzione Database Storico Invictus (Opzione 3A)**: Aggiornata la sessione Invictus del 22/09/2026 (`c02b3922-ee2a-440b-afa2-72f7add94ee4`) ripartendo il tempo totale di 39 minuti su 20 lap calcolati (01:57 a giro) e ricostruendo i 20 set di 5 pull-up, 10 push-up e 20 air squat in `scheda_dati` e nel report dettagliato in `note`.
+# #   [ ]   i n g e s t   |   T i m e r   C o u n t d o w n   e   S u o n i  
+ -   A g g i u n t a   m o d a l i t à   T i m e r   ( C o u n t d o w n )   c o n   U I   d e d i c a t a   i n   n e s t o r e . h t m l   e   c o u n t d o w n E n g i n e   i n   n e s t o r e . j s .  
+ -   A g g i u n t o   s e l e t t o r e   d i   p r o f i l i   a u d i o   ( D i g i t a l e ,   C a m p a n e l l a ,   B u z z e r )   n e l   S o u n d E n g i n e   e   i n c r e m e n t a t o   v o l u m e .  
+ -   A g g i u n t o   p r e s e t   ' R i s c a l d a m .   2 0 / 2 0   x 1 2 '   a i   p r e s e t   T a b a t a .  
+ 
