@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] feat | NESTORE — Personalizzazione Pre-Seduta Metcon e Tabella Comparativa Storico (Best / Last / Today) (v1.05.91)
+- **Tabella Comparativa a 4 Colonne nell'Anteprima Metcon (`portal/nestore.js`, `portal/nestore.css`)**:
+  - Implementata `renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSessione)` che renderizza la nuova tabella comparativa responsive: `ESERCIZIO`, `MIGLIORE 🏆`, `ULTIMA SEDUTA`, `OGGI (TARGET)`.
+  - Se è la prima volta che l'atleta svolge il programma, viene mostrato il banner di prima seduta e i campi target di oggi vengono precompilati con i valori di riferimento predefiniti del catalogo.
+  - Se esistono sedute pregresse, la colonna di oggi viene automaticamente precompilata con i valori effettivi registrati nell'ultima seduta, e viene mostrato il badge record storico migliore con icona 🏆.
+- **Modifica Combinata Target e Carichi Pre-Seduta (`portal/nestore.js`)**:
+  - Implementata la funzione `estraiPesoDaEsercizioMetcon` per individuare automaticamente carichi espressi nel nome (es. `Stacchi 90kg`, `Swing 16kg`, `C+J Manubrio 20kg`).
+  - L'atleta può modificare liberamente sia il target numerico per giro (rip, cal, metri) sia il carico (kg) prima di premere *INIZIA SEDUTA*.
+  - `avviaIbridoSeduta` acquisisce i valori modificati memorizzandoli nello stato `ibridoMetconPersonalizzazione` e inizializza la matrice dei round `ibridoMetconResults` con i parametri personalizzati scelti dall'utente.
+  - Al termine della seduta, `peso_kg` viene persistito nella struttura JSONB `scheda_dati.esercizi[]` su Supabase (`public.nestore_allenamenti`).
+- **Fetch Parallelo dello Storico Programma (`portal/nestore.js`)**:
+  - Implementate `recuperaStoricoSessioniProgramma(progId, progNome)` e `recuperaMiglioreSessioneProgramma(progId, progNome)` con query difensiva contro Supabase, recuperando fino a 50 sedute per estrarre sia l'ultima seduta che la migliore prestazione globale.
+- **Testing & QA (`tests/metcon-schede.test.js`)**:
+  - Aggiunta la suite di test *Iteration 3: Anteprima Comparativa Metcon & Personalizzazione Pre-Seduta* con 4 nuovi test unitari a copertura dell'estrazione pesi, render comparativo prima seduta, precompilazione da storico e acquisizione parametri in avvio.
+  - Test suite globale vitest: 192/192 test passati con successo (15 file su 15).
+
 ## [2026-09-29] feat | NESTORE — Target Macro (Grassi, Proteine, Carboidrati Auto) e Linee Orizzontali Dedicate nel Grafico Dieta
 - **Database Schema Migration (`supabase/migration_nestore_v3_macro_targets.sql`)**:
   - Aggiunte le colonne `grassi_target_pct NUMERIC(4,1) DEFAULT 25.0` e `proteine_target_pct NUMERIC(4,1) DEFAULT 35.0` alla tabella `public.nestore_preferenze`.

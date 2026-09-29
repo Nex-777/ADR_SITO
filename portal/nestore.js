@@ -6654,6 +6654,7 @@ let ibridoConfigurazionePersonalizzata = null;
 let ibridoSessionMinimized = false;
 let ibridoMetconResults = [];
 let ibridoMetconSummary = null;
+let ibridoMetconPersonalizzazione = null;
 let currentMetconDisplayedRound = 1;
 let lastActiveTimerGiro = 1;
 
@@ -6719,6 +6720,10 @@ function getIbridoConfigurazionePersonalizzata() {
     return ibridoConfigurazionePersonalizzata;
 }
 
+function getIbridoMetconPersonalizzazione() {
+    return ibridoMetconPersonalizzazione;
+}
+
 function getIbridoSessionMinimized() {
     return ibridoSessionMinimized;
 }
@@ -6753,27 +6758,74 @@ function ottieniMassimoStoricoEsercizio(nomeEsercizio) {
     return 0;
 }
 
-async function recuperaUltimaSessioneProgramma(progId, progNome) {
+function estraiPesoDaEsercizioMetcon(ex) {
+    if (!ex) return null;
+    if (typeof ex.peso_target === 'number' && ex.peso_target > 0) return ex.peso_target;
+    if (typeof ex.peso_kg === 'number' && ex.peso_kg > 0) return ex.peso_kg;
+    const nome = ex.nome || '';
+    const match = nome.match(/(\d+(?:[.,]\d+)?)\s*kg/i);
+    if (match) {
+        return parseFloat(match[1].replace(',', '.'));
+    }
+    return null;
+}
+
+async function recuperaStoricoSessioniProgramma(progId, progNome) {
     const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
     const user = (typeof window !== 'undefined' && window.currentUser) ? window.currentUser : (typeof currentUser !== 'undefined' ? currentUser : null);
-    if (!client || !user?.id || typeof client.from !== 'function') return null;
+    if (!client || !user?.id || typeof client.from !== 'function') return { ultima: null, migliore: null, tutte: [] };
 
     try {
-        const { data, error } = await client
+        let q = client
             .from('nestore_allenamenti')
-            .select('scheda_dati, data_allenamento')
-            .eq('utente_id', user.id)
-            .eq('attivo', true)
-            .or(`corso_disciplina.ilike.%${progNome}%,scheda_dati->>programma_id.eq.${progId}`)
-            .order('data_allenamento', { ascending: false })
-            .limit(1);
+            .select('scheda_dati, data_allenamento, durata_minuti');
+        if (typeof q.eq === 'function') q = q.eq('utente_id', user.id);
+        if (typeof q.eq === 'function') q = q.eq('attivo', true);
+        if (typeof q.or === 'function') q = q.or(`corso_disciplina.ilike.%${progNome}%,scheda_dati->>programma_id.eq.${progId}`);
+        if (typeof q.order === 'function') q = q.order('data_allenamento', { ascending: false });
+        if (typeof q.limit === 'function') q = q.limit(50);
 
-        if (error || !data || data.length === 0) return null;
-        return data[0];
+        const { data, error } = await q;
+
+        if (error || !data || data.length === 0) return { ultima: null, migliore: null, tutte: [] };
+
+        const ultima = data[0];
+        let migliore = data[0];
+        let bestScore = -1;
+
+        for (const item of data) {
+            const sd = item.scheda_dati;
+            if (!sd) continue;
+            let score = 0;
+            if (typeof sd.rip_totali_effettive === 'number') {
+                score = sd.rip_totali_effettive;
+            } else if (Array.isArray(sd.esercizi)) {
+                score = sd.esercizi.reduce((acc, ex) => {
+                    const eff = typeof ex.totale_effettivo === 'number' ? ex.totale_effettivo : (parseFloat(ex.risultato) || 0);
+                    return acc + eff;
+                }, 0);
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                migliore = item;
+            }
+        }
+
+        return { ultima, migliore, tutte: data };
     } catch (e) {
-        console.warn("Impossibile recuperare ultima sessione programma:", e);
-        return null;
+        console.warn("Impossibile recuperare storico sessioni programma:", e);
+        return { ultima: null, migliore: null, tutte: [] };
     }
+}
+
+async function recuperaMiglioreSessioneProgramma(progId, progNome) {
+    const res = await recuperaStoricoSessioniProgramma(progId, progNome);
+    return res.migliore;
+}
+
+async function recuperaUltimaSessioneProgramma(progId, progNome) {
+    const res = await recuperaStoricoSessioniProgramma(progId, progNome);
+    return res.ultima;
 }
 
 function verificaForzaMaxStorico(exIdx, maxStorico) {
@@ -7449,6 +7501,132 @@ function renderForzaAnteprimaEsercizi(p, exListEl, ultimaSessione) {
     exListEl.innerHTML = html;
 }
 
+function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSessione) {
+    if (!exListEl) return;
+
+    const dataFmt = (ultimaSessione && ultimaSessione.data_allenamento) ? formatDateShort(ultimaSessione.data_allenamento) : '';
+    const infoHtml = ultimaSessione
+        ? `<div style="background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.25); border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; font-size: 11px; line-height: 1.4; color: #f1f5f9; display: flex; align-items: center; gap: 8px;">
+               <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-cyan);">history</span>
+               <span>Dati precompilati dall'ultima seduta <strong>(${escapeHtml(dataFmt)})</strong>. Modifica liberamente i target o i carichi prima di iniziare.</span>
+           </div>`
+        : `<div style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.14); border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; font-size: 11px; line-height: 1.4; color: var(--nst-text-muted); display: flex; align-items: center; gap: 8px;">
+               <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-lime);">verified</span>
+               <span>Prima seduta di questo programma: dati precompilati con i valori di riferimento. Modificali a piacimento prima dell'avvio!</span>
+           </div>`;
+
+    const rowsHtml = (p.esercizi || []).map((ex, exIdx) => {
+        const hasWeight = estraiPesoDaEsercizioMetcon(ex) !== null;
+        const defaultWeight = estraiPesoDaEsercizioMetcon(ex) || 0;
+        const parsed = estraiTargetValoreEUnita(ex.target);
+        const defaultTargetVal = parsed.targetVal || '15';
+        const defaultUnita = parsed.unita || 'rip';
+
+        // Ricerca esercizio in ultimaSessione
+        const lastEx = (ultimaSessione && ultimaSessione.scheda_dati && Array.isArray(ultimaSessione.scheda_dati.esercizi))
+            ? ultimaSessione.scheda_dati.esercizi.find(e => (e.nome || '').trim().toLowerCase().includes((ex.nome || '').trim().toLowerCase()) || (ex.nome || '').trim().toLowerCase().includes((e.nome || '').trim().toLowerCase()))
+            : null;
+
+        // Ricerca esercizio in miglioreSessione
+        const bestEx = (miglioreSessione && miglioreSessione.scheda_dati && Array.isArray(miglioreSessione.scheda_dati.esercizi))
+            ? miglioreSessione.scheda_dati.esercizi.find(e => (e.nome || '').trim().toLowerCase().includes((ex.nome || '').trim().toLowerCase()) || (ex.nome || '').trim().toLowerCase().includes((e.nome || '').trim().toLowerCase()))
+            : null;
+
+        // Formattazione MIGLIORE
+        let bestDisplay = '<span style="color: #64748b; font-size: 11px;">—</span>';
+        if (bestEx) {
+            const bTarget = bestEx.target_val || (bestEx.giri_dettaglio && bestEx.giri_dettaglio[0] ? bestEx.giri_dettaglio[0].effettivo : '') || (bestEx.totale_effettivo ? String(bestEx.totale_effettivo) : '');
+            const bKg = (typeof bestEx.peso_kg === 'number' && bestEx.peso_kg > 0) ? `${bestEx.peso_kg}kg` : '';
+            const bUnit = bestEx.unita || defaultUnita;
+            if (bTarget) {
+                bestDisplay = `
+                    <div style="display: inline-flex; align-items: center; gap: 4px; color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">
+                        <span>🏆</span>
+                        <span>${escapeHtml(bTarget)} ${escapeHtml(bUnit)}</span>
+                    </div>
+                    ${bKg ? `<div style="font-size: 9px; color: var(--nst-cyan); font-family: 'Orbitron', monospace;">@ ${escapeHtml(bKg)}</div>` : ''}
+                `;
+            } else if (bestEx.risultato) {
+                bestDisplay = `<span style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">🏆 ${escapeHtml(bestEx.risultato)}</span>`;
+            }
+        }
+
+        // Formattazione ULTIMA
+        let lastDisplay = '<span style="color: #64748b; font-size: 11px;">—</span>';
+        if (lastEx) {
+            const lTarget = lastEx.target_val || (lastEx.giri_dettaglio && lastEx.giri_dettaglio[0] ? lastEx.giri_dettaglio[0].effettivo : '') || (lastEx.totale_effettivo ? String(lastEx.totale_effettivo) : '');
+            const lKg = (typeof lastEx.peso_kg === 'number' && lastEx.peso_kg > 0) ? `${lastEx.peso_kg}kg` : '';
+            const lUnit = lastEx.unita || defaultUnita;
+            const lData = (ultimaSessione && ultimaSessione.data_allenamento) ? formatDateShort(ultimaSessione.data_allenamento) : '';
+            if (lTarget) {
+                lastDisplay = `
+                    <div style="color: #cbd5e1; font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 600;">${escapeHtml(lTarget)} ${escapeHtml(lUnit)}</div>
+                    ${lKg ? `<div style="font-size: 9px; color: var(--nst-amber); font-family: 'Orbitron', monospace;">@ ${escapeHtml(lKg)}</div>` : ''}
+                    ${lData ? `<div style="font-size: 8px; color: var(--nst-text-muted); margin-top: 1px;">${escapeHtml(lData)}</div>` : ''}
+                `;
+            } else if (lastEx.risultato) {
+                lastDisplay = `
+                    <div style="color: #cbd5e1; font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 600;">${escapeHtml(lastEx.risultato)}</div>
+                    ${lData ? `<div style="font-size: 8px; color: var(--nst-text-muted); margin-top: 1px;">${escapeHtml(lData)}</div>` : ''}
+                `;
+            }
+        }
+
+        // Calcolo default precompilato per OGGI (da ultimaSessione o default catalogo)
+        let todayTargetVal = defaultTargetVal;
+        if (lastEx && (lastEx.target_val || (lastEx.giri_dettaglio && lastEx.giri_dettaglio[0] && lastEx.giri_dettaglio[0].effettivo))) {
+            todayTargetVal = lastEx.target_val || lastEx.giri_dettaglio[0].effettivo;
+        }
+
+        let todayKgVal = defaultWeight;
+        if (lastEx && typeof lastEx.peso_kg === 'number' && lastEx.peso_kg > 0) {
+            todayKgVal = lastEx.peso_kg;
+        }
+
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight: 700; color: #fff; font-size: 12px;">${escapeHtml(ex.nome)}</div>
+                    <div style="font-size: 9px; color: var(--nst-text-muted); font-family: 'Orbitron', monospace;">Rif: ${escapeHtml(ex.target)}</div>
+                </td>
+                <td class="nst-td-best">${bestDisplay}</td>
+                <td class="nst-td-last">${lastDisplay}</td>
+                <td class="nst-td-today">
+                    <div class="nst-metcon-cfg-row">
+                        <div class="nst-metcon-input-wrap">
+                            <input type="text" id="nst-metcon-cfg-target-${exIdx}" class="nst-metcon-cfg-input" value="${escapeHtml(String(todayTargetVal))}" title="Target per giro (rip, cal o metri)">
+                            <span class="nst-metcon-unit-badge">${escapeHtml(defaultUnita)}</span>
+                        </div>
+                        ${hasWeight ? `
+                        <div class="nst-metcon-input-wrap">
+                            <input type="number" id="nst-metcon-cfg-peso-${exIdx}" class="nst-metcon-cfg-input nst-weight-input" value="${todayKgVal}" step="0.5" min="0" max="500" title="Carico in kg">
+                            <span class="nst-metcon-unit-badge kg">kg</span>
+                        </div>
+                        ` : `<input type="hidden" id="nst-metcon-cfg-peso-${exIdx}" value="0">`}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    exListEl.innerHTML = `
+        ${infoHtml}
+        <table class="nst-metcon-compare-table">
+            <thead>
+                <tr>
+                    <th style="width: 34%;">ESERCIZIO</th>
+                    <th style="width: 22%; text-align: center;" class="nst-th-best">MIGLIORE 🏆</th>
+                    <th style="width: 22%; text-align: center;" class="nst-th-last">ULTIMA SEDUTA</th>
+                    <th style="width: 22%; text-align: center;" class="nst-th-today">OGGI (TARGET)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rowsHtml}
+            </tbody>
+        </table>
+    `;
+}
+
 function apriAnteprimaIbrido(progId) {
     const catList = (typeof window !== 'undefined' && window.IBRIDO_PROGRAMMI_CATALOGO) ? window.IBRIDO_PROGRAMMI_CATALOGO : IBRIDO_PROGRAMMI_CATALOGO;
     const libList = (typeof window !== 'undefined' && window.libreriaProgrammiTotali) ? window.libreriaProgrammiTotali : libreriaProgrammiTotali;
@@ -7506,36 +7684,21 @@ function apriAnteprimaIbrido(progId) {
             renderForzaAnteprimaEsercizi(p, exListEl, null);
 
             // Fetch asincrono per eventuale sessione precedente dello stesso programma
-            recuperaUltimaSessioneProgramma(p.id, p.nome).then(prev => {
-                if (prev && ibridoSelezionato && (ibridoSelezionato.id === p.id || ibridoSelezionato.codice === p.id)) {
-                    renderForzaAnteprimaEsercizi(p, exListEl, prev);
+            recuperaStoricoSessioniProgramma(p.id, p.nome).then(res => {
+                if (res && res.ultima && ibridoSelezionato && (ibridoSelezionato.id === p.id || ibridoSelezionato.codice === p.id)) {
+                    renderForzaAnteprimaEsercizi(p, exListEl, res.ultima);
                 }
             }).catch(err => console.warn("Errore fetch background ultima sessione:", err));
         } else {
-            exListEl.innerHTML = `
-                <table class="nst-ex-table">
-                    <thead>
-                        <tr>
-                            <th>ESERCIZIO</th>
-                            <th>TARGET / SCHEMA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${(p.esercizi || []).map(ex => {
-                            let targetText = ex.target || '';
-                            if (ex.serie && Array.isArray(ex.serie) && ex.serie.length > 0) {
-                                targetText = ex.serie.map(s => `${s.rip} rip @ ${(s.pct !== undefined ? s.pct : s.percentuale)}%`).join(' · ');
-                            }
-                            return `
-                                <tr>
-                                    <td style="font-weight: 600; color: #f1f5f9;">${escapeHtml(ex.nome)}</td>
-                                    <td style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px;">${escapeHtml(targetText)}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
+            // Render immediato sincrono con i valori di default/riferimento
+            renderMetconAnteprimaEsercizi(p, exListEl, null, null);
+
+            // Fetch asincrono per ultima e migliore sessione
+            recuperaStoricoSessioniProgramma(p.id, p.nome).then(res => {
+                if (res && (res.ultima || res.migliore) && ibridoSelezionato && (ibridoSelezionato.id === p.id || ibridoSelezionato.codice === p.id)) {
+                    renderMetconAnteprimaEsercizi(p, exListEl, res.ultima, res.migliore);
+                }
+            }).catch(err => console.warn("Errore fetch background storico Metcon:", err));
         }
     }
 }
@@ -7625,23 +7788,60 @@ async function avviaIbridoSeduta() {
         };
     } else {
         ibridoConfigurazionePersonalizzata = null;
+
+        // Raccoglie i target e gli eventuali carichi personalizzati inseriti dall'utente nella tabella anteprima
+        const eserciziPersonalizzati = (p.esercizi || []).map((ex, exIdx) => {
+            const targetInput = document.getElementById(`nst-metcon-cfg-target-${exIdx}`);
+            const pesoInput = document.getElementById(`nst-metcon-cfg-peso-${exIdx}`);
+            const defaultParsed = estraiTargetValoreEUnita(ex.target);
+
+            const customTargetVal = targetInput ? targetInput.value.trim() : '';
+            const customPesoKg = pesoInput ? parseFloat(pesoInput.value) || 0 : 0;
+
+            const finalTargetVal = customTargetVal !== '' ? customTargetVal : defaultParsed.targetVal;
+            const parsedFinal = estraiTargetValoreEUnita(finalTargetVal);
+            const finalTargetNum = parsedFinal.targetNum > 0 ? parsedFinal.targetNum : defaultParsed.targetNum;
+
+            const baseWeight = estraiPesoDaEsercizioMetcon(ex);
+            let nomeVisualizzato = ex.nome;
+            if (customPesoKg > 0 && baseWeight !== null && customPesoKg !== baseWeight) {
+                nomeVisualizzato = ex.nome.replace(/\d+(?:[.,]\d+)?\s*kg/i, `${customPesoKg}kg`);
+            }
+
+            return {
+                nome: nomeVisualizzato,
+                nome_originario: ex.nome,
+                target_originario: ex.target,
+                target_val: String(finalTargetVal),
+                unita: defaultParsed.unita || 'rip',
+                target_num: finalTargetNum,
+                peso_kg: customPesoKg,
+                risultato_effettivo: String(finalTargetVal)
+            };
+        });
+
+        ibridoMetconPersonalizzazione = {
+            programma_id: p.id,
+            programma_nome: p.nome,
+            esercizi: eserciziPersonalizzati
+        };
+
         const totalRounds = (p.timer_mode === 'tabata') ? ibridoRounds : (p.giri_target || 1);
         currentMetconDisplayedRound = 1;
         ibridoMetconResults = [];
         ibridoMetconSummary = null;
 
         for (let r = 0; r < totalRounds; r++) {
-            const roundExercises = (p.esercizi || []).map((ex) => {
-                const { targetVal, unita, targetNum } = estraiTargetValoreEUnita(ex.target);
-                return {
-                    nome: ex.nome,
-                    target_originario: ex.target,
-                    target_val: targetVal,
-                    unita: unita,
-                    target_num: targetNum,
-                    risultato_effettivo: targetVal
-                };
-            });
+            const roundExercises = eserciziPersonalizzati.map((ex) => ({
+                nome: ex.nome,
+                nome_originario: ex.nome_originario,
+                target_originario: ex.target_originario,
+                target_val: ex.target_val,
+                unita: ex.unita,
+                target_num: ex.target_num,
+                peso_kg: ex.peso_kg,
+                risultato_effettivo: ex.risultato_effettivo
+            }));
             ibridoMetconResults.push(roundExercises);
         }
     }
@@ -8365,7 +8565,7 @@ function terminaIbridoSeduta() {
             }
 
             return {
-                nome: ex.nome,
+                nome: firstRoundItem.nome || ex.nome,
                 target_originario: targetOriginario,
                 target_val: firstRoundItem.target_val || '',
                 target_num_giro: targetNumPerRound,
@@ -8373,6 +8573,7 @@ function terminaIbridoSeduta() {
                 totale_effettivo: sumEffectiveEx,
                 unita: unita,
                 esito: esitoEx,
+                peso_kg: (firstRoundItem.peso_kg !== undefined && firstRoundItem.peso_kg !== null) ? firstRoundItem.peso_kg : (estraiPesoDaEsercizioMetcon(ex) || null),
                 giri_dettaglio: giriDettaglio
             };
         });
@@ -8590,6 +8791,7 @@ async function confermaSalvaIbridoSeduta() {
                     target_totale: ex.target_totale,
                     totale_effettivo: ex.totale_effettivo,
                     esito: ex.esito,
+                    peso_kg: (ex.peso_kg !== undefined) ? ex.peso_kg : null,
                     giri_dettaglio: ex.giri_dettaglio
                 }))
             };
@@ -8642,6 +8844,7 @@ async function confermaSalvaIbridoSeduta() {
         if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
 
         ibridoConfigurazionePersonalizzata = null;
+        ibridoMetconPersonalizzazione = null;
         ibridoMetconResults = [];
         ibridoMetconSummary = null;
         currentMetconDisplayedRound = 1;
@@ -8699,6 +8902,7 @@ function chiudiIbridoActiveModal() {
         ibridoSessionMinimized = false;
         if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
         ibridoConfigurazionePersonalizzata = null;
+        ibridoMetconPersonalizzazione = null;
         ibridoMetconResults = [];
         ibridoMetconSummary = null;
         currentMetconDisplayedRound = 1;
@@ -8720,6 +8924,7 @@ function chiudiIbridoActiveModal() {
     if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
 
     ibridoConfigurazionePersonalizzata = null;
+    ibridoMetconPersonalizzazione = null;
     ibridoMetconResults = [];
     ibridoMetconSummary = null;
     currentMetconDisplayedRound = 1;
@@ -9639,6 +9844,11 @@ window.getLastActiveTimerGiro = getLastActiveTimerGiro;
 window.setLastActiveTimerGiro = setLastActiveTimerGiro;
 window.getIbridoMetconSummary = getIbridoMetconSummary;
 window.getIbridoConfigurazionePersonalizzata = getIbridoConfigurazionePersonalizzata;
+window.getIbridoMetconPersonalizzazione = getIbridoMetconPersonalizzazione;
+window.renderMetconAnteprimaEsercizi = renderMetconAnteprimaEsercizi;
+window.recuperaStoricoSessioniProgramma = recuperaStoricoSessioniProgramma;
+window.recuperaMiglioreSessioneProgramma = recuperaMiglioreSessioneProgramma;
+window.estraiPesoDaEsercizioMetcon = estraiPesoDaEsercizioMetcon;
 window.ciclaStatoSerieForza = ciclaStatoSerieForza;
 window.gestisciClickRigaSerieForza = gestisciClickRigaSerieForza;
 
@@ -9804,6 +10014,11 @@ if (typeof module !== 'undefined' && module.exports) {
         setLastActiveTimerGiro,
         getIbridoMetconSummary,
         getIbridoConfigurazionePersonalizzata,
+        getIbridoMetconPersonalizzazione,
+        renderMetconAnteprimaEsercizi,
+        recuperaStoricoSessioniProgramma,
+        recuperaMiglioreSessioneProgramma,
+        estraiPesoDaEsercizioMetcon,
         avviaIbridoSeduta,
         aggiornaIbridoModalAttivo,
         gestisciIbridoActionPause,

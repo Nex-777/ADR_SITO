@@ -8,6 +8,8 @@ const createChainableQuery = () => {
     const q = {
         select: () => q,
         eq: () => q,
+        or: () => q,
+        limit: () => q,
         order: () => q,
         gte: () => q,
         insert: vi.fn(() => Promise.resolve({ error: null })),
@@ -491,6 +493,155 @@ describe('NESTORE — METCON Schede Overhaul & Giro Corrente', () => {
             // Il giro visualizzato deve avanzare automaticamente a 2
             expect(nestore.getCurrentMetconDisplayedRound()).toBe(2);
             expect(nestore.getLastActiveTimerGiro()).toBe(2);
+        });
+    });
+
+    describe('Iteration 3: Anteprima Comparativa Metcon & Personalizzazione Pre-Seduta', () => {
+        it('estraiPesoDaEsercizioMetcon estrae correttamente il carico in kg da nome o proprietà', () => {
+            expect(nestore.estraiPesoDaEsercizioMetcon({ nome: 'Stacchi 90kg' })).toBe(90);
+            expect(nestore.estraiPesoDaEsercizioMetcon({ nome: 'Swing 16kg' })).toBe(16);
+            expect(nestore.estraiPesoDaEsercizioMetcon({ nome: 'C+J Manubrio 20kg' })).toBe(20);
+            expect(nestore.estraiPesoDaEsercizioMetcon({ nome: 'Stacco 120.5kg' })).toBe(120.5);
+            expect(nestore.estraiPesoDaEsercizioMetcon({ nome: 'PULL' })).toBeNull();
+            expect(nestore.estraiPesoDaEsercizioMetcon({ nome: 'Assault Bike' })).toBeNull();
+            expect(nestore.estraiPesoDaEsercizioMetcon({ nome: 'Distensioni', peso_target: 35 })).toBe(35);
+        });
+
+        it('renderMetconAnteprimaEsercizi mostra tabella comparativa a 4 colonne con valori di riferimento se prima seduta', () => {
+            const mockExListEl = { innerHTML: '' };
+            const prog = {
+                id: 'ibrido_metcon_1',
+                nome: 'Metcon 1',
+                tipo: 'metcon',
+                esercizi: [
+                    { nome: 'PULL', target: '15 rip' },
+                    { nome: 'Stacchi 90kg', target: '4 rip' }
+                ]
+            };
+
+            nestore.renderMetconAnteprimaEsercizi(prog, mockExListEl, null, null);
+
+            expect(mockExListEl.innerHTML).toContain('Prima seduta di questo programma');
+            expect(mockExListEl.innerHTML).toContain('nst-metcon-compare-table');
+            expect(mockExListEl.innerHTML).toContain('ESERCIZIO');
+            expect(mockExListEl.innerHTML).toContain('MIGLIORE 🏆');
+            expect(mockExListEl.innerHTML).toContain('ULTIMA SEDUTA');
+            expect(mockExListEl.innerHTML).toContain('OGGI (TARGET)');
+
+            // Colonne storico vuote
+            expect(mockExListEl.innerHTML).toContain('—');
+
+            // Input precompilati con valori di default
+            expect(mockExListEl.innerHTML).toContain('value="15"');
+            expect(mockExListEl.innerHTML).toContain('value="4"');
+            expect(mockExListEl.innerHTML).toContain('value="90"');
+        });
+
+        it('renderMetconAnteprimaEsercizi precompila con ultima seduta e mostra record storico migliore', () => {
+            const mockExListEl = { innerHTML: '' };
+            const prog = {
+                id: 'ibrido_metcon_1',
+                nome: 'Metcon 1',
+                tipo: 'metcon',
+                esercizi: [
+                    { nome: 'PULL', target: '15 rip' },
+                    { nome: 'Stacchi 90kg', target: '4 rip' }
+                ]
+            };
+
+            const ultimaSessione = {
+                data_allenamento: '2026-09-24',
+                scheda_dati: {
+                    esercizi: [
+                        { nome: 'PULL', target_val: '18', unita: 'rip', totale_effettivo: 108 },
+                        { nome: 'Stacchi 90kg', target_val: '5', unita: 'rip', peso_kg: 95, totale_effettivo: 30 }
+                    ]
+                }
+            };
+
+            const miglioreSessione = {
+                data_allenamento: '2026-09-20',
+                scheda_dati: {
+                    esercizi: [
+                        { nome: 'PULL', target_val: '20', unita: 'rip', totale_effettivo: 120 },
+                        { nome: 'Stacchi 90kg', target_val: '6', unita: 'rip', peso_kg: 100, totale_effettivo: 36 }
+                    ]
+                }
+            };
+
+            nestore.renderMetconAnteprimaEsercizi(prog, mockExListEl, ultimaSessione, miglioreSessione);
+
+            expect(mockExListEl.innerHTML).toContain("Dati precompilati dall'ultima seduta");
+            expect(mockExListEl.innerHTML).toContain('🏆');
+            expect(mockExListEl.innerHTML).toContain('20 rip');
+            expect(mockExListEl.innerHTML).toContain('@ 100kg');
+
+            // Ultima seduta
+            expect(mockExListEl.innerHTML).toContain('18 rip');
+            expect(mockExListEl.innerHTML).toContain('@ 95kg');
+
+            // Input di oggi precompilati con i dati dell'ultima seduta
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-0" class="nst-metcon-cfg-input" value="18"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-1" class="nst-metcon-cfg-input" value="5"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-peso-1" class="nst-metcon-cfg-input nst-weight-input" value="95"');
+        });
+
+        it('avviaIbridoSeduta acquisisce i valori personalizzati prima dell avvio del Metcon', async () => {
+            const prog = {
+                id: 'ibrido_metcon_test',
+                nome: 'Metcon Test',
+                tipo: 'metcon',
+                timer_mode: 'tabata',
+                rounds_default: 3,
+                esercizi: [
+                    { nome: 'PULL', target: '15 rip' },
+                    { nome: 'Stacchi 90kg', target: '4 rip' }
+                ]
+            };
+
+            window.IBRIDO_PROGRAMMI_CATALOGO = [prog];
+
+            // Mock elementi DOM con valori modificati dall'utente
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-metcon-cfg-target-0') return { value: '18' };
+                if (id === 'nst-metcon-cfg-peso-0') return { value: '0' };
+                if (id === 'nst-metcon-cfg-target-1') return { value: '5' };
+                if (id === 'nst-metcon-cfg-peso-1') return { value: '95' };
+                if (id === 'nst-ibrido-preview-modal') return { classList: { add: vi.fn(), remove: vi.fn() } };
+                if (id === 'nst-ibrido-preview-card') return { classList: { add: vi.fn(), remove: vi.fn() } };
+                if (id === 'nst-ibrido-preview-title') return { textContent: '' };
+                if (id === 'nst-ibrido-preview-desc') return { textContent: '' };
+                if (id === 'nst-ibrido-preview-icon') return { style: {} };
+                if (id === 'nst-ibrido-tabata-config-box') return { classList: { add: vi.fn(), remove: vi.fn() } };
+                if (id === 'nst-ibrido-preview-ex-list') return { innerHTML: '' };
+                if (id === 'nst-ibrido-active-modal') return { classList: { add: vi.fn(), remove: vi.fn() } };
+                if (id === 'nst-ibrido-active-title') return { textContent: '', style: {} };
+                if (id === 'nst-ibrido-running-view') return { classList: { add: vi.fn(), remove: vi.fn() } };
+                if (id === 'nst-ibrido-save-view') return { classList: { add: vi.fn(), remove: vi.fn() } };
+                if (id === 'nst-ibrido-active-ex-table-container') return { innerHTML: '' };
+                if (id === 'nst-ibrido-laps-wrapper') return { classList: { add: vi.fn(), remove: vi.fn() } };
+                if (id === 'nst-ibrido-action-sec-icon') return { textContent: '' };
+                if (id === 'nst-ibrido-action-sec-text') return { textContent: '' };
+                return null;
+            });
+
+            nestore.apriAnteprimaIbrido(prog.id);
+            await nestore.avviaIbridoSeduta();
+
+            const customConfig = nestore.getIbridoMetconPersonalizzazione();
+            expect(customConfig).toBeDefined();
+            expect(customConfig.esercizi).toHaveLength(2);
+            expect(customConfig.esercizi[0].target_val).toBe('18');
+            expect(customConfig.esercizi[1].target_val).toBe('5');
+            expect(customConfig.esercizi[1].peso_kg).toBe(95);
+            expect(customConfig.esercizi[1].nome).toBe('Stacchi 95kg');
+
+            // Verifica che la matrice dei round sia stata creata con i valori personalizzati
+            const results = nestore.getIbridoMetconResults();
+            expect(results.length).toBeGreaterThan(0);
+            expect(results[0][0].target_val).toBe('18');
+            expect(results[0][1].target_val).toBe('5');
+            expect(results[0][1].peso_kg).toBe(95);
         });
     });
 });
