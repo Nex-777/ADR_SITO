@@ -72,30 +72,39 @@ Registrato: Pranzo — 200g pesce fritto (~1015 kcal).
         const jsPath = path.resolve(__dirname, '../portal/nestore.js');
         const content = fs.readFileSync(jsPath, 'utf8');
 
-        // 1. Verifica stacking asse Y
-        expect(content).toContain('stacked: true');
+        // 1. Verifica non-stacking assi (4 colonne affiancate)
+        expect(content).toContain('stacked: false');
 
-        // 2. Verifica ordine macro: Proteine (0), Grassi (1), Carboidrati (2)
-        const proIdx = content.indexOf("label: 'Proteine (kcal)'");
+        // 2. Verifica ordine macro a 4 colonne: Grassi (0), Proteine (1), Carboidrati (2), Calorie Totali (3)
         const fatIdx = content.indexOf("label: 'Grassi (kcal)'");
+        const proIdx = content.indexOf("label: 'Proteine (kcal)'");
         const carbIdx = content.indexOf("label: 'Carboidrati (kcal)'");
+        const calIdx = content.indexOf("label: 'Calorie Totali (kcal)'");
 
-        expect(proIdx).toBeGreaterThan(0);
-        expect(fatIdx).toBeGreaterThan(proIdx);
-        expect(carbIdx).toBeGreaterThan(fatIdx);
+        expect(fatIdx).toBeGreaterThan(0);
+        expect(proIdx).toBeGreaterThan(fatIdx);
+        expect(carbIdx).toBeGreaterThan(proIdx);
+        expect(calIdx).toBeGreaterThan(carbIdx);
 
-        // 3. Verifica borderRadius: solo carboidrati ha 4, proteine e grassi hanno 0
-        expect(content).toMatch(/label:\s*'Proteine \(kcal\)'[\s\S]*?borderRadius:\s*0/);
-        expect(content).toMatch(/label:\s*'Grassi \(kcal\)'[\s\S]*?borderRadius:\s*0/);
-        expect(content).toMatch(/label:\s*'Carboidrati \(kcal\)'[\s\S]*?borderRadius:\s*4/);
+        // 3. Verifica colori: Grassi (Lime #76ff03), Proteine (Cyan #00e5ff), Carboidrati (Amber #ffb300), Calorie (Grigio #94a3b8)
+        expect(content).toMatch(/label:\s*'Grassi \(kcal\)'[\s\S]*?backgroundColor:\s*'#76ff03'/);
+        expect(content).toMatch(/label:\s*'Proteine \(kcal\)'[\s\S]*?backgroundColor:\s*'#00e5ff'/);
+        expect(content).toMatch(/label:\s*'Carboidrati \(kcal\)'[\s\S]*?backgroundColor:\s*'#ffb300'/);
+        expect(content).toMatch(/label:\s*'Calorie Totali \(kcal\)'[\s\S]*?backgroundColor:\s*'#94a3b8'/);
 
-        // 4. Verifica plugin per linee a tutta ampiezza (fullWidthTargetLinesPlugin)
+        // 4. Verifica borderRadius per ciascuna colonna
+        expect(content).toMatch(/label:\s*'Grassi \(kcal\)'[\s\S]*?borderRadius:\s*3/);
+        expect(content).toMatch(/label:\s*'Proteine \(kcal\)'[\s\S]*?borderRadius:\s*3/);
+        expect(content).toMatch(/label:\s*'Carboidrati \(kcal\)'[\s\S]*?borderRadius:\s*3/);
+        expect(content).toMatch(/label:\s*'Calorie Totali \(kcal\)'[\s\S]*?borderRadius:\s*3/);
+
+        // 5. Verifica plugin per linee a tutta ampiezza (fullWidthTargetLinesPlugin)
         expect(content).toContain('fullWidthTargetLinesPlugin');
         expect(content).toContain('ctx.moveTo(chartArea.left, yPos)');
         expect(content).toContain('ctx.lineTo(chartArea.right, yPos)');
         expect(content).toContain('plugins: [fullWidthTargetLinesPlugin]');
 
-        // 5. Verifica che le linee TDEE e Target abbiano showLine: false per evitare sovrapposizioni parziali
+        // 6. Verifica che le linee TDEE e Target abbiano showLine: false per evitare sovrapposizioni parziali
         expect(content).toMatch(/label:\s*`TDEE Salute[\s\S]*?showLine:\s*false/);
         expect(content).toMatch(/label:\s*`Target[\s\S]*?showLine:\s*false/);
     });

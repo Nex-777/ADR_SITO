@@ -2397,12 +2397,14 @@ async function renderGraficoDieta() {
                     fatG: 0,
                     proKcal: 0,
                     carbKcal: 0,
-                    fatKcal: 0
+                    fatKcal: 0,
+                    totKcal: 0
                 };
             }
             const pro = Number(p.proteine_g || 0);
             const carb = Number(p.carboidrati_g || 0);
             const fat = Number(p.grassi_g || 0);
+            const kcalPasto = Number(p.calorie_stimate || (pro * 4 + carb * 4 + fat * 9));
 
             aggregati[d].proG += pro;
             aggregati[d].carbG += carb;
@@ -2410,12 +2412,13 @@ async function renderGraficoDieta() {
             aggregati[d].proKcal += pro * 4;
             aggregati[d].carbKcal += carb * 4;
             aggregati[d].fatKcal += fat * 9;
+            aggregati[d].totKcal += kcalPasto;
 
             if (d === oggi) {
                 totProOggi += pro;
                 totCarbOggi += carb;
                 totFatOggi += fat;
-                totKcalOggi += Number(p.calorie_stimate || (pro * 4 + carb * 4 + fat * 9));
+                totKcalOggi += kcalPasto;
             }
         });
 
@@ -2428,9 +2431,10 @@ async function renderGraficoDieta() {
         // Date ordinate
         const dateOrdinate = Object.keys(aggregati).sort();
         const labels = dateOrdinate.map(d => formatDateShort(d));
-        const serieCarb = dateOrdinate.map(d => Math.round(aggregati[d].carbKcal));
-        const seriePro = dateOrdinate.map(d => Math.round(aggregati[d].proKcal));
         const serieFat = dateOrdinate.map(d => Math.round(aggregati[d].fatKcal));
+        const seriePro = dateOrdinate.map(d => Math.round(aggregati[d].proKcal));
+        const serieCarb = dateOrdinate.map(d => Math.round(aggregati[d].carbKcal));
+        const serieKcalTot = dateOrdinate.map(d => Math.round(aggregati[d].totKcal || (aggregati[d].fatKcal + aggregati[d].proKcal + aggregati[d].carbKcal)));
 
         // Calcolo o recupero TDEE e Calorie Target
         const targetVal = Number(userPreferenze?.calorie_target || currentSchedaAtleta?.nutrizione?.calorie_target || 2200);
@@ -2467,29 +2471,34 @@ async function renderGraficoDieta() {
         const datasets = [
             {
                 type: 'bar',
-                label: 'Proteine (kcal)',
-                data: seriePro,
-                backgroundColor: '#00e5ff', // Cyan (base)
-                stack: 'macro',
-                borderRadius: 0,
+                label: 'Grassi (kcal)',
+                data: serieFat,
+                backgroundColor: '#76ff03', // Lime (1ª colonna sinistra)
+                borderRadius: 3,
                 order: 2
             },
             {
                 type: 'bar',
-                label: 'Grassi (kcal)',
-                data: serieFat,
-                backgroundColor: '#76ff03', // Lime (centro)
-                stack: 'macro',
-                borderRadius: 0,
+                label: 'Proteine (kcal)',
+                data: seriePro,
+                backgroundColor: '#00e5ff', // Cyan (2ª colonna)
+                borderRadius: 3,
                 order: 2
             },
             {
                 type: 'bar',
                 label: 'Carboidrati (kcal)',
                 data: serieCarb,
-                backgroundColor: '#ffb300', // Amber (cima)
-                stack: 'macro',
-                borderRadius: 4,
+                backgroundColor: '#ffb300', // Amber (3ª colonna)
+                borderRadius: 3,
+                order: 2
+            },
+            {
+                type: 'bar',
+                label: 'Calorie Totali (kcal)',
+                data: serieKcalTot,
+                backgroundColor: '#94a3b8', // Grigio (4ª colonna)
+                borderRadius: 3,
                 order: 2
             }
         ];
@@ -2574,10 +2583,13 @@ async function renderGraficoDieta() {
             }
         };
 
-        const maxMacroDaily = dateOrdinate.length > 0 
-            ? Math.max(...dateOrdinate.map(d => (aggregati[d]?.proKcal || 0) + (aggregati[d]?.carbKcal || 0) + (aggregati[d]?.fatKcal || 0)))
+        const maxDailyKcal = dateOrdinate.length > 0 
+            ? Math.max(...dateOrdinate.map(d => Math.max(
+                aggregati[d]?.totKcal || 0,
+                (aggregati[d]?.proKcal || 0) + (aggregati[d]?.carbKcal || 0) + (aggregati[d]?.fatKcal || 0)
+            )))
             : 0;
-        const suggestedMaxKcal = Math.round(Math.max(tdeeVal, targetVal, maxMacroDaily, 1000) * 1.15);
+        const suggestedMaxKcal = Math.round(Math.max(tdeeVal, targetVal, maxDailyKcal, 1000) * 1.15);
 
         chartDietaInstance = new Chart(canvas, {
             type: 'bar',
@@ -2610,26 +2622,41 @@ async function renderGraficoDieta() {
                         titleFont: { family: "'Orbitron', sans-serif", size: 10 },
                         bodyFont: { size: 10 },
                         callbacks: {
-                            footer: function(tooltipItems) {
-                                let sum = 0;
-                                tooltipItems.forEach(ti => {
-                                    if (ti.dataset.stack === 'macro') {
-                                        sum += ti.parsed.y;
-                                    }
-                                });
-                                return sum > 0 ? `Totale pasti: ${sum} kcal` : '';
+                            label: function(context) {
+                                const dsLabel = context.dataset.label || '';
+                                const val = context.parsed.y;
+                                if (val == null) return '';
+                                const d = dateOrdinate[context.dataIndex];
+                                const agg = d ? aggregati[d] : null;
+
+                                if (dsLabel.startsWith('Grassi')) {
+                                    const g = agg ? Math.round(agg.fatG) : Math.round(val / 9);
+                                    return `Grassi: ${val} kcal (${g}g)`;
+                                }
+                                if (dsLabel.startsWith('Proteine')) {
+                                    const g = agg ? Math.round(agg.proG) : Math.round(val / 4);
+                                    return `Proteine: ${val} kcal (${g}g)`;
+                                }
+                                if (dsLabel.startsWith('Carboidrati')) {
+                                    const g = agg ? Math.round(agg.carbG) : Math.round(val / 4);
+                                    return `Carboidrati: ${val} kcal (${g}g)`;
+                                }
+                                if (dsLabel.startsWith('Calorie')) {
+                                    return `Calorie Totali: ${val} kcal`;
+                                }
+                                return `${dsLabel}: ${val} kcal`;
                             }
                         }
                     }
                 },
                 scales: {
                     x: {
-                        stacked: true,
+                        stacked: false,
                         grid: { color: 'rgba(255, 255, 255, 0.04)' },
                         ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 }
                     },
                     y: {
-                        stacked: true,
+                        stacked: false,
                         suggestedMax: suggestedMaxKcal,
                         grid: { color: 'rgba(255, 255, 255, 0.04)' },
                         ticks: {

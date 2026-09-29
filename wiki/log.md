@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] feat | NESTORE — Grafico Dieta & Macro a 4 Colonne Affiancate
+- **Refactoring Grafico Dieta (`portal/nestore.js`)**:
+  - Trasformato il grafico dei pasti da colonna singola stacked a grafico a 4 colonne affiancate raggruppate per giornata (`stacked: false`).
+  - Ordine delle colonne per ciascuna data:
+    1. **Grassi (kcal)**: Lime (`#76ff03`)
+    2. **Proteine (kcal)**: Cyan (`#00e5ff`)
+    3. **Carboidrati (kcal)**: Amber (`#ffb300`)
+    4. **Calorie Totali (kcal)**: Grigio (`#94a3b8`)
+  - Aggiunti angoli arrotondati (`borderRadius: 3`) a ciascuna colonna per un look pulito e moderno.
+  - Calcolo aggregato delle calorie totali giornaliere sincronizzato con il riepilogo della dashboard odierna (`totKcal`).
+  - Ottimizzato il tooltip interattivo per mostrare sia le Kcal sia i grammi corrispondenti per i singoli macronutrienti (`Grassi: X kcal (Yg)`, `Proteine: X kcal (Yg)`, `Carboidrati: X kcal (Yg)`, `Calorie Totali: Z kcal`).
+  - Preservate le linee di riferimento a tutta larghezza (TDEE Salute e Target Calorie Atleta) tracciate con precisione via `fullWidthTargetLinesPlugin`.
+- **Testing & QA (`tests/diet-chart-target.test.js`)**:
+  - Aggiornati i test di conformità per verificare l'impostazione `stacked: false`, l'ordine rigoroso dei 4 dataset (Grassi $\rightarrow$ Proteine $\rightarrow$ Carboidrati $\rightarrow$ Calorie Totali), i codici colore esadecimali e i border radius.
+  - Test suite globale vitest: 187/187 test passati con successo (15 file su 15).
+
 ## [2026-09-29] fix | NESTORE — Risoluzione Compressione Verticale e Ripristino Scroll Pannello Schede Desktop (v1.05.88)
 - **Fix Compressione Schede & Troncamento Contenuti Desktop (`portal/nestore.css`)**:
   - Risolto il difetto per cui le card dei programmi nel pannello Schede (`#nst-schede-panel`) venivano compresse e schiacciate verticalmente nella vista desktop a causa del comportamento implicito `flex-shrink: 1` di Flexbox dentro `.nst-data-panel`.
