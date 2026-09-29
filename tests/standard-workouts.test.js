@@ -12,7 +12,7 @@ describe('Standard Workouts (INVICTUS) & Active Modal Logic', () => {
     const css = fs.readFileSync(cssPath, 'utf8');
 
     it('contiene la card INVICTUS nel pannello schede in nestore.html', () => {
-        expect(html).toContain('ALLENAMENTI STANDARD &amp; BENCHMARK');
+        expect(html).toContain('ALLENAMENTI BENCHMARK');
         expect(html).toContain('nst-standard-card');
         expect(html).toContain('INVICTUS');
         expect(html).toContain('RAPPORTO 1 : 2 : 4');

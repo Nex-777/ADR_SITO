@@ -171,4 +171,68 @@ describe('Course-Based Workout Programs Restructuring', () => {
         expect(css).toContain('.nst-empty-group-box');
         expect(css).toContain('.nst-badge-raggruppamento');
     });
+
+    it('isProgrammaBenchmark identifies Invictus and benchmark items correctly', () => {
+        expect(nestoreModule.isProgrammaBenchmark({ raggruppamento: 'benchmark' })).toBe(true);
+        expect(nestoreModule.isProgrammaBenchmark({ tipo: 'invictus' })).toBe(true);
+        expect(nestoreModule.isProgrammaBenchmark({ codice: 'invictus_base' })).toBe(true);
+        expect(nestoreModule.isProgrammaBenchmark({ id: 'invictus' })).toBe(true);
+        expect(nestoreModule.isProgrammaBenchmark({ nome: 'Invictus' })).toBe(true);
+        expect(nestoreModule.isProgrammaBenchmark({ nome: 'INVICTUS WOD' })).toBe(true);
+
+        expect(nestoreModule.isProgrammaBenchmark({ nome: 'Metcon 1', tipo: 'metcon' })).toBe(false);
+        expect(nestoreModule.isProgrammaBenchmark({ nome: 'Forza 1', tipo: 'forza' })).toBe(false);
+        expect(nestoreModule.isProgrammaBenchmark(null)).toBe(false);
+    });
+
+    it('strictly excludes Invictus from Ibrido Base grid and places it in Benchmark', () => {
+        const mockBaseGrid = { innerHTML: '' };
+        const mockBenchGrid = { innerHTML: '' };
+        const mockBaseTitle = { textContent: '' };
+        const mockBaseBadge = { textContent: '' };
+        const mockBenchTitle = { textContent: '' };
+
+        document.getElementById = vi.fn((id) => {
+            if (id === 'nst-ibrido-programmi-grid') return mockBaseGrid;
+            if (id === 'nst-schede-benchmark-grid') return mockBenchGrid;
+            if (id === 'nst-schede-base-title') return mockBaseTitle;
+            if (id === 'nst-schede-base-badge') return mockBaseBadge;
+            if (id === 'nst-schede-benchmark-title') return mockBenchTitle;
+            return { textContent: '', innerHTML: '', classList: { add: vi.fn(), remove: vi.fn() } };
+        });
+
+        // Simulate DB returning Invictus tagged with corso_id Ibrido and tipo forza
+        window.libreriaProgrammiTotali = [
+            { id: 'inv-1', nome: 'Invictus', tipo: 'forza', categoria: 'forza', corso_id: nestoreModule.CORSO_IBRIDO_ID, attivo: true },
+            { id: 'm1', nome: 'Metcon 1', tipo: 'metcon', categoria: 'metcon', corso_id: nestoreModule.CORSO_IBRIDO_ID, raggruppamento: 'base', attivo: true },
+            { id: 'f1', nome: 'Forza 1', tipo: 'forza', categoria: 'forza', corso_id: nestoreModule.CORSO_IBRIDO_ID, raggruppamento: 'base', attivo: true }
+        ];
+
+        nestoreModule.selezionaCorsoSchede(nestoreModule.CORSO_IBRIDO_ID);
+
+        // Base grid MUST NOT contain Invictus
+        expect(mockBaseGrid.innerHTML).not.toContain('Invictus');
+        expect(mockBaseGrid.innerHTML).toContain('Metcon 1');
+        expect(mockBaseGrid.innerHTML).toContain('Forza 1');
+        expect(mockBaseBadge.textContent).toBe('2 PROGRAMMI');
+
+        // Benchmark grid and title
+        expect(mockBenchGrid.innerHTML).toContain('INVICTUS');
+        expect(mockBenchTitle.textContent).toBe('ALLENAMENTI BENCHMARK');
+    });
+
+    it('verifies HTML title is ALLENAMENTI BENCHMARK and CSS has flex-wrap: wrap', () => {
+        const html = fs.readFileSync(path.resolve(__dirname, '../portal/nestore.html'), 'utf-8');
+        const css = fs.readFileSync(path.resolve(__dirname, '../portal/nestore.css'), 'utf-8');
+
+        expect(html).toContain('<span id="nst-schede-benchmark-title">ALLENAMENTI BENCHMARK</span>');
+        expect(html).not.toContain('ALLENAMENTI STANDARD &amp; BENCHMARK');
+
+        // Tabs nav has flex-wrap: wrap and no scrollbar-width: thin
+        expect(css).toMatch(/\.nst-course-tabs-nav\s*\{[^}]*flex-wrap:\s*wrap;/);
+        expect(css).not.toMatch(/\.nst-course-tabs-nav\s*\{[^}]*scrollbar-width:\s*thin;/);
+
+        // Compact card has min-height and padding
+        expect(css).toMatch(/\.nst-standard-card-compact\s*\{[^}]*min-height:\s*68px;/);
+    });
 });
