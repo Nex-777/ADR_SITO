@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] feat | NESTORE — Ristrutturazione Programmi per Corso e Raggruppamento + Regalo SCAB (v1.05.83)
+- **Riorganizzazione per Corso e Sottogruppi (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
+  - Strutturata la sezione schede atleta in 4 sezioni distinte: Base, Avanzato, Benchmark e Personali.
+  - Corso Ibrido: Metcon 1-4 e Forza 1-4 collocati in Base, Invictus in Benchmark, Avanzato e Personali predisposti.
+  - Corso Strongman & Powerlifting: riassegnato "PL BEGINNER 1" (di Valerio Ciaralli) a Strongman Base; Avanzato, Benchmark e Personali predisposti.
+  - Corso SCAB: raggruppamento dedicato pronto per l'inserimento programmi e schede.
+- **Accessibilità Atleta & Regalo SCAB per Iscritti Ibrido**:
+  - Implementata logica `determinaCorsiAccessibili()`: gli atleti visualizzano solo i corsi a cui sono iscritti.
+  - Gli atleti iscritti al Corso Ibrido ottengono automaticamente e gratuitamente la consultazione dei programmi del Corso SCAB, con switcher a pillole/tab (`#nst-athlete-course-selector-bar`), badge `🎁 INCLUSO CON IBRIDO` e banner di notifica dedicato.
+- **Pannello Coach & Admin**:
+  - Aggiunti filtri dinamici per Corso (`#nst-lib-filter-corso`) e Raggruppamento (`#nst-lib-filter-raggruppamento`) nella libreria programmi dell'istruttore.
+  - Integrati i campi di selezione Corso e Raggruppamento nel modale di creazione/modifica programma (`#nst-coach-programma-modal`).
+  - Visibilità globale su tutti i corsi mantenuta per Admin e Presidente.
+- **Database Supabase & RLS (`supabase/migration_nestore_programmi_corsi.sql`)**:
+  - Aggiunti `corso_id` e `raggruppamento` su `public.nestore_programmi` con indice composito `idx_nst_prog_corso_raggr`.
+  - Migrati i programmi esistenti e aggiornata la policy RLS `nst_prog_select`.
+- **Testing & QA (`tests/course-programs-restructuring.test.js`)**:
+  - Aggiunta test suite con 7 test unitari dedicati.
+  - Test suite globale vitest: 177/177 test superati (15 suite su 15).
+
 ## [2026-09-25] refactor | Fix path esplicito /usr/lib/postgresql/17/bin/pg_dump (v1.05.78)
 - **Fix Compatibility Round 2 (`backup_db.yml`)**: Il "re-run" di GitHub Actions riutilizzava l'immagine runner già cachata con pg16. Il problema è che Ubuntu 24.04 pre-installa `postgresql-client-16` e il symlink `/usr/bin/pg_dump` rimane puntato a v16 anche dopo aver installato pg17. Fix definitivo: rimozione esplicita di `postgresql-client-16` prima dell'installazione di pg17, e uso del path assoluto `/usr/lib/postgresql/17/bin/pg_dump` in tutti gli step, rendendo il workflow immune ai conflitti di versione.
 

@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.82">
+    <link rel="stylesheet" href="nestore.css?v=1.05.83">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.82"></script>
+    <script src="config.js?v=1.05.83"></script>
 </head>
 <body class="nst-body">
 
@@ -21,7 +21,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div class="nst-brand-text">
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.82</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.83</span>
             </div>
         </div>
 
@@ -572,42 +572,78 @@
 
         <!-- Pannello 6: Schede di Allenamento & WOD Standard (Vista Atleta) -->
         <main class="nst-data-panel nst-hidden" id="nst-schede-panel">
-            <!-- Sezione: Programmi Ufficiali Corso IBRIDO BASE -->
+            <!-- Navigazione Selettore Corsi (Ibrido, Strongman, SCAB, etc.) -->
+            <div id="nst-athlete-course-selector-bar" class="nst-course-tabs-nav nst-hidden">
+                <!-- Popolato dinamicamente da renderNavCorsiAtleta() -->
+            </div>
+
+            <!-- Banner Promozionale SCAB Omaggio (se iscritto Ibrido e vista non-SCAB) -->
+            <div id="nst-scab-gift-banner" class="nst-course-gift-banner nst-hidden">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="material-symbols-outlined" style="color: var(--nst-lime); font-size: 26px;">card_giftcard</span>
+                    <div>
+                        <div style="font-weight: 700; color: #fff; font-size: 13px;">CORSO SCAB INCLUSO NEL TUO ABBONAMENTO IBRIDO</div>
+                        <div style="font-size: 11px; color: var(--nst-text-muted);">Come atleta del corso Ibrido hai accesso illimitato anche a tutti i programmi ufficiali SCAB.</div>
+                    </div>
+                </div>
+                <button type="button" class="nst-btn-primary" onclick="selezionaCorsoSchede('3854f25c-db1c-4c6a-b62a-70398643239a')" style="padding: 6px 14px; font-size: 11px; white-space: nowrap; height: 32px;">
+                    VAI AI PROGRAMMI SCAB
+                </button>
+            </div>
+
+            <!-- Sezione 1: Programmi del Corso BASE -->
             <div class="nst-card" id="nst-ibrido-programmi-section" style="margin-bottom: 20px;">
                 <div class="nst-card-header">
                     <span class="nst-card-title">
                         <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-cyan);">model_training</span>
-                        PROGRAMMI IBRIDO BASE
+                        <span id="nst-schede-base-title">PROGRAMMI IBRIDO BASE</span>
                     </span>
-                    <span class="nst-version-badge" style="border-color: var(--nst-cyan); color: var(--nst-cyan);">8 PROGRAMMI UFFICIALI</span>
+                    <span id="nst-schede-base-badge" class="nst-version-badge" style="border-color: var(--nst-cyan); color: var(--nst-cyan);">8 PROGRAMMI UFFICIALI</span>
                 </div>
-                <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 14px;">
-                    Programmi ufficiali Ibrido (Metcon 1-4 e Forza 1-4). Seleziona una scheda per consultare i carichi, avviare il timer dedicato (Tabata configurabile o Cronometro con Lap) e registrare i risultati.
+                <p id="nst-schede-base-desc" style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 14px;">
+                    Programmi ufficiali del corso. Seleziona una scheda per consultare i carichi, avviare il timer dedicato (Tabata configurabile o Cronometro con Lap) e registrare i risultati.
                 </p>
 
-                <!-- Grid dei Programmi Ibrido Base -->
+                <!-- Grid dei Programmi Base -->
                 <div id="nst-ibrido-programmi-grid" class="nst-ibrido-grid">
                     <!-- Popolato dinamicamente via JS -->
                 </div>
             </div>
 
-            <!-- Sezione: Allenamenti Standard & Benchmark WOD -->
-            <div class="nst-card" style="margin-bottom: 20px;">
+            <!-- Sezione 2: Programmi del Corso AVANZATO -->
+            <div class="nst-card" id="nst-schede-avanzato-section" style="margin-bottom: 20px;">
+                <div class="nst-card-header">
+                    <span class="nst-card-title">
+                        <span class="material-symbols-outlined" style="font-size: 18px; color: #a855f7;">military_tech</span>
+                        <span id="nst-schede-avanzato-title">PROGRAMMI IBRIDO AVANZATO</span>
+                    </span>
+                    <span id="nst-schede-avanzato-badge" class="nst-version-badge" style="border-color: #a855f7; color: #a855f7;">LIVELLO PRO</span>
+                </div>
+                <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 14px;">
+                    Programmazioni avanzate, periodizzazioni ad alta intensità e progressioni di specializzazione.
+                </p>
+                <div id="nst-schede-avanzato-grid" class="nst-ibrido-grid">
+                    <!-- Popolato dinamicamente via JS o placeholder vuoto -->
+                </div>
+            </div>
+
+            <!-- Sezione 3: Allenamenti Standard & Benchmark WOD -->
+            <div class="nst-card" id="nst-schede-benchmark-section" style="margin-bottom: 20px;">
                 <div class="nst-card-header">
                     <span class="nst-card-title">
                         <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-amber);">bolt</span>
-                        ALLENAMENTI STANDARD &amp; BENCHMARK
+                        <span id="nst-schede-benchmark-title">ALLENAMENTI STANDARD &amp; BENCHMARK</span>
                     </span>
-                    <span class="nst-version-badge" style="border-color: var(--nst-amber); color: var(--nst-amber);">BENCHMARK WOD</span>
+                    <span id="nst-schede-benchmark-badge" class="nst-version-badge" style="border-color: var(--nst-amber); color: var(--nst-amber);">BENCHMARK WOD</span>
                 </div>
-                <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 16px;">
+                <p id="nst-schede-benchmark-desc" style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 16px;">
                     Programmi standard ad alta intensità con tracciamento automatico del tempo e registrazione dei massimali.
                 </p>
 
-                <!-- Grid Workout Standard -->
-                <div class="nst-standard-workout-grid">
+                <!-- Grid Workout Benchmark -->
+                <div id="nst-schede-benchmark-grid" class="nst-standard-workout-grid">
                     <!-- Card Workout INVICTUS Ultra-Compatta -->
-                    <div class="nst-standard-card nst-standard-card-compact" onclick="apriAnteprimaInvictus()" role="button" tabindex="0" title="Apri scheda INVICTUS">
+                    <div id="nst-invictus-benchmark-card" class="nst-standard-card nst-standard-card-compact" onclick="apriAnteprimaInvictus()" role="button" tabindex="0" title="Apri scheda INVICTUS">
                         <div class="nst-standard-card-header" style="width: 100%; margin-bottom: 0;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 24px;">fitness_center</span>
@@ -628,17 +664,17 @@
                 </div>
             </div>
 
-            <!-- Sezione: Schede Assegnate dal Coach -->
-            <div class="nst-card">
+            <!-- Sezione 4: Schede di Allenamento Personali Assegnate -->
+            <div class="nst-card" id="nst-schede-personali-section">
                 <div class="nst-card-header">
                     <span class="nst-card-title">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">assignment</span>
-                        SCHEDE DI ALLENAMENTO ASSEGNATE
+                        <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-lime);">assignment</span>
+                        <span id="nst-schede-personali-title">SCHEDE DI ALLENAMENTO PERSONALI</span>
                     </span>
                     <span id="nst-atleta-schede-badge" class="nst-version-badge">0 SCHEDE</span>
                 </div>
                 <p style="font-size: 12px; color: var(--nst-text-muted); margin-bottom: 16px;">
-                    Programmi e schede di allenamento personalizzati assegnati dal tuo istruttore.
+                    Programmi e schede di allenamento personalizzati assegnati specificamente a te dal tuo istruttore.
                 </p>
                 <div id="nst-atleta-schede-container" class="nst-schede-container">
                     <div class="nst-loading-text">Caricamento schede in corso...</div>
@@ -1059,11 +1095,27 @@ GIORNO 2:
                 <div class="nst-coach-filter-bar" style="align-items: center; justify-content: space-between;">
                     <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex-grow: 1;">
                         <div class="nst-filter-item">
-                            <label for="nst-lib-filter-tipo" class="nst-filter-label">FILTRA PER TIPO</label>
+                            <label for="nst-lib-filter-corso" class="nst-filter-label">CORSO</label>
+                            <select id="nst-lib-filter-corso" class="nst-select nst-coach-select" onchange="filtraProgrammiLibreriaCoach()">
+                                <option value="ALL">TUTTI I CORSI</option>
+                            </select>
+                        </div>
+                        <div class="nst-filter-item">
+                            <label for="nst-lib-filter-raggruppamento" class="nst-filter-label">RAGGRUPPAMENTO</label>
+                            <select id="nst-lib-filter-raggruppamento" class="nst-select nst-coach-select" onchange="filtraProgrammiLibreriaCoach()">
+                                <option value="ALL">TUTTI I RAGGRUPPAMENTI</option>
+                                <option value="base">PROGRAMMI BASE</option>
+                                <option value="avanzato">PROGRAMMI AVANZATI</option>
+                                <option value="benchmark">BENCHMARK</option>
+                                <option value="personale">SCHEDE PERSONALI</option>
+                            </select>
+                        </div>
+                        <div class="nst-filter-item">
+                            <label for="nst-lib-filter-tipo" class="nst-filter-label">TIPO / DISCIPLINA</label>
                             <select id="nst-lib-filter-tipo" class="nst-select nst-coach-select" onchange="filtraProgrammiLibreriaCoach()">
-                                <option value="ALL">TUTTI I PROGRAMMI</option>
-                                <option value="ibrido_metcon">IBRIDO — METCON</option>
-                                <option value="ibrido_forza">IBRIDO — FORZA</option>
+                                <option value="ALL">TUTTI I TIPI</option>
+                                <option value="ibrido_metcon">METCON</option>
+                                <option value="ibrido_forza">FORZA</option>
                                 <option value="invictus">INVICTUS &amp; BENCHMARK</option>
                                 <option value="altro">ALTRI PROGRAMMI</option>
                             </select>
@@ -1524,6 +1576,23 @@ GIORNO 2:
                     </div>
 
                     <div class="nst-form-group">
+                        <label class="nst-form-label">CORSO *</label>
+                        <select id="nst-prog-edit-corso" class="nst-form-input">
+                            <!-- Popolato dinamicamente da JS con i corsi disponibili -->
+                        </select>
+                    </div>
+
+                    <div class="nst-form-group">
+                        <label class="nst-form-label">RAGGRUPPAMENTO *</label>
+                        <select id="nst-prog-edit-raggruppamento" class="nst-form-input">
+                            <option value="base">Programmi Base (es. Ibrido Base, Strong Base)</option>
+                            <option value="avanzato">Programmi Avanzati</option>
+                            <option value="benchmark">Allenamenti Benchmark (es. Invictus)</option>
+                            <option value="personale">Schede Personali</option>
+                        </select>
+                    </div>
+
+                    <div class="nst-form-group">
                         <label class="nst-form-label">TIPO *</label>
                         <select id="nst-prog-edit-tipo" class="nst-form-input" onchange="gestisciCambioTipoProgramma()">
                             <option value="ibrido">Ibrido</option>
@@ -1871,6 +1940,6 @@ GIORNO 2:
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.82"></script>
+    <script src="nestore.js?v=1.05.83"></script>
 </body>
 </html>

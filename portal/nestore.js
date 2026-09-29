@@ -38,6 +38,24 @@ const DEFAULT_FORZA_WARMUP = [
     { rip: 1, pct: 100 }
 ];
 
+// ===========================================================================
+// CONFIGURAZIONE CORSI & LIBRERIA WORKOUT
+// ===========================================================================
+const CORSO_IBRIDO_ID = '11102454-b063-4811-a361-6c8459764ce8';
+const CORSO_STRONGMAN_ID = 'b1d8c235-fc94-4372-bff1-28f183700c92';
+const CORSO_SCAB_ID = '3854f25c-db1c-4c6a-b62a-70398643239a';
+
+const CORSI_DEFAULT_FALLBACK = [
+    { id: CORSO_IBRIDO_ID, slug: 'ibrido', titolo: 'Ibrido', icon: 'bolt' },
+    { id: CORSO_STRONGMAN_ID, slug: 'strongman', titolo: 'Strongman e Powerlifting', icon: 'fitness_center' },
+    { id: CORSO_SCAB_ID, slug: 'scab', titolo: 'SCAB (Sistema Combattimento Armi Bianche)', icon: 'sports_martial_arts' }
+];
+
+let tuttiICorsi = [...CORSI_DEFAULT_FALLBACK];
+let corsiAccessibiliUtente = [];
+let schedeCorsoSelezionatoId = CORSO_IBRIDO_ID;
+
+
 // Gestore Screen Wake Lock API (mantiene lo schermo sempre acceso durante allenamento/timer)
 const WakeLockManager = {
     sentinel: null,
@@ -4918,12 +4936,14 @@ function showTimerToast(message) {
 }
 
 // Modalità attiva: 'stopwatch' | 'tabata'
-let currentTimerMode = localStorage.getItem('adr_timer_mode') || 'stopwatch';
+let currentTimerMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('adr_timer_mode') : null) || 'stopwatch';
 
 function switchTimerMode(mode) {
     SoundEngine.getCtx(); // sblocca audio
     currentTimerMode = mode;
-    localStorage.setItem('adr_timer_mode', mode);
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('adr_timer_mode', mode);
+    }
 
     const btnStopwatch = document.getElementById('nst-mode-btn-stopwatch');
     const btnTabata = document.getElementById('nst-mode-btn-tabata');
@@ -6436,7 +6456,131 @@ function aggiornaContatoreInvictus(count) {
     }
 }
 
-function renderCatalogoIbrido() {
+async function caricaListaCorsi() {
+    try {
+        const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : supabaseClient;
+        if (!client) return tuttiICorsi;
+        const { data, error } = await client
+            .from('eventi')
+            .select('id, titolo, tipo')
+            .eq('tipo', 'corso')
+            .order('titolo', { ascending: true });
+        if (!error && Array.isArray(data) && data.length > 0) {
+            tuttiICorsi = data;
+            if (typeof window !== 'undefined') window.tuttiICorsi = tuttiICorsi;
+        }
+    } catch (e) {
+        console.warn("Impossibile caricare lista corsi da eventi:", e);
+    }
+    return tuttiICorsi;
+}
+
+async function determinaCorsiAccessibili() {
+    await caricaListaCorsi();
+
+    if (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin) {
+        corsiAccessibiliUtente = (tuttiICorsi || []).map(c => ({
+            id: c.id,
+            titolo: c.titolo,
+            isGift: false,
+            isPrimary: true
+        }));
+        if (!schedeCorsoSelezionatoId && corsiAccessibiliUtente.length > 0) {
+            schedeCorsoSelezionatoId = corsiAccessibiliUtente[0].id;
+        }
+        if (typeof window !== 'undefined') window.corsiAccessibiliUtente = corsiAccessibiliUtente;
+        return corsiAccessibiliUtente;
+    }
+
+    if (typeof isIstruttore !== 'undefined' && isIstruttore) {
+        const coachCorsiIds = Array.isArray(coachCorsiAtleti) ? coachCorsiAtleti.map(c => c.id) : [];
+        const corsi = (tuttiICorsi || []).filter(c => coachCorsiIds.includes(c.id));
+        corsiAccessibiliUtente = (corsi.length > 0 ? corsi : tuttiICorsi).map(c => ({
+            id: c.id,
+            titolo: c.titolo,
+            isGift: false,
+            isPrimary: true
+        }));
+        if (!schedeCorsoSelezionatoId && corsiAccessibiliUtente.length > 0) {
+            schedeCorsoSelezionatoId = corsiAccessibiliUtente[0].id;
+        }
+        if (typeof window !== 'undefined') window.corsiAccessibiliUtente = corsiAccessibiliUtente;
+        return corsiAccessibiliUtente;
+    }
+
+    const iscrizioni = (typeof window !== 'undefined' && window.utenteIscrizioniCorsi)
+        ? window.utenteIscrizioniCorsi
+        : [];
+    const enrolledIds = iscrizioni.map(isc => isc.eventi ? isc.eventi.id : isc.evento_id).filter(Boolean);
+
+    const result = [];
+    const hasIbrido = enrolledIds.includes(CORSO_IBRIDO_ID);
+
+    (tuttiICorsi || []).forEach(c => {
+        if (enrolledIds.includes(c.id)) {
+            result.push({ id: c.id, titolo: c.titolo, isGift: false, isPrimary: true });
+        } else if (hasIbrido && c.id === CORSO_SCAB_ID) {
+            result.push({ id: c.id, titolo: c.titolo, isGift: true, isPrimary: false });
+        }
+    });
+
+    if (result.length === 0 && (tuttiICorsi || []).length > 0) {
+        result.push({ id: tuttiICorsi[0].id, titolo: tuttiICorsi[0].titolo, isGift: false, isPrimary: true });
+    }
+
+    corsiAccessibiliUtente = result;
+    if (!schedeCorsoSelezionatoId || !corsiAccessibiliUtente.some(c => c.id === schedeCorsoSelezionatoId)) {
+        schedeCorsoSelezionatoId = hasIbrido ? CORSO_IBRIDO_ID : (corsiAccessibiliUtente[0]?.id || CORSO_IBRIDO_ID);
+    }
+
+    if (typeof window !== 'undefined') window.corsiAccessibiliUtente = corsiAccessibiliUtente;
+    return corsiAccessibiliUtente;
+}
+
+function renderNavCorsiAtleta() {
+    if (typeof document === 'undefined') return;
+    const navBar = document.getElementById('nst-athlete-course-selector-bar');
+    const scabBanner = document.getElementById('nst-scab-gift-banner');
+
+    if (navBar) {
+        if (!corsiAccessibiliUtente || corsiAccessibiliUtente.length <= 1) {
+            navBar.classList.add('nst-hidden');
+        } else {
+            navBar.classList.remove('nst-hidden');
+            navBar.innerHTML = corsiAccessibiliUtente.map(c => {
+                const isActive = (c.id === schedeCorsoSelezionatoId);
+                const activeClass = isActive ? 'active' : '';
+                const giftBadge = c.isGift ? '<span class="nst-course-gift-badge">🎁 OMAGGIO</span>' : '';
+                const iconName = c.id === CORSO_IBRIDO_ID ? 'bolt' : c.id === CORSO_STRONGMAN_ID ? 'fitness_center' : 'sports_martial_arts';
+                return `
+                    <button type="button" class="nst-course-tab-btn ${activeClass}" onclick="selezionaCorsoSchede('${c.id}')" title="Passa a ${escapeHtml(c.titolo)}">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">${iconName}</span>
+                        <span>${escapeHtml(c.titolo.toUpperCase())}</span>
+                        ${giftBadge}
+                    </button>
+                `;
+            }).join('');
+        }
+    }
+
+    if (scabBanner) {
+        const hasIbrido = (corsiAccessibiliUtente || []).some(c => c.id === CORSO_IBRIDO_ID);
+        const onScab = (schedeCorsoSelezionatoId === CORSO_SCAB_ID);
+        if (hasIbrido && !onScab) {
+            scabBanner.classList.remove('nst-hidden');
+        } else {
+            scabBanner.classList.add('nst-hidden');
+        }
+    }
+}
+
+function selezionaCorsoSchede(corsoId) {
+    schedeCorsoSelezionatoId = corsoId;
+    renderNavCorsiAtleta();
+    renderSchedeCorsoAttivo();
+}
+
+function renderSchedeCorsoAttivo() {
     if (typeof document === 'undefined') return;
 
     const rawData = (typeof window !== 'undefined' && window.currentAllenamentiData)
@@ -6445,33 +6589,171 @@ function renderCatalogoIbrido() {
     const counts = calcolaCompletamentiProgrammi(rawData);
     aggiornaContatoreInvictus(counts.invictus || 0);
 
-    const grid = document.getElementById('nst-ibrido-programmi-grid');
-    if (!grid) return;
+    renderNavCorsiAtleta();
 
-    if (!IBRIDO_PROGRAMMI_CATALOGO || IBRIDO_PROGRAMMI_CATALOGO.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--nst-text-muted); padding: 16px; font-size: 12px;">Nessun programma Ibrido disponibile al momento.</div>`;
-        return;
+    const corsoAttivo = (tuttiICorsi || []).find(c => c.id === schedeCorsoSelezionatoId)
+        || (corsiAccessibiliUtente || []).find(c => c.id === schedeCorsoSelezionatoId)
+        || { id: CORSO_IBRIDO_ID, titolo: 'Ibrido' };
+
+    const corsoNome = corsoAttivo.titolo || 'Corso';
+    const isIbrido = (corsoAttivo.id === CORSO_IBRIDO_ID);
+
+    const baseTitleEl = document.getElementById('nst-schede-base-title');
+    const baseBadgeEl = document.getElementById('nst-schede-base-badge');
+    const avanzatoTitleEl = document.getElementById('nst-schede-avanzato-title');
+    const avanzatoBadgeEl = document.getElementById('nst-schede-avanzato-badge');
+    const personaliTitleEl = document.getElementById('nst-schede-personali-title');
+
+    if (baseTitleEl) baseTitleEl.textContent = `PROGRAMMI ${corsoNome.toUpperCase()} BASE`;
+    if (avanzatoTitleEl) avanzatoTitleEl.textContent = `PROGRAMMI ${corsoNome.toUpperCase()} AVANZATO`;
+    if (personaliTitleEl) personaliTitleEl.textContent = `SCHEDE DI ALLENAMENTO PERSONALI — ${corsoNome.toUpperCase()}`;
+
+    const allProgs = (typeof window !== 'undefined' && window.libreriaProgrammiTotali) ? window.libreriaProgrammiTotali : libreriaProgrammiTotali;
+    const progsCorso = (allProgs || []).filter(p => {
+        if (p.corso_id) {
+            return p.corso_id === corsoAttivo.id;
+        }
+        if (isIbrido && (p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza' || p.codice === 'invictus_base')) {
+            return true;
+        }
+        return false;
+    });
+
+    const baseProgs = progsCorso.filter(p => p.raggruppamento === 'base' || (!p.raggruppamento && p.tipo !== 'invictus'));
+    const finalBaseProgs = (baseProgs.length > 0)
+        ? baseProgs
+        : (isIbrido && Array.isArray(IBRIDO_PROGRAMMI_CATALOGO) && IBRIDO_PROGRAMMI_CATALOGO.length > 0 ? IBRIDO_PROGRAMMI_CATALOGO : []);
+
+    const avanzatoProgs = progsCorso.filter(p => p.raggruppamento === 'avanzato');
+    const benchmarkProgs = progsCorso.filter(p => p.raggruppamento === 'benchmark' || (isIbrido && (p.tipo === 'invictus' || p.codice === 'invictus_base')));
+
+    if (baseBadgeEl) baseBadgeEl.textContent = `${finalBaseProgs.length} PROGRAMMI`;
+    if (avanzatoBadgeEl) avanzatoBadgeEl.textContent = `${avanzatoProgs.length} PROGRAMMI`;
+
+    // 1. Grid Base
+    const baseGrid = document.getElementById('nst-ibrido-programmi-grid');
+    if (baseGrid) {
+        if (finalBaseProgs.length === 0) {
+            baseGrid.innerHTML = `
+                <div class="nst-empty-group-box" style="grid-column: 1/-1;">
+                    <span class="material-symbols-outlined">model_training</span>
+                    <div>Nessun programma base disponibile al momento per ${escapeHtml(corsoNome)}.</div>
+                </div>
+            `;
+        } else {
+            baseGrid.innerHTML = finalBaseProgs.map(p => {
+                const isMetcon = (p.categoria === 'metcon' || p.tipo === 'metcon');
+                const typeClass = isMetcon ? 'metcon' : 'forza';
+                const badgeLabel = isMetcon ? 'METCON' : 'FORZA';
+                const progKey = p.id || p.codice;
+                const count = counts[progKey] || (p.id && counts[p.id]) || (p.codice && counts[p.codice]) || 0;
+                const countClass = count > 0 ? 'nst-workout-counter-active' : 'nst-workout-counter-zero';
+                const countTitle = `${count} session${count === 1 ? 'e' : 'i'} registrat${count === 1 ? 'a' : 'e'}`;
+
+                return `
+                    <div class="nst-ibrido-card ${typeClass}" onclick="apriAnteprimaIbrido('${progKey}')" role="button" tabindex="0" title="Apri scheda ${escapeHtml(p.nome)}">
+                        <div class="nst-ibrido-card-header">
+                            <span class="nst-ibrido-card-title">${escapeHtml(p.nome)}</span>
+                            <span class="nst-workout-counter ${countClass}" title="${countTitle}">${count}</span>
+                            <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
     }
 
-    grid.innerHTML = IBRIDO_PROGRAMMI_CATALOGO.map(p => {
-        const isMetcon = (p.categoria === 'metcon' || p.tipo === 'metcon');
-        const typeClass = isMetcon ? 'metcon' : 'forza';
-        const badgeLabel = isMetcon ? 'METCON' : 'FORZA';
-        const progKey = p.id || p.codice;
-        const count = counts[progKey] || (p.id && counts[p.id]) || (p.codice && counts[p.codice]) || 0;
-        const countClass = count > 0 ? 'nst-workout-counter-active' : 'nst-workout-counter-zero';
-        const countTitle = `${count} session${count === 1 ? 'e' : 'i'} registrat${count === 1 ? 'a' : 'e'}`;
-
-        return `
-            <div class="nst-ibrido-card ${typeClass}" onclick="apriAnteprimaIbrido('${progKey}')" role="button" tabindex="0" title="Apri scheda ${escapeHtml(p.nome)}">
-                <div class="nst-ibrido-card-header">
-                    <span class="nst-ibrido-card-title">${escapeHtml(p.nome)}</span>
-                    <span class="nst-workout-counter ${countClass}" title="${countTitle}">${count}</span>
-                    <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
+    // 2. Grid Avanzato
+    const avanzatoGrid = document.getElementById('nst-schede-avanzato-grid');
+    if (avanzatoGrid) {
+        if (avanzatoProgs.length === 0) {
+            avanzatoGrid.innerHTML = `
+                <div class="nst-empty-group-box" style="grid-column: 1/-1;">
+                    <span class="material-symbols-outlined">military_tech</span>
+                    <div>Nessun programma avanzato disponibile per ${escapeHtml(corsoNome)}. Nuove schede pro verranno aggiunte dall'istruttore.</div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        } else {
+            avanzatoGrid.innerHTML = avanzatoProgs.map(p => {
+                const isMetcon = (p.categoria === 'metcon' || p.tipo === 'metcon');
+                const typeClass = isMetcon ? 'metcon' : 'forza';
+                const badgeLabel = isMetcon ? 'METCON' : 'FORZA';
+                const progKey = p.id || p.codice;
+                const count = counts[progKey] || (p.id && counts[p.id]) || (p.codice && counts[p.codice]) || 0;
+                const countClass = count > 0 ? 'nst-workout-counter-active' : 'nst-workout-counter-zero';
+                const countTitle = `${count} session${count === 1 ? 'e' : 'i'} registrat${count === 1 ? 'a' : 'e'}`;
+
+                return `
+                    <div class="nst-ibrido-card ${typeClass}" onclick="apriAnteprimaIbrido('${progKey}')" role="button" tabindex="0" title="Apri scheda ${escapeHtml(p.nome)}">
+                        <div class="nst-ibrido-card-header">
+                            <span class="nst-ibrido-card-title">${escapeHtml(p.nome)}</span>
+                            <span class="nst-workout-counter ${countClass}" title="${countTitle}">${count}</span>
+                            <span class="nst-ibrido-badge ${typeClass}">${badgeLabel}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    // 3. Grid Benchmark
+    const benchGrid = document.getElementById('nst-schede-benchmark-grid');
+    if (benchGrid) {
+        if (isIbrido) {
+            benchGrid.innerHTML = `
+                <div id="nst-invictus-benchmark-card" class="nst-standard-card nst-standard-card-compact" onclick="apriAnteprimaInvictus()" role="button" tabindex="0" title="Apri scheda INVICTUS">
+                    <div class="nst-standard-card-header" style="width: 100%; margin-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 24px;">fitness_center</span>
+                            <div>
+                                <div class="nst-standard-title" style="font-size: 13px;">
+                                    INVICTUS
+                                    <span class="nst-pill-badge">RAPPORTO 1 : 2 : 4</span>
+                                </div>
+                                <div class="nst-standard-seq" style="font-size: 10px; color: var(--nst-text-muted);">
+                                    Sequenza: <strong>Pull</strong> → <strong>Push</strong> → <strong>Squat</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <span id="nst-invictus-counter" class="nst-workout-counter ${counts.invictus > 0 ? 'nst-workout-counter-active' : 'nst-workout-counter-zero'}" title="${counts.invictus || 0} sessioni registrate">${counts.invictus || 0}</span>
+                        <span class="nst-version-badge" style="border-color: var(--nst-amber); color: var(--nst-amber); font-size: 9px;">BENCHMARK WOD</span>
+                    </div>
+                </div>
+            `;
+        } else if (benchmarkProgs.length > 0) {
+            benchGrid.innerHTML = benchmarkProgs.map(p => {
+                const progKey = p.id || p.codice;
+                const count = counts[progKey] || (p.id && counts[p.id]) || (p.codice && counts[p.codice]) || 0;
+                const countClass = count > 0 ? 'nst-workout-counter-active' : 'nst-workout-counter-zero';
+                return `
+                    <div class="nst-standard-card nst-standard-card-compact" onclick="apriAnteprimaIbrido('${progKey}')" role="button" tabindex="0" title="Apri benchmark ${escapeHtml(p.nome)}">
+                        <div class="nst-standard-card-header" style="width: 100%; margin-bottom: 0;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="material-symbols-outlined" style="color: var(--nst-amber); font-size: 24px;">bolt</span>
+                                <div>
+                                    <div class="nst-standard-title" style="font-size: 13px;">${escapeHtml(p.nome)}</div>
+                                    <div class="nst-standard-seq" style="font-size: 10px; color: var(--nst-text-muted);">${escapeHtml(p.descrizione || '')}</div>
+                                </div>
+                            </div>
+                            <span class="nst-workout-counter ${countClass}">${count}</span>
+                            <span class="nst-version-badge" style="border-color: var(--nst-amber); color: var(--nst-amber); font-size: 9px;">BENCHMARK</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            benchGrid.innerHTML = `
+                <div class="nst-empty-group-box" style="width: 100%;">
+                    <span class="material-symbols-outlined">bolt</span>
+                    <div>Nessun allenamento benchmark registrato per ${escapeHtml(corsoNome)}.</div>
+                </div>
+            `;
+        }
+    }
+}
+
+function renderCatalogoIbrido() {
+    renderSchedeCorsoAttivo();
 }
 
 function renderForzaAnteprimaEsercizi(p, exListEl, ultimaSessione) {
@@ -6643,7 +6925,9 @@ function apriAnteprimaIbrido(progId) {
     const tabataBox = document.getElementById('nst-ibrido-tabata-config-box');
     const exListEl = document.getElementById('nst-ibrido-preview-ex-list');
 
-    if (titleEl) titleEl.textContent = `IBRIDO — ${p.nome.toUpperCase()}`;
+    const progCorsoObj = (tuttiICorsi || []).find(c => c.id === p.corso_id);
+    const progCorsoNome = progCorsoObj ? progCorsoObj.titolo.toUpperCase() : 'IBRIDO';
+    if (titleEl) titleEl.textContent = `${progCorsoNome} — ${p.nome.toUpperCase()}`;
     if (descEl) descEl.textContent = p.descrizione;
     
     const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
@@ -7934,6 +8218,10 @@ async function caricaLibreriaProgrammi() {
     try {
         const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : supabaseClient;
         if (!client) return;
+
+        await caricaListaCorsi();
+        await determinaCorsiAccessibili();
+
         const { data, error } = await client
             .from('nestore_programmi_libreria')
             .select('*')
@@ -7948,7 +8236,8 @@ async function caricaLibreriaProgrammi() {
 
         if (Array.isArray(data) && data.length > 0) {
             libreriaProgrammiTotali = data;
-            const ibridi = data.filter(p => p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza');
+            // Popola IBRIDO_PROGRAMMI_CATALOGO escludendo schede appartenenti ad altri corsi (es. Strongman)
+            const ibridi = data.filter(p => p.corso_id === CORSO_IBRIDO_ID || (!p.corso_id && (p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza')));
             if (ibridi.length > 0) {
                 IBRIDO_PROGRAMMI_CATALOGO = ibridi.map(p => ({
                     ...p,
@@ -7959,10 +8248,48 @@ async function caricaLibreriaProgrammi() {
                     window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
                 }
             }
-            renderCatalogoIbrido();
+            renderSchedeCorsoAttivo();
         }
     } catch (err) {
         console.warn("Eccezione durante fetch libreria programmi:", err);
+    }
+}
+
+function popolaSelectFiltroCorsiCoach() {
+    const filterCorso = document.getElementById('nst-lib-filter-corso');
+    if (!filterCorso) return;
+
+    const currVal = filterCorso.value || 'ALL';
+    const corsi = (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin)
+        ? (tuttiICorsi || [])
+        : ((typeof coachCorsiAtleti !== 'undefined' && Array.isArray(coachCorsiAtleti) && coachCorsiAtleti.length > 0) ? coachCorsiAtleti : tuttiICorsi);
+
+    let html = '<option value="ALL">TUTTI I CORSI</option>';
+    (corsi || []).forEach(c => {
+        html += `<option value="${c.id}">${escapeHtml((c.titolo || c.nome || 'Corso').toUpperCase())}</option>`;
+    });
+    filterCorso.innerHTML = html;
+    filterCorso.value = currVal;
+}
+
+function popolaSelectCorsiModal(selectedCorsoId = null) {
+    const corsoSelect = document.getElementById('nst-prog-edit-corso');
+    if (!corsoSelect) return;
+
+    const corsi = (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin)
+        ? (tuttiICorsi || [])
+        : ((typeof coachCorsiAtleti !== 'undefined' && Array.isArray(coachCorsiAtleti) && coachCorsiAtleti.length > 0) ? coachCorsiAtleti : tuttiICorsi);
+
+    let html = '';
+    (corsi || []).forEach(c => {
+        html += `<option value="${c.id}">${escapeHtml((c.titolo || c.nome || 'Corso').toUpperCase())}</option>`;
+    });
+    corsoSelect.innerHTML = html;
+
+    if (selectedCorsoId) {
+        corsoSelect.value = selectedCorsoId;
+    } else if (schedeCorsoSelezionatoId) {
+        corsoSelect.value = schedeCorsoSelezionatoId;
     }
 }
 
@@ -7973,6 +8300,10 @@ async function caricaLibreriaProgrammiCoach() {
     try {
         const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : supabaseClient;
         if (!client) return;
+
+        await caricaListaCorsi();
+        popolaSelectFiltroCorsiCoach();
+
         const { data, error } = await client
             .from('nestore_programmi_libreria')
             .select('*')
@@ -7982,7 +8313,16 @@ async function caricaLibreriaProgrammiCoach() {
 
         if (error) throw error;
 
-        libreriaProgrammiTotali = data || [];
+        let progs = data || [];
+        // Se coach non-admin, visualizza programmi dei propri corsi
+        if (typeof isIstruttore !== 'undefined' && isIstruttore && (!isAuthorizedAdmin)) {
+            const myCourseIds = Array.isArray(coachCorsiAtleti) ? coachCorsiAtleti.map(c => c.id) : [];
+            if (myCourseIds.length > 0) {
+                progs = progs.filter(p => !p.corso_id || myCourseIds.includes(p.corso_id) || p.creato_da === currentUser?.id);
+            }
+        }
+
+        libreriaProgrammiTotali = progs;
         if (statsPill) {
             statsPill.textContent = `${libreriaProgrammiTotali.length} PROGRAMMI ATTIVI`;
         }
@@ -7997,12 +8337,22 @@ async function caricaLibreriaProgrammiCoach() {
 }
 
 function filtraProgrammiLibreriaCoach() {
+    const corsoVal = document.getElementById('nst-lib-filter-corso')?.value || 'ALL';
+    const raggrVal = document.getElementById('nst-lib-filter-raggruppamento')?.value || 'ALL';
     const tipoVal = document.getElementById('nst-lib-filter-tipo')?.value || 'ALL';
     const searchVal = (document.getElementById('nst-lib-search-input')?.value || '').toLowerCase().trim();
     const grid = document.getElementById('nst-coach-library-grid');
     if (!grid) return;
 
     let filtered = [...libreriaProgrammiTotali];
+
+    if (corsoVal !== 'ALL') {
+        filtered = filtered.filter(p => p.corso_id === corsoVal);
+    }
+
+    if (raggrVal !== 'ALL') {
+        filtered = filtered.filter(p => (p.raggruppamento || 'base') === raggrVal);
+    }
 
     if (tipoVal === 'ibrido_metcon') {
         filtered = filtered.filter(p => (p.tipo === 'ibrido' || p.categoria === 'metcon') && p.categoria === 'metcon');
@@ -8033,7 +8383,11 @@ function filtraProgrammiLibreriaCoach() {
         const isForza = (p.categoria === 'forza');
         const isInvictus = (p.tipo === 'invictus');
         const cardClass = isMetcon ? 'metcon' : isForza ? 'forza' : 'standard';
-        const typeLabel = isMetcon ? 'IBRIDO METCON' : isForza ? 'IBRIDO FORZA' : isInvictus ? 'INVICTUS BENCHMARK' : (p.tipo ? p.tipo.toUpperCase() : 'STANDARD');
+        const typeLabel = isMetcon ? 'METCON' : isForza ? 'FORZA' : isInvictus ? 'INVICTUS BENCHMARK' : (p.tipo ? p.tipo.toUpperCase() : 'STANDARD');
+
+        const corsoObj = (tuttiICorsi || []).find(c => c.id === p.corso_id);
+        const corsoLabel = corsoObj ? corsoObj.titolo.toUpperCase() : (p.corso_id ? 'CORSO' : 'TUTTI I CORSI');
+        const raggrLabel = (p.raggruppamento || 'base').toUpperCase();
 
         let timerMeta = '';
         if (p.timer_mode === 'tabata') {
@@ -8055,7 +8409,11 @@ function filtraProgrammiLibreriaCoach() {
                     <div class="nst-coach-lib-card-header">
                         <div>
                             <div class="nst-coach-lib-title">${escapeHtml(p.nome)}</div>
-                            <span class="nst-ibrido-badge ${cardClass}" style="font-size: 9px; margin-top: 4px; display: inline-block;">${typeLabel}</span>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                                <span class="nst-ibrido-badge ${cardClass}" style="font-size: 9px;">${typeLabel}</span>
+                                <span class="nst-badge-raggruppamento ${p.raggruppamento || 'base'}">${raggrLabel}</span>
+                                <span class="nst-version-badge" style="font-size: 8px; border-color: rgba(255,255,255,0.2);">${escapeHtml(corsoLabel)}</span>
+                            </div>
                         </div>
                         <span class="nst-version-badge" style="font-size: 9px;">ORD: ${p.ordine || 0}</span>
                     </div>
@@ -8117,6 +8475,7 @@ function apriModalEditorProgramma(progId = null) {
     const tempoInput = document.getElementById('nst-prog-edit-tempo-target');
     const giriInput = document.getElementById('nst-prog-edit-giri-target');
     const descInput = document.getElementById('nst-prog-edit-desc');
+    const raggrSelect = document.getElementById('nst-prog-edit-raggruppamento');
     const exContainer = document.getElementById('nst-prog-edit-esercizi-container');
 
     if (exContainer) exContainer.innerHTML = '';
@@ -8129,6 +8488,9 @@ function apriModalEditorProgramma(progId = null) {
         const pTipo = prog ? prog.tipo : 'ibrido';
         const pCat = prog ? (prog.categoria || 'metcon') : 'metcon';
         const isForza = (pTipo === 'forza' || pCat === 'forza');
+
+        popolaSelectCorsiModal(prog ? prog.corso_id : (schedeCorsoSelezionatoId || CORSO_IBRIDO_ID));
+        if (raggrSelect) raggrSelect.value = prog ? (prog.raggruppamento || 'base') : 'base';
 
         if (titleText) titleText.textContent = `MODIFICA: ${prog ? prog.nome.toUpperCase() : 'PROGRAMMA'}`;
         if (idInput) idInput.value = progId;
@@ -8150,6 +8512,9 @@ function apriModalEditorProgramma(progId = null) {
             aggiungiRigaEsercizioModal('', '', null, isForza);
         }
     } else {
+        popolaSelectCorsiModal(schedeCorsoSelezionatoId || CORSO_IBRIDO_ID);
+        if (raggrSelect) raggrSelect.value = 'base';
+
         if (titleText) titleText.textContent = 'NUOVO PROGRAMMA ALLENAMENTO';
         if (idInput) idInput.value = '';
         if (nomeInput) nomeInput.value = '';
@@ -8330,6 +8695,8 @@ function aggiungiRigaEsercizioModal(nome = '', target = '', serie = null, forzaM
 async function salvaProgrammaLibreriaDaModal() {
     const id = document.getElementById('nst-prog-edit-id')?.value;
     const nome = document.getElementById('nst-prog-edit-nome')?.value.trim();
+    const corsoId = document.getElementById('nst-prog-edit-corso')?.value || null;
+    const raggruppamento = document.getElementById('nst-prog-edit-raggruppamento')?.value || 'base';
     const tipo = document.getElementById('nst-prog-edit-tipo')?.value;
     const categoria = document.getElementById('nst-prog-edit-categoria')?.value;
     const timerMode = document.getElementById('nst-prog-edit-timer-mode')?.value;
@@ -8380,6 +8747,8 @@ async function salvaProgrammaLibreriaDaModal() {
 
     const payload = {
         nome,
+        corso_id: corsoId,
+        raggruppamento,
         tipo,
         categoria,
         timer_mode: timerMode,
@@ -8671,6 +9040,19 @@ window.aggiungiRigaSerie = aggiungiRigaSerie;
 window.rimuoviRigaSerie = rimuoviRigaSerie;
 window.aggiornaLayoutEserciziModal = aggiornaLayoutEserciziModal;
 
+window.CORSO_IBRIDO_ID = CORSO_IBRIDO_ID;
+window.CORSO_STRONGMAN_ID = CORSO_STRONGMAN_ID;
+window.CORSO_SCAB_ID = CORSO_SCAB_ID;
+window.tuttiICorsi = tuttiICorsi;
+window.corsiAccessibiliUtente = corsiAccessibiliUtente;
+window.caricaListaCorsi = caricaListaCorsi;
+window.determinaCorsiAccessibili = determinaCorsiAccessibili;
+window.renderNavCorsiAtleta = renderNavCorsiAtleta;
+window.selezionaCorsoSchede = selezionaCorsoSchede;
+window.renderSchedeCorsoAttivo = renderSchedeCorsoAttivo;
+window.popolaSelectFiltroCorsiCoach = popolaSelectFiltroCorsiCoach;
+window.popolaSelectCorsiModal = popolaSelectCorsiModal;
+
 window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
 window.renderCatalogoIbrido = renderCatalogoIbrido;
 window.calcolaCompletamentiProgrammi = calcolaCompletamentiProgrammi;
@@ -8922,7 +9304,19 @@ if (typeof module !== 'undefined' && module.exports) {
         ricalcolaKcalPastoEdit,
         salvaModifichePasto,
         confermaEliminaPasto,
-        formatTipoPastoDisplay
+        formatTipoPastoDisplay,
+        CORSO_IBRIDO_ID,
+        CORSO_STRONGMAN_ID,
+        CORSO_SCAB_ID,
+        tuttiICorsi,
+        corsiAccessibiliUtente,
+        caricaListaCorsi,
+        determinaCorsiAccessibili,
+        renderNavCorsiAtleta,
+        selezionaCorsoSchede,
+        renderSchedeCorsoAttivo,
+        popolaSelectFiltroCorsiCoach,
+        popolaSelectCorsiModal
     };
 }
 

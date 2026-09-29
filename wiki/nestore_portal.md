@@ -445,6 +445,35 @@ Consente all'atleta di tracciare visivamente l'esito di ogni serie (Riscaldament
    - Lo stato esecutivo viene estratto dalle righe DOM e persistito nel payload JSON `scheda_dati` in `riscaldamento_effettivo` e `serie_effettive` / `serie_dettaglio` come `stato_esecutivo: 'fatta' | 'parziale' | 'saltata' | null`.
    - Garantita retrocompatibilità totale con la visualizzazione cronologica, i record personali e le viste di dettaglio/modifica.
 
+### 9.12. Ristrutturazione Programmi per Corso e Raggruppamento (Base, Avanzato, Benchmark, Personali) + Regalo SCAB per Ibrido
+Riorganizzazione modulare della libreria programmi in Nestore ([`portal/nestore.html`](../portal/nestore.html), [`portal/nestore.js`](../portal/nestore.js), [`portal/nestore.css`](../portal/nestore.css)):
+1. **Raggruppamento per Corso e Tipologia**:
+   - Ciascun corso possiede 4 sottogruppi dedicati:
+     - **Corso Ibrido** (`752f9bc9-a5c9-4ce4-8e10-97528e18fca2`):
+       - *Programmi Ibrido Base*: Metcon 1-4 e Forza 1-4.
+       - *Programmi Ibrido Avanzato*: placeholder/vuoto iniziale per espansioni future.
+       - *Allenamenti Benchmark*: Invictus (WOD con anteprima round e contatore completamenti circolare).
+       - *Schede di allenamento personali*: schede su misura assegnate ad personam all'atleta.
+     - **Corso Strongman & Powerlifting** (`b1d8c235-fc94-4372-bff1-28f183700c92`):
+       - *Programmi Strong Base*: PL BEGINNER 1 (creato da Valerio Ciaralli, riassegnato da Ibrido a Strongman).
+       - *Programmi Strong Avanzato*: placeholder/vuoto iniziale.
+       - *Allenamenti Benchmark*: placeholder/vuoto iniziale.
+       - *Schede di allenamento personali*: placeholder per schede individuali Strongman.
+     - **Corso SCAB** (`5e7d5a57-2fc8-4e89-be21-5ec00d11fbb4`):
+       - *Programmi SCAB*: placeholder/vuoto iniziale.
+       - *Schede di allenamento personali*: placeholder/vuoto iniziale.
+2. **Accessibilità Atleta & Regalo SCAB per Iscritti Ibrido**:
+   - L'atleta visualizza esclusivamente i programmi dei corsi a cui è iscritto (`determinaCorsiAccessibili()`).
+   - Gli atleti iscritti al Corso Ibrido ricevono automaticamente l'accesso gratuito ai programmi del Corso SCAB (con switcher tab dedicato `#nst-course-tabs-nav`, badge `🎁 INCLUSO CON IBRIDO` e banner esplicativo `#nst-scab-gift-banner`).
+   - Switcher a schede dinamico in alto (`#nst-athlete-course-selector-bar`) che evidenzia il corso selezionato e aggiorna istantaneamente le 4 sezioni.
+3. **Gestione Coach & Admin**:
+   - Istruttori e Amministratori possono filtrare la libreria programmi per Corso (`#nst-lib-filter-corso`) e Raggruppamento (`#nst-lib-filter-raggruppamento`).
+   - In fase di creazione o modifica programma (`#nst-coach-programma-modal`), l'istruttore seleziona il Corso di appartenenza e il Raggruppamento (`base`, `avanzato`, `benchmark`, `personale`).
+   - L'Admin/Presidente mantiene sempre visibilità completa su tutti i corsi del centro sportivo.
+4. **Data Layer & RLS Supabase ([`supabase/migration_nestore_programmi_corsi.sql`](../supabase/migration_nestore_programmi_corsi.sql))**:
+   - Aggiunta colonna `corso_id` (UUID FK verso `public.eventi.id`, `ON DELETE SET NULL`) e `raggruppamento` (`VARCHAR(30)`) con indice composito `idx_nst_prog_corso_raggr` su `public.nestore_programmi`.
+   - RLS policy `nst_prog_select` aggiornata per consentire la lettura dei programmi dei corsi a cui l'utente è iscritto o del corso SCAB se iscritto a Ibrido.
+
 ---
 
 ## 10. Related Concept Pages
