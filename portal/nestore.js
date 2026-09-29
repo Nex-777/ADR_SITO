@@ -5791,9 +5791,10 @@ function aggiornaVisibilitaDock() {
     const isTimerPanelVisible = timerPanel && timerPanel.classList && typeof timerPanel.classList.contains === 'function' && !timerPanel.classList.contains('nst-hidden');
 
     const isStopwatchActive = timerEngine.state.running || timerEngine.getElapsedMs() > 0;
+    const isCountdownActive = countdownEngine.state.running || (countdownEngine.getElapsedMs() > 0 && countdownEngine.getRemainingMs() > 0);
     const isTabataActive = tabataEngine.state.running || (tabataEngine.state.phase !== 'prep' && tabataEngine.state.phase !== 'done');
 
-    const shouldShow = (!isTimerPanelVisible) && (isStopwatchActive || isTabataActive || ibridoSessionMinimized);
+    const shouldShow = (!isTimerPanelVisible) && (isStopwatchActive || isCountdownActive || isTabataActive || ibridoSessionMinimized);
 
     if (shouldShow) {
         dockEl.classList.remove('nst-hidden');
@@ -5873,6 +5874,9 @@ function masterTimerLoop() {
     if (timerEngine.state.running) {
         timerEngine.updateUI();
     }
+    if (countdownEngine.state.running) {
+        countdownEngine.updateUI();
+    }
     if (tabataEngine.state.running) {
         tabataEngine.tick();
         tabataEngine.updateUI();
@@ -5891,6 +5895,9 @@ setInterval(() => {
             timerEngine.autoStop();
         }
     }
+    if (countdownEngine.state.running) {
+        countdownEngine.updateUI();
+    }
     if (tabataEngine.state.running) {
         tabataEngine.tick();
     }
@@ -5902,6 +5909,9 @@ if (typeof window !== 'undefined' && window.addEventListener) {
         if (e.key === 'adr_stopwatch_state') {
             timerEngine.loadState();
             timerEngine.updateUI();
+        } else if (e.key === 'adr_countdown_state') {
+            countdownEngine.loadState();
+            countdownEngine.updateUI();
         } else if (e.key === 'adr_tabata_state') {
             tabataEngine.loadState();
             tabataEngine.updateUI();
@@ -5917,24 +5927,26 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 if (typeof document !== 'undefined' && document.addEventListener) {
     document.addEventListener('DOMContentLoaded', () => {
         timerEngine.loadState();
+        countdownEngine.loadState();
         tabataEngine.loadState();
 
-    // Sincronizza i campi input con la config salvata
-    if (document.getElementById('nst-cfg-prep')) document.getElementById('nst-cfg-prep').value = tabataEngine.state.config.prep;
-    if (document.getElementById('nst-cfg-work')) document.getElementById('nst-cfg-work').value = tabataEngine.state.config.work;
-    if (document.getElementById('nst-cfg-rest')) document.getElementById('nst-cfg-rest').value = tabataEngine.state.config.rest;
-    if (document.getElementById('nst-cfg-rounds')) document.getElementById('nst-cfg-rounds').value = tabataEngine.state.config.rounds;
-    if (document.getElementById('nst-cfg-sets')) document.getElementById('nst-cfg-sets').value = tabataEngine.state.config.sets;
+        // Sincronizza i campi input con la config salvata
+        if (document.getElementById('nst-cfg-prep')) document.getElementById('nst-cfg-prep').value = tabataEngine.state.config.prep;
+        if (document.getElementById('nst-cfg-work')) document.getElementById('nst-cfg-work').value = tabataEngine.state.config.work;
+        if (document.getElementById('nst-cfg-rest')) document.getElementById('nst-cfg-rest').value = tabataEngine.state.config.rest;
+        if (document.getElementById('nst-cfg-rounds')) document.getElementById('nst-cfg-rounds').value = tabataEngine.state.config.rounds;
+        if (document.getElementById('nst-cfg-sets')) document.getElementById('nst-cfg-sets').value = tabataEngine.state.config.sets;
+        countdownEngine.updateInputs();
 
-    switchTimerMode(currentTimerMode);
+        switchTimerMode(currentTimerMode);
 
-    // Se l'hash nell'URL è #timer o param ?panel=timer, apri subito il timer
-    const urlParams = new URLSearchParams(window.location.search);
-    if (window.location.hash === '#timer' || urlParams.get('panel') === 'timer') {
-        switchNestorePanel('timer');
-    }
+        // Se l'hash nell'URL è #timer o param ?panel=timer, apri subito il timer
+        const urlParams = new URLSearchParams(window.location.search);
+        if (window.location.hash === '#timer' || urlParams.get('panel') === 'timer') {
+            switchNestorePanel('timer');
+        }
 
-    requestAnimationFrame(masterTimerLoop);
+        requestAnimationFrame(masterTimerLoop);
     });
 }
 
@@ -5947,6 +5959,7 @@ window.gestisciInputConteggio = gestisciInputConteggio;
 window.ancoraChatInAlto = ancoraChatInAlto;
 window.switchTimerMode = switchTimerMode;
 window.timerEngine = timerEngine;
+window.countdownEngine = countdownEngine;
 window.tabataEngine = tabataEngine;
 // ===========================================================================
 // SEZIONE ALLENAMENTI STANDARD & BENCHMARK (INVICTUS)
@@ -6882,6 +6895,17 @@ function selezionaCorsoSchede(corsoId) {
     renderSchedeCorsoAttivo();
 }
 
+function isProgrammaBenchmark(p) {
+    if (!p) return false;
+    if (p.raggruppamento === 'benchmark') return true;
+    if (p.tipo === 'invictus') return true;
+    const codice = String(p.codice || p.id || '').toLowerCase();
+    if (codice.includes('invictus')) return true;
+    const nome = String(p.nome || '').toLowerCase();
+    if (nome.includes('invictus')) return true;
+    return false;
+}
+
 function renderSchedeCorsoAttivo() {
     if (typeof document === 'undefined') return;
 
@@ -6904,10 +6928,12 @@ function renderSchedeCorsoAttivo() {
     const baseBadgeEl = document.getElementById('nst-schede-base-badge');
     const avanzatoTitleEl = document.getElementById('nst-schede-avanzato-title');
     const avanzatoBadgeEl = document.getElementById('nst-schede-avanzato-badge');
+    const benchmarkTitleEl = document.getElementById('nst-schede-benchmark-title');
     const personaliTitleEl = document.getElementById('nst-schede-personali-title');
 
     if (baseTitleEl) baseTitleEl.textContent = `PROGRAMMI ${corsoNome.toUpperCase()} BASE`;
     if (avanzatoTitleEl) avanzatoTitleEl.textContent = `PROGRAMMI ${corsoNome.toUpperCase()} AVANZATO`;
+    if (benchmarkTitleEl) benchmarkTitleEl.textContent = 'ALLENAMENTI BENCHMARK';
     if (personaliTitleEl) personaliTitleEl.textContent = `SCHEDE DI ALLENAMENTO PERSONALI — ${corsoNome.toUpperCase()}`;
 
     const allProgs = (typeof window !== 'undefined' && window.libreriaProgrammiTotali) ? window.libreriaProgrammiTotali : libreriaProgrammiTotali;
@@ -6915,19 +6941,27 @@ function renderSchedeCorsoAttivo() {
         if (p.corso_id) {
             return p.corso_id === corsoAttivo.id;
         }
-        if (isIbrido && (p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza' || p.codice === 'invictus_base')) {
+        if (isIbrido && (p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza' || isProgrammaBenchmark(p))) {
             return true;
         }
         return false;
     });
 
-    const baseProgs = progsCorso.filter(p => p.raggruppamento === 'base' || (!p.raggruppamento && p.tipo !== 'invictus'));
+    const baseProgs = progsCorso.filter(p => {
+        if (isProgrammaBenchmark(p)) return false;
+        if (p.raggruppamento === 'base' || p.raggruppamento === 'ibrido_base' || p.raggruppamento === 'strong_base') return true;
+        if (!p.raggruppamento && p.tipo !== 'invictus') return true;
+        return false;
+    });
+
     const finalBaseProgs = (baseProgs.length > 0)
         ? baseProgs
-        : (isIbrido && Array.isArray(IBRIDO_PROGRAMMI_CATALOGO) && IBRIDO_PROGRAMMI_CATALOGO.length > 0 ? IBRIDO_PROGRAMMI_CATALOGO : []);
+        : (isIbrido && Array.isArray(IBRIDO_PROGRAMMI_CATALOGO) && IBRIDO_PROGRAMMI_CATALOGO.length > 0
+            ? IBRIDO_PROGRAMMI_CATALOGO.filter(p => !isProgrammaBenchmark(p))
+            : []);
 
-    const avanzatoProgs = progsCorso.filter(p => p.raggruppamento === 'avanzato');
-    const benchmarkProgs = progsCorso.filter(p => p.raggruppamento === 'benchmark' || (isIbrido && (p.tipo === 'invictus' || p.codice === 'invictus_base')));
+    const avanzatoProgs = progsCorso.filter(p => !isProgrammaBenchmark(p) && (p.raggruppamento === 'avanzato' || p.raggruppamento === 'ibrido_avanzato' || p.raggruppamento === 'strong_avanzato'));
+    const benchmarkProgs = progsCorso.filter(p => isProgrammaBenchmark(p) || (isIbrido && (p.tipo === 'invictus' || p.codice === 'invictus_base')));
 
     if (baseBadgeEl) baseBadgeEl.textContent = `${finalBaseProgs.length} PROGRAMMI`;
     if (avanzatoBadgeEl) avanzatoBadgeEl.textContent = `${avanzatoProgs.length} PROGRAMMI`;
@@ -8538,8 +8572,14 @@ async function caricaLibreriaProgrammi() {
 
         if (Array.isArray(data) && data.length > 0) {
             libreriaProgrammiTotali = data;
-            // Popola IBRIDO_PROGRAMMI_CATALOGO escludendo schede appartenenti ad altri corsi (es. Strongman)
-            const ibridi = data.filter(p => p.corso_id === CORSO_IBRIDO_ID || (!p.corso_id && (p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza')));
+            if (typeof window !== 'undefined') {
+                window.libreriaProgrammiTotali = libreriaProgrammiTotali;
+            }
+            // Popola IBRIDO_PROGRAMMI_CATALOGO escludendo schede appartenenti ad altri corsi (es. Strongman) e benchmark (Invictus)
+            const ibridi = data.filter(p => {
+                if (typeof isProgrammaBenchmark === 'function' && isProgrammaBenchmark(p)) return false;
+                return p.corso_id === CORSO_IBRIDO_ID || (!p.corso_id && (p.tipo === 'ibrido' || p.categoria === 'metcon' || p.categoria === 'forza'));
+            });
             if (ibridi.length > 0) {
                 IBRIDO_PROGRAMMI_CATALOGO = ibridi.map(p => ({
                     ...p,
@@ -9354,6 +9394,7 @@ window.selezionaCorsoSchede = selezionaCorsoSchede;
 window.renderSchedeCorsoAttivo = renderSchedeCorsoAttivo;
 window.popolaSelectFiltroCorsiCoach = popolaSelectFiltroCorsiCoach;
 window.popolaSelectCorsiModal = popolaSelectCorsiModal;
+window.isProgrammaBenchmark = isProgrammaBenchmark;
 
 window.IBRIDO_PROGRAMMI_CATALOGO = IBRIDO_PROGRAMMI_CATALOGO;
 window.renderCatalogoIbrido = renderCatalogoIbrido;
@@ -9525,6 +9566,7 @@ if (typeof module !== 'undefined' && module.exports) {
         annullaSalvataggioWorkout,
         confermaSalvaAllenamentoStandard,
         chiudiModalWorkoutAttivo,
+        isProgrammaBenchmark,
         IBRIDO_PROGRAMMI_CATALOGO,
         renderCatalogoIbrido,
         calcolaCompletamentiProgrammi,

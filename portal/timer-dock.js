@@ -31,9 +31,21 @@
                 if (!ctx) return;
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, ctx.currentTime);
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+
+                const prof = localStorage.getItem('adr_timer_sound_profile') || 'digital';
+                let finalType = type;
+                let finalFreq = freq;
+                if (prof === 'bell') {
+                    finalType = 'sine';
+                    finalFreq = freq * 1.2;
+                } else if (prof === 'buzzer') {
+                    finalType = 'sawtooth';
+                    finalFreq = freq * 0.6;
+                }
+
+                osc.type = finalType;
+                osc.frequency.setValueAtTime(finalFreq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.85, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (durMs / 1000));
                 osc.connect(gain);
                 gain.connect(ctx.destination);
@@ -192,6 +204,30 @@
                 }
                 localStorage.setItem('adr_stopwatch_state', JSON.stringify(state));
             } catch (e) {}
+        } else if (mode === 'countdown') {
+            try {
+                const raw = localStorage.getItem('adr_countdown_state');
+                if (!raw) return;
+                const state = JSON.parse(raw);
+                const durationMs = state.config?.durationMs || (5 * 60 * 1000);
+                const elapsed = state.running && state.startTimestamp
+                    ? (Date.now() - state.startTimestamp) + (state.elapsedBeforePause || 0)
+                    : (state.elapsedBeforePause || 0);
+                const remaining = Math.max(0, durationMs - elapsed);
+
+                if (state.running) {
+                    state.elapsedBeforePause = elapsed;
+                    state.running = false;
+                    state.startTimestamp = null;
+                } else {
+                    if (remaining <= 0) {
+                        state.elapsedBeforePause = 0;
+                    }
+                    state.running = true;
+                    state.startTimestamp = Date.now();
+                }
+                localStorage.setItem('adr_countdown_state', JSON.stringify(state));
+            } catch (e) {}
         } else {
             try {
                 const raw = localStorage.getItem('adr_tabata_state');
@@ -257,6 +293,34 @@
                         document.getElementById('adr-dock-mode-text').textContent = state.running ? 'CRONOMETRO' : 'CRONO IN PAUSA';
                         document.getElementById('adr-dock-time-text').textContent = formatTime(elapsed);
                         document.getElementById('adr-dock-mode-label').className = 'adr-dock-mode';
+                        document.getElementById('adr-dock-toggle-icon').textContent = state.running ? 'pause' : 'play_arrow';
+                    }
+                }
+            } catch (e) {}
+        } else if (mode === 'countdown') {
+            try {
+                const raw = localStorage.getItem('adr_countdown_state');
+                if (raw) {
+                    const state = JSON.parse(raw);
+                    const durationMs = state.config?.durationMs || (5 * 60 * 1000);
+                    const elapsed = state.running && state.startTimestamp
+                        ? (Date.now() - state.startTimestamp) + (state.elapsedBeforePause || 0)
+                        : (state.elapsedBeforePause || 0);
+                    const remainingMs = Math.max(0, durationMs - elapsed);
+
+                    if (state.running && remainingMs <= 0) {
+                        state.running = false;
+                        state.startTimestamp = null;
+                        state.elapsedBeforePause = durationMs;
+                        localStorage.setItem('adr_countdown_state', JSON.stringify(state));
+                        DockAudio.longBuzzer();
+                    }
+
+                    if (state.running || (elapsed > 0 && remainingMs > 0)) {
+                        isVisible = true;
+                        document.getElementById('adr-dock-mode-text').textContent = state.running ? 'TIMER RITROSO' : 'TIMER IN PAUSA';
+                        document.getElementById('adr-dock-time-text').textContent = formatTime(remainingMs);
+                        document.getElementById('adr-dock-mode-label').className = state.running ? 'adr-dock-mode work' : 'adr-dock-mode';
                         document.getElementById('adr-dock-toggle-icon').textContent = state.running ? 'pause' : 'play_arrow';
                     }
                 }

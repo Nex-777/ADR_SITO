@@ -3038,6 +3038,8 @@ input:checked + .nst-slider:before {
     font-size: 11px;
     color: var(--nst-text-muted);
     margin-top: 4px;
+    line-height: 1.4;
+    display: block;
 }
 
 .nst-standard-seq strong {
@@ -3413,13 +3415,15 @@ input:checked + .nst-slider:before {
     background: var(--nst-surface);
     border: 1px solid rgba(255, 179, 0, 0.3);
     border-radius: 10px;
-    padding: 12px 16px;
+    padding: 16px 18px;
+    min-height: 68px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     transition: all 0.22s ease;
     cursor: pointer;
     user-select: none;
+    box-sizing: border-box;
 }
 
 .nst-standard-card-compact:hover {
@@ -3540,7 +3544,12 @@ input:checked + .nst-slider:before {
 }
 
 .nst-standard-card-compact .nst-standard-card-header {
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 0;
+    gap: 12px;
 }
 
 .nst-ibrido-card-desc {
@@ -5001,9 +5010,8 @@ input:checked + .nst-slider:before {
     align-items: center;
     gap: 8px;
     margin-bottom: 20px;
-    overflow-x: auto;
+    flex-wrap: wrap;
     padding-bottom: 4px;
-    scrollbar-width: thin;
 }
 
 .nst-course-tab-btn {

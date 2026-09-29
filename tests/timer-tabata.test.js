@@ -302,4 +302,143 @@ describe('Timer & Tabata Engine Core Tests', () => {
             expect(restored.config.rounds).toBe(8);
         });
     });
+
+    describe('Countdown Engine (Timer a Ritroso)', () => {
+        function createCountdown(durationMs = 5 * 60 * 1000) {
+            return {
+                state: {
+                    running: false,
+                    startTimestamp: null,
+                    elapsedBeforePause: 0,
+                    laps: [],
+                    config: { durationMs }
+                },
+                getElapsedMs(now = Date.now()) {
+                    if (!this.state.running || !this.state.startTimestamp) return this.state.elapsedBeforePause || 0;
+                    return (now - this.state.startTimestamp) + (this.state.elapsedBeforePause || 0);
+                },
+                getRemainingMs(now = Date.now()) {
+                    const rem = this.state.config.durationMs - this.getElapsedMs(now);
+                    return rem < 0 ? 0 : rem;
+                },
+                start(now = Date.now()) {
+                    if (this.state.config.durationMs <= 0) return;
+                    if (this.state.running) return;
+                    if (this.getRemainingMs(now) <= 0) this.reset();
+                    this.state.running = true;
+                    this.state.startTimestamp = now;
+                },
+                pause(now = Date.now()) {
+                    if (!this.state.running) return;
+                    this.state.elapsedBeforePause = this.getElapsedMs(now);
+                    this.state.running = false;
+                    this.state.startTimestamp = null;
+                },
+                reset() {
+                    this.state.running = false;
+                    this.state.startTimestamp = null;
+                    this.state.elapsedBeforePause = 0;
+                    this.state.laps = [];
+                },
+                lap(now = Date.now()) {
+                    if (!this.state.running) return;
+                    const totalElapsedMs = this.getElapsedMs(now);
+                    const remainingMs = this.getRemainingMs(now);
+                    const lastTotal = this.state.laps.length > 0 ? this.state.laps[0].totalElapsedMs : 0;
+                    const splitMs = totalElapsedMs - lastTotal;
+                    this.state.laps.unshift({
+                        number: this.state.laps.length + 1,
+                        splitMs,
+                        totalElapsedMs,
+                        remainingMs
+                    });
+                }
+            };
+        }
+
+        it('counts down from initial duration and pauses/resumes correctly', () => {
+            const cd = createCountdown(60000); // 1 minuto
+            expect(cd.getRemainingMs()).toBe(60000);
+            expect(cd.state.running).toBe(false);
+
+            const t0 = 1000;
+            cd.start(t0);
+            expect(cd.state.running).toBe(true);
+            expect(cd.getRemainingMs(t0 + 15000)).toBe(45000);
+
+            cd.pause(t0 + 15000);
+            expect(cd.state.running).toBe(false);
+            expect(cd.getRemainingMs(t0 + 30000)).toBe(45000);
+
+            cd.start(t0 + 30000);
+            expect(cd.getRemainingMs(t0 + 40000)).toBe(35000);
+        });
+
+        it('reaches 0 when time expires and caps remaining time at 0', () => {
+            const cd = createCountdown(30000);
+            const t0 = 1000;
+            cd.start(t0);
+
+            expect(cd.getRemainingMs(t0 + 30000)).toBe(0);
+            expect(cd.getRemainingMs(t0 + 35000)).toBe(0);
+        });
+
+        it('records laps with remaining and split time', () => {
+            const cd = createCountdown(120000); // 2 minuti
+            const t0 = 1000;
+            cd.start(t0);
+
+            cd.lap(t0 + 20000); // Lap 1 at 20s
+            expect(cd.state.laps).toHaveLength(1);
+            expect(cd.state.laps[0].number).toBe(1);
+            expect(cd.state.laps[0].remainingMs).toBe(100000);
+            expect(cd.state.laps[0].splitMs).toBe(20000);
+
+            cd.lap(t0 + 50000); // Lap 2 at 50s (+30s)
+            expect(cd.state.laps).toHaveLength(2);
+            expect(cd.state.laps[0].number).toBe(2);
+            expect(cd.state.laps[0].remainingMs).toBe(70000);
+            expect(cd.state.laps[0].splitMs).toBe(30000);
+        });
+
+        it('persists and restores countdown state across pages', () => {
+            const cdState = {
+                running: true,
+                startTimestamp: 1700000000000,
+                elapsedBeforePause: 5000,
+                laps: [{ number: 1, remainingMs: 55000 }],
+                config: { durationMs: 60000 }
+            };
+
+            localStorage.setItem('adr_countdown_state', JSON.stringify(cdState));
+            const restored = JSON.parse(localStorage.getItem('adr_countdown_state'));
+            expect(restored.running).toBe(true);
+            expect(restored.config.durationMs).toBe(60000);
+            expect(restored.laps).toHaveLength(1);
+        });
+    });
+
+    describe('Tabata Presets & Sound Profiles', () => {
+        it('includes the new Warmup preset: riscaldam_20_20', () => {
+            const presets = {
+                'riscaldam_20_20': { prep: 5, work: 20, rest: 20, rounds: 12, sets: 1 },
+                'tabata_classic': { prep: 5, work: 20, rest: 10, rounds: 8, sets: 1 }
+            };
+
+            const warmup = presets['riscaldam_20_20'];
+            expect(warmup).toBeDefined();
+            expect(warmup.work).toBe(20);
+            expect(warmup.rest).toBe(20);
+            expect(warmup.rounds).toBe(12);
+        });
+
+        it('stores and restores sound profiles in localStorage', () => {
+            localStorage.setItem('adr_timer_sound_profile', 'buzzer');
+            expect(localStorage.getItem('adr_timer_sound_profile')).toBe('buzzer');
+
+            localStorage.setItem('adr_timer_sound_profile', 'bell');
+            expect(localStorage.getItem('adr_timer_sound_profile')).toBe('bell');
+        });
+    });
 });
+
