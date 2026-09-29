@@ -484,6 +484,17 @@ Riorganizzazione modulare della libreria programmi in Nestore ([`portal/nestore.
    - Aggiunta colonna `corso_id` (UUID FK verso `public.eventi.id`, `ON DELETE SET NULL`) e `raggruppamento` (`VARCHAR(30)`) con indice composito `idx_nst_prog_corso_raggr` su `public.nestore_programmi`.
    - RLS policy `nst_prog_select` aggiornata per consentire la lettura dei programmi dei corsi a cui l'utente è iscritto o del corso SCAB se iscritto a Ibrido.
 
+### 9.12. Isolamento Rigoroso Benchmark WOD, Ridenominazione Sezione e Rifinitura UI Desktop (v1.05.87)
+- **Isolamento WOD Invictus & Griglia Base (`portal/nestore.js`)**:
+  - Implementata la funzione di discriminazione `isProgrammaBenchmark(p)` che identifica programmaticamente Invictus e ogni scheda con raggruppamento benchmark (su base `raggruppamento`, `tipo`, `codice` e `nome`).
+  - Escluso tassativamente Invictus da `baseProgs`, da `finalBaseProgs` e dalla sincronizzazione di `IBRIDO_PROGRAMMI_CATALOGO`, ripristinando la griglia Ibrido Base al canonico schema di 8 schede (Metcon 1-4 e Forza 1-4) ordinate su 2 righe da 4 senza card orfane.
+  - Invictus è ora esposto esclusivamente nel riquadro Benchmark.
+- **Ridenominazione Sezione Benchmark (`portal/nestore.html`, `portal/nestore.js`)**:
+  - Ridenominato il titolo della sezione `#nst-schede-benchmark-title` da `ALLENAMENTI STANDARD & BENCHMARK` a `ALLENAMENTI BENCHMARK` (sia nel markup statico sia nell'aggiornamento dinamico per i corsi).
+- **Rifinitura Grafica Desktop & Anti-Clipping (`portal/nestore.css`)**:
+  - Switcher corsi (`.nst-course-tabs-nav`): abilitato `flex-wrap: wrap;` e rimossi `overflow-x: auto` e `scrollbar-width: thin;`, eliminando il taglio a destra e l'antiestetica scrollbar orizzontale su browser desktop Windows.
+  - Card Invictus compatta (`.nst-standard-card-compact`): aumentato il padding a `16px 18px`, impostato `min-height: 68px;` e `flex-direction: column; justify-content: center;`, con `gap: 12px` e `flex-wrap: wrap;` sull'header e `line-height: 1.4; display: block;` sul sottotitolo `.nst-standard-seq`, prevenendo qualsiasi troncamento del testo della sequenza contro il bordo inferiore.
+
 ---
 
 ## 10. Related Concept Pages

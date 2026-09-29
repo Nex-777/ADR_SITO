@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-09-29] fix | NESTORE — Isolamento Rigoroso Benchmark Invictus, Ridenominazione Sezione e Rifinitura UI Desktop (v1.05.87)
+- **Isolamento WOD Invictus & Ripristino Griglia 8 Programmi Ibrido Base (`portal/nestore.js`)**:
+  - Implementata la funzione di discriminazione `isProgrammaBenchmark(p)` che analizza programmaticamente il programma per raggruppamento (`benchmark`), tipo (`invictus`), codice (`invictus_base`) o nome (`Invictus`).
+  - Escluso rigorosamente Invictus sia dai filtri `baseProgs` che dal catalogo di fallback `IBRIDO_PROGRAMMI_CATALOGO` e da `caricaLibreriaProgrammi()`.
+  - La griglia Programmi Ibrido Base torna a esporre esattamente le 8 schede (Metcon 1-4 e Forza 1-4) in 2 righe da 4, senza schede orfane o sovrapposizioni.
+  - Invictus è collocato esclusivamente nel contenitore dedicato agli allenamenti Benchmark.
+- **Ridenominazione Sezione Benchmark (`portal/nestore.html`, `portal/nestore.js`)**:
+  - Ridenominato `#nst-schede-benchmark-title` da `ALLENAMENTI STANDARD & BENCHMARK` a `ALLENAMENTI BENCHMARK`.
+- **Rifinitura Grafica Desktop & Anti-Clipping (`portal/nestore.css`)**:
+  - Risolto il taglio orizzontale e l'antiestetica scrollbar orizzontale nel selettore corsi `.nst-course-tabs-nav` abilitando `flex-wrap: wrap;` e rimuovendo `overflow-x: auto;` e `scrollbar-width: thin;`.
+  - Risolto il troncamento del testo della sequenza nella card Invictus (`.nst-standard-card-compact`) aumentando il padding a `16px 18px`, definendo `min-height: 68px;`, `flex-direction: column; justify-content: center;`, e applicando `gap: 12px; flex-wrap: wrap;` all'header e `line-height: 1.4; display: block;` a `.nst-standard-seq`.
+- **Testing & QA (`tests/course-programs-restructuring.test.js`)**:
+  - Aggiunti test unitari specifici per `isProgrammaBenchmark`, isolamento di Invictus dalla griglia base e verifiche responsive HTML/CSS.
+  - Test suite globale vitest: 186/186 test superati con successo (15 file di test su 15).
+
 ## [2026-09-29] feat | NESTORE — Ristrutturazione Programmi per Corso e Raggruppamento + Regalo SCAB (v1.05.83)
 - **Riorganizzazione per Corso e Sottogruppi (`portal/nestore.html`, `portal/nestore.js`, `portal/nestore.css`)**:
   - Strutturata la sezione schede atleta in 4 sezioni distinte: Base, Avanzato, Benchmark e Personali.
