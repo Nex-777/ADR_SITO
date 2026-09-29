@@ -4871,6 +4871,11 @@ async function caricaSchedeAtleta(atletaId, containerId, isCoachView = false) {
 // --- 1. Sound Engine (Web Audio API senza file MP3 esterni) ---
 const SoundEngine = {
     ctx: null,
+    currentProfile: (typeof localStorage !== 'undefined' ? localStorage.getItem('adr_timer_sound_profile') : null) || 'digital',
+    setProfile(profile) {
+        this.currentProfile = profile;
+        if (typeof localStorage !== 'undefined') localStorage.setItem('adr_timer_sound_profile', profile);
+    },
     getCtx() {
         if (!this.ctx) {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -4881,15 +4886,28 @@ const SoundEngine = {
         }
         return this.ctx;
     },
-    beep(freq = 880, durationMs = 150, type = 'sine') {
+    beep(freq = 880, durationMs = 150, type = 'sine', profileOverride = null) {
         try {
             const ctx = this.getCtx();
             if (!ctx) return;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, ctx.currentTime);
-            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            
+            let finalType = type;
+            let finalFreq = freq;
+            const prof = profileOverride || this.currentProfile;
+            
+            if (prof === 'bell') {
+                finalType = 'sine';
+                finalFreq = freq * 1.2; 
+            } else if (prof === 'buzzer') {
+                finalType = 'sawtooth';
+                finalFreq = freq * 0.6;
+            }
+
+            osc.type = finalType;
+            osc.frequency.setValueAtTime(finalFreq, ctx.currentTime);
+            gain.gain.setValueAtTime(0.85, ctx.currentTime); // Alzato a 0.85 per maggiore volume
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (durationMs / 1000));
             osc.connect(gain);
             gain.connect(ctx.destination);
@@ -4909,6 +4927,14 @@ const SoundEngine = {
         setTimeout(() => this.beep(880, 450, 'triangle'), 300);
     }
 };
+
+// Initialize select value if present in DOM
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        const soundSelect = document.getElementById('nst-timer-sound-select');
+        if (soundSelect) soundSelect.value = SoundEngine.currentProfile;
+    });
+}
 
 // Toast di sistema per notifiche timer
 function showTimerToast(message) {
@@ -4935,7 +4961,7 @@ function showTimerToast(message) {
     }
 }
 
-// Modalità attiva: 'stopwatch' | 'tabata'
+// Modalità attiva: 'stopwatch' | 'tabata' | 'countdown'
 let currentTimerMode = (typeof localStorage !== 'undefined' ? localStorage.getItem('adr_timer_mode') : null) || 'stopwatch';
 
 function switchTimerMode(mode) {
@@ -4947,24 +4973,39 @@ function switchTimerMode(mode) {
 
     const btnStopwatch = document.getElementById('nst-mode-btn-stopwatch');
     const btnTabata = document.getElementById('nst-mode-btn-tabata');
-    const cfgBox = document.getElementById('nst-tabata-config-box');
+    const btnCountdown = document.getElementById('nst-mode-btn-countdown');
+    const cfgBoxTabata = document.getElementById('nst-tabata-config-box');
+    const cfgBoxCountdown = document.getElementById('nst-countdown-config-box');
     const lapsContainer = document.getElementById('nst-stopwatch-laps-container');
     const metaRow = document.getElementById('nst-tabata-meta-row');
     const lapBtn = document.getElementById('nst-stopwatch-lap-btn');
     const skipBtn = document.getElementById('nst-tabata-skip-btn');
 
+    // Reset classi active bottoni
+    if (btnStopwatch) btnStopwatch.classList.remove('active');
+    if (btnTabata) btnTabata.classList.remove('active');
+    if (btnCountdown) btnCountdown.classList.remove('active');
+
     if (mode === 'stopwatch') {
         if (btnStopwatch) btnStopwatch.classList.add('active');
-        if (btnTabata) btnTabata.classList.remove('active');
-        if (cfgBox) cfgBox.classList.add('nst-hidden');
+        if (cfgBoxTabata) cfgBoxTabata.classList.add('nst-hidden');
+        if (cfgBoxCountdown) cfgBoxCountdown.classList.add('nst-hidden');
         if (metaRow) metaRow.classList.add('nst-hidden');
         if (lapBtn) lapBtn.classList.remove('nst-hidden');
         if (skipBtn) skipBtn.classList.add('nst-hidden');
         timerEngine.updateUI();
+    } else if (mode === 'countdown') {
+        if (btnCountdown) btnCountdown.classList.add('active');
+        if (cfgBoxTabata) cfgBoxTabata.classList.add('nst-hidden');
+        if (cfgBoxCountdown) cfgBoxCountdown.classList.remove('nst-hidden');
+        if (metaRow) metaRow.classList.add('nst-hidden');
+        if (lapBtn) lapBtn.classList.remove('nst-hidden');
+        if (skipBtn) skipBtn.classList.add('nst-hidden');
+        countdownEngine.updateUI();
     } else {
-        if (btnStopwatch) btnStopwatch.classList.remove('active');
         if (btnTabata) btnTabata.classList.add('active');
-        if (cfgBox) cfgBox.classList.remove('nst-hidden');
+        if (cfgBoxTabata) cfgBoxTabata.classList.remove('nst-hidden');
+        if (cfgBoxCountdown) cfgBoxCountdown.classList.add('nst-hidden');
         if (lapsContainer) lapsContainer.classList.add('nst-hidden');
         if (metaRow) metaRow.classList.remove('nst-hidden');
         if (lapBtn) lapBtn.classList.add('nst-hidden');
@@ -5174,6 +5215,236 @@ const timerEngine = {
                             <td>GIRO ${lap.number} ${idx === fastestIndex ? '⚡' : ''}</td>
                             <td>+${splitFmt.main}${splitFmt.sub}</td>
                             <td>${totalFmt.main}${totalFmt.sub}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                lapsContainer.classList.add('nst-hidden');
+                lapsBody.innerHTML = '';
+            }
+        }
+    }
+};
+
+// --- 2b. Modulo Timer A Ritroso (Countdown) ---
+const countdownEngine = {
+    state: {
+        running: false,
+        startTimestamp: null,
+        elapsedBeforePause: 0,
+        laps: [],
+        config: {
+            durationMs: 5 * 60 * 1000 // default 5 minuti
+        }
+    },
+    loadState() {
+        try {
+            const raw = localStorage.getItem('adr_countdown_state');
+            if (raw) {
+                this.state = JSON.parse(raw);
+                if (!Array.isArray(this.state.laps)) this.state.laps = [];
+            }
+        } catch (e) { console.error('Errore caricamento countdown:', e); }
+    },
+    saveState() {
+        try { localStorage.setItem('adr_countdown_state', JSON.stringify(this.state)); } 
+        catch (e) { console.error('Errore salvataggio countdown:', e); }
+        aggiornaVisibilitaDock();
+    },
+    modifyConfig(param, amount) {
+        if (this.state.running) return;
+        let min = Math.floor(this.state.config.durationMs / 60000);
+        let sec = Math.floor((this.state.config.durationMs % 60000) / 1000);
+        
+        if (param === 'min') { min += amount; }
+        else if (param === 'sec') { sec += amount; }
+        
+        if (sec >= 60) { sec -= 60; min += 1; }
+        else if (sec < 0) { sec += 60; min -= 1; }
+        
+        if (min < 0) min = 0;
+        if (min > 99) min = 99;
+        
+        const totMs = (min * 60 + sec) * 1000;
+        if (totMs >= 0) {
+            this.state.config.durationMs = totMs;
+            this.reset();
+            this.updateInputs();
+        }
+    },
+    updateConfigFromInput() {
+        if (this.state.running) return;
+        const minEl = document.getElementById('nst-cfg-cd-min');
+        const secEl = document.getElementById('nst-cfg-cd-sec');
+        let min = minEl ? parseInt(minEl.value) || 0 : 0;
+        let sec = secEl ? parseInt(secEl.value) || 0 : 0;
+        if (min < 0) min = 0;
+        if (sec < 0) sec = 0;
+        this.state.config.durationMs = (min * 60 + sec) * 1000;
+        this.reset();
+        this.updateInputs();
+    },
+    updateInputs() {
+        const minEl = document.getElementById('nst-cfg-cd-min');
+        const secEl = document.getElementById('nst-cfg-cd-sec');
+        if (minEl && secEl) {
+            const min = Math.floor(this.state.config.durationMs / 60000);
+            const sec = Math.floor((this.state.config.durationMs % 60000) / 1000);
+            minEl.value = min;
+            secEl.value = sec;
+        }
+    },
+    getElapsedMs() {
+        if (!this.state.running || !this.state.startTimestamp) return this.state.elapsedBeforePause || 0;
+        return (Date.now() - this.state.startTimestamp) + (this.state.elapsedBeforePause || 0);
+    },
+    getRemainingMs() {
+        const rem = this.state.config.durationMs - this.getElapsedMs();
+        return rem < 0 ? 0 : rem;
+    },
+    start() {
+        if (this.state.config.durationMs <= 0) return;
+        SoundEngine.getCtx();
+        if (this.state.running) return;
+        if (this.getRemainingMs() <= 0) this.reset(); // if finished, start over
+        this.state.running = true;
+        this.state.startTimestamp = Date.now();
+        this.saveState();
+        this.updateUI();
+    },
+    pause() {
+        if (!this.state.running) return;
+        this.state.elapsedBeforePause = this.getElapsedMs();
+        this.state.running = false;
+        this.state.startTimestamp = null;
+        this.saveState();
+        this.updateUI();
+    },
+    toggle() {
+        if (this.state.running) this.pause();
+        else this.start();
+    },
+    reset() {
+        this.state.running = false;
+        this.state.startTimestamp = null;
+        this.state.elapsedBeforePause = 0;
+        this.state.laps = [];
+        this.saveState();
+        this.updateUI();
+    },
+    lap() {
+        if (!this.state.running) return;
+        const totalElapsedMs = this.getElapsedMs();
+        const remainingMs = this.getRemainingMs();
+        const lastTotal = this.state.laps.length > 0 ? this.state.laps[0].totalElapsedMs : 0;
+        const splitMs = totalElapsedMs - lastTotal;
+        const lapNumber = this.state.laps.length + 1;
+
+        this.state.laps.unshift({
+            number: lapNumber,
+            splitMs,
+            totalElapsedMs,
+            remainingMs,
+            timestamp: Date.now()
+        });
+        this.saveState();
+        SoundEngine.beep(950, 100);
+        this.updateUI();
+    },
+    clearLaps() {
+        this.state.laps = [];
+        this.saveState();
+        this.updateUI();
+    },
+    updateUI() {
+        if (currentTimerMode !== 'countdown') return;
+
+        let rem = this.getRemainingMs();
+        
+        if (this.state.running && rem <= 0) {
+            this.state.running = false;
+            this.state.startTimestamp = null;
+            this.state.elapsedBeforePause = this.state.config.durationMs;
+            rem = 0;
+            this.saveState();
+            SoundEngine.longBuzzer();
+            showTimerToast("TIMER SCADUTO!");
+        }
+
+        const formatted = timerEngine.formatTime(rem);
+        const digitsMain = document.getElementById('nst-timer-digits-main');
+        const digitsSub = document.getElementById('nst-timer-digits-sub');
+        const heroCard = document.getElementById('nst-timer-hero');
+        const phaseBadge = document.getElementById('nst-timer-phase-badge');
+        const phaseIcon = document.getElementById('nst-timer-phase-icon');
+        const phaseText = document.getElementById('nst-timer-phase-text');
+        const primaryBtn = document.getElementById('nst-timer-primary-btn');
+        const primaryIcon = document.getElementById('nst-timer-primary-icon');
+        const primaryLabel = document.getElementById('nst-timer-primary-label');
+        const lapBtn = document.getElementById('nst-stopwatch-lap-btn');
+
+        if (digitsMain) digitsMain.textContent = formatted.main;
+        if (digitsSub) digitsSub.textContent = formatted.sub;
+        
+        this.updateInputs();
+
+        const isFinished = (rem === 0 && this.state.elapsedBeforePause > 0);
+
+        if (heroCard) {
+            heroCard.className = 'nst-timer-hero-card' + (this.state.running ? ' phase-work' : (isFinished ? ' phase-rest' : ''));
+        }
+
+        if (phaseBadge && phaseText && phaseIcon) {
+            phaseBadge.className = 'nst-phase-badge ' + (this.state.running ? 'work' : (isFinished ? 'rest' : 'prep'));
+            phaseIcon.textContent = this.state.running ? 'hourglass_bottom' : (isFinished ? 'notifications_active' : (rem < this.state.config.durationMs ? 'pause_circle' : 'hourglass_empty'));
+            phaseText.textContent = this.state.running ? 'TIMER IN CORSO' : (isFinished ? 'TEMPO SCADUTO' : (rem < this.state.config.durationMs ? 'TIMER IN PAUSA' : 'TIMER PRONTO'));
+        }
+
+        if (primaryBtn && primaryIcon && primaryLabel) {
+            if (this.state.running) {
+                primaryBtn.classList.add('is-running');
+                primaryIcon.textContent = 'pause';
+                primaryLabel.textContent = 'PAUSA';
+            } else {
+                primaryBtn.classList.remove('is-running');
+                primaryIcon.textContent = isFinished ? 'refresh' : 'play_arrow';
+                primaryLabel.textContent = isFinished ? 'RIAVVIA' : (rem < this.state.config.durationMs ? 'RIPRENDI' : 'AVVIA');
+            }
+        }
+
+        if (lapBtn) {
+            lapBtn.disabled = !this.state.running;
+        }
+
+        // Render Laps
+        const lapsContainer = document.getElementById('nst-stopwatch-laps-container');
+        const lapsBody = document.getElementById('nst-stopwatch-laps-body');
+        if (lapsContainer && lapsBody) {
+            if (this.state.laps.length > 0) {
+                lapsContainer.classList.remove('nst-hidden');
+                let fastestIndex = -1;
+                let slowestIndex = -1;
+                if (this.state.laps.length > 1) {
+                    let minSplit = Infinity;
+                    let maxSplit = -Infinity;
+                    this.state.laps.forEach((l, idx) => {
+                        if (l.splitMs < minSplit) { minSplit = l.splitMs; fastestIndex = idx; }
+                        if (l.splitMs > maxSplit) { maxSplit = l.splitMs; slowestIndex = idx; }
+                    });
+                }
+
+                lapsBody.innerHTML = this.state.laps.map((lap, idx) => {
+                    const remFmt = timerEngine.formatTime(lap.remainingMs);
+                    const splitFmt = timerEngine.formatTime(lap.splitMs);
+                    let rowClass = '';
+                    if (idx === fastestIndex) rowClass = 'lap-best';
+                    else if (idx === slowestIndex) rowClass = 'lap-worst';
+
+                    return `
+                        <tr class="${rowClass}">
+                            <td>GIRO ${lap.number} ${idx === fastestIndex ? '⚡' : ''}</td>
+                            <td>+${splitFmt.main}${splitFmt.sub}</td>
+                            <td>${remFmt.main}${remFmt.sub} (RIMANENTE)</td>
                         </tr>
                     `;
                 }).join('');
@@ -5426,8 +5697,11 @@ const tabataEngine = {
 
 // Handlers pulsanti UI
 function gestisciTimerPrimaryClick() {
+    SoundEngine.getCtx();
     if (currentTimerMode === 'stopwatch') {
         timerEngine.toggle();
+    } else if (currentTimerMode === 'countdown') {
+        countdownEngine.toggle();
     } else {
         tabataEngine.toggle();
     }
@@ -5436,8 +5710,26 @@ function gestisciTimerPrimaryClick() {
 function gestisciTimerResetClick() {
     if (currentTimerMode === 'stopwatch') {
         timerEngine.reset();
+    } else if (currentTimerMode === 'countdown') {
+        countdownEngine.reset();
     } else {
         tabataEngine.reset();
+    }
+}
+
+function gestisciTimerLapClick() {
+    if (currentTimerMode === 'stopwatch') {
+        timerEngine.lap();
+    } else if (currentTimerMode === 'countdown') {
+        countdownEngine.lap();
+    }
+}
+
+function gestisciSvuotaLaps() {
+    if (currentTimerMode === 'stopwatch') {
+        timerEngine.clearLaps();
+    } else if (currentTimerMode === 'countdown') {
+        countdownEngine.clearLaps();
     }
 }
 
@@ -5468,6 +5760,7 @@ function aggiornaConfigDaInput() {
 
 function tabataApplyPreset(presetName) {
     const presets = {
+        'riscaldam_20_20': { prep: 5, work: 20, rest: 20, rounds: 12, sets: 1 },
         'tabata_classic': { prep: 5, work: 20, rest: 10, rounds: 8, sets: 1 },
         'hiit_30_15': { prep: 5, work: 30, rest: 15, rounds: 10, sets: 1 },
         'emom_50_10': { prep: 10, work: 50, rest: 10, rounds: 5, sets: 1 },
@@ -5531,6 +5824,13 @@ function aggiornaDatiDock() {
         timeText.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${tenths}`;
         if (modeLabel) modeLabel.className = `nst-dock-mode ${tabataEngine.state.phase}`;
         if (toggleIcon) toggleIcon.textContent = tabataEngine.state.running ? 'pause' : 'play_arrow';
+    } else if (currentTimerMode === 'countdown') {
+        const rem = countdownEngine.getRemainingMs();
+        const fmt = timerEngine.formatTime(rem);
+        modeText.textContent = countdownEngine.state.running ? 'TIMER RITROSO' : 'TIMER IN PAUSA';
+        timeText.textContent = `${fmt.main}${fmt.sub}`;
+        if (modeLabel) modeLabel.className = countdownEngine.state.running ? 'nst-dock-mode work' : 'nst-dock-mode';
+        if (toggleIcon) toggleIcon.textContent = countdownEngine.state.running ? 'pause' : 'play_arrow';
     } else {
         const elapsedMs = timerEngine.getElapsedMs();
         const fmt = timerEngine.formatTime(elapsedMs);
@@ -5544,6 +5844,8 @@ function aggiornaDatiDock() {
 function dockToggleTimer() {
     if (currentTimerMode === 'stopwatch') {
         timerEngine.toggle();
+    } else if (currentTimerMode === 'countdown') {
+        countdownEngine.toggle();
     } else {
         tabataEngine.toggle();
     }

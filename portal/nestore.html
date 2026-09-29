@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.05.83">
+    <link rel="stylesheet" href="nestore.css?v=1.05.84">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.05.83"></script>
+    <script src="config.js?v=1.05.84"></script>
 </head>
 <body class="nst-body">
 
@@ -21,7 +21,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div class="nst-brand-text">
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.83</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.05.84</span>
             </div>
         </div>
 
@@ -312,13 +312,22 @@
                             <span class="material-symbols-outlined" style="font-size: 16px;">timer</span>
                             <span>CRONOMETRO</span>
                         </button>
+                        <button type="button" class="nst-timer-mode-btn" id="nst-mode-btn-countdown" onclick="switchTimerMode('countdown')">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">hourglass_bottom</span>
+                            <span>TIMER</span>
+                        </button>
                         <button type="button" class="nst-timer-mode-btn" id="nst-mode-btn-tabata" onclick="switchTimerMode('tabata')">
                             <span class="material-symbols-outlined" style="font-size: 16px;">fitness_center</span>
                             <span>TABATA & INTERVALLI</span>
                         </button>
                     </div>
-                    <div style="font-size: 11px; color: var(--nst-text-muted); font-family: 'Orbitron', sans-serif;">
-                        <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle; color: var(--nst-cyan);">volume_up</span> AUDIO ATTIVO
+                    <div style="font-size: 11px; color: var(--nst-text-muted); font-family: 'Orbitron', sans-serif; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle; color: var(--nst-cyan);">volume_up</span> 
+                        <select id="nst-timer-sound-select" onchange="SoundEngine.setProfile(this.value); SoundEngine.beep(880, 200, 'sine')" class="nst-input-text" style="font-size: 11px; padding: 2px 4px; height: auto; border: 1px solid var(--nst-border-color); background: var(--nst-panel-bg); color: var(--nst-text-color); border-radius: 4px;">
+                            <option value="digital">Digitale</option>
+                            <option value="bell">Campanella</option>
+                            <option value="buzzer">Buzzer</option>
+                        </select>
                     </div>
                 </div>
 
@@ -356,8 +365,8 @@
                             <span id="nst-timer-primary-label">AVVIA</span>
                         </button>
 
-                        <!-- Tasto Lap (visibile solo in Stopwatch) -->
-                        <button type="button" class="nst-btn-timer-secondary" id="nst-stopwatch-lap-btn" onclick="timerEngine.lap()" disabled title="Registra Giro">
+                        <!-- Tasto Lap (visibile in Stopwatch e Countdown) -->
+                        <button type="button" class="nst-btn-timer-secondary" id="nst-stopwatch-lap-btn" onclick="gestisciTimerLapClick()" disabled title="Registra Giro">
                             <span class="material-symbols-outlined" style="font-size: 16px;">flag</span>
                             <span>GIRO / LAP</span>
                         </button>
@@ -450,6 +459,7 @@
                     <!-- Preset Rapidi -->
                     <div class="nst-presets-row">
                         <span style="font-size: 10px; font-family: 'Orbitron', sans-serif; color: var(--nst-text-muted);">PRESET:</span>
+                        <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('riscaldam_20_20')">RISCALD. 20/20 x12</button>
                         <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('tabata_classic')">TABATA 20/10 x8</button>
                         <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('hiit_30_15')">HIIT 30/15 x10</button>
                         <button type="button" class="nst-preset-btn" onclick="tabataApplyPreset('emom_50_10')">EMOM 50/10 x5</button>
@@ -457,13 +467,47 @@
                     </div>
                 </div>
 
-                <!-- Sezione Laps / Giri per Cronometro -->
+                <!-- Configurazione Countdown (visibile quando modalità Countdown selezionata) -->
+                <div class="nst-countdown-config-box nst-hidden" id="nst-countdown-config-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; color: var(--nst-cyan); letter-spacing: 0.05em;">
+                            IMPOSTA TIMER
+                        </span>
+                        <span style="font-size: 11px; color: var(--nst-text-muted);">Scegli il tempo da contare</span>
+                    </div>
+
+                    <div class="nst-tabata-config-grid" style="grid-template-columns: repeat(2, 1fr);">
+                        <div class="nst-timer-input-group">
+                            <label class="nst-timer-input-label">
+                                MINUTI
+                            </label>
+                            <div class="nst-timer-stepper">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="countdownEngine.modifyConfig('min', -1)">-</button>
+                                <input type="number" id="nst-cfg-cd-min" class="nst-timer-stepper-val" value="5" min="0" max="99" onchange="countdownEngine.updateConfigFromInput()">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="countdownEngine.modifyConfig('min', 1)">+</button>
+                            </div>
+                        </div>
+
+                        <div class="nst-timer-input-group">
+                            <label class="nst-timer-input-label">
+                                SECONDI
+                            </label>
+                            <div class="nst-timer-stepper">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="countdownEngine.modifyConfig('sec', -15)">-</button>
+                                <input type="number" id="nst-cfg-cd-sec" class="nst-timer-stepper-val" value="0" min="0" max="59" onchange="countdownEngine.updateConfigFromInput()">
+                                <button type="button" class="nst-timer-stepper-btn" onclick="countdownEngine.modifyConfig('sec', 15)">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sezione Laps / Giri per Cronometro / Countdown -->
                 <div class="nst-laps-container nst-hidden" id="nst-stopwatch-laps-container">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; color: var(--nst-cyan);">
                             GIRI REGISTRATI (LAPS)
                         </span>
-                        <button type="button" class="nst-btn-ghost-sm" onclick="timerEngine.clearLaps()">SVUOTA GIRI</button>
+                        <button type="button" class="nst-btn-ghost-sm" onclick="gestisciSvuotaLaps()">SVUOTA GIRI</button>
                     </div>
                     <div style="max-height: 220px; overflow-y: auto;">
                         <table class="nst-laps-table">
@@ -1940,6 +1984,6 @@ GIORNO 2:
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.05.83"></script>
+    <script src="nestore.js?v=1.05.84"></script>
 </body>
 </html>
