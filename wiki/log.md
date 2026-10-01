@@ -2,6 +2,12 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-01] fix | Dashboard — Risoluzione ReferenceError hasOverdueRate e Scope Handling su Iscritti (v1.05.99)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Spostata la dichiarazione di `hasOverdueRate` al livello dello scope comune della card atleta prima del blocco di condizionali per il tipo pagamento.
+  - Risolto il bug `ReferenceError: hasOverdueRate is not defined` a riga 6684 che causava il blocco del rendering dell'intero registro iscritti quando erano presenti atleti con `UNICA RATA` o `CARNET`.
+  - Incrementata la versione globale a `v1.05.99`.
+
 ## [2026-10-01] fix | NESTORE — Ripristino Integrale Scheda Allenamento (Forza/Metcon), Persistenza Carichi & Dock Smart Visibility (v1.05.97)
 - **Ripristino Integrale Esercizi Attivi (`portal/nestore.js`)**:
   - Creata la funzione autonoma `renderForzaEserciziAttivi(p, config)` per estrarre la generazione della tabella esercizi (riscaldamento, serie allenanti, target e carichi in kg) e renderla riutilizzabile sia in avvio sia in ripristino da background o reload del browser.

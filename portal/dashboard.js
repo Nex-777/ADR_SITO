@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.97"
+                VERSION: "1.05.99"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6553,6 +6553,7 @@
                 let headerBoxesHtml = '';
                 let headerLabel = 'ABBONAMENTO';
                 let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
+                let hasOverdueRate = false;
 
                 if (atl.tipo_iscrizione === 'PROMO_BUNDLE') {
                     tipoPagamentoBadge = '<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">🎁 COMPRESO CON IBRIDO</span>';
@@ -6591,7 +6592,6 @@
                     const statoRate = atl.stato_rate || 'IN_REGOLA';
                     headerLabel = `A RATE (${ratePagate}/${totRate})`;
 
-                    let hasOverdueRate = false;
                     const oggi = new Date();
                     let annoInizio = oggi.getFullYear();
                     if (dataRif) {
