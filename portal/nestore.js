@@ -363,6 +363,24 @@ async function initNestore() {
         await caricaLibreriaProgrammi();
         renderCatalogoIbrido();
 
+        // 7. Ripristino Sessione Allenamento in background e Listener per Auto-Save
+        const bodyEl = document.body;
+        let saveTimeout;
+        bodyEl.addEventListener('input', (e) => {
+            if (e.target.closest('#nst-ibrido-active-modal') || e.target.closest('#nst-active-workout-modal')) {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(salvaStatoWorkoutAttivo, 1000);
+            }
+        });
+        bodyEl.addEventListener('click', (e) => {
+            if (e.target.closest('#nst-ibrido-active-modal') || e.target.closest('#nst-active-workout-modal')) {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(salvaStatoWorkoutAttivo, 500);
+            }
+        });
+        
+        ripristinaStatoWorkoutAttivo();
+
     } catch (err) {
         console.error("Errore inizializzazione Nestore:", err);
     }
@@ -6088,6 +6106,7 @@ function dockCloseTimer() {
         if (typeof chiudiModalWorkoutAttivo === 'function') chiudiModalWorkoutAttivo();
         timerEngine.reset();
         aggiornaVisibilitaDock();
+        pulisciStatoWorkoutAttivo();
         return;
     }
 
@@ -6101,6 +6120,7 @@ function dockCloseTimer() {
         tabataEngine.reset();
     }
     aggiornaVisibilitaDock();
+    pulisciStatoWorkoutAttivo();
 }
 
 function salvaStatoWorkoutAttivo() {
@@ -6466,6 +6486,7 @@ function avviaAllenamentoInvictus() {
     if (modal) modal.classList.remove('nst-hidden');
 
     aggiornaModalWorkoutAttivo();
+    salvaStatoWorkoutAttivo();
 }
 
 function renderModalLapsList() {
@@ -6638,6 +6659,7 @@ async function confermaSalvaAllenamentoStandard() {
         timerEngine.reset();
         const modal = document.getElementById('nst-active-workout-modal');
         if (modal) modal.classList.add('nst-hidden');
+        pulisciStatoWorkoutAttivo();
 
         showTimerToast("✓ ALLENAMENTO INVICTUS SALVATO CON SUCCESSO!");
         await caricaKpiDashboard();
@@ -6672,6 +6694,7 @@ function chiudiModalWorkoutAttivo() {
     timerEngine.reset();
     const modal = document.getElementById('nst-active-workout-modal');
     if (modal) modal.classList.add('nst-hidden');
+    pulisciStatoWorkoutAttivo();
 }
 
 // ===========================================================================
@@ -7100,6 +7123,7 @@ function ciclaStatoSerieForza(rowEl) {
         }
     }
 
+    salvaStatoWorkoutAttivo();
     return nextStatus || null;
 }
 
@@ -8208,6 +8232,7 @@ async function avviaIbridoSeduta() {
 
     if (modal) modal.classList.remove('nst-hidden');
     aggiornaIbridoModalAttivo();
+    salvaStatoWorkoutAttivo();
 }
 
 function renderMetconGiroCorrente() {
@@ -8314,6 +8339,7 @@ function cambiaMetconGiro(delta) {
         currentMetconDisplayedRound = nuovoGiro;
         renderMetconGiroCorrente();
     }
+    salvaStatoWorkoutAttivo();
 }
 
 function impostaMetconGiro(giroNum) {
@@ -8323,6 +8349,7 @@ function impostaMetconGiro(giroNum) {
         currentMetconDisplayedRound = g;
         renderMetconGiroCorrente();
     }
+    salvaStatoWorkoutAttivo();
 }
 
 function gestisciIbridoActionPause() {
@@ -9049,6 +9076,7 @@ async function confermaSalvaIbridoSeduta() {
 
         const modal = document.getElementById('nst-ibrido-active-modal');
         if (modal) modal.classList.add('nst-hidden');
+        pulisciStatoWorkoutAttivo();
 
         const toastMsg = esitoPerNote
             ? `✓ SESSIONE ${p.nome.toUpperCase()} REGISTRATA (${esitoPerNote})!`
@@ -9089,6 +9117,7 @@ function minimizzaIbridoSeduta() {
     ibridoSessionMinimized = true;
     if (typeof window !== 'undefined') window.ibridoSessionMinimized = true;
     aggiornaVisibilitaDock();
+    salvaStatoWorkoutAttivo();
 }
 
 function chiudiIbridoActiveModal() {
@@ -9104,6 +9133,7 @@ function chiudiIbridoActiveModal() {
         ibridoMetconSummary = null;
         currentMetconDisplayedRound = 1;
         lastActiveTimerGiro = 1;
+        pulisciStatoWorkoutAttivo();
         return;
     }
     const p = ibridoSelezionato;
@@ -9129,6 +9159,7 @@ function chiudiIbridoActiveModal() {
 
     const modal = document.getElementById('nst-ibrido-active-modal');
     if (modal) modal.classList.add('nst-hidden');
+    pulisciStatoWorkoutAttivo();
 }
 
 // ===========================================================================

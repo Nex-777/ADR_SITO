@@ -3988,3 +3988,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - **Profili Audio & Potenziamento Volume**: Aumentato il gain a 0.85 sia in `portal/nestore.js` che in `portal/timer-dock.js`; introdotto selettore per 3 profili sonori (*Digitale*, *Campanella*, *Buzzer*) con persistenza `adr_timer_sound_profile`.
 - **Preset Riscaldamento**: Aggiunto preset `riscaldam_20_20` (20/20 x12 round) in cima all'elenco dei preset veloci Tabata.
 - **Suite di Test**: Aggiunti test di validazione dedicati per Countdown Engine, preset e profili sonori in `tests/timer-tabata.test.js` (183/183 passati).
+
+## [2026-10-01] ingest | Workout Session Persistence Bugfix
+- Implemented robust localStorage persistence (adr_active_workout_session) for Ibrido and Invictus active sessions.
+- State is continuously saved during Metcon/Forza execution (notes, target checkboxes, lap rounds).
+- Entire floating dock is now clickable to seamlessly expand and restore the correct modal upon reload or returning from background.
+- Handled complete state restoration and clearing logic across timer engines.
