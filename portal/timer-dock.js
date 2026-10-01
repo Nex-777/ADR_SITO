@@ -190,11 +190,22 @@
         document.body.appendChild(dock);
 
         // Click handlers
-        document.getElementById('adr-dock-toggle-btn').addEventListener('click', toggleActiveTimer);
-        document.getElementById('adr-dock-expand-btn').addEventListener('click', () => {
+        dock.addEventListener('click', () => {
             window.location.href = 'nestore.html#timer';
         });
-        document.getElementById('adr-dock-close-btn').addEventListener('click', closeGlobalTimer);
+        
+        document.getElementById('adr-dock-toggle-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleActiveTimer();
+        });
+        document.getElementById('adr-dock-expand-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.location.href = 'nestore.html#timer';
+        });
+        document.getElementById('adr-dock-close-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeGlobalTimer();
+        });
     }
 
     // Chiudi e resetta timer attivo da localStorage

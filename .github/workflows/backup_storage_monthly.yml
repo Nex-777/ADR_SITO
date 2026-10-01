@@ -9,6 +9,8 @@ jobs:
   backup_storage_monthly:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: write # Necessario per creare la GitHub Release mensile e allegare il backup cifrato
 
     steps:
       - name: Checkout repository

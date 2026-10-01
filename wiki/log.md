@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-01] fix | Permessi GitHub Release per Backup Storage Mensile (v1.05.94)
+- **Fix Permissions Workflow (`backup_storage_monthly.yml`)**:
+  - Aggiunto il blocco `permissions: contents: write` al job `backup_storage_monthly`.
+  - Risolve l'errore HTTP 403 `Resource not accessible by integration` su `softprops/action-gh-release@v2` riscontrato nell'esecuzione automatica del 1° del mese, consentendo la creazione corretta della release tag `storage-backup/YYYY-MM` e l'allegamento dello ZIP cifrato.
+
 ## [2026-09-29] feat | NESTORE — Pulsante di Chiusura & Reset con Conferma sul Floating Timer Dock (v1.05.93)
 - **Aggiunta Tasto Chiudi e Resetta (`portal/nestore.html`, `portal/timer-dock.js`)**:
   - Introdotto il terzo pulsante `✕` (`#nst-dock-close-btn` e `#adr-dock-close-btn`) all'interno del widget fluttuante del cronometro/timer, posizionato a destra del tasto di espansione.

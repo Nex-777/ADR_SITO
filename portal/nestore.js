@@ -6059,11 +6059,17 @@ function dockToggleTimer() {
 }
 
 function dockExpandTimer() {
-    if (ibridoSelezionato && ibridoSessionMinimized) {
+    const rawSession = localStorage.getItem('adr_active_workout_session');
+    
+    if ((ibridoSelezionato && ibridoSessionMinimized) || (rawSession && JSON.parse(rawSession).type === 'ibrido')) {
         const modal = document.getElementById('nst-ibrido-active-modal');
         if (modal) modal.classList.remove('nst-hidden');
         ibridoSessionMinimized = false;
         if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
+        aggiornaVisibilitaDock();
+    } else if (rawSession && JSON.parse(rawSession).type === 'invictus') {
+        const modal = document.getElementById('nst-active-workout-modal');
+        if (modal) modal.classList.remove('nst-hidden');
         aggiornaVisibilitaDock();
     } else {
         if (typeof window !== 'undefined' && typeof window.switchNestorePanel === 'function') {
@@ -6095,6 +6101,138 @@ function dockCloseTimer() {
         tabataEngine.reset();
     }
     aggiornaVisibilitaDock();
+}
+
+function salvaStatoWorkoutAttivo() {
+    try {
+        let type = null;
+        let state = {};
+
+        const invictusModal = document.getElementById('nst-active-workout-modal');
+        const ibridoModal = document.getElementById('nst-ibrido-active-modal');
+
+        if (ibridoSelezionato || (ibridoModal && !ibridoModal.classList.contains('nst-hidden'))) {
+            type = 'ibrido';
+            const noteEl = document.getElementById('nst-ibrido-workout-note-inline');
+            state = {
+                ibridoSelezionato,
+                ibridoMetconResults: typeof ibridoMetconResults !== 'undefined' ? ibridoMetconResults : [],
+                ibridoMetconSummary: typeof ibridoMetconSummary !== 'undefined' ? ibridoMetconSummary : null,
+                ibridoMetconPersonalizzazione: typeof ibridoMetconPersonalizzazione !== 'undefined' ? ibridoMetconPersonalizzazione : null,
+                ibridoSessionMinimized: typeof ibridoSessionMinimized !== 'undefined' ? ibridoSessionMinimized : false,
+                currentMetconDisplayedRound: typeof currentMetconDisplayedRound !== 'undefined' ? currentMetconDisplayedRound : 1,
+                lastActiveTimerGiro: typeof lastActiveTimerGiro !== 'undefined' ? lastActiveTimerGiro : 1,
+                note: noteEl ? noteEl.value : ''
+            };
+
+            if (ibridoSelezionato && ibridoSelezionato.categoria === 'forza') {
+                const forzaRows = document.querySelectorAll('.nst-active-set-row');
+                const forzaState = [];
+                forzaRows.forEach((row, i) => {
+                    const status = row.dataset.setStatus || '';
+                    const pesoInput = row.querySelector('.nst-forza-peso-input');
+                    const ripInput = row.querySelector('.nst-forza-rip-input');
+                    forzaState.push({
+                        index: i,
+                        status: status,
+                        peso: pesoInput ? pesoInput.value : '',
+                        rip: ripInput ? ripInput.value : ''
+                    });
+                });
+                state.forzaState = forzaState;
+            }
+        } else if (invictusModal && !invictusModal.classList.contains('nst-hidden')) {
+            type = 'invictus';
+            const noteEl = document.getElementById('nst-workout-note-input');
+            state = {
+                invictusPullBase: typeof invictusPullBase !== 'undefined' ? invictusPullBase : 5,
+                note: noteEl ? noteEl.value : ''
+            };
+        }
+
+        if (type) {
+            localStorage.setItem('adr_active_workout_session', JSON.stringify({ type, state }));
+        }
+    } catch (e) {
+        console.warn('Errore durante il salvataggio dello stato allenamento:', e);
+    }
+}
+
+function pulisciStatoWorkoutAttivo() {
+    localStorage.removeItem('adr_active_workout_session');
+}
+
+function ripristinaStatoWorkoutAttivo() {
+    try {
+        const raw = localStorage.getItem('adr_active_workout_session');
+        if (!raw) return;
+        const session = JSON.parse(raw);
+        if (!session || !session.type || !session.state) return;
+
+        if (session.type === 'ibrido') {
+            ibridoSelezionato = session.state.ibridoSelezionato;
+            ibridoMetconResults = session.state.ibridoMetconResults || [];
+            ibridoMetconSummary = session.state.ibridoMetconSummary || null;
+            ibridoMetconPersonalizzazione = session.state.ibridoMetconPersonalizzazione || null;
+            ibridoSessionMinimized = false; 
+            if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
+            currentMetconDisplayedRound = session.state.currentMetconDisplayedRound || 1;
+            lastActiveTimerGiro = session.state.lastActiveTimerGiro || 1;
+
+            if (ibridoSelezionato) {
+                const isForza = (ibridoSelezionato.categoria === 'forza');
+                if (isForza && typeof costruisciInterfacciaForzaAttiva === 'function') {
+                    costruisciInterfacciaForzaAttiva(ibridoSelezionato);
+                    if (session.state.forzaState && session.state.forzaState.length > 0) {
+                        const forzaRows = document.querySelectorAll('.nst-active-set-row');
+                        session.state.forzaState.forEach(st => {
+                            const row = forzaRows[st.index];
+                            if (row) {
+                                row.dataset.setStatus = st.status;
+                                if (st.status === 'fatta') row.classList.add('status-done');
+                                else if (st.status === 'parziale') row.classList.add('status-partial');
+                                else if (st.status === 'saltata') row.classList.add('status-missed');
+                                
+                                const pesoInput = row.querySelector('.nst-forza-peso-input');
+                                const ripInput = row.querySelector('.nst-forza-rip-input');
+                                if (pesoInput && st.peso !== undefined) pesoInput.value = st.peso;
+                                if (ripInput && st.rip !== undefined) ripInput.value = st.rip;
+                            }
+                        });
+                    }
+                } else if (typeof costruisciInterfacciaMetconAttivo === 'function') {
+                    costruisciInterfacciaMetconAttivo(ibridoSelezionato);
+                }
+                
+                const noteEl = document.getElementById('nst-ibrido-workout-note-inline');
+                if (noteEl && session.state.note) noteEl.value = session.state.note;
+
+                const modal = document.getElementById('nst-ibrido-active-modal');
+                if (modal) modal.classList.remove('nst-hidden');
+            }
+        } else if (session.type === 'invictus') {
+            invictusPullBase = session.state.invictusPullBase || 5;
+            if (typeof setInvictusPullBase === 'function') setInvictusPullBase(invictusPullBase);
+            
+            const noteEl = document.getElementById('nst-workout-note-input');
+            if (noteEl && session.state.note) noteEl.value = session.state.note;
+            
+            const pullEl = document.getElementById('nst-modal-pull-reps');
+            const pushEl = document.getElementById('nst-modal-push-reps');
+            const squatEl = document.getElementById('nst-modal-squat-reps');
+            if (pullEl) pullEl.textContent = invictusPullBase;
+            if (pushEl) pushEl.textContent = invictusPullBase * 2;
+            if (squatEl) squatEl.textContent = invictusPullBase * 4;
+
+            const modal = document.getElementById('nst-active-workout-modal');
+            if (modal) modal.classList.remove('nst-hidden');
+        }
+        
+        aggiornaVisibilitaDock();
+    } catch (e) {
+        console.warn('Errore durante il ripristino dello stato allenamento:', e);
+        pulisciStatoWorkoutAttivo();
+    }
 }
 
 // --- 5. Render Loop Master (RAF + Background Interval) ---
