@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-01] fix | NESTORE — Ripristino Integrale Scheda Allenamento (Forza/Metcon), Persistenza Carichi & Dock Smart Visibility (v1.05.97)
+- **Ripristino Integrale Esercizi Attivi (`portal/nestore.js`)**:
+  - Creata la funzione autonoma `renderForzaEserciziAttivi(p, config)` per estrarre la generazione della tabella esercizi (riscaldamento, serie allenanti, target e carichi in kg) e renderla riutilizzabile sia in avvio sia in ripristino da background o reload del browser.
+  - Risolto il bug per cui all'uscita o rientro nella pagina la scheda attiva di Forza riappariva vuota con il solo cronometro.
+- **Persistenza Completa Stato Workout (`portal/nestore.js`)**:
+  - Esteso il serializzatore `salvaStatoWorkoutAttivo()` per catturare `ibridoConfigurazionePersonalizzata`, lo stato delle singole serie (`status-done`, `status-partial`, `status-skipped`), e i carichi (`kg`) / ripetizioni digitati in tempo reale dall'atleta, memorizzandoli in `adr_active_workout_session`.
+  - In `ripristinaStatoWorkoutAttivo()` ricreata la tabella completa e riapplicati tutti gli stati, sincronizzando il titolo (`IBRIDO — FORZA 3 — IN CORSO`) e la modalità timer corretta (`stopwatch` vs `tabata`).
+- **Dock Smart Visibility & Anti-Duplicazione (`portal/nestore.js`, `portal/timer-dock.js`)**:
+  - Modificato `aggiornaVisibilitaDock()` per nascondere la mini-dock flottante in basso quando il modale dell'allenamento è già aperto a tutto schermo (`!ibridoSessionMinimized`), mostrandola unicamente se l'atleta tocca esplicitamente "RIDUCI".
+  - Inserito guard in `portal/timer-dock.js` per prevenire qualsiasi iniezione della dock globale se ci si trova su una pagina di Nestore.
+- **Testing & QA (`tests/workout-persistence.test.js`)**:
+  - Creata test suite dedicata con 5 test unitari per generazione UI, salvataggio localStorage, pulizia e ripristino con verifica visibilità dock.
+  - Test suite globale Vitest: 201/201 test superati con successo (16 file su 16).
+
+
 ## [2026-10-01] fix & feat | Fix Struttura Stripe Webhook per Subscriptions e Rilevamento Mesi Insoluti/Scaduti (v1.05.96)
 - **Backend Stripe Webhook (`api/stripe-webhook.js`)**:
   - Risolto il bug di estrazione di `subId` nelle fatture Stripe periodiche (`invoice.paid`, `invoice.payment_failed`): nelle versioni recenti dell'API Stripe `invoice.subscription` è `null` e l'ID è annidato in `invoice.parent.subscription_details.subscription`.

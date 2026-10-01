@@ -179,6 +179,7 @@ function tornaAdAdrenalina() {
 // Inizializzazione al caricamento
 if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
+        ripristinaStatoWorkoutAttivo();
         initNestore();
         inizializzaRiconoscimentoVocale();
     });
@@ -6092,20 +6093,16 @@ function dockExpandTimer() {
         if (raw) sessionObj = JSON.parse(raw);
     } catch (e) {}
 
-    if (ibridoSelezionato || (sessionObj && sessionObj.type === 'ibrido')) {
-        if (!ibridoSelezionato && sessionObj) {
-            ripristinaStatoWorkoutAttivo();
-        } else {
-            const modal = document.getElementById('nst-ibrido-active-modal');
-            if (modal) modal.classList.remove('nst-hidden');
-            ibridoSessionMinimized = false;
-            if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
-            aggiornaVisibilitaDock();
-        }
-    } else if (sessionObj && sessionObj.type === 'invictus') {
-        const modal = document.getElementById('nst-active-workout-modal');
+    if (ibridoSelezionato && ibridoSessionMinimized) {
+        const modal = document.getElementById('nst-ibrido-active-modal');
         if (modal) modal.classList.remove('nst-hidden');
+        ibridoSessionMinimized = false;
+        if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
         aggiornaVisibilitaDock();
+    } else if (!ibridoSelezionato && sessionObj && sessionObj.type === 'ibrido') {
+        ripristinaStatoWorkoutAttivo();
+    } else if (sessionObj && sessionObj.type === 'invictus' && !document.getElementById('nst-active-workout-modal')?.classList.contains('nst-hidden')) {
+        ripristinaStatoWorkoutAttivo();
     } else {
         if (typeof window !== 'undefined' && typeof window.switchNestorePanel === 'function') {
             window.switchNestorePanel('timer');
@@ -6148,29 +6145,42 @@ function salvaStatoWorkoutAttivo() {
         const invictusModal = document.getElementById('nst-active-workout-modal');
         const ibridoModal = document.getElementById('nst-ibrido-active-modal');
 
-        if (ibridoSelezionato || (ibridoModal && !ibridoModal.classList.contains('nst-hidden'))) {
+        const prog = ibridoSelezionato || (typeof window !== 'undefined' ? window.ibridoSelezionato : null);
+        const config = (typeof ibridoConfigurazionePersonalizzata !== 'undefined' && ibridoConfigurazionePersonalizzata)
+            ? ibridoConfigurazionePersonalizzata
+            : ((typeof window !== 'undefined' && window.ibridoConfigurazionePersonalizzata) || null);
+
+        if (prog || (ibridoModal && !ibridoModal.classList.contains('nst-hidden'))) {
             type = 'ibrido';
             const noteEl = document.getElementById('nst-ibrido-workout-note-inline');
             state = {
-                ibridoSelezionato,
+                ibridoSelezionato: prog,
+                ibridoConfigurazionePersonalizzata: config,
                 ibridoMetconResults: typeof ibridoMetconResults !== 'undefined' ? ibridoMetconResults : [],
                 ibridoMetconSummary: typeof ibridoMetconSummary !== 'undefined' ? ibridoMetconSummary : null,
                 ibridoMetconPersonalizzazione: typeof ibridoMetconPersonalizzazione !== 'undefined' ? ibridoMetconPersonalizzazione : null,
                 ibridoSessionMinimized: typeof ibridoSessionMinimized !== 'undefined' ? ibridoSessionMinimized : false,
                 currentMetconDisplayedRound: typeof currentMetconDisplayedRound !== 'undefined' ? currentMetconDisplayedRound : 1,
                 lastActiveTimerGiro: typeof lastActiveTimerGiro !== 'undefined' ? lastActiveTimerGiro : 1,
+                currentTimerMode: typeof currentTimerMode !== 'undefined' ? currentTimerMode : 'stopwatch',
                 note: noteEl ? noteEl.value : ''
             };
 
-            if (ibridoSelezionato && ibridoSelezionato.categoria === 'forza') {
+            const isForza = prog && (prog.tipo === 'forza' || prog.categoria === 'forza');
+            if (isForza) {
                 const forzaRows = document.querySelectorAll('.nst-active-set-row');
                 const forzaState = [];
                 forzaRows.forEach((row, i) => {
-                    const status = row.dataset.setStatus || '';
-                    const pesoInput = row.querySelector('.nst-forza-peso-input');
-                    const ripInput = row.querySelector('.nst-forza-rip-input');
+                    const status = (row.dataset && row.dataset.setStatus) ? row.dataset.setStatus : (row.getAttribute('data-set-status') || '');
+                    const pesoInput = row.querySelector('.peso-input') || row.querySelector('input[type="number"]:first-of-type');
+                    const ripInput = row.querySelector('.rip-input') || row.querySelector('input[type="number"]:last-of-type');
+                    const isExtra = row.classList.contains('extra-row');
+                    const exIdx = row.dataset.exIdx || row.getAttribute('data-ex-idx') || row.closest('.nst-active-ex-block')?.dataset.exIdx || null;
+
                     forzaState.push({
                         index: i,
+                        exIdx: exIdx !== null ? parseInt(exIdx, 10) : null,
+                        isExtra: isExtra,
                         status: status,
                         peso: pesoInput ? pesoInput.value : '',
                         rip: ripInput ? ripInput.value : ''
@@ -6183,6 +6193,7 @@ function salvaStatoWorkoutAttivo() {
             const noteEl = document.getElementById('nst-workout-note-input');
             state = {
                 invictusPullBase: typeof invictusPullBase !== 'undefined' ? invictusPullBase : 5,
+                currentTimerMode: typeof currentTimerMode !== 'undefined' ? currentTimerMode : 'stopwatch',
                 note: noteEl ? noteEl.value : ''
             };
         }
@@ -6208,6 +6219,7 @@ function ripristinaStatoWorkoutAttivo() {
 
         if (session.type === 'ibrido') {
             ibridoSelezionato = session.state.ibridoSelezionato;
+            ibridoConfigurazionePersonalizzata = session.state.ibridoConfigurazionePersonalizzata || null;
             ibridoMetconResults = session.state.ibridoMetconResults || [];
             ibridoMetconSummary = session.state.ibridoMetconSummary || null;
             ibridoMetconPersonalizzazione = session.state.ibridoMetconPersonalizzazione || null;
@@ -6217,39 +6229,94 @@ function ripristinaStatoWorkoutAttivo() {
             lastActiveTimerGiro = session.state.lastActiveTimerGiro || 1;
 
             if (ibridoSelezionato) {
-                const isForza = (ibridoSelezionato.categoria === 'forza');
-                if (isForza && typeof costruisciInterfacciaForzaAttiva === 'function') {
-                    costruisciInterfacciaForzaAttiva(ibridoSelezionato);
+                const p = ibridoSelezionato;
+                const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
+
+                // Sincronizza modalità timer corretta
+                currentTimerMode = session.state.currentTimerMode || (isForza ? 'stopwatch' : (p.timer_mode || 'stopwatch'));
+                try { if (typeof localStorage !== 'undefined') localStorage.setItem('adr_timer_mode', currentTimerMode); } catch (e) {}
+
+                // Aggiorna titolo modale
+                const titleEl = document.getElementById('nst-ibrido-active-title');
+                if (titleEl) {
+                    titleEl.textContent = `IBRIDO — ${p.nome.toUpperCase()} — IN CORSO`;
+                    if (titleEl.style) titleEl.style.color = isForza ? 'var(--nst-amber)' : 'var(--nst-cyan)';
+                }
+
+                // Vista running / save
+                const runningView = document.getElementById('nst-ibrido-running-view');
+                const saveView = document.getElementById('nst-ibrido-save-view');
+                if (runningView) runningView.classList.remove('nst-hidden');
+                if (saveView) saveView.classList.add('nst-hidden');
+
+                // Laps wrapper e tasto secondario
+                const lapsWrapper = document.getElementById('nst-ibrido-laps-wrapper');
+                const secBtnIcon = document.getElementById('nst-ibrido-action-sec-icon');
+                const secBtnText = document.getElementById('nst-ibrido-action-sec-text');
+                if (currentTimerMode === 'tabata') {
+                    if (lapsWrapper) lapsWrapper.classList.add('nst-hidden');
+                    if (secBtnIcon) secBtnIcon.textContent = 'skip_next';
+                    if (secBtnText) secBtnText.textContent = 'SALTA FASE';
+                } else {
+                    if (lapsWrapper) lapsWrapper.classList.remove('nst-hidden');
+                    renderIbridoLapsList();
+                    if (secBtnIcon) secBtnIcon.textContent = 'flag';
+                    if (secBtnText) secBtnText.textContent = 'GIRO (LAP)';
+                }
+
+                // Ricostruisci tabella esercizi
+                if (isForza && ibridoConfigurazionePersonalizzata) {
+                    renderForzaEserciziAttivi(p, ibridoConfigurazionePersonalizzata);
+
+                    // Ricrea eventuali serie extra
                     if (session.state.forzaState && session.state.forzaState.length > 0) {
+                        session.state.forzaState.forEach(st => {
+                            if (st.isExtra && st.exIdx !== null && typeof aggiungiSerieExtraForza === 'function') {
+                                aggiungiSerieExtraForza(st.exIdx);
+                            }
+                        });
+
+                        // Riapplica stato serie, carichi e ripetizioni digitati
                         const forzaRows = document.querySelectorAll('.nst-active-set-row');
                         session.state.forzaState.forEach(st => {
                             const row = forzaRows[st.index];
                             if (row) {
-                                row.dataset.setStatus = st.status;
-                                if (st.status === 'fatta') row.classList.add('status-done');
-                                else if (st.status === 'parziale') row.classList.add('status-partial');
-                                else if (st.status === 'saltata') row.classList.add('status-missed');
+                                if (st.status) {
+                                    row.dataset.setStatus = st.status;
+                                    row.setAttribute('data-set-status', st.status);
+                                    row.classList.remove('status-done', 'status-fatta', 'status-partial', 'status-parziale', 'status-skipped', 'status-saltata');
+                                    if (st.status === 'fatta') row.classList.add('status-done', 'status-fatta');
+                                    else if (st.status === 'parziale') row.classList.add('status-partial', 'status-parziale');
+                                    else if (st.status === 'saltata') row.classList.add('status-skipped', 'status-saltata');
+                                }
                                 
-                                const pesoInput = row.querySelector('.nst-forza-peso-input');
-                                const ripInput = row.querySelector('.nst-forza-rip-input');
-                                if (pesoInput && st.peso !== undefined) pesoInput.value = st.peso;
-                                if (ripInput && st.rip !== undefined) ripInput.value = st.rip;
+                                const pesoInput = row.querySelector('.peso-input') || row.querySelector('input[type="number"]:first-of-type');
+                                const ripInput = row.querySelector('.rip-input') || row.querySelector('input[type="number"]:last-of-type');
+                                if (pesoInput && st.peso !== undefined && st.peso !== '') pesoInput.value = st.peso;
+                                if (ripInput && st.rip !== undefined && st.rip !== '') ripInput.value = st.rip;
                             }
                         });
                     }
-                } else if (typeof costruisciInterfacciaMetconAttivo === 'function') {
-                    costruisciInterfacciaMetconAttivo(ibridoSelezionato);
+                } else if (!isForza) {
+                    renderMetconGiroCorrente();
                 }
                 
+                // Note
                 const noteEl = document.getElementById('nst-ibrido-workout-note-inline');
                 if (noteEl && session.state.note) noteEl.value = session.state.note;
 
                 const modal = document.getElementById('nst-ibrido-active-modal');
                 if (modal) modal.classList.remove('nst-hidden');
+
+                WakeLockManager.request();
+                aggiornaIbridoModalAttivo();
             }
         } else if (session.type === 'invictus') {
             invictusPullBase = session.state.invictusPullBase || 5;
             if (typeof setInvictusPullBase === 'function') setInvictusPullBase(invictusPullBase);
+
+            currentTimerMode = 'stopwatch';
+            try { if (typeof localStorage !== 'undefined') localStorage.setItem('adr_timer_mode', 'stopwatch'); } catch (e) {}
             
             const noteEl = document.getElementById('nst-workout-note-input');
             if (noteEl && session.state.note) noteEl.value = session.state.note;
@@ -6261,8 +6328,15 @@ function ripristinaStatoWorkoutAttivo() {
             if (pushEl) pushEl.textContent = invictusPullBase * 2;
             if (squatEl) squatEl.textContent = invictusPullBase * 4;
 
+            const runningView = document.getElementById('nst-workout-running-view');
+            const saveView = document.getElementById('nst-workout-save-view');
+            if (runningView) runningView.classList.remove('nst-hidden');
+            if (saveView) saveView.classList.add('nst-hidden');
+
+            renderModalLapsList();
             const modal = document.getElementById('nst-active-workout-modal');
             if (modal) modal.classList.remove('nst-hidden');
+            aggiornaModalWorkoutAttivo();
         }
         
         aggiornaVisibilitaDock();
@@ -8107,100 +8181,7 @@ async function avviaIbridoSeduta() {
     // Tabella interattiva esercizi
     if (exTableContainer) {
         if (isForza && ibridoConfigurazionePersonalizzata) {
-            exTableContainer.innerHTML = `
-                <div class="nst-active-workout-wrapper">
-                    ${ibridoConfigurazionePersonalizzata.esercizi.map((ex, exIdx) => {
-                        const hasWarmup = !ex.isBw && ex.riscaldamento && ex.riscaldamento.length > 0;
-
-                        // Righe riscaldamento specifico interattive (Risc 1 10x, Risc 2 5x, etc.)
-                        const warmupRowsHtml = hasWarmup ? ex.riscaldamento.map((w, wIdx) => {
-                            const riscLabel = `Risc ${wIdx + 1} ${w.rip}x`;
-                            return `
-                                <tr class="nst-active-set-row warmup-row">
-                                    <td class="nst-active-set-label">
-                                        <span style="font-size: 11px;">🔥</span>
-                                        <span>${riscLabel}</span>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <div class="nst-active-input-col">
-                                            <input type="number" id="nst-ibrido-warmup-peso-${exIdx}-${wIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${w.peso_kg}" step="0.5" min="0" max="500">
-                                            <span class="nst-active-unit-label">kg</span>
-                                        </div>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <div class="nst-active-input-col">
-                                            <input type="number" id="nst-ibrido-warmup-rip-${exIdx}-${wIdx}" class="nst-active-set-input rip-input nst-ex-input" value="${w.rip}" min="0" max="100">
-                                            <span class="nst-active-unit-label">rip</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('') : '';
-
-                        // Righe serie allenanti interattive (Serie 1, Serie 2, etc.)
-                        const workRowsHtml = Array.from({ length: ex.serie_target }).map((_, sIdx) => {
-                            const pesoVal = ex.isBw ? 0 : (ex.peso_target_kg || 0);
-                            return `
-                                <tr class="nst-active-set-row work-row">
-                                    <td class="nst-active-set-label">
-                                        <span>Serie ${sIdx + 1}</span>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <div class="nst-active-input-col">
-                                            <input type="number" id="nst-ibrido-ex-peso-${exIdx}-${sIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${pesoVal}" step="0.5" min="0" max="500" ${ex.isBw ? 'disabled title="Corpo Libero"' : ''}>
-                                            <span class="nst-active-unit-label">kg</span>
-                                        </div>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <div class="nst-active-input-col">
-                                            <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-active-set-input rip-input nst-ex-input nst-active-rip-input" value="${ex.rip_target}" min="0" max="100">
-                                            <span class="nst-active-unit-label">rip</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('');
-
-                        return `
-                            <div class="nst-active-ex-block" data-ex-idx="${exIdx}">
-                                <div class="nst-active-ex-header">
-                                    <div>
-                                        <span class="nst-active-ex-title">${escapeHtml(ex.nome)}</span>
-                                        ${hasWarmup ? `<div style="font-size: 10px; color: var(--nst-amber); margin-top: 2px;">🔥 Riscaldamento specifico (5 serie) + Serie Allenanti</div>` : ''}
-                                    </div>
-                                    <div class="nst-active-target-badge">
-                                        🎯 TARGET: ${escapeHtml(ex.target_descrittivo)}
-                                    </div>
-                                </div>
-
-                                <table class="nst-ex-table nst-active-series-table" style="width: 100%;">
-                                    <thead>
-                                        <tr class="nst-active-sets-header">
-                                            <th style="width: 32%;">SET</th>
-                                            <th style="width: 34%; text-align: center;">CARICO (KG)</th>
-                                            <th style="width: 34%; text-align: center;">RIP EFFETTIVE</th>
-                                        </tr>
-                                    </thead>
-                                    ${hasWarmup ? `
-                                    <tbody id="nst-active-warmup-tbody-ex-${exIdx}">
-                                        ${warmupRowsHtml}
-                                    </tbody>
-                                    ` : ''}
-                                    <tbody id="nst-active-tbody-ex-${exIdx}">
-                                        ${workRowsHtml}
-                                    </tbody>
-                                </table>
-
-                                <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-                                    <button type="button" class="nst-btn-ghost-sm" style="font-size: 10px; padding: 4px 10px; border-color: rgba(255,179,0,0.3); color: var(--nst-amber);" onclick="aggiungiSerieExtraForza(${exIdx})">
-                                        + AGGIUNGI SERIE EXTRA
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
+            renderForzaEserciziAttivi(p, ibridoConfigurazionePersonalizzata);
         } else {
             renderMetconGiroCorrente();
         }
@@ -8224,6 +8205,7 @@ async function avviaIbridoSeduta() {
     // Configura motore timer appropriato
     if (p.timer_mode === 'tabata') {
         currentTimerMode = 'tabata';
+        try { if (typeof localStorage !== 'undefined') localStorage.setItem('adr_timer_mode', 'tabata'); } catch (e) {}
         const numEsercizi = (p.esercizi && p.esercizi.length > 0) ? p.esercizi.length : 1;
         const totalIntervals = ibridoRounds * numEsercizi;
         tabataEngine.state.config = {
@@ -8240,6 +8222,7 @@ async function avviaIbridoSeduta() {
         if (secBtnText) secBtnText.textContent = 'SALTA FASE';
     } else {
         currentTimerMode = 'stopwatch';
+        try { if (typeof localStorage !== 'undefined') localStorage.setItem('adr_timer_mode', 'stopwatch'); } catch (e) {}
         timerEngine.reset();
         timerEngine.start();
         if (lapsWrapper) lapsWrapper.classList.remove('nst-hidden');
@@ -8249,8 +8232,109 @@ async function avviaIbridoSeduta() {
     }
 
     if (modal) modal.classList.remove('nst-hidden');
+    aggiornaVisibilitaDock();
     aggiornaIbridoModalAttivo();
     salvaStatoWorkoutAttivo();
+}
+
+function renderForzaEserciziAttivi(p, config) {
+    const exTableContainer = document.getElementById('nst-ibrido-active-ex-table-container');
+    if (!exTableContainer || !config || !Array.isArray(config.esercizi)) return;
+
+    exTableContainer.innerHTML = `
+        <div class="nst-active-workout-wrapper">
+            ${config.esercizi.map((ex, exIdx) => {
+                const hasWarmup = !ex.isBw && ex.riscaldamento && ex.riscaldamento.length > 0;
+
+                // Righe riscaldamento specifico interattive (Risc 1 10x, Risc 2 5x, etc.)
+                const warmupRowsHtml = hasWarmup ? ex.riscaldamento.map((w, wIdx) => {
+                    const riscLabel = `Risc ${wIdx + 1} ${w.rip}x`;
+                    return `
+                        <tr class="nst-active-set-row warmup-row" data-ex-idx="${exIdx}" data-set-type="warmup" data-set-idx="${wIdx}">
+                            <td class="nst-active-set-label">
+                                <span style="font-size: 11px;">🔥</span>
+                                <span>${riscLabel}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <div class="nst-active-input-col">
+                                    <input type="number" id="nst-ibrido-warmup-peso-${exIdx}-${wIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${w.peso_kg}" step="0.5" min="0" max="500">
+                                    <span class="nst-active-unit-label">kg</span>
+                                </div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div class="nst-active-input-col">
+                                    <input type="number" id="nst-ibrido-warmup-rip-${exIdx}-${wIdx}" class="nst-active-set-input rip-input nst-ex-input" value="${w.rip}" min="0" max="100">
+                                    <span class="nst-active-unit-label">rip</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('') : '';
+
+                // Righe serie allenanti interattive (Serie 1, Serie 2, etc.)
+                const workRowsHtml = Array.from({ length: ex.serie_target }).map((_, sIdx) => {
+                    const pesoVal = ex.isBw ? 0 : (ex.peso_target_kg || 0);
+                    return `
+                        <tr class="nst-active-set-row work-row" data-ex-idx="${exIdx}" data-set-type="work" data-set-idx="${sIdx}">
+                            <td class="nst-active-set-label">
+                                <span>Serie ${sIdx + 1}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <div class="nst-active-input-col">
+                                    <input type="number" id="nst-ibrido-ex-peso-${exIdx}-${sIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${pesoVal}" step="0.5" min="0" max="500" ${ex.isBw ? 'disabled title="Corpo Libero"' : ''}>
+                                    <span class="nst-active-unit-label">kg</span>
+                                </div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div class="nst-active-input-col">
+                                    <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-active-set-input rip-input nst-ex-input nst-active-rip-input" value="${ex.rip_target}" min="0" max="100">
+                                    <span class="nst-active-unit-label">rip</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="nst-active-ex-block" data-ex-idx="${exIdx}">
+                        <div class="nst-active-ex-header">
+                            <div>
+                                <span class="nst-active-ex-title">${escapeHtml(ex.nome)}</span>
+                                ${hasWarmup ? `<div style="font-size: 10px; color: var(--nst-amber); margin-top: 2px;">🔥 Riscaldamento specifico (5 serie) + Serie Allenanti</div>` : ''}
+                            </div>
+                            <div class="nst-active-target-badge">
+                                🎯 TARGET: ${escapeHtml(ex.target_descrittivo || '')}
+                            </div>
+                        </div>
+
+                        <table class="nst-ex-table nst-active-series-table" style="width: 100%;">
+                            <thead>
+                                <tr class="nst-active-sets-header">
+                                    <th style="width: 32%;">SET</th>
+                                    <th style="width: 34%; text-align: center;">CARICO (KG)</th>
+                                    <th style="width: 34%; text-align: center;">RIP EFFETTIVE</th>
+                                </tr>
+                            </thead>
+                            ${hasWarmup ? `
+                            <tbody id="nst-active-warmup-tbody-ex-${exIdx}">
+                                ${warmupRowsHtml}
+                            </tbody>
+                            ` : ''}
+                            <tbody id="nst-active-tbody-ex-${exIdx}">
+                                ${workRowsHtml}
+                            </tbody>
+                        </table>
+
+                        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                            <button type="button" class="nst-btn-ghost-sm" style="font-size: 10px; padding: 4px 10px; border-color: rgba(255,179,0,0.3); color: var(--nst-amber);" onclick="aggiungiSerieExtraForza(${exIdx})">
+                                + AGGIUNGI SERIE EXTRA
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
 }
 
 function renderMetconGiroCorrente() {
@@ -10108,6 +10192,10 @@ window.tabataApplyPreset = tabataApplyPreset;
 window.dockToggleTimer = dockToggleTimer;
 window.dockExpandTimer = dockExpandTimer;
 window.dockCloseTimer = dockCloseTimer;
+window.renderForzaEserciziAttivi = renderForzaEserciziAttivi;
+window.salvaStatoWorkoutAttivo = salvaStatoWorkoutAttivo;
+window.ripristinaStatoWorkoutAttivo = ripristinaStatoWorkoutAttivo;
+window.pulisciStatoWorkoutAttivo = pulisciStatoWorkoutAttivo;
 window.normalizeExerciseName = normalizeExerciseName;
 window.isBetterPerformance = isBetterPerformance;
 window.parseExercisesFromWorkout = parseExercisesFromWorkout;
@@ -10342,7 +10430,11 @@ if (typeof module !== 'undefined' && module.exports) {
         popolaSelectCorsiModal,
         dockToggleTimer,
         dockExpandTimer,
-        dockCloseTimer
+        dockCloseTimer,
+        renderForzaEserciziAttivi,
+        salvaStatoWorkoutAttivo,
+        ripristinaStatoWorkoutAttivo,
+        pulisciStatoWorkoutAttivo
     };
 }
 
