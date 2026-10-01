@@ -6013,11 +6013,20 @@ function aggiornaVisibilitaDock() {
     const timerPanel = document.getElementById('nst-timer-panel');
     const isTimerPanelVisible = timerPanel && timerPanel.classList && typeof timerPanel.classList.contains === 'function' && !timerPanel.classList.contains('nst-hidden');
 
+    // Modali allenamento a tutto schermo (se uno dei due è aperto e NON minimizzato, nascondi la dock flottante)
+    const ibridoModal = document.getElementById('nst-ibrido-active-modal');
+    const isIbridoModalOpen = ibridoModal && ibridoModal.classList && typeof ibridoModal.classList.contains === 'function' && !ibridoModal.classList.contains('nst-hidden');
+
+    const invictusModal = document.getElementById('nst-active-workout-modal');
+    const isInvictusModalOpen = invictusModal && invictusModal.classList && typeof invictusModal.classList.contains === 'function' && !invictusModal.classList.contains('nst-hidden');
+
+    const isWorkoutModalFullScreen = (isIbridoModalOpen && !ibridoSessionMinimized) || isInvictusModalOpen;
+
     const isStopwatchActive = timerEngine.state.running || timerEngine.getElapsedMs() > 0;
     const isCountdownActive = countdownEngine.state.running || (countdownEngine.getElapsedMs() > 0 && countdownEngine.getRemainingMs() > 0);
     const isTabataActive = tabataEngine.state.running || (tabataEngine.state.phase !== 'prep' && tabataEngine.state.phase !== 'done');
 
-    const shouldShow = (!isTimerPanelVisible) && (isStopwatchActive || isCountdownActive || isTabataActive || ibridoSessionMinimized);
+    const shouldShow = (!isTimerPanelVisible) && (!isWorkoutModalFullScreen) && (isStopwatchActive || isCountdownActive || isTabataActive || ibridoSessionMinimized);
 
     if (shouldShow) {
         dockEl.classList.remove('nst-hidden');
@@ -6077,15 +6086,23 @@ function dockToggleTimer() {
 }
 
 function dockExpandTimer() {
-    const rawSession = localStorage.getItem('adr_active_workout_session');
-    
-    if ((ibridoSelezionato && ibridoSessionMinimized) || (rawSession && JSON.parse(rawSession).type === 'ibrido')) {
-        const modal = document.getElementById('nst-ibrido-active-modal');
-        if (modal) modal.classList.remove('nst-hidden');
-        ibridoSessionMinimized = false;
-        if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
-        aggiornaVisibilitaDock();
-    } else if (rawSession && JSON.parse(rawSession).type === 'invictus') {
+    let sessionObj = null;
+    try {
+        const raw = localStorage.getItem('adr_active_workout_session');
+        if (raw) sessionObj = JSON.parse(raw);
+    } catch (e) {}
+
+    if (ibridoSelezionato || (sessionObj && sessionObj.type === 'ibrido')) {
+        if (!ibridoSelezionato && sessionObj) {
+            ripristinaStatoWorkoutAttivo();
+        } else {
+            const modal = document.getElementById('nst-ibrido-active-modal');
+            if (modal) modal.classList.remove('nst-hidden');
+            ibridoSessionMinimized = false;
+            if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
+            aggiornaVisibilitaDock();
+        }
+    } else if (sessionObj && sessionObj.type === 'invictus') {
         const modal = document.getElementById('nst-active-workout-modal');
         if (modal) modal.classList.remove('nst-hidden');
         aggiornaVisibilitaDock();
@@ -6477,6 +6494,7 @@ function avviaAllenamentoInvictus() {
 
     // 3. Resetta e avvia cronometro nativo
     currentTimerMode = 'stopwatch';
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem('adr_timer_mode', 'stopwatch'); } catch (e) {}
     timerEngine.reset();
     renderModalLapsList();
     timerEngine.start();

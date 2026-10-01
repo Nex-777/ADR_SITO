@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-01] fix & feat | Fix Struttura Stripe Webhook per Subscriptions e Rilevamento Mesi Insoluti/Scaduti (v1.05.96)
+- **Backend Stripe Webhook (`api/stripe-webhook.js`)**:
+  - Risolto il bug di estrazione di `subId` nelle fatture Stripe periodiche (`invoice.paid`, `invoice.payment_failed`): nelle versioni recenti dell'API Stripe `invoice.subscription` è `null` e l'ID è annidato in `invoice.parent.subscription_details.subscription`.
+  - Introdotto fallback triplo su `invoice.subscription`, `invoice.parent?.subscription_details?.subscription` e `invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription`.
+- **Database & Contabilità (`ricevute_pagamenti`, `iscrizioni_eventi`)**:
+  - Riallineamento posizioni atleti con rate di settembre pagate su Stripe ma non recepite a causa del bug del webhook:
+    - **Danilo Clementi**: Rata 2/6 regolarizzata (Ricevuta n. 177/2026, €56,10, Stripe `in_1UH5W67wrOk84bdxBEaqcDGt`).
+    - **Eleonora Filipponi**: Rata 2/12 regolarizzata (Ricevuta n. 178/2026, €51,00, Stripe `in_1UHmum7wrOk84bdxXG5NgggR`).
+    - **Fabio Morganti**: Rata 3/6 regolarizzata (Ricevuta n. 179/2026, €56,10, Stripe `in_1UKvkI7wrOk84bdxqx2e8JF6`).
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Implementato algoritmo di rilevamento temporale mesi trascorsi non pagati (`meseAssolBox < meseAssolOggi`).
+  - Le caselle dei mesi passati non saldati vengono ora evidenziate visivamente con bordo rosso di allerta (`bg-red-500/15 border-red-500 text-red-400 font-bold`) e attivano l'icona di attenzione `⚠` e il bordo di allerta sulla card atleta.
+
+---
+
 ## [2026-10-01] fix | Permessi GitHub Release per Backup Storage Mensile (v1.05.94)
 - **Fix Permissions Workflow (`backup_storage_monthly.yml`)**:
   - Aggiunto il blocco `permissions: contents: write` al job `backup_storage_monthly`.

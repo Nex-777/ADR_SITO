@@ -5,8 +5,8 @@
  */
 
 (function () {
-    // Se ci troviamo su nestore.html ed è già presente il motore interno, non duplicare
-    if (window.location.pathname.endsWith('nestore.html')) {
+    // Se ci troviamo su nestore ed è già presente il motore interno, non duplicare
+    if (window.location.pathname.includes('nestore') || document.getElementById('nst-timer-dock')) {
         return;
     }
 

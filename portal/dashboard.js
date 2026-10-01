@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.05.95"
+                VERSION: "1.05.96"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6591,10 +6591,21 @@
                     const statoRate = atl.stato_rate || 'IN_REGOLA';
                     headerLabel = `A RATE (${ratePagate}/${totRate})`;
 
+                    let hasOverdueRate = false;
+                    const oggi = new Date();
+                    let annoInizio = oggi.getFullYear();
+                    if (dataRif) {
+                        const y = parseInt(dataRif.split('T')[0].split('-')[0], 10);
+                        if (!isNaN(y)) annoInizio = y;
+                    }
+                    const meseAssolOggi = oggi.getFullYear() * 12 + oggi.getMonth();
+
                     let rateBoxes = '';
                     for (let i = 1; i <= totRate; i++) {
                         const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
                         const nomeMese = nomiMesi[meseNum - 1];
+                        const meseAssolBox = (annoInizio * 12) + (startMonth - 1) + (i - 1);
+                        const isScaduto = meseAssolBox < meseAssolOggi;
 
                         if (i <= ratePagate) {
                             rateBoxes += `
@@ -6606,6 +6617,13 @@
                             rateBoxes += `
                                 <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe FALLITO (Insoluto)">
                                     ✗
+                                </div>
+                            `;
+                        } else if (isScaduto) {
+                            hasOverdueRate = true;
+                            rateBoxes += `
+                                <div class="w-5 h-5 flex items-center justify-center bg-red-500/15 border border-red-500 text-red-400 text-[9px] font-mono font-bold select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Rata non confermata (Mese trascorso - Verificare su Stripe)">
+                                    ${meseNum}
                                 </div>
                             `;
                         } else {
@@ -6663,7 +6681,7 @@
                     tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">GRATUITO</span>';
                 }
 
-                const hasIssue = !atl.cert_valido || atl.stato_rate === 'INSOLUTO';
+                const hasIssue = !atl.cert_valido || atl.stato_rate === 'INSOLUTO' || hasOverdueRate;
 
                 const card = document.createElement('div');
                 card.className = `bg-black/60 border ${hasIssue ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
@@ -6674,7 +6692,7 @@
                             <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${uniqueCardId}">expand_more</span>
                             <div>
                                 <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2">
-                                    ${hasIssue ? '<span class="text-red-500 font-bold" title="CERTIFICATO NON VALIDO O RATA INSOLUTA">⚠</span>' : ''}
+                                    ${hasIssue ? '<span class="text-red-500 font-bold" title="CERTIFICATO NON VALIDO O RATA INSOLUTA / SCADUTA">⚠</span>' : ''}
                                     ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
                                 </h4>
                                 <div class="flex items-center gap-2 mt-1">

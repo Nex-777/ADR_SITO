@@ -476,7 +476,9 @@ export default async function handler(req, res) {
     // ==========================================
     else if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') {
         const invoice = event.data.object;
-        const subId = invoice.subscription;
+        const subId = invoice.subscription 
+            || invoice.parent?.subscription_details?.subscription 
+            || invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription;
 
         // Processa solo le rate periodiche mensili successive (subscription_cycle)
         if (subId && invoice.billing_reason === 'subscription_cycle') {
@@ -580,7 +582,9 @@ export default async function handler(req, res) {
     // ==========================================
     else if (event.type === 'invoice.payment_failed') {
         const invoice = event.data.object;
-        const subId = invoice.subscription;
+        const subId = invoice.subscription 
+            || invoice.parent?.subscription_details?.subscription 
+            || invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription;
 
         if (subId) {
             try {
