@@ -4030,3 +4030,6 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - State is continuously saved during Metcon/Forza execution (notes, target checkboxes, lap rounds).
 - Entire floating dock is now clickable to seamlessly expand and restore the correct modal upon reload or returning from background.
 - Handled complete state restoration and clearing logic across timer engines.
+
+## [2026-10-05] fix | Anti-spam recupero password
+- Bot inserivano email inesistenti in richieste_recupero_password. Rimossa la policy INSERT anonima; il tracciamento ora passa dalla RPC SECURITY DEFINER richiedi_recupero_password (registra solo email di utenti censiti, senza duplicati in attesa). Vedi migration_recupero_password_anti_spam.sql e portal/forgot-password.js. 5 richieste spam archiviate (soft delete).
