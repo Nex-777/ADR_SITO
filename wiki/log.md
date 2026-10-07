@@ -2,7 +2,19 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
-## [2026-10-01] fix | Dashboard — Risoluzione ReferenceError hasOverdueRate e Scope Handling su Iscritti (v1.05.99)
+## [2026-10-07] feat | Automazione CI KNIP Code Quality & Alerting Intelligente ADR_BOT (v1.06.01)
+- **GitHub Actions Workflow (`.github/workflows/knip_scan.yml`)**:
+  - Creato workflow schedulato settimanale (lunedì 02:00 UTC), manuale (`workflow_dispatch`) e su Pull Request verso `main`.
+  - Configurazione non-bloccante (`continue-on-error: true`) con archiviazione automatica dell'artifact `knip-report.json` per 30 giorni.
+- **Reporting & Notifiche (`scripts/knip_report.js`)**:
+  - Creato script Node.js che interpreta il JSON di KNIP con supporto per codifiche multiple (UTF-8, UTF-16, BOM) e formattazione dettagliata per GitHub Step Summary.
+  - Integrata la notifica Telegram verso ADR_BOT (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) con politica anti-rumore: invio solo in caso di anomalie riscontrate o fallimento del report (nessun messaggio superfluo se il codebase è 100% pulito).
+  - Sanitizzazione HTML e troncamento sicuro del testo a 3500 caratteri per piena compatibilità con l'API Telegram.
+- **Documentazione Wiki (`wiki/code_quality_knip.md`, `wiki/index.md`)**:
+  - Creata documentazione dettagliata dell'architettura di analisi statica KNIP, configurazione degli entrypoint e comandi di verifica locale.
+- **Versione**: Incrementata la versione globale a `v1.06.01`.
+
+---
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - Spostata la dichiarazione di `hasOverdueRate` al livello dello scope comune della card atleta prima del blocco di condizionali per il tipo pagamento.
   - Risolto il bug `ReferenceError: hasOverdueRate is not defined` a riga 6684 che causava il blocco del rendering dell'intero registro iscritti quando erano presenti atleti con `UNICA RATA` o `CARNET`.

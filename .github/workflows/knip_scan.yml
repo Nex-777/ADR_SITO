@@ -1,0 +1,61 @@
+name: 🧹 KNIP Code Quality Scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Ogni lunedì alle 02:00 UTC (04:00 ora italiana CEST / 03:00 CET)
+    - cron: '0 2 * * 1'
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: knip-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  knip_scan:
+    name: Analisi Codice & Dipendenze Orfane
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Installa dipendenze
+        run: npm ci || npm install
+
+      - name: Esegui KNIP (JSON Report)
+        id: run_knip
+        # Non-blocking: continue-on-error preserva il workflow per la successiva elaborazione del report
+        continue-on-error: true
+        run: npx knip --reporter json > knip-report.json
+
+      - name: Elabora Report & Notifica ADR_BOT
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: node scripts/knip_report.js knip-report.json
+
+      - name: Archivia Artifact Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knip-report
+          path: knip-report.json
+          retention-days: 30
+          if-no-files-found: ignore

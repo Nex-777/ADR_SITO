@@ -31,6 +31,7 @@ Welcome to the **Adrenalina Club (ADR_SITO)** LLM Wiki. This is a persistent kno
 
 ## 🛡️ Operations & Maintenance
 *   **[Backup System](backup_system.md)** – Architettura del sistema di backup automatico DB (notturno) e Storage (mensile), GitHub Secrets richiesti, procedura di Disaster Recovery e comandi di ripristino.
+*   **[Code Quality & KNIP](code_quality_knip.md)** – Sistema di analisi statica automatica con KNIP, report su GitHub Step Summary e notifiche intelligenti su ADR_BOT.
 
 ---
 
