@@ -49,13 +49,19 @@ Il file di configurazione radice [`knip.json`](../knip.json) mappa tutti i punti
 ## 3. Script di Report & Alerting (`scripts/knip_report.js`)
 
 Lo script [`scripts/knip_report.js`](../scripts/knip_report.js) riceve l'output JSON di KNIP (`knip --reporter json`) e:
-1. **Calcola il totale delle anomalie** per ciascuna categoria.
-2. **Scrive il riepilogo Markdown** all'interno di `$GITHUB_STEP_SUMMARY`, rendendolo visibile nella dashboard del job GitHub Actions.
-3. **Invia notifica Telegram su ADR_BOT** se e solo se sono presenti anomalie (`totalIssues > 0`) oppure se l'analisi fallisce.
-   - **Zero Rumore**: Se il codice è pulito (0 anomalie), non viene inviato alcun messaggio Telegram.
-   - **Sicurezza HTML**: Il testo viene sanificato con escape HTML per evitare errori di sintassi con caratteri speciali (`_`, `*`, `<`).
-   - **Troncamento Intelligente**: Messaggi oltre i 3500 caratteri vengono troncati con link diretto al run GitHub Actions.
-   - **Best Effort**: Eventuali problemi di rete con l'API Telegram vengono loggati ma non fanno mai fallire il job.
+1. **Calcola il totale delle anomalie** per ciascuna categoria (file orfani, dipendenze, devDependencies, export, tipi, unlisted, binari, duplicati, unresolved).
+2. **Scrive il riepilogo Markdown** all'interno di `$GITHUB_STEP_SUMMARY`, rendendolo visibile nella dashboard del job GitHub Actions con caratteri protetti da `mdCode()`.
+3. **Invia notifica Telegram su ADR_BOT** secondo due modalità distinte:
+   - **Allerta Immediata (Anomalie o Crash)**: se vengono riscontrate anomalie (`totalIssues > 0`) o se il processo KNIP ha subito un arresto anomalo (`KNIP_EXIT > 1`), parte un alert con il dettaglio esatto delle categorie e delle prime voci riscontrate.
+   - **Heartbeat Mensile Educativo (Codebase Pulito)**: ogni primo lunedì del mese, se il repository è 100% pulito (`totalIssues === 0`), invia un messaggio di stato chiaro ed esplicativo che ricorda lo scopo del monitoraggio KNIP e certifica l'integrità del codebase. Nelle restanti settimane, il bot rimane silenzioso per azzerare il rumore.
+4. **Resilienza e Budget HTML**: la costruzione del payload Telegram alloca un budget massimo di 3.400 caratteri inserendo solo elementi completi, garantendo che nessun tag HTML (`<code>`, `<i>`, `<a>`) venga mai troncato a metà (prevenendo errori HTTP 400 da Telegram).
+5. **Best Effort**: Eventuali problemi di rete con l'API Telegram vengono loggati ma non fanno mai fallire il job.
+
+---
+
+## 3.1 Suite di Test Automatizzata (`tests/knip-report.test.js`)
+
+La logica di parsing, sanitizzazione, budgeting messaggi ed heartbeat mensile è validata automaticamente tramite 11 test unitari eseguiti da Vitest (`npm test`).
 
 ---
 

@@ -36,13 +36,16 @@ jobs:
 
       - name: Esegui KNIP (JSON Report)
         id: run_knip
-        # Non-blocking: continue-on-error preserva il workflow per la successiva elaborazione del report
-        continue-on-error: true
-        run: npx knip --reporter json > knip-report.json
+        run: |
+          KNIP_CODE=0
+          npx knip --reporter json --no-config-hints > knip-report.json || KNIP_CODE=$?
+          echo "KNIP_EXIT=${KNIP_CODE}" >> "$GITHUB_ENV"
+          echo "KNIP terminato con exit code: ${KNIP_CODE}"
 
       - name: Elabora Report & Notifica ADR_BOT
         if: always()
         env:
+          KNIP_EXIT: ${{ env.KNIP_EXIT }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GITHUB_EVENT_NAME: ${{ github.event_name }}

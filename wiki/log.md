@@ -2,7 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
-## [2026-10-07] feat | Automazione CI KNIP Code Quality & Alerting Intelligente ADR_BOT (v1.06.01)
+## [2026-10-07] fix | Refactoring Robusto Alerting KNIP: Crash Detection, Budget HTML & Heartbeat Educativo (v1.06.02)
+- **Reporting & Alerting (`scripts/knip_report.js`)**:
+  - Risolto bug potenziale di troncamento HTML: eliminato lo slice a fine stringa e implementato budgeting preventivo per elementi completi, evitando tag HTML spezzati ed errori HTTP 400 da Telegram.
+  - Allineati i conteggi del riepilogo Telegram con il totale generale (inclusi unlisted, binaries, duplicates e unresolved).
+  - Implementata la logica di **Heartbeat Mensile Educativo**: il primo lunedì del mese, in assenza di anomalie, invia un promemoria dettagliato ad ADR_BOT che spiega chiaramente lo scopo del controllo KNIP e attesta lo stato pulito del codebase.
+  - Implementata la funzione `mdCode()` per sanificare backtick e pipe nelle tabelle Markdown dello Step Summary.
+- **Workflow GitHub Actions (`.github/workflows/knip_scan.yml`)**:
+  - Tracciamento accurato del codice di uscita reale di KNIP (`KNIP_EXIT`): cattura codici fatali (>1) differenziandoli da normali issue ed invia allerta immediata di crash anche con JSON parziali.
+- **Testing & QA (`tests/knip-report.test.js`)**:
+  - Creata test suite dedicata con 11 test unitari Vitest per validare parsing JSON, conteggi, sanitizzazione, troncamento HTML e calcolo primo lunedì del mese.
+  - Test suite globale Vitest: 212/212 test superati (17 file su 17).
+- **Versione**: Incrementata la versione globale a `v1.06.02`.
+
+---
 - **GitHub Actions Workflow (`.github/workflows/knip_scan.yml`)**:
   - Creato workflow schedulato settimanale (lunedì 02:00 UTC), manuale (`workflow_dispatch`) e su Pull Request verso `main`.
   - Configurazione non-bloccante (`continue-on-error: true`) con archiviazione automatica dell'artifact `knip-report.json` per 30 giorni.
