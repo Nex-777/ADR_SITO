@@ -75,8 +75,15 @@ async function runReconciliation() {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
     });
-    const context = await browser.newContext();
+    const context = await browser.newContext({
+        actionTimeout: 15000,
+        navigationTimeout: 20000
+    });
     const page = await context.newPage();
+
+    page.on('dialog', async dialog => {
+        try { await dialog.accept(); } catch (e) { }
+    });
 
     try {
         console.log("1. Login sul portale CSEN...");
@@ -84,7 +91,7 @@ async function runReconciliation() {
         await page.fill('input[name="affiliazionecsen"]', CSEN_USER);
         await page.fill('input[name="password"]', CSEN_PASS);
         await page.click('input[type="submit"]');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => { });
 
         let sanati = 0;
         let mancanti = 0;
@@ -98,13 +105,13 @@ async function runReconciliation() {
             console.log(`\n>>> Controllo: ${nomeCompleto} (${cf})`);
 
             await page.goto('https://www.conceptstudio.it/website/csenascolipiceno/tesserati.asp?what=show');
-            await page.waitForLoadState('networkidle');
+            await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => { });
             
             const searchInput = await page.$('input[name="q"]');
             if (searchInput) {
                 await searchInput.fill(cf);
                 await page.click("input[type='submit'][value='Cerca']");
-                await page.waitForLoadState('networkidle');
+                await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => { });
             }
 
             const html = await page.content();

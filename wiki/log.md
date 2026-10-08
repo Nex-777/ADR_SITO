@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-08] fix | Hardening Anti-Freeze Pipeline CSEN Active Sync (v1.06.03)
+- **Workflow GitHub Actions (`.github/workflows/csen_sync.yml`)**:
+  - Ridotto il limite `timeout-minutes` da 30 a 10 minuti per prevenire sprechi di quote Actions e consentire la gestione tempestiva degli alert in caso di stallo del portale esterno.
+- **Rinforzo Script Playwright (`scripts/csen_sync_active.js`, `scripts/csen_reconciliation.js`, `scripts/scraper_csen.js`)**:
+  - Configurato `newContext()` con parametri restrittivi globali (`actionTimeout: 15000`, `navigationTimeout: 20000`) per impedire freeze indefiniti su click, form fill o navigazione.
+  - Aggiunto Dialog Handler automatico (`page.on('dialog', ...)` con auto-accept) su `csen_reconciliation.js` e `scraper_csen.js` per scartare modal e alert bloccanti lato portale CSEN.
+  - Aggiunti timeout espliciti di 15s con fallback protetto (`.catch(() => {})`) su tutte le chiamate `waitForLoadState('networkidle')`.
+  - Uniformato l'URL con dominio canonico `https://www.conceptstudio.it/...` in `scraper_csen.js`.
+- **Testing & Validazione**:
+  - Test eseguiti con successo in locale per `scraper_csen.js`, `csen_reconciliation.js` e `csen_sync_active.js` confermando la piena operatività e assenza di regressioni.
+
 ## [2026-10-07] fix | Refactoring Robusto Alerting KNIP: Crash Detection, Budget HTML & Heartbeat Educativo (v1.06.02)
 - **Reporting & Alerting (`scripts/knip_report.js`)**:
   - Risolto bug potenziale di troncamento HTML: eliminato lo slice a fine stringa e implementato budgeting preventivo per elementi completi, evitando tag HTML spezzati ed errori HTTP 400 da Telegram.

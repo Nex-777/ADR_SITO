@@ -21,13 +21,20 @@ async function scrapeCsen() {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
     });
-    const context = await browser.newContext();
+    const context = await browser.newContext({
+        actionTimeout: 15000,
+        navigationTimeout: 20000
+    });
     const page = await context.newPage();
+
+    page.on('dialog', async dialog => {
+        try { await dialog.accept(); } catch (e) { }
+    });
 
     try {
         console.log("1. Navigazione alla pagina di login...");
         // Andiamo direttamente all'indirizzo principale del portale
-        await page.goto('https://conceptstudio.it/website/csenascolipiceno/');
+        await page.goto('https://www.conceptstudio.it/website/csenascolipiceno/');
         
         console.log("2. Inserimento credenziali...");
         // Seleziona specificamente i campi del form CSEN
@@ -38,10 +45,10 @@ async function scrapeCsen() {
         await page.click('input[type="submit"]');
 
         // Aspetta che la pagina si carichi completamente
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => { });
 
         console.log("3. Accesso alla pagina tesserati...");
-        await page.goto('https://conceptstudio.it/website/csenascolipiceno/tesserati.asp?what=show');
+        await page.goto('https://www.conceptstudio.it/website/csenascolipiceno/tesserati.asp?what=show');
         await page.waitForTimeout(2000); // Pausa di sicurezza
 
         console.log("4. Estrazione dati tessere...");
