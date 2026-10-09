@@ -402,12 +402,12 @@ export default async function handler(req, res) {
                     if (!anagErr && anag) {
                         const anagraficaId = anag.id;
 
-                        // Fetch the pending registration that is in 'IN_ATTESA_PAGAMENTO'
+                        // Fetch the pending registration that is in 'IN_ATTESA' or 'IN_ATTESA_PAGAMENTO'
                         const { data: appRecord } = await supabase
                             .from('registro_approvazioni')
                             .select('*')
                             .eq('anagrafica_id', anagraficaId)
-                            .eq('stato', 'IN_ATTESA_PAGAMENTO')
+                            .in('stato', ['IN_ATTESA', 'IN_ATTESA_PAGAMENTO'])
                             .maybeSingle();
 
                         if (appRecord) {

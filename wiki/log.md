@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-09] fix | Attivazione Automatica Tesserati Post-Pagamento nel Webhook Stripe (v1.06.05)
+- **Stripe Webhook (`api/stripe-webhook.js`)**:
+  - Risolto il mancato innesco dell'attivazione automatica post-pagamento per i tesserati esterni: il webhook cercava esclusivamente lo stato `'IN_ATTESA_PAGAMENTO'` in `registro_approvazioni`.
+  - Aggiornata la query con `.in('stato', ['IN_ATTESA', 'IN_ATTESA_PAGAMENTO'])` per intercettare sia i nuovi tesserati appena registrati (stato base `'IN_ATTESA'`) sia i soci già deliberati dal Direttivo (stato `'IN_ATTESA_PAGAMENTO'`).
+  - Quando il pagamento della quota va a buon fine e il certificato medico è `VERDE`, il webhook esegue correttamente la RPC `approva_tesserato`, inserendo l'atleta in `registro_tesserati` come `ATTIVO` e approvando la richiesta senza richiedere l'intervento manuale dell'amministratore.
+- **Global Bump**: Versionamento globale aggiornato a `v1.06.05`.
+
+---
+
 ## [2026-10-09] fix | Risoluzione Conflitto Trigger RBAC e Sblocco Registrazione Soci (v1.06.04)
 - **Database (`public.proteggi_ruolo_utente` su `public.utenti`)**:
   - Risolto il falso positivo nel trigger di Stretta Immutabilità che bloccava la registrazione di nuovi utenti che selezionavano l'adesione come socio o socio tesserato.
