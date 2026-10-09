@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-09] fix | Risoluzione Conflitto Trigger RBAC e Sblocco Registrazione Soci (v1.06.04)
+- **Database (`public.proteggi_ruolo_utente` su `public.utenti`)**:
+  - Risolto il falso positivo nel trigger di Stretta Immutabilità che bloccava la registrazione di nuovi utenti che selezionavano l'adesione come socio o socio tesserato.
+  - Nella fase di prima registrazione (`OLD.tipo_adesione IS NULL`), il trigger ora consente la lecita transizione dal ruolo iniziale di default (`tesserato_esterno`, generato dal trigger auth) al ruolo provvisorio associato alla richiesta (`socio_in_attesa`).
+  - Mantenuto l'irrevocabile e totale blocco anti privilege-escalation: impedita qualsiasi auto-assegnazione di ruoli amministrativi o approvati (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`, `istruttore`, `socio_approvato`, `volontario`).
+  - Preservata la stretta immutabilità assoluta del ruolo per tutti gli utenti con registrazione già completata (`OLD.tipo_adesione IS NOT NULL`).
+  - Creata la migrazione `supabase/migration_fix_registrazione_socio.sql` e applicata con successo sul database remoto.
+- **Global Bump**: Versionamento globale aggiornato a `v1.06.04`.
+
+---
+
 ## [2026-10-08] fix | Hardening Anti-Freeze Pipeline CSEN Active Sync (v1.06.03)
 - **Workflow GitHub Actions (`.github/workflows/csen_sync.yml`)**:
   - Ridotto il limite `timeout-minutes` da 30 a 10 minuti per prevenire sprechi di quote Actions e consentire la gestione tempestiva degli alert in caso di stallo del portale esterno.
