@@ -42,16 +42,24 @@ graph TD
 
 ---
 
-## 🔒 Gated Onboarding & Controllo Certificati (Flusso Ibrido AI)
+## 🔒 Gated Onboarding & Controllo Documenti / Certificati (Validazione Anticipata AI Mistral Vision)
 
-Per i nuovi tesserati (casistica `tesserato` e `socio_tesserato`), l'iscrizione segue una logica condizionale di sicurezza per evitare ingressi senza adempimenti sanitari:
+Dalla versione **v1.06.06**, il flusso di onboarding sposta l'analisi con intelligenza artificiale direttamente all'interno del wizard al momento del caricamento dei file, azzerando gli errori manuali e le frodi sulle date:
 
-1. **Registrazione (Stato PENDING)**: L'atleta completa la firma digitale e carica il certificato medico, inserendo data di emissione e tipologia.
-2. **Validazione AI (Semaforo)**:
-   - **VERDE**: Certificato valido e corrispondente. Si sblocca immediatamente il link di pagamento.
-   - **ROSSO**: Rifiutato. L'utente riceve un alert e deve ricaricare un documento leggibile/conforme nel portale.
-   - **GIALLO**: Richiesta revisione manuale. Il certificato finisce nella coda del Presidente che delibera in un click.
-3. **Pagamento (Attivazione)**: Solo con il certificato validato (VERDE) l'utente può procedere al pagamento tramite Stripe. All'avvenuto saldo, il tesseramento diventa `ATTIVO`.
+1. **Nessun Campo Manuale Utente**:
+   - Eliminati tutti i campi di input manuale per la tipologia e la data di rilascio del certificato medico, nonché la data di scadenza del documento d'identità e del documento tutore.
+2. **Pre-Analisi Automatica con Mistral Vision (`pixtral-12b-2409`)**:
+   - Alla selezione del file (PDF fino a 2 pagine renderizzate in JPEG dal client o immagine compressa), parte automaticamente l'analisi via `api/validate.js` (`precheck_cert` / `precheck_doc`).
+   - L'interfaccia mostra un indicatore di avanzamento a 4 fasi (`1. Preparazione file`, `2. Invio sicuro`, `3. Lettura con intelligenza artificiale`, `4. Controllo validità`) con tempo stimato (5–15 sec).
+3. **Controllo Intestatario & Guardrail Rigorosi**:
+   - Mistral estrae nome, cognome, tipologia, diciture di legge e date.
+   - Il server confronta l'intestatario estratto con nome e cognome inseriti al Passo 1 (`matchIntestatario`). In caso di mancata corrispondenza, il documento scala automaticamente a `GIALLO` (revisione manuale).
+   - Per i certificati, la data di scadenza non viene mai inventata: in assenza di scadenza esplicita o dicitura conforme, l'esito è `GIALLO`.
+4. **Token di Pre-Check Firmato (HMAC-SHA256)**:
+   - Il server restituisce i dati estratti accompagnati da un token HMAC-SHA256 (`api/_utils/precheck-token.js`) con durata di 2 ore, vincolato all'hash SHA-256 del file.
+   - L'utente non può alterare alcuna data: può solo confermare i dati letti (`VERDE`), ricaricare il documento (massimo 2 tentativi rimasti) oppure inviare la pratica a revisione manuale del Direttivo (`GIALLO`) e procedere.
+5. **Verifica Finale Post-OTP (`api/otp-verify.js`)**:
+   - Alla conferma della firma OTP, il server verifica la firma dei token e ricalcola lo SHA-256 del file salvato su Supabase Storage. Se l'hash coincide, il documento/certificato viene registrato direttamente nello stato accreditato (`VERDE` o `GIALLO` con nota per la segreteria). Se il certificato è già `VERDE`, il tesserato riceve subito via email il link per il saldo quota.
 
 ---
 

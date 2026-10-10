@@ -2,6 +2,30 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-10] feat | Validazione Anticipata AI Mistral Vision nel Wizard con Token HMAC-SHA256 (v1.06.06)
+- **Architettura & Sicurezza (`api/_utils/precheck-token.js`, `api/validate.js`)**:
+  - Eliminati i campi di inserimento manuale di tipologie e date di emissione/scadenza nel wizard di registrazione: zero fiducia nei dati arbitrari inseriti dal client per prevenire frodi o date alterate.
+  - Creato helper crittografico `signPrecheck()` / `verifyPrecheck()` basato su HMAC-SHA256 con chiave derivata da `SUPABASE_SERVICE_ROLE_KEY` e matching normalizzato dell'intestatario (`matchIntestatario`).
+  - Esteso `api/validate.js` con rami anonimi `precheck_cert` e `precheck_doc`, protetti da rate-limiting per IP (12 richieste / 5 min) e timeout di 20s.
+  - Nessun incremento nel conteggio serverless di Vercel (limite massimo Hobby 12 funzioni rispettato).
+  - Mistral Vision (`pixtral-12b-2409`) analizza in tempo reale le immagini compresse (o fino a 2 pagine PDF renderizzate su canvas dal browser), estraendo idoneità, tipologia, date e nominativo.
+  - Fallback automatico a `GIALLO` (revisione manuale Direttivo) in caso di timeout, errore AI o mancata corrispondenza dell'intestatario dichiarato.
+- **Frontend Wizard (`portal/registrazione.html`, `portal/registrazione.js`)**:
+  - Rimossi i campi manuali e inseriti container di precheck con indicatore animato di avanzamento a 4 fasi (`1. Preparazione file`, `2. Invio sicuro`, `3. Lettura con intelligenza artificiale`, `4. Controllo validità`) e tempo stimato.
+  - Scheda di riepilogo in sola lettura con esito analitico: l'utente può confermare i dati letti (`VERDE`), effettuare un ricaricamento del file (massimo 2 tentativi rimasti) o inviare a revisione umana (`GIALLO`) e procedere.
+  - Unione anticipata PDF fronte/retro per il documento d'identità già al Passo 3, garantendo identità crittografica tra file analizzato e file archiviato.
+  - Pulsante avanti bloccato finché tutti i documenti non sono risolti.
+- **Finalizzazione Post-OTP (`api/otp-verify.js`)**:
+  - Alla verifica dell'OTP, `otp-verify.js` convalida la firma crittografica del token e confronta l'hash SHA-256 con il file presente nello Storage di Supabase.
+  - Inserimento diretto dei record in `certificati_medici` e `documenti_identita` con stato accreditato (`VERDE` o `GIALLO` con note dettagliate). Se il certificato è `VERDE`, il tesserato riceve immediatamente via email il link Stripe per il pagamento della quota.
+- **Dashboard Direttivo (`portal/dashboard.js`)**:
+  - Aggiunti badge e stili dedicati `REVISIONE RICHIESTA` per evidenziare immediatamente alla segreteria e al Presidente le pratiche inviate a verifica manuale dall'utente con la nota dell'esito AI.
+- **Testing & QA (`tests/precheck-token.test.js`)**:
+  - Test suite dedicata con 7 test unitari su firma, verifica, scadenza, manomissione e matching intestatario.
+  - Test suite globale Vitest: 219/219 test superati con successo (18 file su 18).
+
+---
+
 ## [2026-10-09] fix | Attivazione Automatica Tesserati Post-Pagamento nel Webhook Stripe (v1.06.05)
 - **Stripe Webhook (`api/stripe-webhook.js`)**:
   - Risolto il mancato innesco dell'attivazione automatica post-pagamento per i tesserati esterni: il webhook cercava esclusivamente lo stato `'IN_ATTESA_PAGAMENTO'` in `registro_approvazioni`.

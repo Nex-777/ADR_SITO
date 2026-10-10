@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Mistral } from '@mistralai/mistralai';
 import { sendEmail } from './_utils/resend-mail.js';
+import { signPrecheck, matchIntestatario } from './_utils/precheck-token.js';
 
 // ═══════════════════════════════════════════════════════════════════
 //  /api/validate  —  Endpoint unificato di validazione AI
@@ -63,8 +64,255 @@ export default async function handler(req, res) {
         if (req.body.table === 'certificati_medici') targetType = 'cert';
         if (req.body.table === 'documenti_identita') targetType = 'doc';
     }
-    if (!targetType || !['cert', 'doc'].includes(targetType)) {
-        return res.status(400).json({ error: 'target_type mancante o non valido. Usa "cert" o "doc".' });
+    if (!targetType || !['cert', 'doc', 'precheck_cert', 'precheck_doc'].includes(targetType)) {
+        return res.status(400).json({ error: 'target_type mancante o non valido. Usa "cert", "doc", "precheck_cert" o "precheck_doc".' });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  RAMO PRE-AUTH: PRECHECK CERTIFICATI E DOCUMENTI (Wizard Step 2, 3, 5)
+    // ═══════════════════════════════════════════════════════════════════
+    if (targetType === 'precheck_cert' || targetType === 'precheck_doc') {
+        const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+        const { data: allowed } = await supabase.rpc('check_rate_limit', {
+            p_key: `precheck:${clientIp}`,
+            p_max_requests: 12,
+            p_window_seconds: 300
+        });
+        if (allowed === false) {
+            return res.status(429).json({ error: 'Troppe richieste di verifica AI. Attendi qualche minuto prima di riprovare.' });
+        }
+
+        const { images_base64, sha256_file, nome, cognome } = req.body;
+        if (!images_base64 || !Array.isArray(images_base64) || images_base64.length === 0 || !sha256_file) {
+            return res.status(400).json({ error: 'Dati incompleti: immagini e hash SHA-256 del file obbligatori per il precheck.' });
+        }
+
+        const mistral = new Mistral({ apiKey: mistralApiKey });
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (targetType === 'precheck_cert') {
+            const prompt = `Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date).
+Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
+Sto per fornirti l'immagine di un certificato medico.
+
+REQUISITO FONDAMENTALE SULLE DICITURE DI IDONEITÀ:
+Affinché il certificato sia valido per il tesseramento sportivo, sul documento DEVE ESSERE PRESENTE IN MODO CHIARO ED ESPLICITO almeno una delle seguenti parole/diciture (senza distinzione tra maiuscole e minuscole):
+- "AGONISTICO"
+- "AGONISTICI"
+- "NON AGONISTICO"
+- "NON AGONISTICI"
+
+Se il certificato NON contiene nessuna di queste parole esplicite (ad esempio se riporta soltanto "attività ludico-motoria", "ludico-ricreativa", "attività amatoriale" o altre diciture prive dei termini sopra indicati), il certificato NON È VALIDO ai fini del tesseramento sportivo e lo stato DEVE essere tassativamente "ROSSO".
+
+Devi estrarre le seguenti informazioni in formato JSON STRICT:
+1. data_emissione (formato YYYY-MM-DD, la data in cui il certificato è stato rilasciato, null se non leggibile)
+2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato, null se non leggibile)
+3. agonistico (booleano, true se specifica idoneità agonistica, false se specifica non agonistica)
+4. stato (stringa: "VERDE" se il certificato è originale, ben leggibile e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se l'immagine è sfuocata, tagliata o c'è qualcosa di incomprensibile o manca la scadenza; "ROSSO" se il certificato non contiene la dicitura obbligatoria o è palesemente non medico o scaduto).
+5. note (una breve spiegazione del perché hai assegnato quello stato).
+6. intestatario_rilevato (stringa: nome e cognome del paziente/atleta indicato sul certificato, null se non leggibile).
+
+Rispondi SOLO con il JSON, senza markdown, senza blockquote:
+{"data_emissione": "2026-10-01", "data_scadenza": "2027-10-01", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico valido.", "intestatario_rilevato": "Mario Rossi"}`;
+
+            try {
+                const content = [{ type: 'text', text: prompt }];
+                for (const b64 of images_base64.slice(0, 2)) {
+                    const formattedUrl = b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`;
+                    content.push({ type: 'image_url', imageUrl: formattedUrl });
+                }
+
+                const response = await mistral.chat.complete({
+                    model: 'pixtral-12b-2409',
+                    responseFormat: { type: 'json_object' },
+                    messages: [{ role: 'user', content }]
+                });
+
+                let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
+                    .replace(/```json/g, '').replace(/```/g, '').trim();
+                const aiResult = JSON.parse(responseText);
+
+                let finalStatus = aiResult.stato || 'GIALLO';
+                let finalNotes = aiResult.note || 'Analisi completata';
+                let finalRelease = aiResult.data_emissione || null;
+                let finalExpiry = aiResult.data_scadenza || null;
+                let finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
+
+                // Guardrail 1: Scadenza mancante -> GIALLO (rigoroso: nessuna estrapolazione arbitraria)
+                if (!finalExpiry) {
+                    if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
+                    finalNotes = `Data di scadenza non chiaramente indicata sul documento. Richiesta revisione manuale. (${finalNotes})`;
+                } else {
+                    const expiryDate = new Date(finalExpiry);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (expiryDate < today) {
+                        finalStatus = 'ROSSO';
+                        finalNotes = `Certificato medico scaduto il ${finalExpiry}.`;
+                    }
+                }
+
+                // Guardrail 2: Controllo corrispondenza intestatario
+                if (aiResult.intestatario_rilevato && (nome || cognome)) {
+                    const isMatch = matchIntestatario(aiResult.intestatario_rilevato, nome, cognome);
+                    if (!isMatch) {
+                        if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
+                        finalNotes = `Intestatario rilevato (${aiResult.intestatario_rilevato}) non corrispondente ai dati anagrafici dichiarati (${nome} ${cognome}). Richiesta revisione manuale.`;
+                    }
+                }
+
+                const token = signPrecheck({
+                    kind: 'cert',
+                    esito: finalStatus,
+                    tipologia: finalType,
+                    data_emissione: finalRelease,
+                    data_scadenza: finalExpiry,
+                    sha256_file,
+                    nome,
+                    cognome,
+                    note: finalNotes
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    esito: finalStatus,
+                    tipologia: finalType,
+                    data_emissione: finalRelease,
+                    data_scadenza: finalExpiry,
+                    note: finalNotes,
+                    token
+                });
+            } catch (err) {
+                console.error('[PRECHECK CERT ERROR] Fallback a GIALLO:', err);
+                const fallbackStatus = 'GIALLO';
+                const fallbackNotes = 'Servizio di analisi AI momentaneamente non disponibile. Il certificato verrà revisionato manualmente dal direttivo.';
+                const token = signPrecheck({
+                    kind: 'cert',
+                    esito: fallbackStatus,
+                    tipologia: 'NON_SPECIFICATO',
+                    data_emissione: null,
+                    data_scadenza: null,
+                    sha256_file,
+                    nome,
+                    cognome,
+                    note: fallbackNotes
+                });
+                return res.status(200).json({
+                    success: true,
+                    esito: fallbackStatus,
+                    tipologia: 'NON_SPECIFICATO',
+                    data_emissione: null,
+                    data_scadenza: null,
+                    note: fallbackNotes,
+                    token
+                });
+            }
+        }
+
+        if (targetType === 'precheck_doc') {
+            const docKind = req.body.doc_kind || 'doc'; // 'doc' o 'tutore'
+            const prompt = `Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date).
+Sei un esperto di documenti di identità italiani.
+Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida).
+Devi estrarre queste informazioni in formato JSON STRICT:
+1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO")
+2. data_scadenza (formato YYYY-MM-DD, null se non leggibile)
+3. leggibile (booleano)
+4. stato (stringa: "VERDE" se il documento è autentico, valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o mancano dati certi; "ROSSO" se l'immagine non è un documento d'identità valido o è scaduto)
+5. note (breve spiegazione)
+6. intestatario_rilevato (stringa: nome e cognome dell'intestatario riportato sul documento, o null se non leggibile)
+
+Rispondi SOLO con il JSON senza markdown:
+{"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento d'identità valido e ben leggibile.","intestatario_rilevato":"Mario Rossi"}`;
+
+            try {
+                const content = [{ type: 'text', text: prompt }];
+                for (const b64 of images_base64.slice(0, 2)) {
+                    const formattedUrl = b64.startsWith('data:') ? b64 : `data:image/jpeg;base64,${b64}`;
+                    content.push({ type: 'image_url', imageUrl: formattedUrl });
+                }
+
+                const response = await mistral.chat.complete({
+                    model: 'pixtral-12b-2409',
+                    responseFormat: { type: 'json_object' },
+                    messages: [{ role: 'user', content }]
+                });
+
+                let responseText = (typeof response.choices[0].message.content === 'string' ? response.choices[0].message.content : JSON.stringify(response.choices[0].message.content)).trim()
+                    .replace(/```json/g, '').replace(/```/g, '').trim();
+                const aiResult = JSON.parse(responseText);
+
+                let finalStatus = aiResult.stato || 'GIALLO';
+                let finalNotes = aiResult.note || 'Analisi documento completata';
+                let finalExpiry = aiResult.data_scadenza || null;
+                let finalDocType = aiResult.tipo_documento || 'CARTA_IDENTITA';
+
+                // Guardrail 1: Scadenza documento
+                if (!finalExpiry) {
+                    if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
+                    finalNotes = `Data di scadenza non rilevabile dal documento. Richiesta revisione manuale. (${finalNotes})`;
+                } else {
+                    const expiryDate = new Date(finalExpiry);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (expiryDate < today) {
+                        finalStatus = 'ROSSO';
+                        finalNotes = `Documento d'identità scaduto il ${finalExpiry}.`;
+                    }
+                }
+
+                // Guardrail 2: Controllo corrispondenza intestatario
+                if (aiResult.intestatario_rilevato && (nome || cognome)) {
+                    const isMatch = matchIntestatario(aiResult.intestatario_rilevato, nome, cognome);
+                    if (!isMatch) {
+                        if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
+                        finalNotes = `Intestatario rilevato (${aiResult.intestatario_rilevato}) non corrispondente ai dati anagrafici (${nome} ${cognome}). Richiesta revisione manuale.`;
+                    }
+                }
+
+                const token = signPrecheck({
+                    kind: docKind,
+                    esito: finalStatus,
+                    tipo_documento: finalDocType,
+                    data_scadenza: finalExpiry,
+                    sha256_file,
+                    nome,
+                    cognome,
+                    note: finalNotes
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    esito: finalStatus,
+                    tipo_documento: finalDocType,
+                    data_scadenza: finalExpiry,
+                    note: finalNotes,
+                    token
+                });
+            } catch (err) {
+                console.error('[PRECHECK DOC ERROR] Fallback a GIALLO:', err);
+                const fallbackStatus = 'GIALLO';
+                const fallbackNotes = 'Servizio di analisi AI momentaneamente non disponibile. Il documento verrà revisionato manualmente dal direttivo.';
+                const token = signPrecheck({
+                    kind: docKind,
+                    esito: fallbackStatus,
+                    tipo_documento: 'CARTA_IDENTITA',
+                    data_scadenza: null,
+                    sha256_file,
+                    nome,
+                    cognome,
+                    note: fallbackNotes
+                });
+                return res.status(200).json({
+                    success: true,
+                    esito: fallbackStatus,
+                    tipo_documento: 'CARTA_IDENTITA',
+                    data_scadenza: null,
+                    note: fallbackNotes,
+                    token
+                });
+            }
+        }
     }
 
     try {

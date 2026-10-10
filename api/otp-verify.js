@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from './_utils/resend-mail.js';
+import { verifyPrecheck } from './_utils/precheck-token.js';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
@@ -83,8 +84,16 @@ export default async function handler(req, res) {
             return res.status(429).json({ error: 'Troppe richieste di verifica OTP. Riprova più tardi.' });
         }
         
-        // 3. Get OTP from request body
-        const { otp } = req.body;
+        // 3. Get OTP and precheck tokens from request body
+        const { 
+            otp, 
+            cert_token, 
+            doc_token, 
+            tutore_token, 
+            cert_revisione_umana, 
+            doc_revisione_umana, 
+            tutore_revisione_umana 
+        } = req.body;
         if (!otp || otp.length !== 6) {
             return res.status(400).json({ error: 'Valid 6-digit OTP code required' });
         }
@@ -235,17 +244,30 @@ export default async function handler(req, res) {
         if (contError) console.error("Errore inserimento contatti:", contError);
 
         // C2. Insert into public.certificati_medici if present
+        let isCertVerde = false;
         if (profile.certificato_medico_url) {
-            // Manteniamo lo storico per 5 anni, non eliminiamo il record precedente fisicamente.
-            // await supabase.from('certificati_medici').delete().eq('anagrafica_id', anagraficaId);
-            
-            // Calcola una data di scadenza fittizia (1 anno) per bypassare il constraint NOT NULL,
-            // verrà sovrascritta dall'AI fra pochi secondi.
             let fallbackScadenza = '2099-12-31';
-            if (profile.certificato_data_emissione) {
-                const emDate = new Date(profile.certificato_data_emissione);
-                emDate.setFullYear(emDate.getFullYear() + 1);
-                fallbackScadenza = emDate.toISOString().split('T')[0];
+            let certStato = 'IN_ATTESA';
+            let certNote = 'In elaborazione AI...';
+            let certTipologia = profile.certificato_tipologia || 'NON_SPECIFICATO';
+            let certDataRilascio = profile.certificato_data_emissione || new Date().toISOString().split('T')[0];
+
+            if (cert_token) {
+                const verifiedCert = verifyPrecheck(cert_token);
+                if (verifiedCert && verifiedCert.kind === 'cert') {
+                    certTipologia = verifiedCert.tipologia || certTipologia;
+                    if (verifiedCert.data_emissione) certDataRilascio = verifiedCert.data_emissione;
+                    if (verifiedCert.data_scadenza) fallbackScadenza = verifiedCert.data_scadenza;
+
+                    if (cert_revisione_umana || verifiedCert.esito !== 'VERDE') {
+                        certStato = 'GIALLO';
+                        certNote = verifiedCert.note ? `Revisione manuale richiesta. Nota AI: ${verifiedCert.note}` : 'Revisione manuale richiesta dall\'utente.';
+                    } else if (verifiedCert.esito === 'VERDE') {
+                        certStato = 'VERDE';
+                        certNote = verifiedCert.note || 'Certificato validato con successo da Mistral AI';
+                        isCertVerde = true;
+                    }
+                }
             }
 
             const { error: certError } = await supabase
@@ -253,24 +275,40 @@ export default async function handler(req, res) {
                 .insert({
                     anagrafica_id: anagraficaId,
                     file_url: profile.certificato_medico_url,
-                    tipologia: profile.certificato_tipologia || 'NON_SPECIFICATO',
-                    data_rilascio: profile.certificato_data_emissione || new Date().toISOString().split('T')[0],
+                    tipologia: certTipologia,
+                    data_rilascio: certDataRilascio,
                     data_scadenza: fallbackScadenza,
-                    medico_rilascio: 'In elaborazione AI...',
-                    stato_validazione: 'IN_ATTESA'
+                    medico_rilascio: certNote,
+                    stato_validazione: certStato,
+                    note_ai: certNote
                 });
             if (certError) {
                 console.error("Errore inserimento certificati medici:", certError);
             } else {
-                // La validazione AI ora viene lanciata automaticamente tramite Webhook di Supabase
-                // all'inserimento del record in 'certificati_medici', svincolando la registrazione.
-                console.log(`[OTP] Certificato salvato in IN_ATTESA. Webhook AI triggerato da Supabase.`);
+                console.log(`[OTP] Certificato salvato in stato ${certStato}.`);
             }
         }
 
         // C3. Insert into public.documenti_identita if present (documento personale)
         if (profile.documento_identita_url) {
-            // Manteniamo lo storico per 5 anni, non eliminiamo il record precedente fisicamente.
+            let docStato = 'IN_ATTESA';
+            let docNote = null;
+            let docScadenza = profile.documento_identita_scadenza || null;
+
+            if (doc_token) {
+                const verifiedDoc = verifyPrecheck(doc_token);
+                if (verifiedDoc && verifiedDoc.kind === 'doc') {
+                    if (verifiedDoc.data_scadenza) docScadenza = verifiedDoc.data_scadenza;
+                    if (doc_revisione_umana || verifiedDoc.esito !== 'VERDE') {
+                        docStato = 'GIALLO';
+                        docNote = verifiedDoc.note ? `Revisione manuale richiesta. Nota AI: ${verifiedDoc.note}` : 'Revisione manuale richiesta dall\'utente.';
+                    } else if (verifiedDoc.esito === 'VERDE') {
+                        docStato = 'VERDE';
+                        docNote = verifiedDoc.note || 'Documento identità validato con successo da Mistral AI';
+                    }
+                }
+            }
+
             const { error: idDocError } = await supabase
                 .from('documenti_identita')
                 .insert({
@@ -278,15 +316,33 @@ export default async function handler(req, res) {
                     file_url: profile.documento_identita_url,
                     tipologia: 'FRONTE_RETRO',
                     tipo_documento: 'PERSONALE',
-                    data_scadenza: profile.documento_identita_scadenza || null,
-                    stato_validazione: 'IN_ATTESA'
-                    // Webhook AI triggerato automaticamente da DB trigger AI_Validate_Document
+                    data_scadenza: docScadenza,
+                    stato_validazione: docStato,
+                    note_ai: docNote
                 });
             if (idDocError) console.error("Errore inserimento documento identita:", idDocError);
         }
 
         // C4. Insert into public.documenti_identita for tutore/genitore (if minor)
         if (profile.tutore_documento_url) {
+            let tutoreStato = 'IN_ATTESA';
+            let tutoreNote = null;
+            let tutoreScadenza = profile.tutore_documento_scadenza || null;
+
+            if (tutore_token) {
+                const verifiedTutore = verifyPrecheck(tutore_token);
+                if (verifiedTutore && verifiedTutore.kind === 'tutore') {
+                    if (verifiedTutore.data_scadenza) tutoreScadenza = verifiedTutore.data_scadenza;
+                    if (tutore_revisione_umana || verifiedTutore.esito !== 'VERDE') {
+                        tutoreStato = 'GIALLO';
+                        tutoreNote = verifiedTutore.note ? `Revisione manuale richiesta. Nota AI: ${verifiedTutore.note}` : 'Revisione manuale richiesta dal tutore.';
+                    } else if (verifiedTutore.esito === 'VERDE') {
+                        tutoreStato = 'VERDE';
+                        tutoreNote = verifiedTutore.note || 'Documento tutore validato con successo da Mistral AI';
+                    }
+                }
+            }
+
             const { error: tutoreDocError } = await supabase
                 .from('documenti_identita')
                 .insert({
@@ -294,9 +350,9 @@ export default async function handler(req, res) {
                     file_url: profile.tutore_documento_url,
                     tipologia: 'FRONTE_RETRO',
                     tipo_documento: 'TUTORE',
-                    data_scadenza: profile.tutore_documento_scadenza || null,
-                    stato_validazione: 'IN_ATTESA'
-                    // Webhook AI triggerato automaticamente da DB trigger AI_Validate_Document
+                    data_scadenza: tutoreScadenza,
+                    stato_validazione: tutoreStato,
+                    note_ai: tutoreNote
                 });
             if (tutoreDocError) console.error("Errore inserimento documento tutore:", tutoreDocError);
         }
@@ -372,7 +428,7 @@ export default async function handler(req, res) {
                 <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
                     <h1 style="color: #df293e; font-size: 22px;">ADRENALINA CLUB</h1>
                     <p style="color: #ccc;">Ciao ${profile.nome}, la tua richiesta di tesseramento sportivo CSEN è stata registrata con successo.</p>
-                    <p style="color: #aaa; font-size: 13px;">I nostri sistemi stanno attualmente verificando la validità del certificato medico da te caricato. Riceverai un'e-mail di conferma contenente il link per procedere al pagamento non appena il certificato sarà approvato.</p>
+                    <p style="color: #aaa; font-size: 13px;">${isCertVerde ? "Il tuo certificato medico è stato verificato con successo! Puoi procedere direttamente al pagamento della quota per attivare la tua tessera." : "I nostri sistemi o la segreteria stanno verificando la validità del certificato medico da te caricato. Riceverai un'e-mail non appena il certificato sarà approvato."}</p>
                 </div>
             `;
         }

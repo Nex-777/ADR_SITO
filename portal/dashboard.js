@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.05"
+                VERSION: "1.06.06"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1758,7 +1758,7 @@
                                     <p class="text-[9px] text-gray-400">Scadenza doc: <span class="text-amber-300">${dataScad}</span></p>
                                     ${note ? `<p class="text-[9px] text-amber-400 mt-1">AI: "${note}"</p>` : ''}
                                 </div>
-                                <span class="px-1.5 py-0.5 text-[8px] bg-amber-900 text-amber-300 font-headline font-bold rounded uppercase shrink-0">${doc.stato_validazione}</span>
+                                <span class="px-1.5 py-0.5 text-[8px] ${note.toLowerCase().includes('revisione') ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40' : 'bg-amber-900 text-amber-300'} font-headline font-bold rounded uppercase shrink-0">${note.toLowerCase().includes('revisione') ? 'REVISIONE RICHIESTA' : doc.stato_validazione}</span>
                             </div>
                             <div class="flex gap-2 flex-wrap">
                                 ${doc.file_url ? `<button onclick="openSignedFile('${doc.tipo_documento === 'TUTORE' ? 'documenti_tutori' : 'documenti_identita'}', '${escapeHtml(doc.file_url)}', this)" class="bg-blue-900 hover:bg-blue-700 active:scale-95 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all flex items-center gap-1"><span class="material-symbols-outlined text-xs">visibility</span> VEDI DOCUMENTO</button>` : ''}
@@ -2844,7 +2844,10 @@
                         badgeHtml = '<span class="px-1.5 py-0.5 text-[8px] bg-red-950/80 text-red-400 border border-red-500/30 font-bold rounded uppercase ml-1">RIFIUTATO AI</span>';
                         noteColorClass = 'text-red-300/90';
                     } else if (stato === 'GIALLO') {
-                        badgeHtml = '<span class="px-1.5 py-0.5 text-[8px] bg-yellow-950/80 text-yellow-400 border border-yellow-500/30 font-bold rounded uppercase ml-1">DUBBIO AI</span>';
+                        const isRevUtente = noteAi.toLowerCase().includes('revisione');
+                        badgeHtml = isRevUtente
+                            ? '<span class="px-1.5 py-0.5 text-[8px] bg-amber-950/80 text-amber-300 border border-amber-500/40 font-bold rounded uppercase ml-1">REVISIONE RICHIESTA</span>'
+                            : '<span class="px-1.5 py-0.5 text-[8px] bg-yellow-950/80 text-yellow-400 border border-yellow-500/30 font-bold rounded uppercase ml-1">DUBBIO AI</span>';
                         noteColorClass = 'text-yellow-300/80';
                     } else {
                         badgeHtml = '<span class="px-1.5 py-0.5 text-[8px] bg-blue-950/80 text-blue-400 border border-blue-500/30 font-bold rounded uppercase ml-1">IN ATTESA</span>';

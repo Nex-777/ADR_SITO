@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.05"
+                VERSION: "1.06.06"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -416,8 +416,6 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 certificatoContainer.classList.add('hidden');
                 selectedTessera = "";
                 inputTessera.value = "";
-                document.getElementById('certificato_tipologia').value = "";
-                document.getElementById('certificato_data_emissione').value = "";
             } else {
                 tesseraContainer.classList.remove('hidden');
                 certificatoContainer.classList.remove('hidden');
@@ -521,52 +519,367 @@ function togglePasswordVisibility(inputId, buttonEl) {
             fileNameLabel.textContent = file.name.toUpperCase();
             fileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
             fileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+            runPrecheck('cert');
         });
 
-        // Validazione visiva preventiva della data di emissione del certificato medico
-        const certDataEmissioneInput = document.getElementById('certificato_data_emissione');
-        const certDataWarning = document.getElementById('cert-data-warning');
+        // ========================================================
+        //  MODULO PRECHECK AI CON MISTRAL (STEP 2, STEP 3, STEP 5)
+        // ========================================================
+        const precheckState = {
+            cert: {
+                state: 'idle', // 'idle' | 'loading' | 'ok' | 'ko' | 'confermato' | 'revisione_umana'
+                token: null,
+                esito: null,
+                tipologia: null,
+                scadenza: null,
+                emissione: null,
+                note: null,
+                retries: 2,
+                revisioneUmana: false,
+                sha256: null
+            },
+            doc: {
+                state: 'idle',
+                token: null,
+                esito: null,
+                tipo: null,
+                scadenza: null,
+                note: null,
+                retries: 2,
+                revisioneUmana: false,
+                sha256: null
+            },
+            tutore: {
+                state: 'idle',
+                token: null,
+                esito: null,
+                tipo: null,
+                scadenza: null,
+                note: null,
+                retries: 2,
+                revisioneUmana: false,
+                sha256: null
+            }
+        };
 
-        if (certDataEmissioneInput) {
-            certDataEmissioneInput.addEventListener('change', () => {
-                const emissioneVal = certDataEmissioneInput.value;
-                if (!emissioneVal) {
-                    if (certDataWarning) {
-                        certDataWarning.textContent = '';
-                        certDataWarning.classList.add('hidden');
-                    }
-                    certDataEmissioneInput.classList.remove('border-red-500');
-                    return;
-                }
+        function formatIsoToItalian(isoDate) {
+            if (!isoDate || typeof isoDate !== 'string') return 'Non indicata';
+            const parts = isoDate.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return isoDate;
+        }
 
-                const emissioneDate = new Date(emissioneVal);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
+        async function calculateSha256(file) {
+            const buffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
 
-                // Calcolo scadenza: 1 anno dopo la data di emissione
-                const expiryDate = new Date(emissioneDate);
-                expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-
-                if (emissioneDate > today) {
-                    if (certDataWarning) {
-                        certDataWarning.textContent = "⚠️ Attenzione: la data di emissione non può essere nel futuro.";
-                        certDataWarning.classList.remove('hidden');
-                    }
-                    certDataEmissioneInput.classList.add('border-red-500');
-                } else if (expiryDate < today) {
-                    if (certDataWarning) {
-                        certDataWarning.textContent = "⚠️ Attenzione: questa data indica che il certificato è scaduto (validità 1 anno). Il sistema AI lo rifiuterà automaticamente. Carica un certificato aggiornato.";
-                        certDataWarning.classList.remove('hidden');
-                    }
-                    certDataEmissioneInput.classList.add('border-red-500');
-                } else {
-                    if (certDataWarning) {
-                        certDataWarning.textContent = '';
-                        certDataWarning.classList.add('hidden');
-                    }
-                    certDataEmissioneInput.classList.remove('border-red-500');
-                }
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
             });
+        }
+
+        async function prepareImagesForAi(fileOrBlob) {
+            const images = [];
+            const isPdf = fileOrBlob.type === 'application/pdf' || (fileOrBlob.name && fileOrBlob.name.toLowerCase().endsWith('.pdf'));
+            if (isPdf) {
+                if (typeof window.pdfjsLib !== 'undefined') {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                    const arrayBuffer = await fileOrBlob.arrayBuffer();
+                    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const maxPages = Math.min(pdf.numPages, 2);
+                    for (let i = 1; i <= maxPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const scale = 1.4;
+                        const viewport = page.getViewport({ scale });
+                        const canvas = document.createElement('canvas');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        const context = canvas.getContext('2d');
+                        await page.render({ canvasContext: context, viewport }).promise;
+                        images.push(canvas.toDataURL('image/jpeg', 0.8));
+                    }
+                } else {
+                    const thumb = await generatePdfThumbnail(fileOrBlob);
+                    if (thumb) images.push(await blobToBase64(thumb));
+                }
+            } else {
+                const compressed = await compressImage(fileOrBlob, 1200, 1200, 0.8);
+                images.push(await blobToBase64(compressed));
+            }
+            return images;
+        }
+
+        async function runPrecheck(kind) {
+            let targetFile = null;
+            let containerPrefix = '';
+            let targetType = '';
+            let docKind = '';
+
+            if (kind === 'cert') {
+                targetFile = uploadedCertificatoFile;
+                containerPrefix = 'certificato-precheck';
+                targetType = 'precheck_cert';
+            } else if (kind === 'doc') {
+                targetFile = uploadedDocumentoIdentitaFile;
+                containerPrefix = 'documento-precheck';
+                targetType = 'precheck_doc';
+                docKind = 'doc';
+            } else if (kind === 'tutore') {
+                targetFile = uploadedTutoreDocumentoFile;
+                containerPrefix = 'tutore-precheck';
+                targetType = 'precheck_doc';
+                docKind = 'tutore';
+            }
+
+            if (!targetFile) return;
+
+            const container = document.getElementById(`${containerPrefix}-container`);
+            const loadingBox = document.getElementById(`${containerPrefix}-loading`);
+            const resultBox = document.getElementById(`${containerPrefix}-result`);
+            const stepText = document.getElementById(`${containerPrefix}-step-text`);
+            const progressBar = document.getElementById(`${containerPrefix}-progress-bar`);
+
+            if (!container || !loadingBox || !resultBox) return;
+
+            container.classList.remove('hidden');
+            loadingBox.classList.remove('hidden');
+            resultBox.classList.add('hidden');
+            precheckState[kind].state = 'loading';
+
+            try {
+                // Fase 1: Calcolo hash e compressione
+                if (stepText) stepText.textContent = "1. Preparazione e calcolo hash del file...";
+                if (progressBar) progressBar.style.width = "25%";
+                const hash = await calculateSha256(targetFile);
+                const images = await prepareImagesForAi(targetFile);
+
+                // Fase 2: Invio
+                if (stepText) stepText.textContent = "2. Invio protetto a Mistral Vision...";
+                if (progressBar) progressBar.style.width = "50%";
+
+                const nomeDichiarato = kind === 'tutore'
+                    ? (document.getElementById('tutore_nome')?.value?.trim() || '')
+                    : (document.getElementById('nome')?.value?.trim() || '');
+                const cognomeDichiarato = kind === 'tutore'
+                    ? (document.getElementById('tutore_cognome')?.value?.trim() || '')
+                    : (document.getElementById('cognome')?.value?.trim() || '');
+
+                // Fase 3: Lettura AI
+                if (stepText) stepText.textContent = "3. Lettura e comprensione documento in corso...";
+                if (progressBar) progressBar.style.width = "75%";
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+                const response = await fetch(`${API_BASE}/api/validate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_type: targetType,
+                        doc_kind: docKind,
+                        images_base64: images,
+                        sha256_file: hash,
+                        nome: nomeDichiarato,
+                        cognome: cognomeDichiarato
+                    }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                // Fase 4: Verifica
+                if (stepText) stepText.textContent = "4. Controllo integrità e conformità...";
+                if (progressBar) progressBar.style.width = "100%";
+
+                if (!response.ok) {
+                    const errJson = await response.json().catch(() => ({}));
+                    throw new Error(errJson.error || `Errore HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                precheckState[kind].token = data.token;
+                precheckState[kind].esito = data.esito;
+                precheckState[kind].note = data.note;
+                precheckState[kind].sha256 = hash;
+                if (kind === 'cert') {
+                    precheckState[kind].tipologia = data.tipologia;
+                    precheckState[kind].scadenza = data.data_scadenza;
+                    precheckState[kind].emissione = data.data_emissione;
+                } else {
+                    precheckState[kind].tipo = data.tipo_documento;
+                    precheckState[kind].scadenza = data.data_scadenza;
+                }
+
+                precheckState[kind].state = data.esito === 'VERDE' ? 'ok' : 'ko';
+                renderPrecheckResult(kind);
+
+            } catch (err) {
+                console.warn(`[PRECHECK ${kind}] Fallito, fallback a revisione umana:`, err);
+                precheckState[kind].esito = 'GIALLO';
+                precheckState[kind].note = 'Servizio di analisi AI momentaneamente non disponibile o tempo limite superato. Il documento verrà revisionato manualmente dal direttivo.';
+                precheckState[kind].state = 'ko';
+                renderPrecheckResult(kind);
+            }
+        }
+
+        function renderPrecheckResult(kind) {
+            let containerPrefix = '';
+            if (kind === 'cert') containerPrefix = 'certificato-precheck';
+            else if (kind === 'doc') containerPrefix = 'documento-precheck';
+            else if (kind === 'tutore') containerPrefix = 'tutore-precheck';
+
+            const loadingBox = document.getElementById(`${containerPrefix}-loading`);
+            const resultBox = document.getElementById(`${containerPrefix}-result`);
+            const badge = document.getElementById(`${containerPrefix}-badge`);
+            const retriesLabel = document.getElementById(`${containerPrefix}-retries`);
+            const tipoLabel = document.getElementById(`${containerPrefix}-tipo`);
+            const scadenzaLabel = document.getElementById(`${containerPrefix}-scadenza`);
+            const noteLabel = document.getElementById(`${containerPrefix}-note`);
+            const actionsBox = document.getElementById(`${containerPrefix}-actions`);
+
+            if (!resultBox) return;
+
+            if (loadingBox) loadingBox.classList.add('hidden');
+            resultBox.classList.remove('hidden');
+
+            const item = precheckState[kind];
+
+            if (retriesLabel) {
+                retriesLabel.textContent = `Ricaricamenti rimasti: ${item.retries}`;
+            }
+
+            if (badge) {
+                if (item.state === 'confermato') {
+                    badge.className = "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/40";
+                    badge.textContent = "✓ DATI CONFERMATI DALL'UTENTE";
+                } else if (item.state === 'revisione_umana') {
+                    badge.className = "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40";
+                    badge.textContent = "⚠️ INVIATO A REVISIONE UMANA";
+                } else if (item.esito === 'VERDE') {
+                    badge.className = "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/40";
+                    badge.textContent = "✓ DOCUMENTO VALIDO (AI)";
+                } else if (item.esito === 'ROSSO') {
+                    badge.className = "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/40";
+                    badge.textContent = "❌ NON VALIDO O SCADUTO (AI)";
+                } else {
+                    badge.className = "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40";
+                    badge.textContent = "⚠️ REVISIONE NECESSARIA (AI)";
+                }
+            }
+
+            if (tipoLabel) {
+                tipoLabel.textContent = (kind === 'cert' ? item.tipologia : item.tipo) || 'NON SPECIFICATO';
+            }
+
+            if (scadenzaLabel) {
+                scadenzaLabel.textContent = formatIsoToItalian(item.scadenza);
+            }
+
+            if (noteLabel) {
+                noteLabel.textContent = item.note || '';
+            }
+
+            if (actionsBox) {
+                actionsBox.innerHTML = '';
+
+                if (item.state === 'confermato' || item.state === 'revisione_umana') {
+                    const statusText = document.createElement('span');
+                    statusText.className = "text-xs font-bold uppercase " + (item.state === 'confermato' ? "text-green-400" : "text-amber-400");
+                    statusText.textContent = item.state === 'confermato' ? "✓ Pronto per proseguire" : "⚠️ Proseguirai con revisione del Direttivo";
+                    actionsBox.appendChild(statusText);
+
+                    if (item.retries > 0) {
+                        const btnReset = document.createElement('button');
+                        btnReset.type = "button";
+                        btnReset.className = "text-[10px] text-gray-400 underline uppercase ml-3 hover:text-white transition-colors";
+                        btnReset.textContent = "Carica un altro file";
+                        btnReset.onclick = () => resetPrecheck(kind);
+                        actionsBox.appendChild(btnReset);
+                    }
+                } else if (item.esito === 'VERDE') {
+                    const btnOk = document.createElement('button');
+                    btnOk.type = "button";
+                    btnOk.className = "bg-green-600 hover:bg-green-500 text-white font-bold text-xs uppercase px-4 py-2 transition-colors";
+                    btnOk.textContent = "CONFERMA E PROCEDI";
+                    btnOk.onclick = () => {
+                        item.state = 'confermato';
+                        item.revisioneUmana = false;
+                        renderPrecheckResult(kind);
+                    };
+                    actionsBox.appendChild(btnOk);
+
+                    if (item.retries > 0) {
+                        const btnRetry = document.createElement('button');
+                        btnRetry.type = "button";
+                        btnRetry.className = "bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase px-3 py-2 transition-colors";
+                        btnRetry.textContent = `RICARICA FILE (${item.retries} RIMASTI)`;
+                        btnRetry.onclick = () => resetPrecheck(kind);
+                        actionsBox.appendChild(btnRetry);
+                    }
+                } else {
+                    // Esito GIALLO o ROSSO o Fallback
+                    if (item.retries > 0) {
+                        const btnRetry = document.createElement('button');
+                        btnRetry.type = "button";
+                        btnRetry.className = "bg-primary hover:bg-primary/80 text-white font-bold text-xs uppercase px-4 py-2 transition-colors";
+                        btnRetry.textContent = `RICARICA FILE (${item.retries} RIMASTI)`;
+                        btnRetry.onclick = () => resetPrecheck(kind);
+                        actionsBox.appendChild(btnRetry);
+                    }
+
+                    const btnRev = document.createElement('button');
+                    btnRev.type = "button";
+                    btnRev.className = "bg-amber-600/80 hover:bg-amber-600 text-white font-bold text-xs uppercase px-4 py-2 transition-colors";
+                    btnRev.textContent = "INVIA A REVISIONE UMANA E PROCEDI";
+                    btnRev.onclick = () => {
+                        item.state = 'revisione_umana';
+                        item.revisioneUmana = true;
+                        renderPrecheckResult(kind);
+                    };
+                    actionsBox.appendChild(btnRev);
+                }
+            }
+        }
+
+        function resetPrecheck(kind) {
+            if (precheckState[kind].retries > 0) {
+                precheckState[kind].retries--;
+            }
+            precheckState[kind].state = 'idle';
+            precheckState[kind].token = null;
+            precheckState[kind].esito = null;
+            precheckState[kind].revisioneUmana = false;
+
+            let fileInputId = '';
+            let containerPrefix = '';
+            if (kind === 'cert') {
+                fileInputId = 'certificato_file';
+                containerPrefix = 'certificato-precheck';
+                uploadedCertificatoFile = null;
+            } else if (kind === 'doc') {
+                fileInputId = 'documento_identita_file';
+                containerPrefix = 'documento-precheck';
+                uploadedDocumentoIdentitaFile = null;
+            } else if (kind === 'tutore') {
+                fileInputId = 'tutore_documento_file';
+                containerPrefix = 'tutore-precheck';
+                uploadedTutoreDocumentoFile = null;
+            }
+
+            const container = document.getElementById(`${containerPrefix}-container`);
+            if (container) container.classList.add('hidden');
+
+            const inp = document.getElementById(fileInputId);
+            if (inp) {
+                inp.value = "";
+                inp.click();
+            }
         }
 
         // ID Document Selection handling
@@ -660,6 +973,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
             identitaFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
             identitaFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
             updateDocumentoIdentitaHelper();
+            mergeIdFilesIfReady();
         });
 
         if (identitaRetroFileInput) {
@@ -690,7 +1004,62 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 identitaRetroFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
                 identitaRetroFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
                 updateDocumentoIdentitaHelper();
+                mergeIdFilesIfReady();
             });
+        }
+
+        async function mergeIdFilesIfReady() {
+            const layoutChoice = document.querySelector('input[name="documento_layout_choice"]:checked')?.value || 'single';
+            if (layoutChoice === 'single') {
+                if (uploadedDocumentoIdentitaFile) {
+                    runPrecheck('doc');
+                }
+                return;
+            }
+
+            // In double mode: wait until both are uploaded
+            if (!uploadedDocumentoIdentitaFile || !uploadedDocumentoIdentitaRetroFile) {
+                return;
+            }
+
+            if (typeof window.PDFLib === 'undefined') {
+                runPrecheck('doc');
+                return;
+            }
+
+            try {
+                const pdfDoc = await window.PDFLib.PDFDocument.create();
+                const files = [uploadedDocumentoIdentitaFile, uploadedDocumentoIdentitaRetroFile];
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (!file) continue;
+                    if (file.type === 'application/pdf') {
+                        const fileBytes = await file.arrayBuffer();
+                        const donorPdf = await window.PDFLib.PDFDocument.load(fileBytes);
+                        const copiedPages = await pdfDoc.copyPages(donorPdf, donorPdf.getPageIndices());
+                        copiedPages.forEach(page => pdfDoc.addPage(page));
+                    } else if (file.type.startsWith('image/')) {
+                        const compBlob = await compressImage(file, 1200, 1200, 0.8);
+                        const imageBytes = await compBlob.arrayBuffer();
+                        let embeddedImage;
+                        if (file.type === 'image/png') {
+                            embeddedImage = await pdfDoc.embedPng(imageBytes).catch(async () => await pdfDoc.embedJpg(imageBytes));
+                        } else {
+                            embeddedImage = await pdfDoc.embedJpg(imageBytes).catch(async () => await pdfDoc.embedPng(imageBytes));
+                        }
+                        const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                        page.drawImage(embeddedImage, { x: 0, y: 0, width: embeddedImage.width, height: embeddedImage.height });
+                    }
+                }
+                const pdfBytes = await pdfDoc.save();
+                const mergedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                uploadedDocumentoIdentitaFile = new File([mergedPdfBlob], "documento_unito.pdf", { type: "application/pdf" });
+                console.log("Merge fronte/retro completato anticipatamente per precheck.");
+                runPrecheck('doc');
+            } catch (mergeErr) {
+                console.warn("Merge fronte/retro fallito, uso fronte:", mergeErr);
+                runPrecheck('doc');
+            }
         }
 
         // Initialize rates download
@@ -900,6 +1269,14 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         alert("Devi selezionare e caricare il certificato medico prima di procedere.");
                         return false;
                     }
+                    if (precheckState.cert.state !== 'confermato' && precheckState.cert.state !== 'revisione_umana') {
+                        if (precheckState.cert.state === 'loading') {
+                            alert("Analisi del certificato medico con l'AI in corso. Attendi qualche istante.");
+                        } else {
+                            alert("Prima di proseguire, conferma i dati estratti dal certificato o invialo a revisione umana.");
+                        }
+                        return false;
+                    }
                 }
             } else if (step === 3) {
                 // Check Identity Document (Mandatory for all)
@@ -912,6 +1289,15 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 const layoutChoice = document.querySelector('input[name="documento_layout_choice"]:checked')?.value || 'single';
                 if (layoutChoice === 'double' && !uploadedDocumentoIdentitaRetroFile) {
                     alert("Hai selezionato la modalità a due file. Carica il retro del documento.");
+                    return false;
+                }
+
+                if (precheckState.doc.state !== 'confermato' && precheckState.doc.state !== 'revisione_umana') {
+                    if (precheckState.doc.state === 'loading') {
+                        alert("Analisi del documento d'identità con l'AI in corso. Attendi qualche istante.");
+                    } else {
+                        alert("Prima di proseguire, conferma i dati estratti dal documento o invialo a revisione umana.");
+                    }
                     return false;
                 }
             } else if (step === 4) {
@@ -934,6 +1320,14 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     }
                     if (!uploadedTutoreDocumentoFile) {
                         alert("Devi selezionare e caricare il documento d'identità del genitore/tutore prima di procedere.");
+                        return false;
+                    }
+                    if (precheckState.tutore.state !== 'confermato' && precheckState.tutore.state !== 'revisione_umana') {
+                        if (precheckState.tutore.state === 'loading') {
+                            alert("Analisi del documento del genitore/tutore con l'AI in corso. Attendi qualche istante.");
+                        } else {
+                            alert("Prima di proseguire, conferma i dati estratti dal documento del tutore o invialo a revisione umana.");
+                        }
                         return false;
                     }
                 }
@@ -989,6 +1383,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 tutoreFileNameLabel.textContent = file.name.toUpperCase();
                 tutoreFileStatusLabel.textContent = `✓ PRONTO PER L'UPLOAD (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
                 tutoreFileStatusLabel.className = "text-[9px] text-green-500 mt-1 uppercase font-bold";
+                runPrecheck('tutore');
             });
         }
 
@@ -1696,18 +2091,22 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     const updatePayload = {};
                     if (preUploadedCertificatoUrl) {
                         updatePayload.certificato_medico_url = preUploadedCertificatoUrl;
-                        updatePayload.certificato_tipologia = document.getElementById('certificato_tipologia')?.value || 'NON_AGONISTICO';
-                        updatePayload.certificato_data_emissione = document.getElementById('certificato_data_emissione')?.value || new Date().toISOString().split('T')[0];
+                        updatePayload.certificato_tipologia = precheckState.cert.tipologia || 'NON_AGONISTICO';
+                        if (precheckState.cert.emissione) {
+                            updatePayload.certificato_data_emissione = precheckState.cert.emissione;
+                        }
                     }
                     if (preUploadedTutoreUrl) {
                         updatePayload.tutore_documento_url = preUploadedTutoreUrl;
-                        const tutoreScadenza = document.getElementById('tutore_documento_scadenza')?.value;
-                        if (tutoreScadenza) updatePayload.tutore_documento_scadenza = tutoreScadenza;
+                        if (precheckState.tutore.scadenza) {
+                            updatePayload.tutore_documento_scadenza = precheckState.tutore.scadenza;
+                        }
                     }
                     if (preUploadedDocumentoUrl) {
                         updatePayload.documento_identita_url = preUploadedDocumentoUrl;
-                        const docScadenza = document.getElementById('documento_identita_scadenza')?.value;
-                        if (docScadenza) updatePayload.documento_identita_scadenza = docScadenza;
+                        if (precheckState.doc.scadenza) {
+                            updatePayload.documento_identita_scadenza = precheckState.doc.scadenza;
+                        }
                     }
 
                     const { error: utentiUpdateError } = await supabaseClient
@@ -1994,7 +2393,13 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         otp: code, 
                         url_pdf_generato: preUploadedPdfUrl,
                         consenso_marketing: elMktg ? elMktg.value === 'acconsento' : false,
-                        consenso_audiovisivi: elAudio ? elAudio.value === 'acconsento' : false
+                        consenso_audiovisivi: elAudio ? elAudio.value === 'acconsento' : false,
+                        cert_token: precheckState.cert.token,
+                        doc_token: precheckState.doc.token,
+                        tutore_token: precheckState.tutore.token,
+                        cert_revisione_umana: precheckState.cert.revisioneUmana,
+                        doc_revisione_umana: precheckState.doc.revisioneUmana,
+                        tutore_revisione_umana: precheckState.tutore.revisioneUmana
                     })
                 });
 
@@ -2008,7 +2413,11 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
                 updateOtpButtonStatus("COMPLETATO!", false);
                 if (selectedAdesione === 'tesserato') {
-                    alert("REGISTRAZIONE RICEVUTA CON SUCCESSO!\n\nI nostri sistemi verificheranno la validità del certificato medico tramite scansione AI. Potrai procedere al pagamento non appena la verifica sarà completata con successo.");
+                    if (precheckState.cert.esito === 'VERDE' && !precheckState.cert.revisioneUmana) {
+                        alert("REGISTRAZIONE COMPLETATA CON SUCCESSO!\n\nIl tuo certificato medico è stato validato con successo dall'AI. Puoi procedere subito al pagamento della quota per completare la tua iscrizione.");
+                    } else {
+                        alert("REGISTRAZIONE RICEVUTA CON SUCCESSO!\n\nLa documentazione medica è in attesa di revisione da parte del Direttivo. Riceverai un'e-mail non appena la verifica sarà approvata.");
+                    }
                     window.location.href = "pagamento.html?id=" + createdUserSession.user.id;
                 } else {
                     alert("DOMANDA DI ISCRIZIONE RICEVUTA CON SUCCESSO!\n\nLa tua richiesta di ammissione socio è in attesa di delibera da parte del Consiglio Direttivo. Riceverai un'e-mail per procedere al pagamento non appena la domanda verrà deliberata.");

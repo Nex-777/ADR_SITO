@@ -40,6 +40,9 @@
     "functions": {
         "api/otp-verify.js": {
             "includeFiles": "{CSEN_moduli/**,assets/**}"
+        },
+        "api/validate.js": {
+            "maxDuration": 30
         }
     }
 }

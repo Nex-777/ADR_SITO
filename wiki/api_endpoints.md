@@ -41,16 +41,21 @@ Verifies the client-submitted OTP against the cryptographic hash in the database
 -   **Body JSON Parameters**:
     ```json
     {
-      "otp": "123456"
+      "otp": "123456",
+      "cert_token": "payload.hmac",
+      "doc_token": "payload.hmac",
+      "tutore_token": "payload.hmac",
+      "cert_revisione_umana": false,
+      "doc_revisione_umana": false,
+      "tutore_revisione_umana": false
     }
     ```
 -   **Actions**:
-    -   Hashes the input OTP string.
-    -   Checks the database for a matching record containing `utente_id`, the hashed value, and the state `in_attesa_otp`.
-    -   Returns standard HTTP states:
-        -   `200 OK`: Valid verification.
-        -   `400 Bad Request`: Expired or invalid OTP.
-        -   `401 Unauthorized`: Missing or invalid Bearer JWT.
+    -   Hashes the input OTP string and validates against database.
+    -   Verifies HMAC-SHA256 signatures of `cert_token`, `doc_token`, `tutore_token` using `[precheck-token.js](../api/_utils/precheck-token.js)`.
+    -   Recalculates SHA-256 hash of uploaded file in Supabase Storage and verifies match against token `sha256_file`.
+    -   Directly inserts records into `public.certificati_medici` and `public.documenti_identita` with status `VERDE` (if AI verified) or `GIALLO` (if human review was requested), attaching contextual notes for the board.
+    -   Sends confirmation email with immediate Stripe payment link if the medical certificate is already verified (`VERDE`).
 
 ---
 
@@ -62,8 +67,25 @@ Validates uploaded medical certificates and identity documents via Mistral AI Vi
 -   **File Path**: `[validate.js](../api/validate.js)`
 -   **Endpoint Route**: `POST /api/validate`
 -   **Headers**:
-    -   `Authorization: Bearer <Supabase_JWT>` (for manual board approvals) OR `X-Internal-Secret: <CRON_SECRET>` (for automatic webhook triggers)
--   **Body JSON Parameters**:
+    -   Pre-Auth (Anonimo durante registrazione): nessun header di autenticazione richiesto per `target_type: "precheck_cert"` o `"precheck_doc"`, protetto da strict IP rate limit (12 req / 5 min).
+    -   Post-Auth / Cron: `Authorization: Bearer <Supabase_JWT>` (approvazioni manuali) o `X-Internal-Secret: <CRON_SECRET>` (trigger automatici).
+-   **Body JSON Parameters (Pre-check anonimo nel wizard)**:
+    ```json
+    {
+      "target_type": "precheck_cert" | "precheck_doc",
+      "images": ["data:image/jpeg;base64,..."],
+      "sha256_file": "hex_string",
+      "nome": "Mario",
+      "cognome": "Rossi"
+    }
+    ```
+-   **Actions (Pre-check)**:
+    -   Esegue rate limit per IP client.
+    -   Dispatches compressed images directly to Mistral AI Vision API (`pixtral-12b-2409`).
+    -   Estrae tipologia, date, idoneità e intestatario.
+    -   Esegue guardrail deterministici e verifica intestatario (`matchIntestatario`).
+    -   Firma i dati con HMAC-SHA256 e restituisce `{ success: true, esito: "VERDE"|"GIALLO"|"ROSSO", ..., token: "..." }`. Se il servizio AI va in timeout o errore, effettua fallback sicuro a `GIALLO` (revisione umana).
+-   **Body JSON Parameters (Post-Auth / Webhook)**:
     ```json
     {
       "target_type": "cert" | "doc",
@@ -71,7 +93,7 @@ Validates uploaded medical certificates and identity documents via Mistral AI Vi
       "file_url": "https://..."
     }
     ```
--   **Actions**:
+-   **Actions (Post-Auth / Webhook)**:
     -   Downloads image from Supabase Storage and encodes as Base64 Data URI.
     -   Dispatches image to Mistral AI Vision API (`pixtral-12b-2409`) using `@mistralai/mistralai` SDK.
     -   Extracts structured JSON validation status (`VERDE`, `GIALLO`, `ROSSO`) and expiry dates.
