@@ -2,6 +2,22 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-10] feat | Timeline Continua a 12 Mesi con Focus Mese Corrente, Mesi Saltati e Frecce di Scorrimento (v1.06.07)
+- **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
+  - Trasformate le caselle dei corsi in una **Timeline Storica Continua a 12 slot**, imperniata sul mese corrente (`[OGGI]`).
+  - **Legibilità Numerica Assoluta**: eliminate le spunte interne `✓` e le croci `✗` che coprivano il numero del mese; in ogni casella è sempre visibile il numero del mese (es. `10`), mentre lo stato è comunicato unicamente dal colore della cornice:
+    - 🟩 **Cornice Verde**: Rata o saldo unico pagato regolarmente.
+    - 🟥 **Cornice Rossa**: Rata non pagata / insoluta / scaduta.
+    - ⬜ **Cornice Bianca**: Mese saltato (gap temporale tra abbonamenti o periodo in cui l'atleta non frequentava).
+    - 🔲 **Cornice Grigia tenue**: Mese futuro compreso nell'abbonamento attivo in attesa di maturazione.
+    - 🟡 **Anello Primario Attivo**: Mese corrente evidenziato al centro con anello e glow.
+  - **Scorrimento Interattivo per Singola Riga**:
+    - Aggiunte frecce `◀` e `▶` a inizio e fine nastro per esplorare lo storico passato (partendo dalla prima iscrizione in assoluto) o i mesi futuri oltre la finestra standard di 12 mesi, con gestione asincrona fluida dell'offset senza ricaricare la pagina.
+    - In linea con la scelta Opzione A, a destra vengono mostrati solo i mesi fino all'ultimo mese di abbonamento attivo.
+  - **Preservazione Carnet**: i carnet a ingressi mantengono le caselle numerate degli ingressi e il pulsante rapido `+` per scalare le presenze.
+
+---
+
 ## [2026-10-10] feat | Validazione Anticipata AI Mistral Vision nel Wizard con Token HMAC-SHA256 (v1.06.06)
 - **Architettura & Sicurezza (`api/_utils/precheck-token.js`, `api/validate.js`)**:
   - Eliminati i campi di inserimento manuale di tipologie e date di emissione/scadenza nel wizard di registrazione: zero fiducia nei dati arbitrari inseriti dal client per prevenire frodi o date alterate.

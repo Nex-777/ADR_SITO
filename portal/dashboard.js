@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.06"
+                VERSION: "1.06.07"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6188,6 +6188,7 @@
             document.getElementById('instructor-course-detail-title').textContent = title.toUpperCase();
             document.getElementById('instructor-course-detail-subtitle').textContent = `ORARIO: ${orariStr.toUpperCase()} | LUOGO: ${luogo.toUpperCase()}`;
 
+            window.athleteTimelineOffsets = {};
             resetInstructorFilters(false);
             await loadRegistroIscritti();
         }
@@ -6349,6 +6350,236 @@
             if (p) p.value = 'ALL';
             if (triggerRender) {
                 renderInstructorCards();
+            }
+        };
+
+        window.athleteTimelineOffsets = window.athleteTimelineOffsets || {};
+
+        window.buildAthleteTimeline = function(atl, cardId) {
+            const nomiMesi = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+            const parseAbsMonth = (dateStr) => {
+                if (!dateStr) return null;
+                const parts = dateStr.split('T')[0].split('-');
+                if (parts.length < 2) return null;
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (isNaN(y) || isNaN(m)) return null;
+                return y * 12 + (m - 1);
+            };
+
+            const oggi = new Date();
+            const currentAbsMonth = oggi.getFullYear() * 12 + oggi.getMonth();
+
+            const userIscrizioni = (window.instructorAllIscrizioni || []).filter(i => i.utente_id === atl.utente_id);
+
+            let minAbs = null;
+            let maxAbs = null;
+
+            if (userIscrizioni.length > 0) {
+                userIscrizioni.forEach(isc => {
+                    const s = parseAbsMonth(isc.data_inizio_corso || isc.data_iscrizione || isc.created_at);
+                    if (s !== null) {
+                        if (minAbs === null || s < minAbs) minAbs = s;
+
+                        let e = parseAbsMonth(isc.data_scadenza_corso);
+                        if (e === null || e < s) {
+                            let n = isc.totale_rate || 1;
+                            const abb = (isc.abbonamento_scelto || '').toLowerCase();
+                            if (abb.includes('annua')) n = 12;
+                            else if (abb.includes('semest')) n = 6;
+                            else if (abb.includes('quadrimest')) n = 4;
+                            else if (abb.includes('trimest')) n = 3;
+                            else if (abb.includes('bimest')) n = 2;
+                            else if (abb.includes('mese') || abb.includes('mensil')) n = 1;
+                            e = s + n - 1;
+                        }
+                        if (maxAbs === null || e > maxAbs) maxAbs = e;
+                    }
+                });
+            }
+
+            if (minAbs === null) {
+                minAbs = parseAbsMonth(atl.data_inizio_corso || atl.data_iscrizione) || currentAbsMonth;
+            }
+            if (maxAbs === null) {
+                let n = atl.totale_rate || 1;
+                const abb = (atl.abbonamento_scelto || '').toLowerCase();
+                if (abb.includes('annua')) n = 12;
+                else if (abb.includes('semest')) n = 6;
+                else if (abb.includes('quadrimest')) n = 4;
+                else if (abb.includes('trimest')) n = 3;
+                else if (abb.includes('bimest')) n = 2;
+                else if (abb.includes('mese') || abb.includes('mensil')) n = 1;
+                maxAbs = parseAbsMonth(atl.data_scadenza_corso) || (minAbs + n - 1);
+            }
+            if (maxAbs < minAbs) maxAbs = minAbs;
+
+            const slots = [];
+            let hasOverdue = false;
+
+            for (let absM = minAbs; absM <= maxAbs; absM++) {
+                const yearM = Math.floor(absM / 12);
+                const monthNum = (absM % 12) + 1;
+                const monthName = nomiMesi[monthNum - 1];
+                const isCurrent = (absM === currentAbsMonth);
+
+                // Trova l'iscrizione che copre questo mese
+                const coveringIsc = userIscrizioni.find(isc => {
+                    const s = parseAbsMonth(isc.data_inizio_corso || isc.data_iscrizione || isc.created_at);
+                    let e = parseAbsMonth(isc.data_scadenza_corso);
+                    if (e === null || e < s) {
+                        let n = isc.totale_rate || 1;
+                        const abb = (isc.abbonamento_scelto || '').toLowerCase();
+                        if (abb.includes('annua')) n = 12;
+                        else if (abb.includes('semest')) n = 6;
+                        else if (abb.includes('quadrimest')) n = 4;
+                        else if (abb.includes('trimest')) n = 3;
+                        else if (abb.includes('bimest')) n = 2;
+                        else if (abb.includes('mese') || abb.includes('mensil')) n = 1;
+                        e = s + n - 1;
+                    }
+                    return s !== null && absM >= s && absM <= e;
+                }) || (absM >= minAbs && absM <= maxAbs ? atl : null);
+
+                let status = 'SALTATO';
+                let title = `Mese ${monthNum} (${monthName} ${yearM}): Mese non frequentato (Nessun abbonamento attivo)`;
+                let boxClass = 'border-white/40 bg-white/5 text-gray-300';
+
+                const tipoPag = (coveringIsc?.tipo_pagamento || atl.tipo_pagamento || '').toUpperCase();
+
+                if (!coveringIsc || (tipoPag !== 'UNICA RATA' && tipoPag !== 'A RATE')) {
+                    status = 'SALTATO';
+                    boxClass = 'border-white/40 bg-white/5 text-gray-300';
+                } else if (tipoPag === 'UNICA RATA') {
+                    status = 'PAGATO';
+                    title = `Mese ${monthNum} (${monthName} ${yearM}): Saldo unico effettuato (In regola)`;
+                    boxClass = 'border-green-500 bg-green-500/10 text-green-400 font-bold';
+                } else if (tipoPag === 'A RATE') {
+                    const s = parseAbsMonth(coveringIsc.data_inizio_corso || coveringIsc.data_iscrizione || coveringIsc.created_at) || minAbs;
+                    const rataIndex = (absM - s) + 1;
+                    const ratePagate = coveringIsc.rate_pagate !== undefined && coveringIsc.rate_pagate !== null ? coveringIsc.rate_pagate : 1;
+                    const statoRate = coveringIsc.stato_rate || 'IN_REGOLA';
+                    const totRate = coveringIsc.totale_rate || (coveringIsc.abbonamento_scelto && coveringIsc.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
+
+                    if (rataIndex <= ratePagate) {
+                        status = 'PAGATO';
+                        title = `Rata ${rataIndex}/${totRate} - Mese ${monthNum} (${monthName} ${yearM}): Prelievo Stripe effettuato con successo (Pagato)`;
+                        boxClass = 'border-green-500 bg-green-500/10 text-green-400 font-bold';
+                    } else if (rataIndex === ratePagate + 1 && statoRate === 'INSOLUTO') {
+                        status = 'INSOLUTO';
+                        hasOverdue = true;
+                        title = `Rata ${rataIndex}/${totRate} - Mese ${monthNum} (${monthName} ${yearM}): Prelievo Stripe FALLITO (Insoluto)`;
+                        boxClass = 'border-red-500 bg-red-500/20 text-red-500 font-bold animate-pulse';
+                    } else if (absM < currentAbsMonth) {
+                        status = 'SCADUTO_NON_PAGATO';
+                        hasOverdue = true;
+                        title = `Rata ${rataIndex}/${totRate} - Mese ${monthNum} (${monthName} ${yearM}): Rata non confermata (Mese trascorso - Verificare su Stripe)`;
+                        boxClass = 'border-red-500 bg-red-500/15 text-red-400 font-bold';
+                    } else {
+                        status = 'IN_ATTESA';
+                        title = `Rata ${rataIndex}/${totRate} - Mese ${monthNum} (${monthName} ${yearM}): In attesa di addebito`;
+                        boxClass = 'border-white/20 bg-white/5 text-gray-400';
+                    }
+                }
+
+                if (isCurrent) {
+                    title = `[OGGI - MESE CORRENTE] ` + title;
+                }
+
+                slots.push({
+                    absM,
+                    monthNum,
+                    yearM,
+                    monthName,
+                    status,
+                    isCurrent,
+                    title,
+                    boxClass
+                });
+            }
+
+            const offset = window.athleteTimelineOffsets[atl.utente_id] || 0;
+            const anchorAbs = currentAbsMonth + offset;
+
+            const idealStart = anchorAbs - 3;
+            const idealEnd = anchorAbs + 8;
+
+            const startVisible = Math.max(minAbs, idealStart);
+            const endVisible = Math.min(maxAbs, idealEnd);
+
+            const visibleSlots = slots.filter(s => s.absM >= startVisible && s.absM <= endVisible);
+
+            const canScrollLeft = (startVisible > minAbs) || (offset > 0);
+            const canScrollRight = (endVisible < maxAbs) || (offset < 0);
+
+            let boxesHtml = '';
+            visibleSlots.forEach(s => {
+                const currentIndicator = s.isCurrent ? 'ring-2 ring-primary ring-offset-1 ring-offset-black font-extrabold shadow-[0_0_8px_rgba(255,200,0,0.3)]' : '';
+                boxesHtml += `
+                    <div class="min-w-[22px] h-[22px] px-1 flex items-center justify-center border text-[10px] font-mono select-none cursor-default transition-all ${s.boxClass} ${currentIndicator}" title="${escapeHtml(s.title)}">
+                        ${s.monthNum}
+                    </div>
+                `;
+            });
+
+            const timelineHtml = `
+                <div class="flex items-center gap-1 select-none">
+                    <button type="button" onclick="event.stopPropagation(); window.scrollAthleteTimeline('${atl.utente_id}', -1, '${cardId}')" 
+                            class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 text-[9px] font-bold rounded transition-colors ${canScrollLeft ? 'cursor-pointer' : 'opacity-20 cursor-not-allowed pointer-events-none'}" 
+                            ${canScrollLeft ? '' : 'disabled'} title="Scorri indietro nello storico">
+                        ◀
+                    </button>
+                    <div class="flex items-center gap-1">
+                        ${boxesHtml}
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); window.scrollAthleteTimeline('${atl.utente_id}', 1, '${cardId}')" 
+                            class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 text-[9px] font-bold rounded transition-colors ${canScrollRight ? 'cursor-pointer' : 'opacity-20 cursor-not-allowed pointer-events-none'}" 
+                            ${canScrollRight ? '' : 'disabled'} title="Scorri avanti nei mesi futuri">
+                        ▶
+                    </button>
+                </div>
+            `;
+
+            let headerLabel = 'ABBONAMENTO';
+            let tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">N/D</span>';
+
+            if (atl.tipo_pagamento === 'A RATE') {
+                const totRate = atl.totale_rate || (atl.abbonamento_scelto && atl.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
+                const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
+                const statoRate = atl.stato_rate || 'IN_REGOLA';
+                headerLabel = `A RATE (${ratePagate}/${totRate})`;
+
+                const statusText = statoRate === 'INSOLUTO'
+                    ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider animate-pulse">🔴 INSOLUTO</span>'
+                    : (statoRate === 'ANNULLATO' ? '<span class="text-gray-500 font-bold text-[9px] uppercase tracking-wider">⚪ ANNULLATO</span>' : `<span class="text-green-500 font-mono text-[9px] font-bold">(${ratePagate}/${totRate})</span>`);
+
+                tipoPagamentoBadge = `
+                    <div class="flex items-center gap-1.5">
+                        <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>
+                        ${statusText}
+                    </div>
+                `;
+            } else if (atl.tipo_pagamento === 'UNICA RATA') {
+                headerLabel = 'UNICA RATA (SALDATO)';
+                tipoPagamentoBadge = '<span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">UNICA RATA</span>';
+            }
+
+            return {
+                timelineHtml,
+                hasOverdue,
+                headerLabel,
+                tipoPagamentoBadge
+            };
+        };
+
+        window.scrollAthleteTimeline = function(utenteId, delta, cardId) {
+            window.athleteTimelineOffsets[utenteId] = (window.athleteTimelineOffsets[utenteId] || 0) + delta;
+            const atl = (instructorStudentsData || []).find(a => a.utente_id === utenteId);
+            if (!atl) return;
+            const container = document.getElementById(`timeline-wrapper-${cardId}`);
+            if (container) {
+                const res = window.buildAthleteTimeline(atl, cardId);
+                container.innerHTML = res.timelineHtml;
             }
         };
 
@@ -6570,116 +6801,31 @@
                     for (let i = 1; i <= atl.ingressi_totali; i++) {
                         if (i <= ingressiUsati) {
                             carnetBoxes += `
-                                <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Utilizzato">
+                                <div class="min-w-[22px] h-[22px] px-1 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Utilizzato">
                                     ✓
                                 </div>
                             `;
                         } else if (i === ingressiUsati + 1) {
                             carnetBoxes += `
-                                <button onclick="event.stopPropagation(); scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="w-5 h-5 flex items-center justify-center bg-primary/20 border border-primary text-primary hover:bg-primary hover:text-black text-[9px] font-mono font-bold select-none cursor-pointer transition-all animate-pulse" title="Ingresso ${i}/${atl.ingressi_totali}: Clicca per scalare 1 presenza">
+                                <button type="button" onclick="event.stopPropagation(); scalaIngresso('${atl.iscrizione_id}', '${atl.utente_id}', '${atl.evento_id}')" class="min-w-[22px] h-[22px] px-1 flex items-center justify-center bg-primary/20 border border-primary text-primary hover:bg-primary hover:text-black text-[10px] font-mono font-bold select-none cursor-pointer transition-all animate-pulse" title="Ingresso ${i}/${atl.ingressi_totali}: Clicca per scalare 1 presenza">
                                     +
                                 </button>
                             `;
                         } else {
                             carnetBoxes += `
-                                <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-500 text-[9px] font-mono select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Rimanente">
+                                <div class="min-w-[22px] h-[22px] px-1 flex items-center justify-center bg-white/5 border border-white/20 text-gray-500 text-[10px] font-mono select-none cursor-default" title="Ingresso ${i}/${atl.ingressi_totali}: Rimanente">
                                     ${i}
                                 </div>
                             `;
                         }
                     }
-                    headerBoxesHtml = carnetBoxes;
-                } else if (atl.tipo_pagamento === 'A RATE') {
-                    const totRate = atl.totale_rate || (atl.abbonamento_scelto && atl.abbonamento_scelto.toLowerCase().includes('semestr') ? 6 : 12);
-                    const ratePagate = atl.rate_pagate !== undefined && atl.rate_pagate !== null ? atl.rate_pagate : 1;
-                    const statoRate = atl.stato_rate || 'IN_REGOLA';
-                    headerLabel = `A RATE (${ratePagate}/${totRate})`;
-
-                    const oggi = new Date();
-                    let annoInizio = oggi.getFullYear();
-                    if (dataRif) {
-                        const y = parseInt(dataRif.split('T')[0].split('-')[0], 10);
-                        if (!isNaN(y)) annoInizio = y;
-                    }
-                    const meseAssolOggi = oggi.getFullYear() * 12 + oggi.getMonth();
-
-                    let rateBoxes = '';
-                    for (let i = 1; i <= totRate; i++) {
-                        const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
-                        const nomeMese = nomiMesi[meseNum - 1];
-                        const meseAssolBox = (annoInizio * 12) + (startMonth - 1) + (i - 1);
-                        const isScaduto = meseAssolBox < meseAssolOggi;
-
-                        if (i <= ratePagate) {
-                            rateBoxes += `
-                                <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe effettuato con successo (Pagato)">
-                                    ✓
-                                </div>
-                            `;
-                        } else if (i === ratePagate + 1 && statoRate === 'INSOLUTO') {
-                            rateBoxes += `
-                                <div class="w-5 h-5 flex items-center justify-center bg-red-500/20 border border-red-500 text-red-500 text-[10px] font-mono font-bold select-none cursor-default animate-pulse" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Prelievo Stripe FALLITO (Insoluto)">
-                                    ✗
-                                </div>
-                            `;
-                        } else if (isScaduto) {
-                            hasOverdueRate = true;
-                            rateBoxes += `
-                                <div class="w-5 h-5 flex items-center justify-center bg-red-500/15 border border-red-500 text-red-400 text-[9px] font-mono font-bold select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): Rata non confermata (Mese trascorso - Verificare su Stripe)">
-                                    ${meseNum}
-                                </div>
-                            `;
-                        } else {
-                            rateBoxes += `
-                                <div class="w-5 h-5 flex items-center justify-center bg-white/5 border border-white/20 text-gray-400 text-[9px] font-mono select-none cursor-default" title="Rata ${i}/${totRate} - Mese ${meseNum} (${nomeMese}): In attesa di addebito">
-                                    ${meseNum}
-                                </div>
-                            `;
-                        }
-                    }
-
-                    const statusText = statoRate === 'INSOLUTO'
-                        ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider animate-pulse">🔴 INSOLUTO</span>'
-                        : (statoRate === 'ANNULLATO' ? '<span class="text-gray-500 font-bold text-[9px] uppercase tracking-wider">⚪ ANNULLATO</span>' : `<span class="text-green-500 font-mono text-[9px] font-bold">(${ratePagate}/${totRate})</span>`);
-
-                    tipoPagamentoBadge = `
-                        <div class="flex items-center gap-1.5">
-                            <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">A RATE</span>
-                            ${statusText}
-                        </div>
-                    `;
-
-                    headerBoxesHtml = rateBoxes;
-                } else if (atl.tipo_pagamento === 'UNICA RATA') {
-                    tipoPagamentoBadge = '<span class="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">UNICA RATA</span>';
-                    headerLabel = 'UNICA RATA (SALDATO)';
-
-                    let numMesi = 1;
-                    const abb = (atl.abbonamento_scelto || '').toLowerCase();
-                    if (abb.includes('annua')) numMesi = 12;
-                    else if (abb.includes('semest')) numMesi = 6;
-                    else if (abb.includes('quadrimest')) numMesi = 4;
-                    else if (abb.includes('trimest')) numMesi = 3;
-                    else if (abb.includes('bimest')) numMesi = 2;
-                    else if (abb.includes('mese') || abb.includes('mensil')) numMesi = 1;
-                    else if (atl.totale_rate) numMesi = atl.totale_rate;
-                    else if (atl.data_inizio_corso && atl.data_scadenza_corso) {
-                        const d1 = new Date(atl.data_inizio_corso);
-                        const d2 = new Date(atl.data_scadenza_corso);
-                        numMesi = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24 * 30.4375)));
-                    }
-
-                    let unicaBoxes = '';
-                    for (let i = 1; i <= numMesi; i++) {
-                        const meseNum = ((startMonth - 1 + (i - 1)) % 12) + 1;
-                        const nomeMese = nomiMesi[meseNum - 1];
-                        unicaBoxes += `
-                            <div class="w-5 h-5 flex items-center justify-center bg-green-500/20 border border-green-500 text-green-400 text-[10px] font-mono font-bold select-none cursor-default" title="Mese ${meseNum} (${nomeMese}): Saldo unico effettuato (Pagato)">
-                                ✓
-                            </div>
-                        `;
-                    }
-                    headerBoxesHtml = unicaBoxes;
+                    headerBoxesHtml = `<div class="flex flex-wrap items-center gap-1">${carnetBoxes}</div>`;
+                } else if (atl.tipo_pagamento === 'A RATE' || atl.tipo_pagamento === 'UNICA RATA') {
+                    const timelineRes = window.buildAthleteTimeline(atl, uniqueCardId);
+                    headerBoxesHtml = timelineRes.timelineHtml;
+                    hasOverdueRate = timelineRes.hasOverdue;
+                    headerLabel = timelineRes.headerLabel;
+                    tipoPagamentoBadge = timelineRes.tipoPagamentoBadge;
                 } else if (atl.tipo_pagamento === 'GRATUITO') {
                     tipoPagamentoBadge = '<span class="bg-gray-500/10 text-gray-400 border border-gray-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">GRATUITO</span>';
                 }
@@ -6708,7 +6854,7 @@
                             ${headerBoxesHtml ? `
                                 <div class="flex flex-col items-start md:items-end">
                                     <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">${headerLabel}</span>
-                                    <div class="flex flex-wrap items-center gap-1 mt-0.5" onclick="event.stopPropagation()">
+                                    <div id="timeline-wrapper-${uniqueCardId}" class="flex items-center gap-1 mt-0.5" onclick="event.stopPropagation()">
                                         ${headerBoxesHtml}
                                     </div>
                                 </div>
@@ -6818,6 +6964,18 @@
 
                 if (errAtleti) throw errAtleti;
 
+                // Carica anche tutte le iscrizioni storiche del corso per calcolare lo storico continuo e i mesi saltati
+                const { data: allIscrizioni, error: errAllIsc } = await supabaseClient
+                    .from('iscrizioni_eventi')
+                    .select('id, utente_id, evento_id, data_inizio_corso, data_scadenza_corso, data_iscrizione, abbonamento_scelto, tipo_pagamento, rate_pagate, totale_rate, stato_rate, created_at')
+                    .eq('evento_id', instructorSelectedCourseId)
+                    .order('data_inizio_corso', { ascending: true });
+
+                if (errAllIsc) {
+                    console.warn("Avviso caricamento storico iscrizioni:", errAllIsc);
+                }
+
+                window.instructorAllIscrizioni = allIscrizioni || [];
                 instructorStudentsData = atleti || [];
                 renderInstructorCards();
             } catch (err) {
