@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-11] fix | Ripristino Riga Orizzontale Unica nel Registro Corsi (v1.06.11)
+- **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
+  - Eliminato il wrapping accidentale a due righe nell'header della scheda atleta:
+    - Rimosso il vincolo di larghezza fissa `360px` che provocava l'overflow su schermi compatti.
+    - Forzato `flex-nowrap` e `shrink-0` sul gruppo di destra: la riga rimane sempre rigorosamente su un unico livello orizzontale.
+    - Ripristinata la sequenza orizzontale richiesta: Nome Atleta a sinistra, Schema Mesi Timeline al centro-destra subito prima dei badge, e `TESSERA CSEN` con `CERT. MEDICO` ancorati saldamente in fondo a destra.
+
+---
+
 ## [2026-10-11] feat | Allineamento a Sinistra della Timeline Mesi Corsi con Colonna Fissa (v1.06.10)
 - **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
   - Implementata l'Opzione A per l'allineamento della timeline dei mesi:
