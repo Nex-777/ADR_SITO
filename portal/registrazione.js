@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.08"
+                VERSION: "1.06.09"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -168,6 +168,11 @@ function togglePasswordVisibility(inputId, buttonEl) {
             }
         });
 
+        function updateBirthPlaceDisabledState() {
+            if (selectProvinciaNascita) selectProvinciaNascita.disabled = !anagraficaModificataManualmente;
+            if (selectComuneNascita) selectComuneNascita.disabled = !anagraficaModificataManualmente;
+        }
+
         // Birthplace Handlers
         selectProvinciaNascita.addEventListener('change', () => {
             const sigla = selectProvinciaNascita.value;
@@ -196,7 +201,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 });
             }
 
-            selectComuneNascita.disabled = false;
+            updateBirthPlaceDisabledState();
         });
 
         // Initialize address load
@@ -319,7 +324,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
                 // Imposta comune di nascita
                 selectComuneNascita.value = nomeComune;
-                selectComuneNascita.disabled = false;
+                updateBirthPlaceDisabledState();
 
                 cfStatus.textContent = "✓ CODICE FISCALE VALIDO E DATI COMPILATI";
                 cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-green-500 font-bold";
@@ -569,27 +574,28 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
         let anagraficaModificataManualmente = false;
 
-        function populateFromDocumentPrecheck(docData) {
-            if (!docData || anagraficaModificataManualmente) return;
+        function populateFromDocumentPrecheck(docData, force = false) {
+            if (!docData) return;
+            if (!anagraficaModificataManualmente || force) {
+                // 1. Nome & Cognome
+                const nomeEl = document.getElementById('nome');
+                const cognomeEl = document.getElementById('cognome');
+                if (docData.nome && nomeEl) nomeEl.value = docData.nome.toUpperCase();
+                if (docData.cognome && cognomeEl) cognomeEl.value = docData.cognome.toUpperCase();
 
-            // 1. Nome & Cognome
-            const nomeEl = document.getElementById('nome');
-            const cognomeEl = document.getElementById('cognome');
-            if (docData.nome && nomeEl) nomeEl.value = docData.nome.toUpperCase();
-            if (docData.cognome && cognomeEl) cognomeEl.value = docData.cognome.toUpperCase();
-
-            // 2. Codice Fiscale & Dati Nascita
-            const cfEl = document.getElementById('codice_fiscale');
-            if (docData.codice_fiscale && cfEl) {
-                cfEl.value = docData.codice_fiscale.toUpperCase();
-                if (typeof verifyCfCoherence === 'function') {
-                    verifyCfCoherence();
+                // 2. Codice Fiscale & Dati Nascita
+                const cfEl = document.getElementById('codice_fiscale');
+                if (docData.codice_fiscale && cfEl) {
+                    cfEl.value = docData.codice_fiscale.toUpperCase();
+                    if (typeof verifyCfCoherence === 'function') {
+                        verifyCfCoherence();
+                    }
                 }
             }
 
             // 3. Indirizzo di residenza
             const indEl = document.getElementById('indirizzo');
-            if (docData.indirizzo_residenza && indEl) {
+            if (docData.indirizzo_residenza && indEl && (!indEl.value || force)) {
                 indEl.value = docData.indirizzo_residenza;
             }
 
@@ -600,7 +606,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 if (matched) {
                     const provSelect = document.getElementById('provincia');
                     const comSelect = document.getElementById('comune');
-                    if (provSelect && comSelect) {
+                    if (provSelect && comSelect && (!comSelect.value || force)) {
                         provSelect.value = matched.sigla;
                         provSelect.dispatchEvent(new Event('change'));
                         comSelect.value = matched.nome;
@@ -621,7 +627,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
             btnUnlock.addEventListener('click', () => {
                 const conferma = confirm(
-                    "ATTENZIONE: Modificando manualmente i dati anagrafici rispetto a quanto estratto dal documento d'identità, la tua domanda sarà inviata a REVISIONE MANUALE OBBLIGATORIA da parte del Consiglio Direttivo prima di poter essere attivata.\\n\\nVuoi sbloccare e modificare i campi a mano?"
+                    "ATTENZIONE: Modificando manualmente i dati anagrafici rispetto a quanto estratto dal documento d'identità, la tua domanda sarà inviata a REVISIONE MANUALE OBBLIGATORIA da parte del Consiglio Direttivo prima di poter essere attivata.\n\nVuoi sbloccare e modificare i campi a mano?"
                 );
                 if (!conferma) return;
 
@@ -637,10 +643,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     }
                 });
 
-                const provNas = document.getElementById('provincia_nascita');
-                const comNas = document.getElementById('comune_nascita');
-                if (provNas) provNas.removeAttribute('disabled');
-                if (comNas) comNas.removeAttribute('disabled');
+                updateBirthPlaceDisabledState();
 
                 // Aggiorna la barra di stato
                 if (avvisoModifica) avvisoModifica.classList.remove('hidden');
@@ -763,12 +766,18 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 if (stepText) stepText.textContent = "2. Invio protetto a Mistral Vision...";
                 if (progressBar) progressBar.style.width = "50%";
 
-                const nomeDichiarato = kind === 'tutore'
-                    ? (document.getElementById('tutore_nome')?.value?.trim() || '')
-                    : (document.getElementById('nome')?.value?.trim() || '');
-                const cognomeDichiarato = kind === 'tutore'
-                    ? (document.getElementById('tutore_cognome')?.value?.trim() || '')
-                    : (document.getElementById('cognome')?.value?.trim() || '');
+                let nomeDichiarato = '';
+                let cognomeDichiarato = '';
+                if (kind === 'tutore') {
+                    nomeDichiarato = document.getElementById('tutore_nome')?.value?.trim() || '';
+                    cognomeDichiarato = document.getElementById('tutore_cognome')?.value?.trim() || '';
+                } else if (kind === 'cert') {
+                    nomeDichiarato = precheckState.doc.nome || document.getElementById('nome')?.value?.trim() || '';
+                    cognomeDichiarato = precheckState.doc.cognome || document.getElementById('cognome')?.value?.trim() || '';
+                } else if (kind === 'doc') {
+                    nomeDichiarato = '';
+                    cognomeDichiarato = '';
+                }
 
                 // Fase 3: Lettura AI
                 if (stepText) stepText.textContent = "3. Lettura e comprensione documento in corso...";
@@ -975,17 +984,50 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 precheckState[kind].codice_fiscale = null;
                 precheckState[kind].indirizzo_residenza = null;
                 precheckState[kind].comune_residenza = null;
-                if (!anagraficaModificataManualmente) {
-                    ['nome', 'cognome', 'codice_fiscale', 'data_nascita', 'indirizzo'].forEach(id => {
-                        const el = document.getElementById(id);
-                        if (el) el.value = '';
-                    });
-                    const cfStatus = document.getElementById('cf_validation_status');
-                    if (cfStatus) {
-                        cfStatus.textContent = "Verifica formale automatica del codice fiscale.";
-                        cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold";
+
+                // Ripristina lo stato bloccato pulito per il nuovo file
+                anagraficaModificataManualmente = false;
+                const fieldsToLock = ['nome', 'cognome', 'codice_fiscale', 'data_nascita'];
+                fieldsToLock.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = '';
+                        el.setAttribute('readonly', '');
+                        el.classList.remove('border-amber-500/50', 'bg-amber-950/20');
                     }
+                });
+                const indEl = document.getElementById('indirizzo');
+                if (indEl) indEl.value = '';
+
+                const cfStatus = document.getElementById('cf_validation_status');
+                if (cfStatus) {
+                    cfStatus.textContent = "Verifica formale automatica del codice fiscale.";
+                    cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold";
                 }
+
+                // Ripristina barra di stato
+                const avvisoModifica = document.getElementById('avviso-modifica-manuale-anagrafica');
+                const boxLock = document.getElementById('box-anagrafica-lock-status');
+                const labelLock = document.getElementById('label-anagrafica-lock');
+                const iconLock = document.getElementById('icon-anagrafica-lock');
+                const btnUnlock = document.getElementById('btn-sblocca-anagrafica');
+
+                if (avvisoModifica) avvisoModifica.classList.add('hidden');
+                if (boxLock) {
+                    boxLock.classList.remove('bg-amber-950/30', 'border-amber-500/50');
+                    boxLock.classList.add('bg-primary/10', 'border-primary/30');
+                }
+                if (labelLock) {
+                    labelLock.textContent = "DATI CONFERMATI DA DOCUMENTO";
+                    labelLock.classList.remove('text-amber-400');
+                }
+                if (iconLock) {
+                    iconLock.textContent = "lock";
+                    iconLock.classList.remove('text-amber-400');
+                }
+                if (btnUnlock) btnUnlock.classList.remove('hidden');
+
+                updateBirthPlaceDisabledState();
             }
 
             let fileInputId = '';

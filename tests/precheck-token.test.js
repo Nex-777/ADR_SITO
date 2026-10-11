@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { signPrecheck, verifyPrecheck, matchIntestatario, normalizeText } from '../api/_utils/precheck-token.js';
+import { signPrecheck, verifyPrecheck, matchIntestatario, normalizeText, isValidCodiceFiscale } from '../api/_utils/precheck-token.js';
 
 describe('Precheck Token & Validation Helper', () => {
     it('correttamente firma e verifica un token valido', () => {
@@ -103,5 +103,16 @@ describe('Precheck Token & Validation Helper', () => {
 
     it('normalizza correttamente le stringhe', () => {
         expect(normalizeText('È un test con Accènti e Simboli #@!')).toBe('e un test con accenti e simboli');
+    });
+
+    it('valida formalmente i codici fiscali italiani con checksum', () => {
+        expect(isValidCodiceFiscale('RSSMRA85M01H501Q')).toBe(true);
+        expect(isValidCodiceFiscale('RCHSTV95A01F205A')).toBe(true);
+        expect(isValidCodiceFiscale('RSSMRA85M01H501Z')).toBe(false); // Checksum errato
+        expect(isValidCodiceFiscale('RSSMRA85M01H501')).toBe(false);  // Troppo corto (15 char)
+        expect(isValidCodiceFiscale('RSSMRA85M01H501QQ')).toBe(false); // Troppo lungo (17 char)
+        expect(isValidCodiceFiscale('1234567890123456')).toBe(false); // Solo numeri
+        expect(isValidCodiceFiscale('')).toBe(false);
+        expect(isValidCodiceFiscale(null)).toBe(false);
     });
 });

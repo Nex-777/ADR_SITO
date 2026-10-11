@@ -2,6 +2,25 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-11] fix | Audit Hardening Anti-Bypass Anagrafica Server-Side, Lock Nascita e Allerta Telegram Await (v1.06.09)
+- **Hardening Anti-Tampering Server-Side (`api/otp-verify.js`)**:
+  - Eliminato il potenziale bypass del flag client `doc_modificato_manualmente`: il server confronta in modo non manomettibile `profile.nome`, `profile.cognome` e `profile.codice_fiscale` con quelli firmati nel `doc_token` HMAC.
+  - In caso di alterazione o discrepanza, la registrazione viene forzata irreversibilmente allo stato `GIALLO` per revisione manuale con annotazione formale `anagraficaMismatch`.
+  - Aggiunto `await sendTelegramAlert(tgMessage)` prima della chiusura della response HTTP per garantire che il container serverless di Vercel non congeli la connessione prima dell'invio della notifica Telegram.
+- **Validazione Ministeriale Codice Fiscale (`api/_utils/precheck-token.js`, `api/validate.js`)**:
+  - Implementata la funzione ministeriale `isValidCodiceFiscale(cf)` con calcolo esatto del carattere di controllo (checksum posizioni pari e dispari).
+  - In `api/validate.js`, se il CF estratto dalla carta d'identità fallisce il checksum o è malformato, la pratica viene declassata a `GIALLO` prevenendo falsi positivi `VERDE`.
+  - Rifinito il guardrail `matchIntestatario` per scattare solo su stringhe non vuote (evitando falsi blocchi al Passo 1 prima dell'inserimento credenziali).
+- **Frontend Wizard Hardening (`portal/registrazione.js`)**:
+  - Sincronizzati i campi `provincia_nascita` e `comune_nascita` con il lock anagrafico generale: rimangono disabilitati (`disabled = !anagraficaModificataManualmente`) anche a seguito di ricalcolo da CF o cambio provincia.
+  - Sblocco selettivo al Passo 2: comune e provincia di nascita vengono sbloccati solo previa autorizzazione esplicita dell'utente.
+  - Gestione riallineamento e re-upload: `populateFromDocumentPrecheck(docData, force = false)` ripristina lo stato pulito e bloccato in caso di nuovo upload documento.
+- **Testing (`tests/precheck-token.test.js`, `tests/otp-verify-anagrafica.test.js`)**:
+  - Nuova suite di test unitari con 6 scenari mirati su anti-tampering server-side, sblocco manuale ed escape HTML per Telegram.
+  - Test suite globale Vitest: 231/231 test superati con successo (20 file su 20).
+
+---
+
 ## [2026-10-11] feat | Fast-Onboarding Documento al Passo 1, Autofill Anagrafica AI, Sblocco Auditabile e Allerte Telegram ADR_BOT (v1.06.08)
 - **Riorganizzazione Wizard di Registrazione (`portal/registrazione.html`, `portal/registrazione.js`)**:
   - Invertito l'ordine dei passi: caricamento e precheck AI del Documento di Riconoscimento spostati al Passo 1 assoluto.

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Mistral } from '@mistralai/mistralai';
 import { sendEmail } from './_utils/resend-mail.js';
-import { signPrecheck, matchIntestatario } from './_utils/precheck-token.js';
+import { signPrecheck, matchIntestatario, isValidCodiceFiscale } from './_utils/precheck-token.js';
 
 // ═══════════════════════════════════════════════════════════════════
 //  /api/validate  —  Endpoint unificato di validazione AI
@@ -255,9 +255,21 @@ Rispondi SOLO con il JSON senza markdown:
                 let extractedNome = (aiResult.nome || '').trim() || null;
                 let extractedCognome = (aiResult.cognome || '').trim() || null;
                 let extractedCodiceFiscale = (aiResult.codice_fiscale || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase() || null;
-                if (extractedCodiceFiscale && extractedCodiceFiscale.length !== 16) {
-                    extractedCodiceFiscale = null;
+                
+                if (extractedCodiceFiscale) {
+                    if (extractedCodiceFiscale.length === 16 && isValidCodiceFiscale(extractedCodiceFiscale)) {
+                        // CF formalmente valido
+                    } else {
+                        extractedCodiceFiscale = null;
+                        if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
+                        finalNotes = `Codice fiscale estratto non formalmente valido. Richiesta revisione manuale. (${finalNotes})`;
+                    }
+                } else if (finalDocType === 'CARTA_IDENTITA' && docKind === 'doc') {
+                    // Sulle carte d'identità italiane il CF è sempre presente
+                    if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
+                    finalNotes = `Codice fiscale non rilevabile con certezza dal documento. Richiesta revisione manuale. (${finalNotes})`;
                 }
+
                 let extractedIndirizzo = (aiResult.indirizzo_residenza || '').trim() || null;
                 let extractedComune = (aiResult.comune_residenza || '').trim() || null;
 
@@ -283,12 +295,13 @@ Rispondi SOLO con il JSON senza markdown:
                     }
                 }
 
-                // Guardrail 2: Controllo corrispondenza intestatario (se nome/cognome erano forniti)
-                if (aiResult.intestatario_rilevato && (nome || cognome)) {
+                // Guardrail 2: Controllo corrispondenza intestatario (solo se nome o cognome dichiarati sono non vuoti)
+                const hasDichiarato = (nome && nome.trim().length > 0) || (cognome && cognome.trim().length > 0);
+                if (aiResult.intestatario_rilevato && hasDichiarato) {
                     const isMatch = matchIntestatario(aiResult.intestatario_rilevato, nome, cognome);
                     if (!isMatch) {
                         if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
-                        finalNotes = `Intestatario rilevato (${aiResult.intestatario_rilevato}) non corrispondente ai dati anagrafici (${nome} ${cognome}). Richiesta revisione manuale.`;
+                        finalNotes = `Intestatario rilevato (${aiResult.intestatario_rilevato}) non corrispondente ai dati dichiarati (${nome || ''} ${cognome || ''}). Richiesta revisione manuale.`;
                     }
                 }
 

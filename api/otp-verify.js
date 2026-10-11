@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from './_utils/resend-mail.js';
-import { verifyPrecheck } from './_utils/precheck-token.js';
+import { verifyPrecheck, normalizeText } from './_utils/precheck-token.js';
 import { sendTelegramAlert } from './_utils/telegram-bot.js';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
@@ -295,18 +295,51 @@ export default async function handler(req, res) {
         // C3. Insert into public.documenti_identita if present (documento personale)
         let docStato = 'IN_ATTESA';
         let docNote = null;
+        let anagraficaMismatch = false;
+        let mismatchMotivi = [];
 
         if (profile.documento_identita_url) {
             let docScadenza = profile.documento_identita_scadenza || null;
 
-            if (doc_modificato_manualmente) {
-                docStato = 'GIALLO';
-                docNote = 'Dati anagrafici modificati manualmente dall\'utente rispetto a quanto rilevato dal documento. Richiesta revisione manuale del Direttivo.';
-            } else if (doc_token) {
+            if (doc_token) {
                 const verifiedDoc = verifyPrecheck(doc_token);
                 if (verifiedDoc && verifiedDoc.kind === 'doc') {
                     if (verifiedDoc.data_scadenza) docScadenza = verifiedDoc.data_scadenza;
-                    if (doc_revisione_umana || verifiedDoc.esito !== 'VERDE') {
+
+                    // Controllo severo anti-tamper: verifica corrispondenza tra dati profilo e token autenticato
+                    if (verifiedDoc.codice_fiscale) {
+                        const tokenCf = verifiedDoc.codice_fiscale.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                        const profileCf = (profile.codice_fiscale || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                        if (tokenCf && profileCf && tokenCf !== profileCf) {
+                            anagraficaMismatch = true;
+                            mismatchMotivi.push(`CF (${profileCf} vs doc ${tokenCf})`);
+                        }
+                    }
+
+                    if (verifiedDoc.cognome) {
+                        const tokenCognome = normalizeText(verifiedDoc.cognome);
+                        const profileCognome = normalizeText(profile.cognome);
+                        if (tokenCognome && profileCognome && tokenCognome !== profileCognome) {
+                            anagraficaMismatch = true;
+                            mismatchMotivi.push(`Cognome (${profile.cognome} vs doc ${verifiedDoc.cognome})`);
+                        }
+                    }
+
+                    if (verifiedDoc.nome) {
+                        const tokenNome = normalizeText(verifiedDoc.nome);
+                        const profileNome = normalizeText(profile.nome);
+                        if (tokenNome && profileNome && tokenNome !== profileNome) {
+                            anagraficaMismatch = true;
+                            mismatchMotivi.push(`Nome (${profile.nome} vs doc ${verifiedDoc.nome})`);
+                        }
+                    }
+
+                    if (doc_modificato_manualmente || anagraficaMismatch) {
+                        docStato = 'GIALLO';
+                        docNote = anagraficaMismatch
+                            ? `Dati anagrafici discordanti rispetto al documento autenticato: ${mismatchMotivi.join('; ')}. Richiesta revisione manuale del Direttivo.`
+                            : 'Dati anagrafici modificati manualmente dall\'utente rispetto a quanto rilevato dal documento. Richiesta revisione manuale del Direttivo.';
+                    } else if (doc_revisione_umana || verifiedDoc.esito !== 'VERDE') {
                         docStato = 'GIALLO';
                         docNote = verifiedDoc.note ? `Revisione manuale richiesta. Nota AI: ${verifiedDoc.note}` : 'Revisione manuale richiesta dall\'utente.';
                     } else if (verifiedDoc.esito === 'VERDE') {
@@ -314,6 +347,9 @@ export default async function handler(req, res) {
                         docNote = verifiedDoc.note || 'Documento identità validato con successo da Mistral AI';
                     }
                 }
+            } else if (doc_modificato_manualmente) {
+                docStato = 'GIALLO';
+                docNote = 'Dati anagrafici modificati manualmente dall\'utente. Richiesta revisione manuale del Direttivo.';
             }
 
             const { error: idDocError } = await supabase
@@ -731,10 +767,12 @@ export default async function handler(req, res) {
             };
 
             const motiviBlocco = [];
-            if (doc_modificato_manualmente) {
+            if (anagraficaMismatch) {
+                motiviBlocco.push(`Dati anagrafici discordanti rispetto al documento autenticato (${mismatchMotivi.join(', ')})`);
+            } else if (doc_modificato_manualmente) {
                 motiviBlocco.push("Dati anagrafici modificati manualmente rispetto al documento");
             }
-            if (docStato === 'GIALLO') {
+            if (docStato === 'GIALLO' && !anagraficaMismatch && !doc_modificato_manualmente) {
                 motiviBlocco.push(`Documento identità in revisione (${docNote || 'Dubbio AI'})`);
             }
             if (profile.certificato_medico_url && certStato !== 'VERDE') {
@@ -754,7 +792,7 @@ export default async function handler(req, res) {
                     `📅 <b>Data/Ora:</b> ${nowStr}\n\n` +
                     `👉 <i>Accedi al portale direttivo per verificare la pratica.</i>`;
 
-                sendTelegramAlert(tgMessage).catch(tgErr => console.error('[OTP] Errore invio alert Telegram:', tgErr));
+                await sendTelegramAlert(tgMessage).catch(tgErr => console.error('[OTP] Errore invio alert Telegram:', tgErr));
             }
         } catch (tgEx) {
             console.error('[OTP] Eccezione preparazione notifica Telegram:', tgEx);
