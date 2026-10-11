@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.09"
+                VERSION: "1.06.10"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6837,7 +6837,7 @@
                 card.innerHTML = `
                     <!-- Header riga -->
                     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${uniqueCardId}')">
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3 flex-1 min-w-[180px]">
                             <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${uniqueCardId}">expand_more</span>
                             <div>
                                 <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2">
@@ -6852,18 +6852,18 @@
                         
                         <div class="flex flex-wrap items-center gap-4 self-start md:self-center">
                             ${headerBoxesHtml ? `
-                                <div class="flex flex-col items-start md:items-end">
+                                <div class="w-full sm:w-[360px] shrink-0 flex flex-col items-start">
                                     <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">${headerLabel}</span>
-                                    <div id="timeline-wrapper-${uniqueCardId}" class="flex items-center gap-1 mt-0.5" onclick="event.stopPropagation()">
+                                    <div id="timeline-wrapper-${uniqueCardId}" class="flex items-center gap-1 mt-0.5 justify-start w-full" onclick="event.stopPropagation()">
                                         ${headerBoxesHtml}
                                     </div>
                                 </div>
                             ` : ''}
-                            <div class="flex flex-col items-end">
+                            <div class="flex flex-col items-end shrink-0 min-w-[75px]">
                                 <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">TESSERA CSEN</span>
                                 ${badgeCsen}
                             </div>
-                            <div class="flex flex-col items-end">
+                            <div class="flex flex-col items-end shrink-0 min-w-[100px]">
                                 <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">CERT. MEDICO</span>
                                 ${semaforoCert}
                             </div>

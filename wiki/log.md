@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-11] feat | Allineamento a Sinistra della Timeline Mesi Corsi con Colonna Fissa (v1.06.10)
+- **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
+  - Implementata l'Opzione A per l'allineamento della timeline dei mesi:
+    - Sostituito l'allineamento destro (`md:items-end`) con una colonna dedicata a larghezza fissa (`w-full sm:w-[360px] shrink-0 flex flex-col items-start`).
+    - Tutte le frecce `◀` e le prime caselle dei mesi di tutti gli atleti risultano ora allineate sulla stessa identica coordinata verticale a sinistra, espandendosi ordinatamente verso destra.
+    - Gli atleti con abbonamenti brevi (es. 2 o 3 mesi) visualizzano le loro caselle a sinistra, con lo spazio vuoto residuo verso destra, senza più essere compressi o spinti contro il badge CSEN.
+    - Ancorati a larghezza minima fissa i badge `TESSERA CSEN` e `CERT. MEDICO` sul lato destro per garantire la simmetria a tabella dell'intero registro.
+
+---
+
 ## [2026-10-11] fix | Audit Hardening Anti-Bypass Anagrafica Server-Side, Lock Nascita e Allerta Telegram Await (v1.06.09)
 - **Hardening Anti-Tampering Server-Side (`api/otp-verify.js`)**:
   - Eliminato il potenziale bypass del flag client `doc_modificato_manualmente`: il server confronta in modo non manomettibile `profile.nome`, `profile.cognome` e `profile.codice_fiscale` con quelli firmati nel `doc_token` HMAC.
