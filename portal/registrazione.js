@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.07"
+                VERSION: "1.06.08"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -544,6 +544,11 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 esito: null,
                 tipo: null,
                 scadenza: null,
+                nome: null,
+                cognome: null,
+                codice_fiscale: null,
+                indirizzo_residenza: null,
+                comune_residenza: null,
                 note: null,
                 retries: 2,
                 revisioneUmana: false,
@@ -561,6 +566,100 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 sha256: null
             }
         };
+
+        let anagraficaModificataManualmente = false;
+
+        function populateFromDocumentPrecheck(docData) {
+            if (!docData || anagraficaModificataManualmente) return;
+
+            // 1. Nome & Cognome
+            const nomeEl = document.getElementById('nome');
+            const cognomeEl = document.getElementById('cognome');
+            if (docData.nome && nomeEl) nomeEl.value = docData.nome.toUpperCase();
+            if (docData.cognome && cognomeEl) cognomeEl.value = docData.cognome.toUpperCase();
+
+            // 2. Codice Fiscale & Dati Nascita
+            const cfEl = document.getElementById('codice_fiscale');
+            if (docData.codice_fiscale && cfEl) {
+                cfEl.value = docData.codice_fiscale.toUpperCase();
+                if (typeof verifyCfCoherence === 'function') {
+                    verifyCfCoherence();
+                }
+            }
+
+            // 3. Indirizzo di residenza
+            const indEl = document.getElementById('indirizzo');
+            if (docData.indirizzo_residenza && indEl) {
+                indEl.value = docData.indirizzo_residenza;
+            }
+
+            // 4. Comune di residenza
+            if (docData.comune_residenza && Array.isArray(comuniData) && comuniData.length > 0) {
+                const normDocComune = docData.comune_residenza.trim().toLowerCase();
+                const matched = comuniData.find(c => c.nome && c.nome.toLowerCase() === normDocComune);
+                if (matched) {
+                    const provSelect = document.getElementById('provincia');
+                    const comSelect = document.getElementById('comune');
+                    if (provSelect && comSelect) {
+                        provSelect.value = matched.sigla;
+                        provSelect.dispatchEvent(new Event('change'));
+                        comSelect.value = matched.nome;
+                        comSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+            }
+        }
+
+        function setupAnagraficaUnlock() {
+            const btnUnlock = document.getElementById('btn-sblocca-anagrafica');
+            const avvisoModifica = document.getElementById('avviso-modifica-manuale-anagrafica');
+            const boxLock = document.getElementById('box-anagrafica-lock-status');
+            const labelLock = document.getElementById('label-anagrafica-lock');
+            const iconLock = document.getElementById('icon-anagrafica-lock');
+
+            if (!btnUnlock) return;
+
+            btnUnlock.addEventListener('click', () => {
+                const conferma = confirm(
+                    "ATTENZIONE: Modificando manualmente i dati anagrafici rispetto a quanto estratto dal documento d'identità, la tua domanda sarà inviata a REVISIONE MANUALE OBBLIGATORIA da parte del Consiglio Direttivo prima di poter essere attivata.\\n\\nVuoi sbloccare e modificare i campi a mano?"
+                );
+                if (!conferma) return;
+
+                anagraficaModificataManualmente = true;
+
+                // Sblocca i campi anagrafici
+                const fieldsToUnlock = ['nome', 'cognome', 'codice_fiscale', 'data_nascita'];
+                fieldsToUnlock.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.removeAttribute('readonly');
+                        el.classList.add('border-amber-500/50', 'bg-amber-950/20');
+                    }
+                });
+
+                const provNas = document.getElementById('provincia_nascita');
+                const comNas = document.getElementById('comune_nascita');
+                if (provNas) provNas.removeAttribute('disabled');
+                if (comNas) comNas.removeAttribute('disabled');
+
+                // Aggiorna la barra di stato
+                if (avvisoModifica) avvisoModifica.classList.remove('hidden');
+                if (boxLock) {
+                    boxLock.classList.remove('bg-primary/10', 'border-primary/30');
+                    boxLock.classList.add('bg-amber-950/30', 'border-amber-500/50');
+                }
+                if (labelLock) {
+                    labelLock.textContent = "MODIFICA MANUALE ATTIVA (CONTROLLO DIRETTIVO RICHIESTO)";
+                    labelLock.classList.add('text-amber-400');
+                }
+                if (iconLock) {
+                    iconLock.textContent = "lock_open";
+                    iconLock.classList.add('text-amber-400');
+                }
+                btnUnlock.classList.add('hidden');
+            });
+        }
+        setupAnagraficaUnlock();
 
         function formatIsoToItalian(isoDate) {
             if (!isoDate || typeof isoDate !== 'string') return 'Non indicata';
@@ -714,6 +813,14 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 } else {
                     precheckState[kind].tipo = data.tipo_documento;
                     precheckState[kind].scadenza = data.data_scadenza;
+                    if (kind === 'doc') {
+                        precheckState[kind].nome = data.nome || null;
+                        precheckState[kind].cognome = data.cognome || null;
+                        precheckState[kind].codice_fiscale = data.codice_fiscale || null;
+                        precheckState[kind].indirizzo_residenza = data.indirizzo_residenza || null;
+                        precheckState[kind].comune_residenza = data.comune_residenza || null;
+                        populateFromDocumentPrecheck(data);
+                    }
                 }
 
                 precheckState[kind].state = data.esito === 'VERDE' ? 'ok' : 'ko';
@@ -810,6 +917,9 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     btnOk.onclick = () => {
                         item.state = 'confermato';
                         item.revisioneUmana = false;
+                        if (kind === 'doc') {
+                            populateFromDocumentPrecheck(item);
+                        }
                         renderPrecheckResult(kind);
                     };
                     actionsBox.appendChild(btnOk);
@@ -840,6 +950,9 @@ function togglePasswordVisibility(inputId, buttonEl) {
                     btnRev.onclick = () => {
                         item.state = 'revisione_umana';
                         item.revisioneUmana = true;
+                        if (kind === 'doc') {
+                            populateFromDocumentPrecheck(item);
+                        }
                         renderPrecheckResult(kind);
                     };
                     actionsBox.appendChild(btnRev);
@@ -855,6 +968,25 @@ function togglePasswordVisibility(inputId, buttonEl) {
             precheckState[kind].token = null;
             precheckState[kind].esito = null;
             precheckState[kind].revisioneUmana = false;
+
+            if (kind === 'doc') {
+                precheckState[kind].nome = null;
+                precheckState[kind].cognome = null;
+                precheckState[kind].codice_fiscale = null;
+                precheckState[kind].indirizzo_residenza = null;
+                precheckState[kind].comune_residenza = null;
+                if (!anagraficaModificataManualmente) {
+                    ['nome', 'cognome', 'codice_fiscale', 'data_nascita', 'indirizzo'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                    const cfStatus = document.getElementById('cf_validation_status');
+                    if (cfStatus) {
+                        cfStatus.textContent = "Verifica formale automatica del codice fiscale.";
+                        cfStatus.className = "text-[9px] uppercase tracking-wider block mt-1 text-gray-500 font-bold";
+                    }
+                }
+            }
 
             let fileInputId = '';
             let containerPrefix = '';
@@ -1112,7 +1244,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
             
             const displayTotalSteps = isMinor ? 6 : 5;
             
-            // Skip tutore step dynamically if adult
+            // Skip tutore step dynamically if adult (Step 5 è Tutore)
             if (currentStep === 5 && !isMinor) {
                 if (direction === 'next') {
                     currentStep = 6;
@@ -1124,25 +1256,25 @@ function togglePasswordVisibility(inputId, buttonEl) {
             if (currentStep === 1) {
                 targetPanel = step1;
                 btnBack.classList.add('invisible');
-                labelText = `PASSO 1 DI ${displayTotalSteps}: DATI ANAGRAFICI`;
+                labelText = `PASSO 1 DI ${displayTotalSteps}: DOCUMENTO DI RICONOSCIMENTO`;
                 percentText = Math.round((1 / displayTotalSteps) * 100) + "%";
                 progressVal = percentText;
             } else if (currentStep === 2) {
                 targetPanel = step2;
                 btnBack.classList.remove('invisible');
-                labelText = `PASSO 2 DI ${displayTotalSteps}: ADESIONE & QUOTE`;
+                labelText = `PASSO 2 DI ${displayTotalSteps}: DATI ANAGRAFICI & CREDENZIALI`;
                 percentText = Math.round((2 / displayTotalSteps) * 100) + "%";
                 progressVal = percentText;
             } else if (currentStep === 3) {
                 targetPanel = step3;
                 btnBack.classList.remove('invisible');
-                labelText = `PASSO 3 DI ${displayTotalSteps}: DOCUMENTO DI RICONOSCIMENTO`;
+                labelText = `PASSO 3 DI ${displayTotalSteps}: INDIRIZZO DI RESIDENZA & CONTATTI`;
                 percentText = Math.round((3 / displayTotalSteps) * 100) + "%";
                 progressVal = percentText;
             } else if (currentStep === 4) {
                 targetPanel = step4;
                 btnBack.classList.remove('invisible');
-                labelText = `PASSO 4 DI ${displayTotalSteps}: INDIRIZZO DI RESIDENZA`;
+                labelText = `PASSO 4 DI ${displayTotalSteps}: ADESIONE & QUOTE`;
                 percentText = Math.round((4 / displayTotalSteps) * 100) + "%";
                 progressVal = percentText;
             } else if (currentStep === 5) {
@@ -1204,12 +1336,39 @@ function togglePasswordVisibility(inputId, buttonEl) {
         // Validate current step fields
         function validateStep(step) {
             if (step === 1) {
+                // Check Identity Document (Mandatory for all at Step 1)
+                if (!uploadedDocumentoIdentitaFile) {
+                    alert("Devi selezionare e caricare un documento di riconoscimento prima di procedere.");
+                    return false;
+                }
+
+                // Check Retro if double layout is selected
+                const layoutChoice = document.querySelector('input[name="documento_layout_choice"]:checked')?.value || 'single';
+                if (layoutChoice === 'double' && !uploadedDocumentoIdentitaRetroFile) {
+                    alert("Hai selezionato la modalità a due file. Carica il retro del documento.");
+                    return false;
+                }
+
+                if (precheckState.doc.state !== 'confermato' && precheckState.doc.state !== 'revisione_umana') {
+                    if (precheckState.doc.state === 'loading') {
+                        alert("Analisi del documento d'identità con l'AI in corso. Attendi qualche istante.");
+                    } else {
+                        alert("Prima di proseguire, conferma i dati estratti dal documento o invialo a revisione del Direttivo.");
+                    }
+                    return false;
+                }
+
+                // Assicurati che l'anagrafica sia stata popolata
+                populateFromDocumentPrecheck(precheckState.doc);
+
+            } else if (step === 2) {
+                // Step 2: Dati Anagrafici & Credenziali
                 const cfEl = document.getElementById('codice_fiscale');
                 if (cfEl && validateCodiceFiscale(cfEl.value)) {
                     cfEl.setCustomValidity("");
                 }
 
-                const inputs = step1.querySelectorAll('input[required]:not([type="hidden"]), select[required]');
+                const inputs = step2.querySelectorAll('input[required]:not([type="hidden"]), select[required]');
                 for (let input of inputs) {
                     if (!input.checkValidity()) {
                         input.reportValidity();
@@ -1250,8 +1409,29 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         return false;
                     }
                 }
-            } else if (step === 2) {
-                // Check Membership type
+
+            } else if (step === 3) {
+                // Step 3: Indirizzo di residenza & Contatti
+                const inputs = step3.querySelectorAll('input[required], select[required]');
+                for (let input of inputs) {
+                    if (!input.checkValidity()) {
+                        input.reportValidity();
+                        return false;
+                    }
+                }
+
+                const telInput = document.getElementById('cellulare');
+                if (telInput) {
+                    const telVal = telInput.value.trim();
+                    if (!telVal || telVal.length < 8) {
+                        alert("Inserisci un numero di cellulare valido (obbligatorio per comunicazioni e urgenze).");
+                        telInput.focus();
+                        return false;
+                    }
+                }
+
+            } else if (step === 4) {
+                // Step 4: Adesione & Quote
                 if (!selectedAdesione) {
                     alert("Seleziona un tipo di adesione cliccando su una delle tre card.");
                     return false;
@@ -1278,36 +1458,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         return false;
                     }
                 }
-            } else if (step === 3) {
-                // Check Identity Document (Mandatory for all)
-                if (!uploadedDocumentoIdentitaFile) {
-                    alert("Devi selezionare e caricare un documento di riconoscimento prima di procedere.");
-                    return false;
-                }
 
-                // Check Retro if double layout is selected
-                const layoutChoice = document.querySelector('input[name="documento_layout_choice"]:checked')?.value || 'single';
-                if (layoutChoice === 'double' && !uploadedDocumentoIdentitaRetroFile) {
-                    alert("Hai selezionato la modalità a due file. Carica il retro del documento.");
-                    return false;
-                }
-
-                if (precheckState.doc.state !== 'confermato' && precheckState.doc.state !== 'revisione_umana') {
-                    if (precheckState.doc.state === 'loading') {
-                        alert("Analisi del documento d'identità con l'AI in corso. Attendi qualche istante.");
-                    } else {
-                        alert("Prima di proseguire, conferma i dati estratti dal documento o invialo a revisione umana.");
-                    }
-                    return false;
-                }
-            } else if (step === 4) {
-                const inputs = step4.querySelectorAll('input[required], select[required]');
-                for (let input of inputs) {
-                    if (!input.checkValidity()) {
-                        input.reportValidity();
-                        return false;
-                    }
-                }
             } else if (step === 5) {
                 if (isMinor) {
                     const inputs = step5.querySelectorAll('input:not([type="file"])');
@@ -1444,7 +1595,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
         inputBirth.addEventListener('change', () => {
             isMinor = getAge(inputBirth.value) < 18;
             if (isMinor) {
-                document.querySelectorAll('#step-3 input').forEach(inp => inp.required = true);
+                document.querySelectorAll('#step-5 input:not([type="file"]), #step-5 select').forEach(inp => inp.required = true);
                 
                 // Set visuals for minor lock
                 document.getElementById('card-socio').classList.add('opacity-40', 'cursor-not-allowed');
@@ -1455,7 +1606,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 // Force select tesserato
                 selectAdesione('tesserato');
             } else {
-                document.querySelectorAll('#step-3 input').forEach(inp => inp.required = false);
+                document.querySelectorAll('#step-5 input, #step-5 select').forEach(inp => inp.required = false);
                 
                 // Restore visuals
                 document.getElementById('card-socio').classList.remove('opacity-40', 'cursor-not-allowed');
@@ -2399,7 +2550,8 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         tutore_token: precheckState.tutore.token,
                         cert_revisione_umana: precheckState.cert.revisioneUmana,
                         doc_revisione_umana: precheckState.doc.revisioneUmana,
-                        tutore_revisione_umana: precheckState.tutore.revisioneUmana
+                        tutore_revisione_umana: precheckState.tutore.revisioneUmana,
+                        doc_modificato_manualmente: anagraficaModificataManualmente
                     })
                 });
 
@@ -2413,10 +2565,12 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
                 updateOtpButtonStatus("COMPLETATO!", false);
                 if (selectedAdesione === 'tesserato') {
-                    if (precheckState.cert.esito === 'VERDE' && !precheckState.cert.revisioneUmana) {
-                        alert("REGISTRAZIONE COMPLETATA CON SUCCESSO!\n\nIl tuo certificato medico è stato validato con successo dall'AI. Puoi procedere subito al pagamento della quota per completare la tua iscrizione.");
+                    if (anagraficaModificataManualmente) {
+                        alert("REGISTRAZIONE RICEVUTA!\n\nAvendo modificato a mano i dati anagrafici rispetto al documento, la tua pratica è in attesa di approvazione da parte del Direttivo. Riceverai un'e-mail di conferma.");
+                    } else if (precheckState.cert.esito === 'VERDE' && !precheckState.cert.revisioneUmana && !precheckState.doc.revisioneUmana) {
+                        alert("REGISTRAZIONE COMPLETATA CON SUCCESSO!\n\nI tuoi documenti sono stati validati con successo dall'AI. Puoi procedere subito al pagamento della quota per completare la tua iscrizione.");
                     } else {
-                        alert("REGISTRAZIONE RICEVUTA CON SUCCESSO!\n\nLa documentazione medica è in attesa di revisione da parte del Direttivo. Riceverai un'e-mail non appena la verifica sarà approvata.");
+                        alert("REGISTRAZIONE RICEVUTA CON SUCCESSO!\n\nLa documentazione è in attesa di revisione da parte del Direttivo. Riceverai un'e-mail non appena la verifica sarà approvata.");
                     }
                     window.location.href = "pagamento.html?id=" + createdUserSession.user.id;
                 } else {
@@ -2545,6 +2699,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('documento_identita_file').click()
         });
     }
+    setupAnagraficaUnlock();
 });
 
 

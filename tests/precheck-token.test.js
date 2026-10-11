@@ -24,6 +24,33 @@ describe('Precheck Token & Validation Helper', () => {
         expect(verified.sha256_file).toBe(payload.sha256_file);
     });
 
+    it('firma e verifica un token di documento con dati anagrafici e di residenza estratti', () => {
+        const payload = {
+            kind: 'doc',
+            esito: 'VERDE',
+            tipo_documento: 'CARTA_IDENTITA',
+            data_scadenza: '2030-05-15',
+            nome: 'MARIO',
+            cognome: 'ROSSI',
+            codice_fiscale: 'RSSMRA85M01H501Z',
+            indirizzo_residenza: 'Via Roma 10',
+            comune_residenza: 'Roma',
+            sha256_file: '111122223333444455556666777788889999aaaabbbbccccddddeeeeffff0000'
+        };
+
+        const token = signPrecheck(payload);
+        const verified = verifyPrecheck(token);
+
+        expect(verified).not.toBeNull();
+        expect(verified.kind).toBe('doc');
+        expect(verified.esito).toBe('VERDE');
+        expect(verified.nome).toBe('MARIO');
+        expect(verified.cognome).toBe('ROSSI');
+        expect(verified.codice_fiscale).toBe('RSSMRA85M01H501Z');
+        expect(verified.indirizzo_residenza).toBe('Via Roma 10');
+        expect(verified.comune_residenza).toBe('Roma');
+    });
+
     it('rifiuta un token manomesso', () => {
         const payload = { kind: 'cert', esito: 'VERDE' };
         const token = signPrecheck(payload);

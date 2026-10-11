@@ -47,15 +47,17 @@ Verifies the client-submitted OTP against the cryptographic hash in the database
       "tutore_token": "payload.hmac",
       "cert_revisione_umana": false,
       "doc_revisione_umana": false,
-      "tutore_revisione_umana": false
+      "tutore_revisione_umana": false,
+      "doc_modificato_manualmente": false
     }
     ```
 -   **Actions**:
     -   Hashes the input OTP string and validates against database.
     -   Verifies HMAC-SHA256 signatures of `cert_token`, `doc_token`, `tutore_token` using `[precheck-token.js](../api/_utils/precheck-token.js)`.
     -   Recalculates SHA-256 hash of uploaded file in Supabase Storage and verifies match against token `sha256_file`.
-    -   Directly inserts records into `public.certificati_medici` and `public.documenti_identita` with status `VERDE` (if AI verified) or `GIALLO` (if human review was requested), attaching contextual notes for the board.
+    -   Directly inserts records into `public.certificati_medici` and `public.documenti_identita` with status `VERDE` (if AI verified) or `GIALLO` (if human review was requested or if `doc_modificato_manualmente` is true), attaching contextual notes for the board.
     -   Sends confirmation email with immediate Stripe payment link if the medical certificate is already verified (`VERDE`).
+    -   **Telegram Push Alert (ADR_BOT)**: Dispatches instant HTML alert to board Telegram channel via `[telegram-bot.js](../api/_utils/telegram-bot.js)` if the registration is pending manual review (modifiche manuali anagrafica, documento/certificato GIALLO, ammissione soci).
 
 ---
 
@@ -82,9 +84,9 @@ Validates uploaded medical certificates and identity documents via Mistral AI Vi
 -   **Actions (Pre-check)**:
     -   Esegue rate limit per IP client.
     -   Dispatches compressed images directly to Mistral AI Vision API (`pixtral-12b-2409`).
-    -   Estrae tipologia, date, idoneità e intestatario.
-    -   Esegue guardrail deterministici e verifica intestatario (`matchIntestatario`).
-    -   Firma i dati con HMAC-SHA256 e restituisce `{ success: true, esito: "VERDE"|"GIALLO"|"ROSSO", ..., token: "..." }`. Se il servizio AI va in timeout o errore, effettua fallback sicuro a `GIALLO` (revisione umana).
+    -   Per `precheck_cert`: estrae tipologia, date, idoneità e intestatario con guardrail deterministici.
+    -   Per `precheck_doc`: estrae tipo documento, data scadenza, `nome`, `cognome`, `codice_fiscale`, `indirizzo_residenza` (via e civico) e `comune_residenza`.
+    -   Firma i dati con HMAC-SHA256 (`[precheck-token.js](../api/_utils/precheck-token.js)`) e restituisce `{ success: true, esito: "VERDE"|"GIALLO"|"ROSSO", ..., token: "..." }`. Se il servizio AI va in timeout o errore, effettua fallback sicuro a `GIALLO` (revisione umana).
 -   **Body JSON Parameters (Post-Auth / Webhook)**:
     ```json
     {

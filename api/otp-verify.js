@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from './_utils/resend-mail.js';
 import { verifyPrecheck } from './_utils/precheck-token.js';
+import { sendTelegramAlert } from './_utils/telegram-bot.js';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
@@ -92,7 +93,8 @@ export default async function handler(req, res) {
             tutore_token, 
             cert_revisione_umana, 
             doc_revisione_umana, 
-            tutore_revisione_umana 
+            tutore_revisione_umana,
+            doc_modificato_manualmente
         } = req.body;
         if (!otp || otp.length !== 6) {
             return res.status(400).json({ error: 'Valid 6-digit OTP code required' });
@@ -245,10 +247,11 @@ export default async function handler(req, res) {
 
         // C2. Insert into public.certificati_medici if present
         let isCertVerde = false;
+        let certStato = 'IN_ATTESA';
+        let certNote = 'In elaborazione AI...';
+
         if (profile.certificato_medico_url) {
             let fallbackScadenza = '2099-12-31';
-            let certStato = 'IN_ATTESA';
-            let certNote = 'In elaborazione AI...';
             let certTipologia = profile.certificato_tipologia || 'NON_SPECIFICATO';
             let certDataRilascio = profile.certificato_data_emissione || new Date().toISOString().split('T')[0];
 
@@ -290,12 +293,16 @@ export default async function handler(req, res) {
         }
 
         // C3. Insert into public.documenti_identita if present (documento personale)
+        let docStato = 'IN_ATTESA';
+        let docNote = null;
+
         if (profile.documento_identita_url) {
-            let docStato = 'IN_ATTESA';
-            let docNote = null;
             let docScadenza = profile.documento_identita_scadenza || null;
 
-            if (doc_token) {
+            if (doc_modificato_manualmente) {
+                docStato = 'GIALLO';
+                docNote = 'Dati anagrafici modificati manualmente dall\'utente rispetto a quanto rilevato dal documento. Richiesta revisione manuale del Direttivo.';
+            } else if (doc_token) {
                 const verifiedDoc = verifyPrecheck(doc_token);
                 if (verifiedDoc && verifiedDoc.kind === 'doc') {
                     if (verifiedDoc.data_scadenza) docScadenza = verifiedDoc.data_scadenza;
@@ -715,6 +722,43 @@ export default async function handler(req, res) {
             .from('utenti')
             .update(updateUtentiData)
             .eq('id', utenteId);
+
+        // 8. Notifica Telegram ad ADR_BOT per pratiche in attesa di approvazione / bloccate
+        try {
+            const escapeTg = (text) => {
+                if (!text) return '';
+                return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            };
+
+            const motiviBlocco = [];
+            if (doc_modificato_manualmente) {
+                motiviBlocco.push("Dati anagrafici modificati manualmente rispetto al documento");
+            }
+            if (docStato === 'GIALLO') {
+                motiviBlocco.push(`Documento identità in revisione (${docNote || 'Dubbio AI'})`);
+            }
+            if (profile.certificato_medico_url && certStato !== 'VERDE') {
+                motiviBlocco.push(`Certificato medico in revisione (${certNote || 'Dubbio AI'})`);
+            }
+            if (adesione === 'socio' || adesione === 'socio_tesserato') {
+                motiviBlocco.push("Richiesta ammissione socio in attesa di delibera del Direttivo");
+            }
+
+            if (motiviBlocco.length > 0) {
+                const nowStr = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+                const tgMessage = `🔔 <b>NUOVA ISCRIZIONE IN ATTESA DI APPROVAZIONE</b>\n\n` +
+                    `👤 <b>Atleta:</b> ${escapeTg(profile.nome)} ${escapeTg(profile.cognome)}\n` +
+                    `📄 <b>Codice Fiscale:</b> <code>${escapeTg(cf)}</code>\n` +
+                    `🎯 <b>Tipo Adesione:</b> ${escapeTg(adesione.toUpperCase())}\n` +
+                    `⚠️ <b>Motivo:</b>\n• ${motiviBlocco.map(m => escapeTg(m)).join('\n• ')}\n\n` +
+                    `📅 <b>Data/Ora:</b> ${nowStr}\n\n` +
+                    `👉 <i>Accedi al portale direttivo per verificare la pratica.</i>`;
+
+                sendTelegramAlert(tgMessage).catch(tgErr => console.error('[OTP] Errore invio alert Telegram:', tgErr));
+            }
+        } catch (tgEx) {
+            console.error('[OTP] Eccezione preparazione notifica Telegram:', tgEx);
+        }
 
         return res.status(200).json({ success: true, message: 'OTP verified and registration records created successfully' });
         

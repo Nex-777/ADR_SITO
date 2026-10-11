@@ -4,62 +4,52 @@ The registration wizard is implemented in [registrazione.html](../portal/registr
 
 ---
 
-## 🗺️ Step Funnel Breakdown
+## 🗺️ Step Funnel Breakdown (v1.06.08+)
 
 ```mermaid
 graph TD
-    S1[Step 1: Anagrafica] --> S2[Step 2: Residenza]
-    S2 --> S3{Is Minor?}
-    S3 -- Yes --> S4[Step 3: Tutore/Genitore]
-    S3 -- No --> S5[Step 4: Firma Digitale OTP]
-    S4 --> S5
-    S5 --> S6[jsPDF Document + Submit]
+    S1[Passo 1: Documento di Riconoscimento & AI Precheck] --> S2[Passo 2: Dati Anagrafici & Credenziali 🔒]
+    S2 --> S3[Passo 3: Indirizzo di Residenza & Cellulare]
+    S3 --> S4[Passo 4: Adesione, Quote & Certificato Medico]
+    S4 --> S5{Atleta Minorenne?}
+    S5 -- Sì --> S6[Passo 5: Genitore / Tutore Legale]
+    S5 -- No --> S7[Passo 6: Firma Digitale OTP & Consensi]
+    S6 --> S7
+    S7 --> S8[Salvataggio, Generazione PDF & Notifica Telegram ADR_BOT]
 ```
 
-### 1. Passo 1: Anagrafica (Personal Info)
--   Captures basic personal information (name, surname, fiscal code, birthdate, birth location).
--   Requires selection of the **Adesione (Membership type)**:
-    -   *Tesserato*: Course licensing only. Requires a medical certificate.
-    -   *Socio + Tesserato*: Full association membership + course licensing. Requires a medical certificate.
-    -   *Socio*: Association membership only. Medical certificate is optional.
--   Requires selection of **Tessera Sportiva (Sport License)** (Silver, Gold, Integrativa A/B) if tesseramento is chosen.
--   Calculates fees dynamically.
+### 1. Passo 1: Documento di Riconoscimento (AI Fast-Onboarding)
+- Caricamento preventivo del documento d'identità (Fronte e Retro separati o file unico).
+- **GDPR & Privacy Zero-Retention**: il documento non viene caricato preventivamente su storage permanente ma analizzato in tempo reale su server europei conformi via Mistral Vision (`pixtral-12b-2409`).
+- Estrazione automatica accurata: `nome`, `cognome`, `codice_fiscale`, `tipo_documento`, `data_scadenza`, `indirizzo_residenza` (via e civico), `comune_residenza`.
+- L'utente conferma i dati estratti con token HMAC firmato oppure ricarica (max 2 tentativi) o invia a revisione del Direttivo.
 
-### 2. Passo 2: Residenza (Address)
--   Captures residential address details.
--   Integrates a dynamic Italian municipality selector.
+### 2. Passo 2: Dati Anagrafici & Credenziali
+- **Autofill Intelligente**: Nome, Cognome e Codice Fiscale vengono precompilati dai dati del documento.
+- **Decodifica CF**: Data di nascita, sesso, provincia e comune di nascita vengono calcolati e compilati automaticamente tramite l'algoritmo catastale del Codice Fiscale.
+- **Protezione Anti-Frode (Campi Bloccati 🔒)**: I campi anagrafici sono impostati in sola lettura (`readonly`).
+- **Sblocco Manuale Auditabile**: Se i dati letti dall'AI contengono errori o discrepanze, l'utente può cliccare sul tasto dedicato *"MODIFICA DATI A MANO"*. L'azione richiede conferma esplicita e attiva il flag `anagraficaModificataManualmente = true`, che forza **l'invio obbligatorio a controllo manuale del Consiglio Direttivo** con stato `GIALLO`.
+- Inserimento credenziali di accesso (Email e Password con checklist di complessità).
 
-### 3. Passo 3: Tutore/Genitore (Parental Signoff)
--   Dynamically shown only if the calculated birthdate is under 18 years old.
--   Requires inputs for parental/guardian details (name, fiscal code, email).
+### 3. Passo 3: Indirizzo di Residenza & Contatti
+- Compilazione automatica dell'indirizzo e del comune estratti dalla carta d'identità.
+- **Residenza Libera (Non Bloccante)**: L'utente può sempre modificare o correggere liberamente via, comune, provincia e CAP (anche per documenti che non riportano l'indirizzo, come patenti di guida UE o passaporti). La modifica dell'indirizzo non blocca la pratica.
+- **Cellulare Obbligatorio**: Campo inserito come requisito essenziale per comunicazioni urgenti e coordinamento corsi.
 
-### 4. Passo 4: Firma Digitale (OTP Electronic Signature & Pre-Upload)
--   Accepts legal waivers and terms.
--   Richiede il consenso GDPR obbligatorio sul trattamento dei dati sanitari e l'elaborazione automatizzata AI per i tesserati.
--   **Pre-Upload Strategy (v1.03.49/50, Hardening v1.04.71)**: Al click su *"INVIA CODICE OTP"*, il sistema esegue preventivamente la compressione delle immagini, l'unione PDFLib fronte/retro protetta da fallback su formati non standard, la generazione del contratto ed il caricamento su Storage (`documenti_identita`, `certificati_medici`, `documenti_adesione`, `documenti_tutori`) con `upsert: false` e policy RLS dedicate per utente, generando Signed URL con durata di **3600 secondi (1 ora)**.
--   **Verifica Istantanea (< 2s)**: Al click su *"CONFERMA FIRMA"*, l'OTP viene inviato a `/api/otp-verify.js` in meno di 2 secondi, previa sanitizzazione degli spazi (`.replace(/\s+/g, '')`) e refresh preventivo della sessione JWT (`auth.refreshSession()`).
--   Generates and validates OTP code to e-sign the registration dynamically.
+### 4. Passo 4: Adesione, Quote & Certificato Medico
+- Selezione tipologia adesione (*Tesserato*, *Socio + Tesserato*, *Socio*).
+- Selezione Tessera Sportiva se atleta (*Silver*, *Gold*, *Integrativa A/B*).
+- Caricamento Certificato Medico con precheck AI Mistral in tempo reale (estrazione tipologia e scadenza).
 
----
+### 5. Passo 5: Dati Genitore / Tutore (Solo Minorenni)
+- Mostrato condizionalmente se l'età calcolata dalla data di nascita è < 18 anni.
+- Richiede dati legali del genitore/tutore e precheck AI del rispettivo documento d'identità.
 
-## 🔒 Gated Onboarding & Controllo Documenti / Certificati (Validazione Anticipata AI Mistral Vision)
-
-Dalla versione **v1.06.06**, il flusso di onboarding sposta l'analisi con intelligenza artificiale direttamente all'interno del wizard al momento del caricamento dei file, azzerando gli errori manuali e le frodi sulle date:
-
-1. **Nessun Campo Manuale Utente**:
-   - Eliminati tutti i campi di input manuale per la tipologia e la data di rilascio del certificato medico, nonché la data di scadenza del documento d'identità e del documento tutore.
-2. **Pre-Analisi Automatica con Mistral Vision (`pixtral-12b-2409`)**:
-   - Alla selezione del file (PDF fino a 2 pagine renderizzate in JPEG dal client o immagine compressa), parte automaticamente l'analisi via `api/validate.js` (`precheck_cert` / `precheck_doc`).
-   - L'interfaccia mostra un indicatore di avanzamento a 4 fasi (`1. Preparazione file`, `2. Invio sicuro`, `3. Lettura con intelligenza artificiale`, `4. Controllo validità`) con tempo stimato (5–15 sec).
-3. **Controllo Intestatario & Guardrail Rigorosi**:
-   - Mistral estrae nome, cognome, tipologia, diciture di legge e date.
-   - Il server confronta l'intestatario estratto con nome e cognome inseriti al Passo 1 (`matchIntestatario`). In caso di mancata corrispondenza, il documento scala automaticamente a `GIALLO` (revisione manuale).
-   - Per i certificati, la data di scadenza non viene mai inventata: in assenza di scadenza esplicita o dicitura conforme, l'esito è `GIALLO`.
-4. **Token di Pre-Check Firmato (HMAC-SHA256)**:
-   - Il server restituisce i dati estratti accompagnati da un token HMAC-SHA256 (`api/_utils/precheck-token.js`) con durata di 2 ore, vincolato all'hash SHA-256 del file.
-   - L'utente non può alterare alcuna data: può solo confermare i dati letti (`VERDE`), ricaricare il documento (massimo 2 tentativi rimasti) oppure inviare la pratica a revisione manuale del Direttivo (`GIALLO`) e procedere.
-5. **Verifica Finale Post-OTP (`api/otp-verify.js`)**:
-   - Alla conferma della firma OTP, il server verifica la firma dei token e ricalcola lo SHA-256 del file salvato su Supabase Storage. Se l'hash coincide, il documento/certificato viene registrato direttamente nello stato accreditato (`VERDE` o `GIALLO` con nota per la segreteria). Se il certificato è già `VERDE`, il tesserato riceve subito via email il link per il saldo quota.
+### 6. Passo 6: Firma Digitale OTP, Consensi & Notifica Telegram ADR_BOT
+- Firma elettronica avanzata con codice OTP via email.
+- Consensi GDPR, audiovisivi e marketing.
+- Verifica firma HMAC di token doc e token cert su `/api/otp-verify.js`.
+- **Notifica Push Telegram Istantanea (`api/_utils/telegram-bot.js`)**: Quando una registrazione viene archiviata con richiesta di delibera o approvazione manuale (nuovi soci, documenti `GIALLO`, modifiche anagrafiche a mano), il server invia automaticamente una notifica formattata ad **ADR_BOT** sul canale Telegram del Consiglio Direttivo con link diretto al pannello approvazioni della dashboard.
 
 ---
 

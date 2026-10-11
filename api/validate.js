@@ -212,18 +212,23 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote:
         if (targetType === 'precheck_doc') {
             const docKind = req.body.doc_kind || 'doc'; // 'doc' o 'tutore'
             const prompt = `Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date).
-Sei un esperto di documenti di identità italiani.
-Ti fornisco l'immagine di un documento di identità (Carta d'Identità, Passaporto o Patente di Guida).
-Devi estrarre queste informazioni in formato JSON STRICT:
+Sei un esperto di documenti di identità italiani (Carta d'Identità cartacea o elettronica CIE, Patente di Guida, Passaporto).
+Ti fornisco l'immagine di un documento di identità.
+Devi estrarre queste informazioni con la massima accuratezza in formato JSON STRICT:
 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO")
-2. data_scadenza (formato YYYY-MM-DD, null se non leggibile)
-3. leggibile (booleano)
-4. stato (stringa: "VERDE" se il documento è autentico, valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o mancano dati certi; "ROSSO" se l'immagine non è un documento d'identità valido o è scaduto)
-5. note (breve spiegazione)
-6. intestatario_rilevato (stringa: nome e cognome dell'intestatario riportato sul documento, o null se non leggibile)
+2. nome (stringa: il solo nome dell'intestatario, es. "MARIO", oppure null se non leggibile)
+3. cognome (stringa: il solo cognome dell'intestatario, es. "ROSSI", oppure null se non leggibile)
+4. codice_fiscale (stringa di 16 caratteri alfanumerici in maiuscolo, es. "RSSMRA85M01H501Z", oppure null se non presente o non leggibile)
+5. data_scadenza (formato YYYY-MM-DD, null se non leggibile)
+6. indirizzo_residenza (stringa con via/piazza e civico, es. "VIA DEI MILLE 12", oppure null se non presente come su patenti europee o non leggibile)
+7. comune_residenza (stringa con il solo nome del comune, es. "ROMA", oppure null se non presente o non leggibile)
+8. leggibile (booleano)
+9. stato (stringa: "VERDE" se il documento è autentico, valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o mancano dati certi; "ROSSO" se l'immagine non è un documento d'identità valido o è scaduto)
+10. note (breve spiegazione)
+11. intestatario_rilevato (stringa: nome e cognome dell'intestatario riportato sul documento, o null se non leggibile)
 
 Rispondi SOLO con il JSON senza markdown:
-{"tipo_documento":"CARTA_IDENTITA","data_scadenza":"2029-05-10","leggibile":true,"stato":"VERDE","note":"Documento d'identità valido e ben leggibile.","intestatario_rilevato":"Mario Rossi"}`;
+{"tipo_documento":"CARTA_IDENTITA","nome":"MARIO","cognome":"ROSSI","codice_fiscale":"RSSMRA85M01H501Z","data_scadenza":"2029-05-10","indirizzo_residenza":"VIA DEI MILLE 12","comune_residenza":"ROMA","leggibile":true,"stato":"VERDE","note":"Documento d'identità valido e ben leggibile.","intestatario_rilevato":"MARIO ROSSI"}`;
 
             try {
                 const content = [{ type: 'text', text: prompt }];
@@ -247,6 +252,23 @@ Rispondi SOLO con il JSON senza markdown:
                 let finalExpiry = aiResult.data_scadenza || null;
                 let finalDocType = aiResult.tipo_documento || 'CARTA_IDENTITA';
 
+                let extractedNome = (aiResult.nome || '').trim() || null;
+                let extractedCognome = (aiResult.cognome || '').trim() || null;
+                let extractedCodiceFiscale = (aiResult.codice_fiscale || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase() || null;
+                if (extractedCodiceFiscale && extractedCodiceFiscale.length !== 16) {
+                    extractedCodiceFiscale = null;
+                }
+                let extractedIndirizzo = (aiResult.indirizzo_residenza || '').trim() || null;
+                let extractedComune = (aiResult.comune_residenza || '').trim() || null;
+
+                if (!extractedNome && !extractedCognome && aiResult.intestatario_rilevato) {
+                    const parts = aiResult.intestatario_rilevato.trim().split(/\s+/);
+                    if (parts.length >= 2) {
+                        extractedNome = parts[0];
+                        extractedCognome = parts.slice(1).join(' ');
+                    }
+                }
+
                 // Guardrail 1: Scadenza documento
                 if (!finalExpiry) {
                     if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
@@ -261,7 +283,7 @@ Rispondi SOLO con il JSON senza markdown:
                     }
                 }
 
-                // Guardrail 2: Controllo corrispondenza intestatario
+                // Guardrail 2: Controllo corrispondenza intestatario (se nome/cognome erano forniti)
                 if (aiResult.intestatario_rilevato && (nome || cognome)) {
                     const isMatch = matchIntestatario(aiResult.intestatario_rilevato, nome, cognome);
                     if (!isMatch) {
@@ -270,14 +292,23 @@ Rispondi SOLO con il JSON senza markdown:
                     }
                 }
 
+                // Guardrail 3: Se mancano sia nome che cognome, passa a GIALLO
+                if (!extractedNome && !extractedCognome && !aiResult.intestatario_rilevato) {
+                    if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
+                    finalNotes = `Nome o cognome non chiaramente leggibili dal documento. Richiesta revisione manuale. (${finalNotes})`;
+                }
+
                 const token = signPrecheck({
                     kind: docKind,
                     esito: finalStatus,
                     tipo_documento: finalDocType,
                     data_scadenza: finalExpiry,
                     sha256_file,
-                    nome,
-                    cognome,
+                    nome: extractedNome || nome,
+                    cognome: extractedCognome || cognome,
+                    codice_fiscale: extractedCodiceFiscale,
+                    indirizzo_residenza: extractedIndirizzo,
+                    comune_residenza: extractedComune,
                     note: finalNotes
                 });
 
@@ -286,6 +317,11 @@ Rispondi SOLO con il JSON senza markdown:
                     esito: finalStatus,
                     tipo_documento: finalDocType,
                     data_scadenza: finalExpiry,
+                    nome: extractedNome,
+                    cognome: extractedCognome,
+                    codice_fiscale: extractedCodiceFiscale,
+                    indirizzo_residenza: extractedIndirizzo,
+                    comune_residenza: extractedComune,
                     note: finalNotes,
                     token
                 });
@@ -301,6 +337,9 @@ Rispondi SOLO con il JSON senza markdown:
                     sha256_file,
                     nome,
                     cognome,
+                    codice_fiscale: null,
+                    indirizzo_residenza: null,
+                    comune_residenza: null,
                     note: fallbackNotes
                 });
                 return res.status(200).json({
@@ -308,6 +347,11 @@ Rispondi SOLO con il JSON senza markdown:
                     esito: fallbackStatus,
                     tipo_documento: 'CARTA_IDENTITA',
                     data_scadenza: null,
+                    nome: null,
+                    cognome: null,
+                    codice_fiscale: null,
+                    indirizzo_residenza: null,
+                    comune_residenza: null,
                     note: fallbackNotes,
                     token
                 });

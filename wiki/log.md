@@ -2,6 +2,26 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-11] feat | Fast-Onboarding Documento al Passo 1, Autofill Anagrafica AI, Sblocco Auditabile e Allerte Telegram ADR_BOT (v1.06.08)
+- **Riorganizzazione Wizard di Registrazione (`portal/registrazione.html`, `portal/registrazione.js`)**:
+  - Invertito l'ordine dei passi: caricamento e precheck AI del Documento di Riconoscimento spostati al Passo 1 assoluto.
+  - **GDPR & Privacy Zero-Retention**: documento analizzato al volo da Mistral Vision (`pixtral-12b-2409`) direttamente dalla memoria del browser; upload permanente su Storage solo al Passo 6 dopo la firma OTP.
+  - **Autofill Completo & Anti-Frode**: estratti automaticamente dal documento `nome`, `cognome`, `codice_fiscale`, `tipo_documento`, `data_scadenza`, `indirizzo_residenza` (via e civico) e `comune_residenza`.
+  - Tramite decodifica catastale del Codice Fiscale vengono ricavati ed impostati in automatico: data di nascita, sesso, comune e provincia di nascita.
+  - Al Passo 2, i campi anagrafici sono bloccati in sola lettura (`readonly`) per prevenire manomissioni o alterazioni fraudolente.
+  - **Sblocco Manuale Auditabile**: introdotto pulsante *"MODIFICA DATI A MANO"* con conferma esplicita: se l'utente sblocca i campi, il sistema attiva il flag `anagraficaModificataManualmente = true`, che invia obbligatoriamente la pratica al controllo manuale del Consiglio Direttivo con stato `GIALLO`.
+  - Al Passo 3, l'indirizzo di residenza è precompilato ma liberamente modificabile in ogni circostanza (non blocca mai l'approvazione). Inserito il campo Cellulare obbligatorio.
+  - Passo 4 per Adesione, Quote e Certificato Medico; Passo 5 per Tutore Legale (solo minorenni); Passo 6 per Firma Digitale OTP e Consensi.
+- **Backend & Notifiche Telegram Direttivo (`api/_utils/telegram-bot.js`, `api/otp-verify.js`, `api/validate.js`)**:
+  - Creato helper serverless `sendTelegramAlert()` in `api/_utils/` (zero impatto sul limite Vercel Hobby 12 funzioni).
+  - Al termine della firma OTP, invia una notifica push istantanea ad **ADR_BOT** sul canale del Direttivo per ogni registrazione che finisce nel registro approvazioni (modifiche manuali anagrafica, documento/certificato GIALLO, ammissione soci), con nominativo, CF, tipologia richiesta e link diretto alla dashboard.
+- **Testing & QA (`tests/telegram-bot.test.js`, `tests/precheck-token.test.js`)**:
+  - Aggiunta suite di test unitari su invio Telegram (gestione env mancanti, mock fetch 200, errori Telegram e timeout fail-safe).
+  - Esteso il test dei token HMAC-SHA256 con verifica integrità dei nuovi campi anagrafici e di residenza.
+  - Test suite globale Vitest: 224/224 test superati con successo (19 file su 19).
+
+---
+
 ## [2026-10-10] feat | Timeline Continua a 12 Mesi con Focus Mese Corrente, Mesi Saltati e Frecce di Scorrimento (v1.06.07)
 - **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
   - Trasformate le caselle dei corsi in una **Timeline Storica Continua a 12 slot**, imperniata sul mese corrente (`[OGGI]`).
