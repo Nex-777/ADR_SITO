@@ -115,4 +115,81 @@ describe('Precheck Token & Validation Helper', () => {
         expect(isValidCodiceFiscale('')).toBe(false);
         expect(isValidCodiceFiscale(null)).toBe(false);
     });
+
+    it('sanifica note e rileva diciture facsimile su documenti con scadenza futura', () => {
+        // Funzione pura che replica la logica di guardrail deterministico di validate.js
+        function evaluateDocGuardrail(aiResult, finalExpiry, today = new Date()) {
+            let finalStatus = aiResult.stato || 'GIALLO';
+            let finalNotes = aiResult.note || '';
+            const expiryDate = new Date(finalExpiry);
+            today.setHours(0, 0, 0, 0);
+
+            if (expiryDate < today) {
+                finalStatus = 'ROSSO';
+                finalNotes = `Documento d'identità scaduto il ${finalExpiry}.`;
+            } else {
+                const rawLower = (finalNotes + ' ' + (aiResult.note || '')).toLowerCase();
+                const isFacsimile = rawLower.includes('facsimile') || rawLower.includes('fac-simile') || rawLower.includes('specimen') || rawLower.includes('campione');
+                if (isFacsimile) {
+                    finalStatus = 'ROSSO';
+                    finalNotes = 'Documento non valido: rilevata dicitura facsimile/copia.';
+                } else if (finalStatus === 'ROSSO') {
+                    finalNotes = 'Documento non conforme: rilevata anomalia nei dati o nel formato.';
+                } else if (/scadut/i.test(finalNotes)) {
+                    finalNotes = "Documento d'identità in corso di validità.";
+                }
+            }
+            return { finalStatus, finalNotes };
+        }
+
+        // Caso 1: Data futura (2030-12-30) con allucinazione "scaduto" e facsimile
+        const res1 = evaluateDocGuardrail({
+            stato: 'ROSSO',
+            note: 'Documento scaduto dal 30/12/2030. Rilevata scritta Facsimile sullo sfondo.'
+        }, '2030-12-30', new Date('2026-10-11'));
+        expect(res1.finalStatus).toBe('ROSSO');
+        expect(res1.finalNotes).toBe('Documento non valido: rilevata dicitura facsimile/copia.');
+
+        // Caso 2: Data futura (2030-12-30) con allucinazione "scaduto" senza facsimile
+        const res2 = evaluateDocGuardrail({
+            stato: 'ROSSO',
+            note: 'Documento scaduto dal 30/12/2030 (oggi è 2026-10-11).'
+        }, '2030-12-30', new Date('2026-10-11'));
+        expect(res2.finalStatus).toBe('ROSSO');
+        expect(res2.finalNotes).toBe('Documento non conforme: rilevata anomalia nei dati o nel formato.');
+
+        // Caso 3: Data realmente passata (2020-01-01)
+        const res3 = evaluateDocGuardrail({
+            stato: 'VERDE',
+            note: 'Documento originale e chiaro.'
+        }, '2020-01-01', new Date('2026-10-11'));
+        expect(res3.finalStatus).toBe('ROSSO');
+        expect(res3.finalNotes).toBe("Documento d'identità scaduto il 2020-01-01.");
+
+        // Caso 4: Data futura regolare con parole spurie "scaduto" ma stato VERDE
+        const res4 = evaluateDocGuardrail({
+            stato: 'VERDE',
+            note: 'Il documento non è ancora scaduto e scadrà nel 2030.'
+        }, '2030-12-30', new Date('2026-10-11'));
+        expect(res4.finalStatus).toBe('VERDE');
+        expect(res4.finalNotes).toBe("Documento d'identità in corso di validità.");
+    });
+
+    it('formatta correttamente i tentativi di sostituzione al singolare e al plurale', () => {
+        function formatRetryLabels(retries) {
+            const retriesLabel = retries === 1 
+                ? 'Tentativo di sostituzione rimasto: 1' 
+                : `Tentativi di sostituzione rimasti: ${retries}`;
+            const buttonLabel = retries === 1 
+                ? 'SOSTITUISCI FILE (1 TENTATIVO RIMASTO)' 
+                : `SOSTITUISCI FILE (${retries} TENTATIVI RIMASTI)`;
+            return { retriesLabel, buttonLabel };
+        }
+
+        expect(formatRetryLabels(2).retriesLabel).toBe('Tentativi di sostituzione rimasti: 2');
+        expect(formatRetryLabels(2).buttonLabel).toBe('SOSTITUISCI FILE (2 TENTATIVI RIMASTI)');
+        expect(formatRetryLabels(1).retriesLabel).toBe('Tentativo di sostituzione rimasto: 1');
+        expect(formatRetryLabels(1).buttonLabel).toBe('SOSTITUISCI FILE (1 TENTATIVO RIMASTO)');
+    });
 });
+

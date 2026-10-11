@@ -23,7 +23,8 @@ graph TD
 - **GDPR & Privacy Zero-Retention**: il documento non viene caricato preventivamente su storage permanente ma analizzato in tempo reale su server europei conformi via Mistral Vision (`pixtral-12b-2409`).
 - Estrazione automatica accurata: `nome`, `cognome`, `codice_fiscale`, `tipo_documento`, `data_scadenza`, `indirizzo_residenza` (via e civico), `comune_residenza`.
 - **Validazione Ministeriale Codice Fiscale**: verifica server-side del formato e dell'algoritmo di controllo/checksum dell'Agenzia delle Entrate (`isValidCodiceFiscale`). Per le carte d'identità, se il CF manca o fallisce il checksum, declassamento preventivo a `GIALLO`.
-- L'utente conferma i dati estratti con token HMAC firmato oppure ricarica (max 2 tentativi) o invia a revisione del Direttivo.
+- **Guardrail Consistenza Date & Riconoscimento Facsimile (v1.06.10+)**: se la data di scadenza è futura, il server impedisce categoricamente l'attribuzione di motivazioni spurie o allucinazioni di "scaduto". Se viene rilevata una dicitura *FACSIMILE* o *SPECIMEN*, il documento viene marcato esplicitamente con `"Documento non valido: rilevata dicitura facsimile/copia"`.
+- L'utente conferma i dati estratti con token HMAC firmato oppure sostituisce il file (tramite il pulsante *"SOSTITUISCI FILE (2 TENTATIVI RIMASTI)"*, max 2 tentativi) o invia a revisione del Direttivo.
 
 ### 2. Passo 2: Dati Anagrafici & Credenziali
 - **Autofill Intelligente**: Nome, Cognome e Codice Fiscale vengono precompilati dai dati del documento.

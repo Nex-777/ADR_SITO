@@ -149,6 +149,15 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote:
                     if (expiryDate < today) {
                         finalStatus = 'ROSSO';
                         finalNotes = `Certificato medico scaduto il ${finalExpiry}.`;
+                    } else {
+                        const rawLower = (finalNotes + ' ' + (aiResult.note || '')).toLowerCase();
+                        const isFacsimile = rawLower.includes('facsimile') || rawLower.includes('fac-simile') || rawLower.includes('specimen') || rawLower.includes('campione');
+                        if (isFacsimile) {
+                            finalStatus = 'ROSSO';
+                            finalNotes = 'Certificato non valido: rilevata dicitura facsimile/copia.';
+                        } else if (finalStatus === 'ROSSO' && /scadut/i.test(finalNotes)) {
+                            finalNotes = 'Certificato non conforme: idoneità o requisiti non validi ai fini sportivi.';
+                        }
                     }
                 }
 
@@ -211,9 +220,14 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote:
 
         if (targetType === 'precheck_doc') {
             const docKind = req.body.doc_kind || 'doc'; // 'doc' o 'tutore'
-            const prompt = `Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date).
+            const prompt = `Oggi è il ${todayStr} (data odierna di riferimento).
 Sei un esperto di documenti di identità italiani (Carta d'Identità cartacea o elettronica CIE, Patente di Guida, Passaporto).
 Ti fornisco l'immagine di un documento di identità.
+
+REGOLE CRITICHE SULLA VALIDITÀ E SULLE DATE:
+1. Una data di scadenza uguale o successiva a oggi (${todayStr}) indica che il documento È IN CORSO DI VALIDITÀ e NON È SCADUTO. Non dichiarare MAI nelle note che un documento è scaduto se la data di scadenza è futura rispetto a oggi.
+2. Se l'immagine presenta la scritta "FACSIMILE", "FAC-SIMILE", "SPECIMEN", "CAMPIONE", "ESEMPIO" o simili, il documento NON è un originale autentico: imposta stato "ROSSO" e note "Documento non valido: rilevata dicitura facsimile/copia.".
+
 Devi estrarre queste informazioni con la massima accuratezza in formato JSON STRICT:
 1. tipo_documento (stringa: "CARTA_IDENTITA", "PASSAPORTO", "PATENTE" oppure "ALTRO")
 2. nome (stringa: il solo nome dell'intestatario, es. "MARIO", oppure null se non leggibile)
@@ -223,8 +237,8 @@ Devi estrarre queste informazioni con la massima accuratezza in formato JSON STR
 6. indirizzo_residenza (stringa con via/piazza e civico, es. "VIA DEI MILLE 12", oppure null se non presente come su patenti europee o non leggibile)
 7. comune_residenza (stringa con il solo nome del comune, es. "ROMA", oppure null se non presente o non leggibile)
 8. leggibile (booleano)
-9. stato (stringa: "VERDE" se il documento è autentico, valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o mancano dati certi; "ROSSO" se l'immagine non è un documento d'identità valido o è scaduto)
-10. note (breve spiegazione)
+9. stato (stringa: "VERDE" se il documento è autentico, originale, valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o mancano dati certi; "ROSSO" se l'immagine è un facsimile/specimen, non è un documento d'identità valido o la data di scadenza è già passata rispetto a oggi)
+10. note (breve spiegazione coerente)
 11. intestatario_rilevato (stringa: nome e cognome dell'intestatario riportato sul documento, o null se non leggibile)
 
 Rispondi SOLO con il JSON senza markdown:
@@ -281,7 +295,7 @@ Rispondi SOLO con il JSON senza markdown:
                     }
                 }
 
-                // Guardrail 1: Scadenza documento
+                // Guardrail 1: Scadenza e consistenza temporale documento
                 if (!finalExpiry) {
                     if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
                     finalNotes = `Data di scadenza non rilevabile dal documento. Richiesta revisione manuale. (${finalNotes})`;
@@ -292,6 +306,21 @@ Rispondi SOLO con il JSON senza markdown:
                     if (expiryDate < today) {
                         finalStatus = 'ROSSO';
                         finalNotes = `Documento d'identità scaduto il ${finalExpiry}.`;
+                    } else {
+                        // Data futura o odierna: non è scaduto.
+                        const rawLower = (finalNotes + ' ' + (aiResult.note || '')).toLowerCase();
+                        const isFacsimile = rawLower.includes('facsimile') || rawLower.includes('fac-simile') || rawLower.includes('specimen') || rawLower.includes('campione');
+                        
+                        if (isFacsimile) {
+                            finalStatus = 'ROSSO';
+                            finalNotes = 'Documento non valido: rilevata dicitura facsimile/copia.';
+                        } else if (finalStatus === 'ROSSO') {
+                            // Data futura ma rifiutato per altre ragioni non scadute
+                            finalNotes = 'Documento non conforme: rilevata anomalia nei dati o nel formato.';
+                        } else if (/scadut/i.test(finalNotes)) {
+                            // Sanitizzazione bonificatrice di eventuali scorie testuali
+                            finalNotes = 'Documento d\'identità in corso di validità.';
+                        }
                     }
                 }
 

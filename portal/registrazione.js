@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.11"
+                VERSION: "1.06.12"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -867,7 +867,9 @@ function togglePasswordVisibility(inputId, buttonEl) {
             const item = precheckState[kind];
 
             if (retriesLabel) {
-                retriesLabel.textContent = `Ricaricamenti rimasti: ${item.retries}`;
+                retriesLabel.textContent = item.retries === 1 
+                    ? 'Tentativo di sostituzione rimasto: 1' 
+                    : `Tentativi di sostituzione rimasti: ${item.retries}`;
             }
 
             if (badge) {
@@ -904,6 +906,10 @@ function togglePasswordVisibility(inputId, buttonEl) {
             if (actionsBox) {
                 actionsBox.innerHTML = '';
 
+                const retryButtonLabel = item.retries === 1 
+                    ? 'SOSTITUISCI FILE (1 TENTATIVO RIMASTO)' 
+                    : `SOSTITUISCI FILE (${item.retries} TENTATIVI RIMASTI)`;
+
                 if (item.state === 'confermato' || item.state === 'revisione_umana') {
                     const statusText = document.createElement('span');
                     statusText.className = "text-xs font-bold uppercase " + (item.state === 'confermato' ? "text-green-400" : "text-amber-400");
@@ -937,7 +943,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         const btnRetry = document.createElement('button');
                         btnRetry.type = "button";
                         btnRetry.className = "bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase px-3 py-2 transition-colors";
-                        btnRetry.textContent = `RICARICA FILE (${item.retries} RIMASTI)`;
+                        btnRetry.textContent = retryButtonLabel;
                         btnRetry.onclick = () => resetPrecheck(kind);
                         actionsBox.appendChild(btnRetry);
                     }
@@ -947,7 +953,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                         const btnRetry = document.createElement('button');
                         btnRetry.type = "button";
                         btnRetry.className = "bg-primary hover:bg-primary/80 text-white font-bold text-xs uppercase px-4 py-2 transition-colors";
-                        btnRetry.textContent = `RICARICA FILE (${item.retries} RIMASTI)`;
+                        btnRetry.textContent = retryButtonLabel;
                         btnRetry.onclick = () => resetPrecheck(kind);
                         actionsBox.appendChild(btnRetry);
                     }

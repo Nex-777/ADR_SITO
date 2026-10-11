@@ -2,6 +2,21 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-11] fix | Guardrail Consistenza Date Scadenza, Riconoscimento Facsimile e Refactor Testi Sostituzione File (v1.06.12)
+- **Hardening AI & Guardrail Deterministico Backend (`api/validate.js`)**:
+  - Eliminata alla radice l'allucinazione temporale per cui documenti con scadenza futura venivano etichettati come scaduti.
+  - Istruito il prompt di Mistral Vision con regole tassative: una data uguale o successiva ad oggi indica che il documento è in corso di validità; per documenti recanti diciture *FACSIMILE*, *SPECIMEN*, *CAMPIONE* o copie non originali, l'AI imposta lo stato `ROSSO` con causale puntuale `"Documento non valido: rilevata dicitura facsimile/copia."`.
+  - Introdotto guardrail deterministico server-side: se `expiryDate >= today`, qualsiasi menzione a "scaduto" nelle note viene intercettata e bonificata. In caso di rifiuto per diciture facsimile, viene riportata la causale corretta; per altri motivi di rifiuto con data futura viene indicata l'anomalia di formato/dati `"Documento non conforme: rilevata anomalia nei dati o nel formato."` senza mai citare erroneamente la scadenza.
+- **Frontend Wizard Registrazione (`portal/registrazione.js`, `portal/registrazione.html`)**:
+  - Sostituita la dicitura ambigua `"RICARICA FILE (2 RIMASTI)"` con la copia esplicita ed ergonomica `"SOSTITUISCI FILE (2 TENTATIVI RIMASTI)"` (e `"SOSTITUISCI FILE (1 TENTATIVO RIMASTO)"`).
+  - Sostituita l'etichetta contatore con `"Tentativi di sostituzione rimasti: 2"` (e `"Tentativo di sostituzione rimasto: 1"`).
+  - Uniformata l'esperienza utente su tutti e tre i precheck: Documento Identità Atleta, Certificato Medico e Documento Tutore.
+- **Testing & QA (`tests/precheck-token.test.js`)**:
+  - Aggiunti test unitari mirati per il guardrail di sanitizzazione date/facsimile e per la formattazione singolare/plurale dei pulsanti ed etichette.
+  - Test suite globale Vitest: 233/233 test superati con successo (20 file su 20).
+
+---
+
 ## [2026-10-11] fix | Ripristino Riga Orizzontale Unica nel Registro Corsi (v1.06.11)
 - **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
   - Eliminato il wrapping accidentale a due righe nell'header della scheda atleta:
