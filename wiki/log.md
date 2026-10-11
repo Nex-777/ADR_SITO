@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-11] feat | Layout a 3 Zone su Riga Unica nel Registro Corsi (v1.06.13)
+- **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
+  - Ristrutturato l'header della card atleta in 3 zone orizzontali consecutive su un'unica linea:
+    - **Zona 1 (Sinistra)**: Nome dell'atleta e data di iscrizione con larghezza guida fissa (`lg:w-64 shrink-0`, 256px).
+    - **Zona 2 (Centro-Sinistra)**: Schema dei mesi dell'abbonamento (`shrink-0 flex flex-col items-start`). Poiché la Zona 1 ha larghezza fissa, tutte le frecce `◀` e le prime caselle dei mesi partono esattamente dalla stessa linea verticale per ogni atleta, allineandosi naturalmente a sinistra ed espandendosi verso destra.
+    - **Zona 3 (Estrema Destra)**: Badge `TESSERA CSEN` e `CERT. MEDICO` ancorati saldamente in fondo a destra tramite `lg:ml-auto`, assorbendo lo spazio vuoto al centro ed evitando qualsiasi interruzione su due righe.
+
+---
+
 ## [2026-10-11] fix | Guardrail Consistenza Date Scadenza, Riconoscimento Facsimile e Refactor Testi Sostituzione File (v1.06.12)
 - **Hardening AI & Guardrail Deterministico Backend (`api/validate.js`)**:
   - Eliminata alla radice l'allucinazione temporale per cui documenti con scadenza futura venivano etichettati come scaduti.
