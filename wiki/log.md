@@ -2,6 +2,17 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-11] fix | Forzatura Riga Orizzontale Fissa (flex-row) nel Registro Corsi (v1.06.14)
+- **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
+  - Eliminati tutti i breakpoint condizionali (`lg:`) che provocavano lo stack verticale accidentale su 3 righe su schermi compatti con sidebar aperta.
+  - Impostato layout orizzontale incondizionato `flex-row items-center w-full`:
+    - **Nome Atleta**: colonna fissa compatta a sinistra (`w-48 shrink-0`, 192px) con testo troncato pulito in caso di overflow.
+    - **Timeline Mesi**: posizionata subito a destra del nome (`shrink-0 flex flex-col items-start`), garantendo che tutte le frecce `◀` e le prime caselle dei mesi inizino sulla stessa coordinata verticale a sinistra.
+    - **CSEN e Certificato**: ancorati all'estremità destra tramite `ml-auto shrink-0 flex-nowrap`.
+    - Ingombro orizzontale totale contenuto a ~680px: mai più spezzamenti o wrapping su più righe.
+
+---
+
 ## [2026-10-11] feat | Layout a 3 Zone su Riga Unica nel Registro Corsi (v1.06.13)
 - **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
   - Ristrutturato l'header della card atleta in 3 zone orizzontali consecutive su un'unica linea:

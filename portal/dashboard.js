@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.13"
+                VERSION: "1.06.14"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -6836,17 +6836,17 @@
                 card.className = `bg-black/60 border ${hasIssue ? 'border-red-500/40 bg-red-500/5' : 'border-white/10'} hover:border-white/20 transition-all p-4 rounded-none`;
                 card.innerHTML = `
                     <!-- Header riga -->
-                    <div class="flex flex-col lg:flex-row lg:items-center gap-4 cursor-pointer select-none" onclick="toggleAthleteCard('${uniqueCardId}')">
-                        <!-- ZONA 1: Nome Atleta e Data Iscrizione (sinistra, larghezza guida fissa 256px) -->
-                        <div class="flex items-center gap-3 w-full lg:w-64 shrink-0 min-w-0">
-                            <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200" id="icon-card-${uniqueCardId}">expand_more</span>
+                    <div class="flex flex-row items-center gap-4 cursor-pointer select-none w-full" onclick="toggleAthleteCard('${uniqueCardId}')">
+                        <!-- ZONA 1: Nome Atleta e Data Iscrizione (sinistra, larghezza guida fissa 192px) -->
+                        <div class="flex items-center gap-2.5 w-48 shrink-0 min-w-0">
+                            <span class="material-symbols-outlined text-gray-500 text-sm transform transition-transform duration-200 shrink-0" id="icon-card-${uniqueCardId}">expand_more</span>
                             <div class="min-w-0 truncate">
-                                <h4 class="font-headline font-bold text-white text-sm uppercase flex items-center gap-2 truncate">
-                                    ${hasIssue ? '<span class="text-red-500 font-bold" title="CERTIFICATO NON VALIDO O RATA INSOLUTA / SCADUTA">⚠</span>' : ''}
-                                    ${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}
+                                <h4 class="font-headline font-bold text-white text-xs sm:text-sm uppercase flex items-center gap-1.5 truncate">
+                                    ${hasIssue ? '<span class="text-red-500 font-bold shrink-0" title="CERTIFICATO NON VALIDO O RATA INSOLUTA / SCADUTA">⚠</span>' : ''}
+                                    <span class="truncate">${atl.nome.toUpperCase()} ${atl.cognome.toUpperCase()}</span>
                                 </h4>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-[9px] font-mono text-gray-400 uppercase">ISCRITTO IL: ${dataInizioStr}</span>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <span class="text-[9px] font-mono text-gray-400 uppercase truncate">ISCRITTO: ${dataInizioStr}</span>
                                 </div>
                             </div>
                         </div>
@@ -6861,8 +6861,8 @@
                             </div>
                         ` : ''}
 
-                        <!-- ZONA 3: Badge CSEN e Certificato Medico (ancorati in fondo a destra con lg:ml-auto) -->
-                        <div class="flex items-center gap-4 shrink-0 flex-nowrap lg:ml-auto self-start lg:self-center">
+                        <!-- ZONA 3: Badge CSEN e Certificato Medico (ancorati in fondo a destra con ml-auto) -->
+                        <div class="flex items-center gap-4 shrink-0 flex-nowrap ml-auto">
                             <div class="flex flex-col items-end shrink-0">
                                 <span class="text-[8px] font-headline text-gray-500 uppercase tracking-widest">TESSERA CSEN</span>
                                 ${badgeCsen}
