@@ -31,6 +31,9 @@
             ]
         }
     ],
+    "rewrites": [
+        { "source": "/api/feedback", "destination": "/api/get-ip?route=feedback" }
+    ],
     "crons": [
         {
             "path": "/api/cron-scadenze",

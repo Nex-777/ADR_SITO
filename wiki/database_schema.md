@@ -501,7 +501,35 @@ Catalogo centralizzato e dinamico dei programmi ufficiali di allenamento (Invict
 - `creato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
 - `aggiornato_il` (TIMESTAMPTZ NOT NULL DEFAULT now())
 
+---
 
+## 📢 Sistema Segnalazioni & Feedback
 
+### `public.feedback_reports`
+Tabella per la memorizzazione di segnalazioni bug e suggerimenti utenti/atleti, integrata con notifiche Telegram ADR_BOT e diagnostica tecnica per LLM (introdotta con `supabase/migration_feedback_reports.sql`).
 
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `uuid` (PK) | Identificativo univoco della segnalazione (`gen_random_uuid()`). |
+| `client_id` | `uuid` (FK) | Riferimento all'utente firmatario/segnalatore (`auth.users.id`). |
+| `company_name` | `text` | Denominazione verificata server-side (es. `Adrenalina Club ASD - Mario Rossi`). |
+| `user_email` | `text` | Email verificata dell'utente segnalatore. |
+| `user_role` | `text` | Ruoli dell'utente al momento dell'invio. |
+| `category` | `text` | Tipologia: `SUGGERIMENTO` o `BUG`. |
+| `title` | `text` | Titolo conciso della segnalazione. |
+| `message` | `text` | Descrizione dettagliata dell'idea o del blocco tecnico riscontrato. |
+| `page_url` | `text` | Route/URL relativo in cui si trovava l'utente. |
+| `app_version` | `text` | Versione applicativa al momento dell'invio. |
+| `diagnostic_data` | `jsonb` | Metadati ambiente (browser, OS, viewport, online, lang) e ring buffer ultimi errori runtime JS. |
+| `attachment_name` | `text` | Nome del file screenshot opzionale. |
+| `attachment_base64` | `text` | Payload compresso client-side via Canvas (max 1600px, JPEG 0.75 a ~150-250KB). |
+| `status` | `text` | Stato del ticket: `DA_LEGGERE`, `LETTA`, `RISOLTA`, `ARCHIVIATA`. |
+| `admin_notes` | `text` | Note interne riservate alla Presidenza. |
+| `created_at` | `timestamptz` | Data e ora di inserimento. |
+| `updated_at` | `timestamptz` | Timestamp ultimo aggiornamento stato/note via trigger. |
+
+#### Politiche RLS
+- **INSERT**: `insert_own_feedback` riservata a `client_id = auth.uid()`.
+- **SELECT**: `select_own_or_presidenza_feedback` consente agli utenti di consultare solo i propri record, e alla Presidenza (`presidente`, `vice_presidente`) l'accesso globale.
+- **UPDATE**: `update_presidenza_feedback` riservata esclusivamente a `presidente` e `vice_presidente`.
 

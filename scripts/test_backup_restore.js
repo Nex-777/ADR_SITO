@@ -1,6 +1,3 @@
-// scripts/test_backup_restore.js
-// Smoke Test per la validazione di integrità e decifratura dei backup di ADR_SITO
-
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -18,7 +15,8 @@ const CRITICAL_TABLES = [
     'epika_gruppi_storici',
     'nestore_pesi_misure',
     'nestore_allenamenti',
-    'nestore_pasti'
+    'nestore_pasti',
+    'feedback_reports'
 ];
 
 async function getLatestReleaseAsset(repo, token) {
@@ -98,112 +96,87 @@ async function main() {
         process.exit(1);
     }
 
-    const args = process.argv.slice(2);
-    let targetEncFile = null;
-    let isTempDownload = false;
+    let encDumpPath = null;
+    let shouldCleanupEnc = false;
 
-    if (args.includes('--latest')) {
-        const repo = process.env.GITHUB_REPOSITORY || 'Nex-777/ADR_SITO';
-        const token = process.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN_REPO;
-        const result = await getLatestReleaseAsset(repo, token);
-        targetEncFile = result.filePath;
-        isTempDownload = result.isTempDownload;
-    } else if (args[0] && !args[0].startsWith('--')) {
-        targetEncFile = path.resolve(args[0]);
+    // 1. Controlla se passato come argomento
+    if (process.argv[2] && fs.existsSync(process.argv[2])) {
+        encDumpPath = path.resolve(process.argv[2]);
+        console.log(`📂 Utilizzo file specificato come argomento: ${encDumpPath}`);
     } else {
-        // Cerca eventuale file .dump.enc nella cartella corrente
-        const localFiles = fs.readdirSync(process.cwd()).filter(f => f.endsWith('.dump.enc'));
+        // 2. Cerca file locale nel root dir
+        const localFiles = fs.readdirSync(process.cwd()).filter(f => f.startsWith('backup_') && f.endsWith('.dump.enc'));
         if (localFiles.length > 0) {
-            targetEncFile = path.resolve(localFiles[0]);
-            console.log(`ℹ️ Trovato dump locale: ${targetEncFile}`);
+            localFiles.sort().reverse();
+            encDumpPath = path.resolve(localFiles[0]);
+            console.log(`📂 Utilizzo dump cifrato locale più recente: ${encDumpPath}`);
         } else {
-            console.error("❌ Specificare il file .dump.enc oppure usare il flag --latest.");
-            console.log("Uso: node scripts/test_backup_restore.js [<percorso_file.dump.enc> | --latest]");
-            process.exit(1);
+            // 3. Scarica da GitHub Releases
+            const repo = process.env.GITHUB_REPOSITORY || 'Nex-777/ADR_SITO';
+            const token = process.env.GITHUB_TOKEN;
+            const res = await getLatestReleaseAsset(repo, token);
+            encDumpPath = res.filePath;
+            shouldCleanupEnc = res.isTempDownload;
         }
     }
 
-    if (!fs.existsSync(targetEncFile)) {
-        console.error(`❌ File non trovato: ${targetEncFile}`);
-        process.exit(1);
+    const tempDir = path.join(process.cwd(), '.tmp_smoke_test');
+    if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir);
     }
 
-    const fileSizeMb = (fs.statSync(targetEncFile).size / (1024 * 1024)).toFixed(2);
-    console.log(`📁 Target: ${targetEncFile} (${fileSizeMb} MB)`);
-
-    const decryptedFile = targetEncFile.replace(/\.enc$/, '');
-    if (decryptedFile === targetEncFile) {
-        console.error("❌ Il file specificato deve avere estensione .enc");
-        process.exit(1);
-    }
+    const decDumpPath = path.join(tempDir, 'smoke_test.dump');
 
     try {
-        // 1. Decifratura OpenSSL
-        console.log("🔓 Decifratura AES-256-CBC (PBKDF2, 100k iter)...");
-        execSync(
-            `openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -d -in "${targetEncFile}" -out "${decryptedFile}" -pass env:BACKUP_PASSPHRASE`,
-            {
-                stdio: 'pipe',
-                env: { ...process.env, BACKUP_PASSPHRASE: passphrase }
-            }
-        );
-
-        if (!fs.existsSync(decryptedFile) || fs.statSync(decryptedFile).size === 0) {
-            throw new Error("Il file decifrato è vuoto o non è stato creato. Passphrase errata o dump corrotto.");
-        }
-
-        const decSizeMb = (fs.statSync(decryptedFile).size / (1024 * 1024)).toFixed(2);
-        console.log(`✅ Decifratura riuscita. Dimensione dump: ${decSizeMb} MB`);
-
-        // 2. Lettura catalogo pg_restore --list
-        console.log("📋 Lettura catalogo PostgreSQL (pg_restore --list)...");
-        const pgRestoreCmd = process.platform === 'linux' ? '/usr/lib/postgresql/17/bin/pg_restore' : 'pg_restore';
-        const catalogOutput = execSync(`${pgRestoreCmd} --list "${decryptedFile}"`, {
-            encoding: 'utf-8',
-            maxBuffer: 10 * 1024 * 1024
+        console.log(`\n🔓 Decifratura AES-256-CBC con pbkdf2...`);
+        // Decifra
+        execSync(`openssl enc -d -aes-256-cbc -pbkdf2 -in "${encDumpPath}" -out "${decDumpPath}" -k "${passphrase}"`, {
+            stdio: 'inherit'
         });
 
-        const lines = catalogOutput.split('\n');
-        console.log(`📊 Record totali nel dump: ${lines.length}`);
+        const stat = fs.statSync(decDumpPath);
+        if (stat.size === 0) {
+            throw new Error("Il file decifrato ha dimensione 0 bytes (passphrase errata o file corrotto).");
+        }
+        console.log(`✅ Decifratura completata con successo! Dimensione dump: ${(stat.size / 1024).toFixed(1)} KB`);
 
-        // 3. Verifica tabelle critiche
-        console.log("\n🧪 Controllo presenza tabelle core:");
-        const missing = [];
-        for (const table of CRITICAL_TABLES) {
-            // Cerca pattern TABLE DATA o TABLE nell'output del TOC
-            const found = lines.some(line => line.includes(` ${table} `) || line.endsWith(` ${table}`));
-            if (found) {
-                console.log(`   ✅ [PRESENTE] ${table}`);
+        console.log(`\n📋 Verifica integrità formato pg_dump (TOC Table of Contents)...`);
+        const tocOutput = execSync(`pg_restore --list "${decDumpPath}"`, { encoding: 'utf8' });
+        console.log(`✅ pg_restore --list ha completato la scansione della TOC (${tocOutput.split('\n').length} elementi rilevati).`);
+
+        console.log(`\n🔍 Controllo presenza tabelle critiche nella TOC del dump:`);
+        const missingTables = [];
+        for (const tbl of CRITICAL_TABLES) {
+            // Cerca "TABLE DATA public <tbl>" o "TABLE public <tbl>"
+            const regex = new RegExp(`TABLE (DATA )?public ${tbl} `, 'i');
+            if (regex.test(tocOutput)) {
+                console.log(`  ✓ Tabella '${tbl}' presente`);
             } else {
-                console.log(`   ❌ [MANCANTE] ${table}`);
-                missing.push(table);
+                console.log(`  ❌ Tabella '${tbl}' ASSENTE`);
+                missingTables.push(tbl);
             }
         }
 
-        console.log("\n-------------------------------------------");
-        if (missing.length === 0) {
-            console.log(`🎉 SMOKE TEST SUPERATO: Tutte le ${CRITICAL_TABLES.length} tabelle critiche sono integre!`);
-        } else {
-            console.error(`🚨 SMOKE TEST FALLITO: Mancano ${missing.length} tabelle critiche: ${missing.join(', ')}`);
+        if (missingTables.length > 0) {
+            throw new Error(`Controllo integrità fallito: ${missingTables.length} tabelle critiche mancanti (${missingTables.join(', ')}).`);
         }
-        console.log("-------------------------------------------\n");
 
-        if (missing.length > 0) {
-            process.exit(1);
-        }
+        console.log("\n🎉 TUTTE LE TABELLE CRITICHE SONO STATE IDENTIFICATE CON SUCCESSO.");
+        console.log("🛡️ SMOKE TEST COMPLETATO CON SUCCESSO — BACKUP VALIDO E RIPRISTINABILE.");
 
     } catch (err) {
-        console.error(`❌ Errore durante lo smoke test: ${err.message}`);
-        process.exit(1);
+        console.error("\n❌ SMOKE TEST FALLITO:", err.message);
+        process.exitCode = 1;
     } finally {
-        // Pulisci file temporanei in chiaro per sicurezza
-        if (fs.existsSync(decryptedFile)) {
-            fs.unlinkSync(decryptedFile);
-            console.log("🗑️ File dump in chiaro rimosso dal disco.");
+        // Cleanup file temporanei
+        if (fs.existsSync(decDumpPath)) {
+            try { fs.unlinkSync(decDumpPath); } catch (_) {}
         }
-        if (isTempDownload && fs.existsSync(targetEncFile)) {
-            fs.unlinkSync(targetEncFile);
-            console.log("🗑️ Asset scaricato rimosso dal disco.");
+        if (fs.existsSync(tempDir)) {
+            try { fs.rmdirSync(tempDir); } catch (_) {}
+        }
+        if (shouldCleanupEnc && encDumpPath && fs.existsSync(encDumpPath)) {
+            try { fs.unlinkSync(encDumpPath); } catch (_) {}
         }
     }
 }

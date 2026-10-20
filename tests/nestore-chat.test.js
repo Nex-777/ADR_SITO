@@ -246,15 +246,18 @@ describe('calcolaSchedaAtleta()', () => {
                     };
                 }
                 if (table === 'nestore_allenamenti') {
+                    const todayIso = new Date().toISOString().split('T')[0];
+                    const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
+                    const fiveDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0];
                     return {
                         select: vi.fn().mockReturnThis(),
                         eq: vi.fn().mockReturnThis(),
                         order: vi.fn().mockReturnThis(),
                         limit: vi.fn().mockResolvedValue({
                             data: [
-                                { data_allenamento: '2026-09-14', corso_disciplina: 'Ibrido', durata_minuti: 60, rpe_fatica: 8 },
-                                { data_allenamento: '2026-09-12', corso_disciplina: 'Ibrido', durata_minuti: 60, rpe_fatica: 7 },
-                                { data_allenamento: '2026-09-08', corso_disciplina: 'Strongman', durata_minuti: 75, rpe_fatica: 8 }
+                                { data_allenamento: todayIso, corso_disciplina: 'Ibrido', durata_minuti: 60, rpe_fatica: 8 },
+                                { data_allenamento: twoDaysAgo, corso_disciplina: 'Ibrido', durata_minuti: 60, rpe_fatica: 7 },
+                                { data_allenamento: fiveDaysAgo, corso_disciplina: 'Strongman', durata_minuti: 75, rpe_fatica: 8 }
                             ]
                         })
                     };

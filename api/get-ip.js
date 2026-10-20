@@ -1,6 +1,17 @@
-export default function handler(req, res) {
+import { handleFeedback } from './_utils/feedback-handler.js';
+
+export default async function handler(req, res) {
+    // Gestione route delegata per feedback utenti (Vercel Serverless Function consolidation)
+    const isFeedback = req.query?.route === 'feedback' || 
+                       req.url?.includes('route=feedback') ||
+                       req.url?.startsWith('/api/feedback');
+
+    if (isFeedback) {
+        return await handleFeedback(req, res);
+    }
+
     // CORS headers
-    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     const allowedOrigins = [
         'https://adrenalinaclub.it',
         'https://www.adrenalinaclub.it',
