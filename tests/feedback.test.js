@@ -1,7 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import { escapeTelegramHtml, sendTelegramFeedbackAlert } from '../api/_utils/telegram-bot.js';
 import { handleFeedback } from '../api/_utils/feedback-handler.js';
 import { formatForAntigravity } from '../portal/dashboard-feedback.js';
+
+// Mock Supabase per test di integrazione backend
+const mockGetUser = vi.fn();
+const mockFrom = vi.fn();
+
+vi.mock('@supabase/supabase-js', () => ({
+    createClient: vi.fn(() => ({
+        auth: {
+            getUser: (...args) => mockGetUser(...args)
+        },
+        from: (...args) => mockFrom(...args)
+    }))
+}));
 
 describe('Feedback Telegram Notifications & Escape Helpers', () => {
     const originalEnv = { ...process.env };
@@ -93,6 +108,194 @@ describe('Feedback Telegram Notifications & Escape Helpers', () => {
 
         expect(resData.status).toBe(401);
         expect(resData.body.error).toContain('Non autorizzato');
+    });
+
+    it('gestisce con successo inserimento report e notifica Telegram con telegram_sent: true', async () => {
+        process.env.SUPABASE_URL = 'https://fake.supabase.co';
+        process.env.SUPABASE_SERVICE_ROLE_KEY = 'fake-key';
+        process.env.TELEGRAM_BOT_TOKEN = 'mock-token';
+        process.env.TELEGRAM_CHAT_ID = '987654321';
+
+        mockGetUser.mockResolvedValue({
+            data: { user: { id: 'user-guid-001', email: 'atleta@adrenalinaclub.it' } },
+            error: null
+        });
+
+        mockFrom.mockImplementation((tableName) => {
+            if (tableName === 'utenti') {
+                return {
+                    select: vi.fn().mockReturnValue({
+                        eq: vi.fn().mockReturnValue({
+                            maybeSingle: vi.fn().mockResolvedValue({
+                                data: {
+                                    nome: 'Mario',
+                                    cognome: 'Rossi',
+                                    email: 'mario@rossi.it',
+                                    ruolo: ['socio']
+                                },
+                                error: null
+                            })
+                        })
+                    })
+                };
+            }
+            if (tableName === 'feedback_reports') {
+                return {
+                    insert: vi.fn().mockReturnValue({
+                        select: vi.fn().mockReturnValue({
+                            single: vi.fn().mockResolvedValue({
+                                data: {
+                                    id: 'report-guid-123',
+                                    status: 'DA_LEGGERE',
+                                    created_at: '2026-10-20T21:00:00Z'
+                                },
+                                error: null
+                            })
+                        })
+                    })
+                };
+            }
+            return {};
+        });
+
+        const mockFetch = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({ ok: true, result: { message_id: 777 } })
+        });
+        globalThis.fetch = mockFetch;
+
+        const mockReq = {
+            method: 'POST',
+            headers: {
+                authorization: 'Bearer valid-jwt-token',
+                origin: 'https://portal.adrenalinaclub.it'
+            },
+            socket: { remoteAddress: '127.0.0.1' },
+            body: {
+                category: 'BUG',
+                title: 'Crash su scheda allenamento',
+                message: 'La pagina si blocca dopo aver salvato il massimale',
+                page_url: '/portal/dashboard.html?tab=forza',
+                app_version: '1.06.16',
+                diagnostic_data: {
+                    browser: 'Chrome 120.0',
+                    os: 'Windows 11',
+                    viewport: '1920x1080',
+                    errors: [{ message: 'TypeError: undefined', lineno: 42 }]
+                }
+            }
+        };
+
+        const resData = {};
+        const mockRes = {
+            setHeader: vi.fn(),
+            status: vi.fn().mockImplementation((code) => {
+                resData.status = code;
+                return {
+                    json: vi.fn().mockImplementation((payload) => {
+                        resData.body = payload;
+                        return payload;
+                    })
+                };
+            })
+        };
+
+        await handleFeedback(mockReq, mockRes);
+
+        expect(resData.status).toBe(200);
+        expect(resData.body.success).toBe(true);
+        expect(resData.body.id).toBe('report-guid-123');
+        expect(resData.body.telegram_sent).toBe(true);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('garantisce architettura fail-open: restituisce 200 e telegram_sent: false se Telegram fallisce', async () => {
+        process.env.SUPABASE_URL = 'https://fake.supabase.co';
+        process.env.SUPABASE_SERVICE_ROLE_KEY = 'fake-key';
+        // Telegram senza credenziali
+        delete process.env.TELEGRAM_BOT_TOKEN;
+        delete process.env.TELEGRAM_CHAT_ID;
+
+        mockGetUser.mockResolvedValue({
+            data: { user: { id: 'user-guid-002', email: 'test@adrenalinaclub.it' } },
+            error: null
+        });
+
+        mockFrom.mockImplementation((tableName) => {
+            if (tableName === 'utenti') {
+                return {
+                    select: vi.fn().mockReturnValue({
+                        eq: vi.fn().mockReturnValue({
+                            maybeSingle: vi.fn().mockResolvedValue({
+                                data: { nome: 'Luigi', cognome: 'Verdi', email: 'luigi@verdi.it', ruolo: 'socio' },
+                                error: null
+                            })
+                        })
+                    })
+                };
+            }
+            if (tableName === 'feedback_reports') {
+                return {
+                    insert: vi.fn().mockReturnValue({
+                        select: vi.fn().mockReturnValue({
+                            single: vi.fn().mockResolvedValue({
+                                data: {
+                                    id: 'report-guid-999',
+                                    status: 'DA_LEGGERE',
+                                    created_at: '2026-10-20T21:05:00Z'
+                                },
+                                error: null
+                            })
+                        })
+                    })
+                };
+            }
+            return {};
+        });
+
+        const mockReq = {
+            method: 'POST',
+            headers: {
+                authorization: 'Bearer valid-jwt-token-2'
+            },
+            socket: { remoteAddress: '127.0.0.1' },
+            body: {
+                category: 'SUGGERIMENTO',
+                title: 'Nuova opzione per il cronometro',
+                message: 'Aggiungere suono al minuto finale'
+            }
+        };
+
+        const resData = {};
+        const mockRes = {
+            setHeader: vi.fn(),
+            status: vi.fn().mockImplementation((code) => {
+                resData.status = code;
+                return {
+                    json: vi.fn().mockImplementation((payload) => {
+                        resData.body = payload;
+                        return payload;
+                    })
+                };
+            })
+        };
+
+        await handleFeedback(mockReq, mockRes);
+
+        expect(resData.status).toBe(200);
+        expect(resData.body.success).toBe(true);
+        expect(resData.body.id).toBe('report-guid-999');
+        expect(resData.body.telegram_sent).toBe(false);
+    });
+});
+
+describe('Dashboard Script & Browser Compatibility', () => {
+    it('non include export ESM a livello top-level per evitare SyntaxError nei browser standard', () => {
+        const filePath = path.resolve(__dirname, '../portal/dashboard-feedback.js');
+        const content = fs.readFileSync(filePath, 'utf-8');
+        expect(content).not.toMatch(/^export\s+/m);
+        expect(content).not.toMatch(/^import\s+/m);
     });
 });
 

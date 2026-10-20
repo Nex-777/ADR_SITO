@@ -185,6 +185,7 @@ export async function handleFeedback(req, res) {
         }
 
         // --- 8. Notifica Telegram Istantanea (Fail-Open) ---
+        let tgResult = null;
         try {
             const isBug = validatedData.category === 'BUG';
             const icon = isBug ? '🚨' : '💡';
@@ -217,14 +218,17 @@ export async function handleFeedback(req, res) {
                 });
             }
 
-            // Invio asincrono a Telegram senza attendere bloccando o rischiando eccezioni
-            sendTelegramFeedbackAlert({
-                htmlText: tgMessage,
-                base64Image: validatedData.attachment_base64,
-                attachmentName: validatedData.attachment_name
-            }).catch(tgErr => {
+            // Invio garantito prima della chiusura del runtime Serverless (fail-open con timeout interno)
+            try {
+                tgResult = await sendTelegramFeedbackAlert({
+                    htmlText: tgMessage,
+                    base64Image: validatedData.attachment_base64,
+                    attachmentName: validatedData.attachment_name
+                });
+                console.log('[FEEDBACK] Esito invio notifica Telegram:', tgResult?.success ? 'OK' : 'FALLITO', tgResult?.reason || tgResult?.error || '');
+            } catch (tgErr) {
                 console.warn('[FEEDBACK] Invio notifica Telegram fallito (fail-open):', tgErr.message);
-            });
+            }
         } catch (tgNotifyErr) {
             console.warn('[FEEDBACK] Errore composizione Telegram (fail-open):', tgNotifyErr.message);
         }
@@ -235,6 +239,7 @@ export async function handleFeedback(req, res) {
             id: insertedReport.id,
             status: insertedReport.status,
             created_at: insertedReport.created_at,
+            telegram_sent: Boolean(tgResult?.success),
             message: 'Segnalazione inviata con successo.'
         });
 

@@ -4,12 +4,13 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.16"
+                VERSION: "1.06.17"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
         const SUPABASE_KEY = APP_CONFIG.SUPABASE_KEY;
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        window.supabaseClient = supabaseClient;
 
         function showLoader() {
             document.body.style.cursor = 'wait';
@@ -404,6 +405,11 @@
                     applyRolePermissions(profile);
                 } catch (e) {
                     console.error("Errore in applyRolePermissions:", e);
+                }
+
+                // Inizializza Bacheca Feedback per Presidenza
+                if (window.initDashboardFeedback) {
+                    window.initDashboardFeedback(userRoles, currentUser, supabaseClient);
                 }
 
                 const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
@@ -1014,6 +1020,17 @@
                         switchTab('user_corsi');
                     }
                 });
+            }
+            // Sincronizza visibilità pulsante Feedback & BUG per Presidenza (sempre visibile in qualsiasi contesto)
+            const isPresidenza = typeof userRoles !== 'undefined' && Array.isArray(userRoles) &&
+                (userRoles.includes('presidente') || userRoles.includes('vice_presidente'));
+            const fbBtn = document.getElementById('tab-btn-feedback_reports');
+            if (fbBtn) {
+                if (isPresidenza) {
+                    fbBtn.classList.remove('hidden');
+                } else {
+                    fbBtn.classList.add('hidden');
+                }
             }
         }
 

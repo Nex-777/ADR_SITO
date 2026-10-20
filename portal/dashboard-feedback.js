@@ -4,6 +4,8 @@
  * Modulo Bacheca Segnalazioni & Feedback Utenti (Adrenalina Club)
  * Riservato alla Presidenza (Presidente e Vice Presidente).
  * 
+ * Script classico da browser (Zero export ESM per evitare SyntaxError in tag script standard).
+ * 
  * Caratteristiche:
  * - Query token/data-efficient: attachment_base64 caricato SOLO on-demand
  * - Optimistic UI (<16ms) per transizione stato DA_LEGGERE -> LETTA su click/apertura
@@ -13,76 +15,95 @@
  * - Tasto "Copia per Antigravity" ultra-ottimizzato per LLM (zero fronzoli/emoticon)
  */
 
-export function formatForAntigravity(report) {
-    const lines = [];
-    
-    // 1. Header line: [CATEGORY] vX.X.X route:/path
-    const v = report.app_version ? `v${report.app_version}` : 'v?';
-    const r = report.page_url ? ` route:${report.page_url}` : '';
-    lines.push(`[${report.category || 'BUG'}] ${v}${r}`);
+(function () {
+    'use strict';
 
-    // 2. Client line: client:Nome Azienda/Utente (email)
-    const company = report.company_name || 'Adrenalina Club ASD';
-    const email = report.user_email || 'sconosciuto';
-    lines.push(`client:${company} (${email})`);
+    function formatForAntigravity(report) {
+        if (!report) return '';
+        const lines = [];
+        
+        // 1. Header line: [CATEGORY] vX.X.X route:/path
+        const v = report.app_version ? `v${report.app_version}` : 'v?';
+        const r = report.page_url ? ` route:${report.page_url}` : '';
+        lines.push(`[${report.category || 'BUG'}] ${v}${r}`);
 
-    // 3. Title & Desc (linee compresse senza newlines interne superflue)
-    const cleanTitle = (report.title || '').replace(/\r?\n+/g, ' ').trim();
-    const cleanDesc = (report.message || '').replace(/\r?\n+/g, ' ').trim();
-    lines.push(`title:${cleanTitle}`);
-    lines.push(`desc:${cleanDesc}`);
+        // 2. Client line: client:Nome Azienda/Utente (email)
+        const company = report.company_name || 'Adrenalina Club ASD';
+        const email = report.user_email || 'sconosciuto';
+        lines.push(`client:${company} (${email})`);
 
-    // 4. Env line (solo se presente e rilevante)
-    const diag = report.diagnostic_data || {};
-    if (diag.browser || diag.os || diag.viewport) {
-        const b = (diag.browser || '').split(' ')[0];
-        const o = diag.os || '';
-        const vp = diag.viewport || '';
-        const envStr = `${b}/${o} ${vp}`.trim();
-        if (envStr && envStr !== '/') {
-            lines.push(`env:${envStr}`);
+        // 3. Title & Desc (linee compresse senza newlines interne superflue)
+        const cleanTitle = (report.title || '').replace(/\r?\n+/g, ' ').trim();
+        const cleanDesc = (report.message || '').replace(/\r?\n+/g, ' ').trim();
+        lines.push(`title:${cleanTitle}`);
+        lines.push(`desc:${cleanDesc}`);
+
+        // 4. Env line (solo se presente e rilevante)
+        const diag = report.diagnostic_data || {};
+        if (diag.browser || diag.os || diag.viewport) {
+            const b = (diag.browser || '').split(' ')[0];
+            const o = diag.os || '';
+            const vp = diag.viewport || '';
+            const envStr = `${b}/${o} ${vp}`.trim();
+            if (envStr && envStr !== '/') {
+                lines.push(`env:${envStr}`);
+            }
         }
+
+        // 5. Err line (solo se presenti errori runtime intercettati)
+        if (Array.isArray(diag.errors) && diag.errors.length > 0) {
+            diag.errors.forEach(e => {
+                const time = e.time ? `[${e.time}] ` : '';
+                const src = e.source ? `${e.source}` : '';
+                const line = e.lineno ? `:${e.lineno}` : '';
+                const col = e.colno ? `:${e.colno}` : '';
+                const loc = (src || line) ? ` (${src}${line}${col})` : '';
+                lines.push(`err:-${time}${e.message || 'Error'}${loc}`);
+            });
+        }
+
+        // 6. File line (solo se presente allegato)
+        if (report.attachment_name) {
+            lines.push(`file:${report.attachment_name}`);
+        }
+
+        return lines.join('\n');
     }
 
-    // 5. Err line (solo se presenti errori runtime intercettati)
-    if (Array.isArray(diag.errors) && diag.errors.length > 0) {
-        diag.errors.forEach(e => {
-            const time = e.time ? `[${e.time}] ` : '';
-            const src = e.source ? `${e.source}` : '';
-            const line = e.lineno ? `:${e.lineno}` : '';
-            const col = e.colno ? `:${e.colno}` : '';
-            const loc = (src || line) ? ` (${src}${line}${col})` : '';
-            lines.push(`err:-${time}${e.message || 'Error'}${loc}`);
-        });
+    // Esponi per Browser e per ambienti di Test (Node/Vitest)
+    if (typeof window !== 'undefined') {
+        window.formatForAntigravity = formatForAntigravity;
+    }
+    if (typeof globalThis !== 'undefined') {
+        globalThis.formatForAntigravity = formatForAntigravity;
+    }
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { formatForAntigravity };
     }
 
-    // 6. File line (solo se presente allegato)
-    if (report.attachment_name) {
-        lines.push(`file:${report.attachment_name}`);
-    }
-
-    return lines.join('\n');
-}
-
-// In ambiente browser, esponi l'inizializzatore sul window
-if (typeof window !== 'undefined') {
-    window.formatForAntigravity = formatForAntigravity;
-
-    window.initDashboardFeedback = function (userRoles, currentUser, supabaseClient) {
+    // Inizializzazione Bacheca per la Presidenza
+    function initDashboardFeedback(userRoles, currentUser, clientInstance) {
         const isPresidenza = Array.isArray(userRoles) && 
             (userRoles.includes('presidente') || userRoles.includes('vice_presidente'));
 
         if (!isPresidenza) return;
 
-        // Unhide Sidebar Button
+        const supabaseClient = clientInstance || (typeof window !== 'undefined' ? window.supabaseClient : null);
+        if (!supabaseClient) {
+            console.warn('[FEEDBACK] Supabase client non disponibile per la bacheca.');
+            return;
+        }
+
+        // Sblocca il pulsante della sidebar
         const sidebarBtn = document.getElementById('tab-btn-feedback_reports');
         if (sidebarBtn) {
             sidebarBtn.classList.remove('hidden');
-            sidebarBtn.addEventListener('click', () => {
+            sidebarBtn.onclick = function (e) {
+                e.preventDefault();
                 if (typeof window.switchTab === 'function') {
                     window.switchTab('feedback_reports');
                 }
-            });
+            };
         }
 
         // Cache locale dei dati
@@ -595,5 +616,9 @@ if (typeof window !== 'undefined') {
 
         // Inizializza subito il badge contatore
         updateBadgeCounters();
-    };
-}
+    }
+
+    if (typeof window !== 'undefined') {
+        window.initDashboardFeedback = initDashboardFeedback;
+    }
+})();
