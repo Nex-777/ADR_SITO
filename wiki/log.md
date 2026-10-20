@@ -4243,3 +4243,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - **Garantito Await Notifica Telegram**: Aggiornato `api/_utils/feedback-handler.js` per attendere esplicitamente `await sendTelegramFeedbackAlert(...)` prima di inviare la risposta HTTP 200 al client, prevenendo il freezing del container Serverless Vercel a chiamata HTTP Telegram pendente.
 - **Risolto ReferenceError tgResult**: Dichiarata `let tgResult = null;` all'esterno del blocco `try` in `handleFeedback` ed esposto il flag `telegram_sent` nel JSON di ritorno al client.
 - **Test Unitari & Integrità**: Aggiunti test in `tests/feedback.test.js` per validare l'assenza di `export` ESM nel client script, il ritorno di `telegram_sent: true` su successo e il fallback fail-open `telegram_sent: false` su assenza credenziali o errore Telegram (242/242 test passati).
+
+## [2026-10-20] fix | Inserimento Markup Bacheca Feedback & Catch-Up Notifiche Telegram
+- **Inserimento Markup Sidebar & Pannello**: Inserito in `portal/dashboard.html` il pulsante `#tab-btn-feedback_reports` subito dopo `PANORAMICA` (con icona `bug_report`, etichetta `FEEDBACK & BUG` e doppio badge contatore `#badge-feedback-bugs` / `#badge-feedback-ideas`), e il container `#panel-feedback_reports` (con testata statistiche, filtri di stato, filtri categoria, ricerca e `#feedback-cards-container`).
+- **Allineamento Globale switchTab**: Esposto `window.switchTab = switchTab;` e aggiunto listener `DOMContentLoaded` per `#tab-btn-feedback_reports` in `portal/dashboard.js`.
+- **Catch-Up Notifiche Telegram Eseguito**: Inviate con successo su Telegram ADR_BOT le due notifiche pendenti nel database per 'PROVA 2' (`messageId: 14`) e 'PROVA ERRORE' (`messageId: 15`).
+- **Test Unitari DOM**: Aggiunta suite di verifica DOM in `tests/feedback.test.js` per verificare la presenza e l'ordine degli ID HTML e del listener JS (245/245 test passati).

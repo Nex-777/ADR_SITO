@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.17"
+                VERSION: "1.06.18"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -7127,6 +7127,7 @@
                 activeBtn.classList.add('border-primary/30', 'bg-primary/10', 'text-white');
             }
         }
+        window.switchTab = switchTab;
 
         // Gestione Caricamento Certificato Medico da Dashboard
         let dashUploadedCertFile = null;
@@ -9482,6 +9483,15 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('click', function(event) {
             switchTab('sandbox');
             initSandboxDocumenti();
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-feedback_reports');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('feedback_reports');
         });
     }
 });

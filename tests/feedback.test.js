@@ -297,6 +297,37 @@ describe('Dashboard Script & Browser Compatibility', () => {
         expect(content).not.toMatch(/^export\s+/m);
         expect(content).not.toMatch(/^import\s+/m);
     });
+
+    it('include il pulsante sidebar FEEDBACK & BUG subito dopo PANORAMICA in dashboard.html', () => {
+        const htmlPath = path.resolve(__dirname, '../portal/dashboard.html');
+        const content = fs.readFileSync(htmlPath, 'utf-8');
+        expect(content).toContain('id="tab-btn-feedback_reports"');
+        expect(content).toContain('id="badge-feedback-counter-wrap"');
+        expect(content).toContain('id="badge-feedback-bugs"');
+        expect(content).toContain('id="badge-feedback-ideas"');
+
+        // Verifica che tab-btn-feedback_reports compaia dopo tab-btn-panoramica
+        const idxPanoramica = content.indexOf('id="tab-btn-panoramica"');
+        const idxFeedback = content.indexOf('id="tab-btn-feedback_reports"');
+        expect(idxPanoramica).toBeGreaterThan(-1);
+        expect(idxFeedback).toBeGreaterThan(idxPanoramica);
+    });
+
+    it('include il pannello panel-feedback_reports e il container feedback-cards-container in dashboard.html', () => {
+        const htmlPath = path.resolve(__dirname, '../portal/dashboard.html');
+        const content = fs.readFileSync(htmlPath, 'utf-8');
+        expect(content).toContain('id="panel-feedback_reports"');
+        expect(content).toContain('id="feedback-cards-container"');
+        expect(content).toContain('id="fb-refresh-btn"');
+        expect(content).toContain('id="fb-search-input"');
+    });
+
+    it('assegna window.switchTab e include listener per tab-btn-feedback_reports in dashboard.js', () => {
+        const jsPath = path.resolve(__dirname, '../portal/dashboard.js');
+        const content = fs.readFileSync(jsPath, 'utf-8');
+        expect(content).toContain('window.switchTab = switchTab;');
+        expect(content).toContain("document.getElementById('tab-btn-feedback_reports')");
+    });
 });
 
 describe('Antigravity LLM Format Generator', () => {
