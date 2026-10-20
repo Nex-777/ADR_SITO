@@ -2341,6 +2341,25 @@ input:checked + .nst-slider:before {
     border-color: var(--nst-border-lime);
 }
 
+.nst-atleta-badge.expired-sub {
+    background: rgba(255, 23, 68, 0.18);
+    color: #ff5252;
+    border-color: rgba(255, 23, 68, 0.45);
+    font-weight: 700;
+}
+
+.nst-atleta-badge.direttivo-badge {
+    background: rgba(255, 171, 0, 0.18);
+    color: var(--nst-amber);
+    border-color: rgba(255, 171, 0, 0.45);
+    font-weight: 700;
+}
+
+.nst-coach-athlete-card.is-expired {
+    border-color: rgba(255, 23, 68, 0.25);
+    background: rgba(24, 8, 14, 0.75);
+}
+
 .nst-btn-open-atleta {
     width: 100%;
     background: rgba(0, 229, 255, 0.1);

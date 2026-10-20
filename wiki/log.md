@@ -4222,3 +4222,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 
 ## [2026-10-05] fix | Anti-spam recupero password
 - Bot inserivano email inesistenti in richieste_recupero_password. Rimossa la policy INSERT anonima; il tracciamento ora passa dalla RPC SECURITY DEFINER richiedi_recupero_password (registra solo email di utenti censiti, senza duplicati in attesa). Vedi migration_recupero_password_anti_spam.sql e portal/forgot-password.js. 5 richieste spam archiviate (soft delete).
+
+## [2026-10-20] ingest | Nestore Coach Dashboard: Atleti Scaduti & Gruppo Direttivo
+- **Inclusione Atleti con Abbonamento Scaduto**: Aggiornate caricaCoachDashboard() e caricaAdminDashboard() in portal/nestore.js per includere sia gli atleti attivi sia gli atleti con abbonamento scaduto (deduplicati per evento_id, utente_id mantenendo la scadenza più recente).
+- **Badge di Stato & Filtro Rapido**: Aggiunto badge visivo di stato (SCAD: GG/MM/AAAA vs ⚠️ SCADUTO: GG/MM/AAAA) e introdotto il selettore #nst-coach-status-select in portal/nestore.html e portal/nestore.js con tre modalità: *TUTTI (ATTIVI + SCADUTI)*, *SOLO ATTIVI*, *SOLO SCADUTI*.
+- **Gruppo Virtuale DIRETTIVO**: Introdotto il gruppo automatico DIRETTIVO per i 6 componenti del Consiglio Direttivo tesserati sportivi (*Tito Fabio Paoletti, Manuel La Commare, Sergio Paoletti, Paolo Alesi, Valerio Massimo Ciaralli, Valerio Mannocchi*), escludendo consiglieri privi di tesseramento sportivo attivo.
+- **Accesso Schede & Libreria Allenamenti**: I membri del Direttivo sono pienamente selezionabili nella modale di assegnazione programmi da Libreria e nell'ispezione coach, con gestione sicura dei filtri per escludere i gruppi virtuali dalle foreign key ai corsi fisici.

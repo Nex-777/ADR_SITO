@@ -3957,8 +3957,71 @@ function switchNestorePanel(panelId) {
 }
 
 // ===========================================================================
+// ===========================================================================
 // SEZIONE DASHBOARD ALLENATORE & AMMINISTRATORE (Fase 2)
 // ===========================================================================
+
+// Helper deduplicazione: se un atleta ha più iscrizioni storiche allo stesso corso,
+// mantiene l'iscrizione più recente in base a data_scadenza_corso / created_at.
+function deduplicaIscrizioniRecenti(iscrizioni) {
+    const map = new Map();
+    (iscrizioni || []).forEach(isc => {
+        if (!isc.utenti || !isc.utente_id || !isc.evento_id) return;
+        const key = `${isc.evento_id}_${isc.utente_id}`;
+        const existing = map.get(key);
+        if (!existing) {
+            map.set(key, isc);
+        } else {
+            const s1 = isc.data_scadenza_corso || isc.created_at || '';
+            const s2 = existing.data_scadenza_corso || existing.created_at || '';
+            if (s1 > s2) {
+                map.set(key, isc);
+            }
+        }
+    });
+    return Array.from(map.values());
+}
+
+// Helper per caricare i componenti del Consiglio Direttivo tesserati sportivi.
+// Non richiede pagamenti né iscrizioni fittizie; include anche il profilo del Presidente loggato.
+async function caricaDirettivoTesserati() {
+    try {
+        const { data: dirUsers, error: dirErr } = await supabaseClient
+            .from('utenti')
+            .select('id, nome, cognome, email, ruolo, tipo_adesione, tipo_tessera')
+            .overlaps('ruolo', ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'])
+            .order('cognome', { ascending: true });
+
+        if (dirErr) {
+            console.warn("Avviso caricamento utenti direttivo:", dirErr);
+            return [];
+        }
+
+        if (!Array.isArray(dirUsers) || dirUsers.length === 0) return [];
+
+        // Filtra solo chi ha un tesseramento sportivo attivo (tessera base / integrativa / socio tesserato / ruolo tesserato)
+        const tesserati = dirUsers.filter(u => {
+            const isSocioTess = u.tipo_adesione === 'socio_tesserato';
+            const hasTessera = !!u.tipo_tessera;
+            const hasRuoloTess = Array.isArray(u.ruolo) && u.ruolo.some(r => typeof r === 'string' && r.startsWith('tesserato'));
+            return isSocioTess || hasTessera || hasRuoloTess;
+        });
+
+        return tesserati.map(u => ({
+            id: u.id,
+            nome: u.nome || '',
+            cognome: u.cognome || '',
+            email: u.email || '',
+            dataScadenza: null,
+            isAttivo: true,
+            isDirettivo: true,
+            schedaAttiva: null
+        }));
+    } catch (e) {
+        console.warn("Eccezione durante il caricamento del direttivo:", e);
+        return [];
+    }
+}
 
 async function caricaCoachDashboard() {
     if (!isIstruttore && !isAuthorizedAdmin) {
@@ -3977,7 +4040,10 @@ async function caricaCoachDashboard() {
     }
 
     try {
-        // 1. Trova i corsi assegnati all'istruttore loggato
+        // 1. Carica i componenti del Direttivo tesserati (sempre inclusi per il Coach)
+        const direttivoAtleti = await caricaDirettivoTesserati();
+
+        // 2. Trova i corsi assegnati all'istruttore loggato
         const { data: assegnazioni, error: assErr } = await supabaseClient
             .from('istruttori_eventi')
             .select('evento_id, eventi(id, titolo, tipo, orari_settimanali)')
@@ -3985,7 +4051,11 @@ async function caricaCoachDashboard() {
 
         if (assErr) throw assErr;
 
-        if (!assegnazioni || assegnazioni.length === 0) {
+        const corsi = (assegnazioni || []).map(a => a.eventi).filter(Boolean);
+        const corsiIds = corsi.map(c => c.id);
+
+        // Se nessun corso assegnato e nessun membro del direttivo trovato
+        if (corsiIds.length === 0 && direttivoAtleti.length === 0) {
             coachCorsiAtleti = [];
             aggiornaSelectCorsiCoach([]);
             if (container) {
@@ -4004,24 +4074,29 @@ async function caricaCoachDashboard() {
             return;
         }
 
-        const corsi = assegnazioni.map(a => a.eventi).filter(Boolean);
-        const corsiIds = corsi.map(c => c.id);
+        // 3. Trova tutte le iscrizioni a questi corsi (anche scadute, per tracciare lo storico)
+        let iscrizioni = [];
+        if (corsiIds.length > 0) {
+            const { data: iscrData, error: iscrErr } = await supabaseClient
+                .from('iscrizioni_eventi')
+                .select('id, evento_id, utente_id, data_inizio_corso, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, created_at, utenti(id, nome, cognome, email)')
+                .in('evento_id', corsiIds)
+                .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
 
-        // 2. Trova tutti gli atleti iscritti a questi corsi
-        const { data: iscrizioni, error: iscrErr } = await supabaseClient
-            .from('iscrizioni_eventi')
-            .select('id, evento_id, utente_id, data_inizio_corso, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, utenti(id, nome, cognome, email)')
-            .in('evento_id', corsiIds)
-            .in('stato_pagamento', ['PAGATO', 'GRATUITO']);
+            if (iscrErr) throw iscrErr;
+            iscrizioni = iscrData || [];
+        }
 
-        if (iscrErr) throw iscrErr;
-
-        // 3. Filtra solo iscrizioni attive (non scadute / ingressi rimanenti)
+        // 4. Deduplica iscrizioni per (corso, atleta) mantenendo la più recente
+        const iscrizioniRecenti = deduplicaIscrizioniRecenti(iscrizioni);
         const oggi = new Date().toISOString().split('T')[0];
-        const iscrizioniAttive = (iscrizioni || []).filter(i => isIscrizioneAttiva(i, oggi));
 
-        // 4. Trova schede attive per questi atleti
-        const atletiIds = Array.from(new Set(iscrizioniAttive.map(i => i.utente_id)));
+        // 5. Raccogli tutti gli ID atleta (corsisti + direttivo) per caricare le relative schede attive
+        const atletiIdsSet = new Set();
+        iscrizioniRecenti.forEach(i => { if (i.utente_id) atletiIdsSet.add(i.utente_id); });
+        direttivoAtleti.forEach(d => atletiIdsSet.add(d.id));
+        const atletiIds = Array.from(atletiIdsSet);
+
         const schedeMap = {};
         if (atletiIds.length > 0) {
             const { data: schede } = await supabaseClient
@@ -4034,23 +4109,41 @@ async function caricaCoachDashboard() {
             });
         }
 
-        // 5. Aggrega per corso
+        // Assegna schede ai componenti del Direttivo
+        direttivoAtleti.forEach(d => {
+            d.schedaAttiva = schedeMap[d.id] || null;
+        });
+
+        // 6. Aggrega per corso (con stato isAttivo per evidenziare sia gli attivi sia gli scaduti)
         coachCorsiAtleti = corsi.map(c => {
-            const iscrCorso = iscrizioniAttive.filter(i => i.evento_id === c.id && i.utenti);
+            const iscrCorso = iscrizioniRecenti.filter(i => i.evento_id === c.id && i.utenti);
             const atleti = iscrCorso.map(isc => ({
                 id: isc.utenti.id,
                 nome: isc.utenti.nome || '',
                 cognome: isc.utenti.cognome || '',
                 email: isc.utenti.email || '',
                 dataScadenza: isc.data_scadenza_corso,
+                isAttivo: isIscrizioneAttiva(isc, oggi),
+                isDirettivo: false,
                 schedaAttiva: schedeMap[isc.utenti.id] || null
             }));
             return {
                 id: c.id,
                 titolo: c.titolo,
+                isVirtualGroup: false,
                 atleti: atleti
             };
         });
+
+        // Aggiungi il gruppo virtuale DIRETTIVO se presenti componenti tesserati
+        if (direttivoAtleti.length > 0) {
+            coachCorsiAtleti.push({
+                id: 'DIRETTIVO',
+                titolo: 'DIRETTIVO',
+                isVirtualGroup: true,
+                atleti: direttivoAtleti
+            });
+        }
 
         aggiornaSelectCorsiCoach(coachCorsiAtleti);
         renderCoachCoursesList(coachCorsiAtleti);
@@ -4084,7 +4177,10 @@ async function caricaAdminDashboard() {
     }
 
     try {
-        // 1. Prendi tutti i corsi attivi
+        // 1. Carica i componenti del Direttivo tesserati
+        const direttivoAtleti = await caricaDirettivoTesserati();
+
+        // 2. Prendi tutti i corsi attivi
         const { data: corsi, error: cErr } = await supabaseClient
             .from('eventi')
             .select('id, titolo, tipo, orari_settimanali')
@@ -4093,37 +4189,32 @@ async function caricaAdminDashboard() {
 
         if (cErr) throw cErr;
 
-        if (!corsi || corsi.length === 0) {
-            coachCorsiAtleti = [];
-            aggiornaSelectCorsiCoach([]);
-            if (container) {
-                container.innerHTML = `
-                    <div class="nst-card" style="text-align: center; padding: 40px 20px;">
-                        <p style="font-size: 13px; color: var(--nst-text-muted);">Nessun corso configurato nel sistema.</p>
-                    </div>
-                `;
-            }
-            return;
+        const corsiIds = (corsi || []).map(c => c.id);
+
+        // 3. Iscrizioni per tutti i corsi (con limite anti-bloat a 1000 record)
+        let iscrizioni = [];
+        if (corsiIds.length > 0) {
+            const { data: iscrData, error: iscrErr } = await supabaseClient
+                .from('iscrizioni_eventi')
+                .select('id, evento_id, utente_id, data_inizio_corso, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, created_at, utenti(id, nome, cognome, email)')
+                .in('evento_id', corsiIds)
+                .in('stato_pagamento', ['PAGATO', 'GRATUITO'])
+                .limit(1000);
+
+            if (iscrErr) throw iscrErr;
+            iscrizioni = iscrData || [];
         }
 
-        const corsiIds = corsi.map(c => c.id);
-
-        // 2. Iscrizioni per tutti i corsi (con limite anti-bloat a 500 record)
-        const { data: iscrizioni, error: iscrErr } = await supabaseClient
-            .from('iscrizioni_eventi')
-            .select('id, evento_id, utente_id, data_inizio_corso, data_scadenza_corso, stato_pagamento, ingressi_totali, ingressi_usati, utenti(id, nome, cognome, email)')
-            .in('evento_id', corsiIds)
-            .in('stato_pagamento', ['PAGATO', 'GRATUITO'])
-            .limit(500);
-
-        if (iscrErr) throw iscrErr;
-
-        // 3. Filtra solo iscrizioni attive (non scadute / ingressi rimanenti)
+        // 4. Deduplica iscrizioni mantenendo la più recente per (corso, atleta)
+        const iscrizioniRecenti = deduplicaIscrizioniRecenti(iscrizioni);
         const oggi = new Date().toISOString().split('T')[0];
-        const iscrizioniAttive = (iscrizioni || []).filter(i => isIscrizioneAttiva(i, oggi));
 
-        // 4. Schede attive
-        const atletiIds = Array.from(new Set(iscrizioniAttive.map(i => i.utente_id)));
+        // 5. Raccogli ID per caricare le schede attive
+        const atletiIdsSet = new Set();
+        iscrizioniRecenti.forEach(i => { if (i.utente_id) atletiIdsSet.add(i.utente_id); });
+        direttivoAtleti.forEach(d => atletiIdsSet.add(d.id));
+        const atletiIds = Array.from(atletiIdsSet);
+
         const schedeMap = {};
         if (atletiIds.length > 0) {
             const { data: schede } = await supabaseClient
@@ -4136,31 +4227,50 @@ async function caricaAdminDashboard() {
             });
         }
 
-        coachCorsiAtleti = corsi.map(c => {
-            const iscrCorso = iscrizioniAttive.filter(i => i.evento_id === c.id && i.utenti);
+        // Assegna schede ai componenti del Direttivo
+        direttivoAtleti.forEach(d => {
+            d.schedaAttiva = schedeMap[d.id] || null;
+        });
+
+        // 6. Aggrega per corso (inclusi atleti attivi e scaduti)
+        coachCorsiAtleti = (corsi || []).map(c => {
+            const iscrCorso = iscrizioniRecenti.filter(i => i.evento_id === c.id && i.utenti);
             const atleti = iscrCorso.map(isc => ({
                 id: isc.utenti.id,
                 nome: isc.utenti.nome || '',
                 cognome: isc.utenti.cognome || '',
                 email: isc.utenti.email || '',
                 dataScadenza: isc.data_scadenza_corso,
+                isAttivo: isIscrizioneAttiva(isc, oggi),
+                isDirettivo: false,
                 schedaAttiva: schedeMap[isc.utenti.id] || null
             }));
             return {
                 id: c.id,
                 titolo: c.titolo,
+                isVirtualGroup: false,
                 atleti: atleti
             };
         });
 
+        // Aggiungi gruppo virtuale DIRETTIVO
+        if (direttivoAtleti.length > 0) {
+            coachCorsiAtleti.push({
+                id: 'DIRETTIVO',
+                titolo: 'DIRETTIVO',
+                isVirtualGroup: true,
+                atleti: direttivoAtleti
+            });
+        }
+
         aggiornaSelectCorsiCoach(coachCorsiAtleti);
         renderCoachCoursesList(coachCorsiAtleti);
 
-        if (iscrizioni && iscrizioni.length >= 500) {
+        if (iscrizioni && iscrizioni.length >= 1000) {
             const statsPill = document.getElementById('nst-coach-stats-pill');
             if (statsPill) {
-                statsPill.textContent += ' (LIMITE 500)';
-                statsPill.title = 'Attenzione: visualizzazione limitata a 500 iscrizioni. Utilizza i filtri per affinare la ricerca.';
+                statsPill.textContent += ' (LIMITE 1000)';
+                statsPill.title = 'Attenzione: visualizzazione limitata a 1000 iscrizioni. Utilizza i filtri per affinare la ricerca.';
             }
         }
 
@@ -4179,30 +4289,44 @@ async function caricaAdminDashboard() {
 function aggiornaSelectCorsiCoach(corsiData) {
     const select = document.getElementById('nst-coach-course-select');
     if (!select) return;
+    const currentVal = select.value || 'ALL';
     select.innerHTML = '<option value="ALL">TUTTI I CORSI</option>';
     corsiData.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.id;
-        opt.textContent = `${c.titolo.toUpperCase()} (${c.atleti.length} ATLETI)`;
+        const prefix = c.isVirtualGroup ? '⭐ ' : '';
+        opt.textContent = `${prefix}${c.titolo.toUpperCase()} (${c.atleti.length} ATLETI)`;
         select.appendChild(opt);
     });
+    if (corsiData.some(c => c.id === currentVal)) {
+        select.value = currentVal;
+    }
 }
 
 function filtraCorsoCoach(val) {
+    const statusVal = document.getElementById('nst-coach-status-select')?.value || 'ALL';
     const searchVal = document.getElementById('nst-coach-search-input')?.value || '';
-    renderCoachCoursesList(coachCorsiAtleti, val, searchVal);
+    renderCoachCoursesList(coachCorsiAtleti, val, searchVal, statusVal);
+}
+
+function filtraStatoCoach(val) {
+    const courseVal = document.getElementById('nst-coach-course-select')?.value || 'ALL';
+    const searchVal = document.getElementById('nst-coach-search-input')?.value || '';
+    renderCoachCoursesList(coachCorsiAtleti, courseVal, searchVal, val);
 }
 
 function cercaAtletiCoach(val) {
     const courseVal = document.getElementById('nst-coach-course-select')?.value || 'ALL';
-    renderCoachCoursesList(coachCorsiAtleti, courseVal, val);
+    const statusVal = document.getElementById('nst-coach-status-select')?.value || 'ALL';
+    renderCoachCoursesList(coachCorsiAtleti, courseVal, val, statusVal);
 }
 
-function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch = '') {
+function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch = '', filterStatus = 'ALL') {
     const container = document.getElementById('nst-coach-atleti-container');
     if (!container) return;
 
     const term = (filterSearch || '').trim().toLowerCase();
+    const statusMode = filterStatus || document.getElementById('nst-coach-status-select')?.value || 'ALL';
     let totalAtletiCount = 0;
 
     let html = '';
@@ -4212,8 +4336,13 @@ function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch 
             return;
         }
 
-        // Filtra atleti per termine di ricerca
+        // Filtra atleti per stato abbonamento e per termine di ricerca
         const atletiFiltrati = (corso.atleti || []).filter(a => {
+            // Filtro stato
+            if (statusMode === 'ACTIVE' && !a.isAttivo) return false;
+            if (statusMode === 'EXPIRED' && a.isAttivo) return false;
+
+            // Filtro ricerca testo
             if (!term) return true;
             const full = `${a.cognome} ${a.nome} ${a.email}`.toLowerCase();
             return full.includes(term);
@@ -4221,11 +4350,15 @@ function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch 
 
         totalAtletiCount += atletiFiltrati.length;
 
+        const isVirtual = !!corso.isVirtualGroup;
+        const iconHeader = isVirtual ? 'military_tech' : 'sports';
+        const cardTitleColor = isVirtual ? 'style="color: var(--nst-amber);"' : '';
+
         html += `
             <div class="nst-coach-course-card" id="nst-course-card-${corso.id}">
                 <div class="nst-coach-course-header">
-                    <span class="nst-coach-course-title">
-                        <span class="material-symbols-outlined">sports</span>
+                    <span class="nst-coach-course-title" ${cardTitleColor}>
+                        <span class="material-symbols-outlined">${iconHeader}</span>
                         ${escapeHtml(corso.titolo)}
                     </span>
                     <span class="nst-coach-course-count">${atletiFiltrati.length} ATLETI</span>
@@ -4248,16 +4381,38 @@ function renderCoachCoursesList(corsiData, filterCourseId = 'ALL', filterSearch 
                     ? `<span class="nst-atleta-badge active-scheda" title="${escapeHtml(atleta.schedaAttiva.titolo)}">SCHEDA: ${escapeHtml(atleta.schedaAttiva.titolo.slice(0, 18))}</span>`
                     : `<span class="nst-atleta-badge">NESSUNA SCHEDA</span>`;
 
+                let badgeStatoHtml = '';
+                let cardExtraClass = '';
+
+                if (atleta.isDirettivo) {
+                    badgeStatoHtml = `<span class="nst-atleta-badge direttivo-badge" title="Componente del Consiglio Direttivo con tesseramento sportivo attivo">⭐ DIRETTIVO • TESSERATO</span>`;
+                } else if (atleta.isAttivo) {
+                    badgeStatoHtml = atleta.dataScadenza
+                        ? `<span class="nst-atleta-badge" style="color: var(--nst-cyan);">SCAD: ${formatDate(atleta.dataScadenza)}</span>`
+                        : `<span class="nst-atleta-badge" style="color: var(--nst-cyan);">ATTIVO</span>`;
+                } else {
+                    cardExtraClass = 'is-expired';
+                    badgeStatoHtml = atleta.dataScadenza
+                        ? `<span class="nst-atleta-badge expired-sub" title="Abbonamento corso scaduto il ${formatDate(atleta.dataScadenza)}">⚠️ SCADUTO: ${formatDate(atleta.dataScadenza)}</span>`
+                        : `<span class="nst-atleta-badge expired-sub">⚠️ ABBONAMENTO SCADUTO</span>`;
+                }
+
+                const avatarStyle = atleta.isDirettivo
+                    ? 'style="border-color: rgba(255, 171, 0, 0.5); color: var(--nst-amber); background: rgba(255, 171, 0, 0.12);"'
+                    : (!atleta.isAttivo
+                        ? 'style="border-color: rgba(255, 23, 68, 0.4); color: #ff5252; background: rgba(255, 23, 68, 0.1);"'
+                        : '');
+
                 html += `
-                    <div class="nst-coach-athlete-card">
+                    <div class="nst-coach-athlete-card ${cardExtraClass}">
                         <div class="nst-atleta-card-header">
-                            <div class="nst-atleta-avatar">${initial}</div>
+                            <div class="nst-atleta-avatar" ${avatarStyle}>${initial}</div>
                             <div class="nst-atleta-card-info">
                                 <div class="nst-atleta-card-name" title="${escapeHtml(nomeCompleto)}">${escapeHtml(nomeCompleto)}</div>
                                 <div class="nst-atleta-card-email">${escapeHtml(atleta.email || 'Email non registrata')}</div>
                                 <div class="nst-atleta-card-badges">
                                     ${badgeSchedaHtml}
-                                    ${atleta.dataScadenza ? `<span class="nst-atleta-badge">SCAD: ${formatDate(atleta.dataScadenza)}</span>` : ''}
+                                    ${badgeStatoHtml}
                                 </div>
                             </div>
                         </div>
@@ -7363,7 +7518,7 @@ async function caricaListaCorsi() {
 async function determinaCorsiAccessibili() {
     await caricaListaCorsi();
 
-    if (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin) {
+    if ((typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin) || (typeof isBoardMember !== 'undefined' && isBoardMember)) {
         corsiAccessibiliUtente = (tuttiICorsi || []).map(c => ({
             id: c.id,
             titolo: c.titolo,
@@ -7378,7 +7533,7 @@ async function determinaCorsiAccessibili() {
     }
 
     if (typeof isIstruttore !== 'undefined' && isIstruttore) {
-        const coachCorsiIds = Array.isArray(coachCorsiAtleti) ? coachCorsiAtleti.map(c => c.id) : [];
+        const coachCorsiIds = Array.isArray(coachCorsiAtleti) ? coachCorsiAtleti.filter(c => !c.isVirtualGroup).map(c => c.id) : [];
         const corsi = (tuttiICorsi || []).filter(c => coachCorsiIds.includes(c.id));
         corsiAccessibiliUtente = (corsi.length > 0 ? corsi : tuttiICorsi).map(c => ({
             id: c.id,
@@ -9342,9 +9497,10 @@ function popolaSelectFiltroCorsiCoach() {
     if (!filterCorso) return;
 
     const currVal = filterCorso.value || 'ALL';
-    const corsi = (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin)
+    const rawCorsi = (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin)
         ? (tuttiICorsi || [])
         : ((typeof coachCorsiAtleti !== 'undefined' && Array.isArray(coachCorsiAtleti) && coachCorsiAtleti.length > 0) ? coachCorsiAtleti : tuttiICorsi);
+    const corsi = (rawCorsi || []).filter(c => !c.isVirtualGroup);
 
     let html = '<option value="ALL">TUTTI I CORSI</option>';
     (corsi || []).forEach(c => {
@@ -9358,9 +9514,10 @@ function popolaSelectCorsiModal(selectedCorsoId = null) {
     const corsoSelect = document.getElementById('nst-prog-edit-corso');
     if (!corsoSelect) return;
 
-    const corsi = (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin)
+    const rawCorsi = (typeof isAuthorizedAdmin !== 'undefined' && isAuthorizedAdmin)
         ? (tuttiICorsi || [])
         : ((typeof coachCorsiAtleti !== 'undefined' && Array.isArray(coachCorsiAtleti) && coachCorsiAtleti.length > 0) ? coachCorsiAtleti : tuttiICorsi);
+    const corsi = (rawCorsi || []).filter(c => !c.isVirtualGroup);
 
     let html = '';
     (corsi || []).forEach(c => {
@@ -9398,7 +9555,7 @@ async function caricaLibreriaProgrammiCoach() {
         let progs = data || [];
         // Se coach non-admin, visualizza programmi dei propri corsi
         if (typeof isIstruttore !== 'undefined' && isIstruttore && (!isAuthorizedAdmin)) {
-            const myCourseIds = Array.isArray(coachCorsiAtleti) ? coachCorsiAtleti.map(c => c.id) : [];
+            const myCourseIds = Array.isArray(coachCorsiAtleti) ? coachCorsiAtleti.filter(c => !c.isVirtualGroup).map(c => c.id) : [];
             if (myCourseIds.length > 0) {
                 progs = progs.filter(p => !p.corso_id || myCourseIds.includes(p.corso_id) || p.creato_da === currentUser?.id);
             }
@@ -10214,6 +10371,7 @@ window.switchNestorePanel = switchNestorePanel;
 window.caricaCoachDashboard = caricaCoachDashboard;
 window.caricaAdminDashboard = caricaAdminDashboard;
 window.filtraCorsoCoach = filtraCorsoCoach;
+window.filtraStatoCoach = filtraStatoCoach;
 window.cercaAtletiCoach = cercaAtletiCoach;
 window.apriAtletaPerAllenatore = apriAtletaPerAllenatore;
 window.chiudiDettaglioAtletaPerCoach = chiudiDettaglioAtletaPerCoach;
@@ -10426,6 +10584,7 @@ if (typeof module !== 'undefined' && module.exports) {
         renderNavCorsiAtleta,
         selezionaCorsoSchede,
         renderSchedeCorsoAttivo,
+        filtraStatoCoach,
         popolaSelectFiltroCorsiCoach,
         popolaSelectCorsiModal,
         dockToggleTimer,

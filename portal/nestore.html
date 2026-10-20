@@ -6,11 +6,11 @@
     <title>NESTORE — Assistente AI Adrenalina Club</title>
     <link rel="icon" type="image/png" href="../assets/nestore_logo.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <link rel="stylesheet" href="nestore.css?v=1.06.14">
+    <link rel="stylesheet" href="nestore.css?v=1.06.15">
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
-    <script src="config.js?v=1.06.14"></script>
+    <script src="config.js?v=1.06.15"></script>
 </head>
 <body class="nst-body">
 
@@ -21,7 +21,7 @@
             <img src="../assets/nestore_logo.png" alt="Nestore Logo" class="nst-logo-img">
             <div class="nst-brand-text">
                 <h1 class="nst-headline nst-title-gradient" style="font-size: 18px; margin: 0;">NESTORE</h1>
-                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.06.14</span>
+                <span id="nst-version-badge" class="nst-version-badge">Vs. 1.06.15</span>
             </div>
         </div>
 
@@ -826,12 +826,20 @@
                     </p>
                 </div>
 
-                <!-- Filtri: Tendina Corso & Ricerca Rapida -->
+                <!-- Filtri: Tendina Corso, Stato & Ricerca Rapida -->
                 <div class="nst-coach-filter-bar">
                     <div class="nst-filter-item">
                         <label for="nst-coach-course-select" class="nst-filter-label">FILTRA PER CORSO</label>
                         <select id="nst-coach-course-select" class="nst-select nst-coach-select" onchange="filtraCorsoCoach(this.value)">
                             <option value="ALL">TUTTI I CORSI</option>
+                        </select>
+                    </div>
+                    <div class="nst-filter-item">
+                        <label for="nst-coach-status-select" class="nst-filter-label">STATO ABBONAMENTO</label>
+                        <select id="nst-coach-status-select" class="nst-select nst-coach-select" onchange="filtraStatoCoach(this.value)">
+                            <option value="ALL">TUTTI (ATTIVI + SCADUTI)</option>
+                            <option value="ACTIVE">SOLO ATTIVI</option>
+                            <option value="EXPIRED">SOLO SCADUTI</option>
                         </select>
                     </div>
                     <div class="nst-filter-item flex-grow">
@@ -2045,6 +2053,6 @@ GIORNO 2:
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Script del portale Nestore -->
-    <script src="nestore.js?v=1.06.14"></script>
+    <script src="nestore.js?v=1.06.15"></script>
 </body>
 </html>
