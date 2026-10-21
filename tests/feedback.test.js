@@ -328,9 +328,55 @@ describe('Dashboard Script & Browser Compatibility', () => {
         expect(content).toContain('window.switchTab = switchTab;');
         expect(content).toContain("document.getElementById('tab-btn-feedback_reports')");
     });
+
+    it('verifica che feedback-widget.js includa tasto screenshot 1-click, Edge Bookmark mobile e SRI html2canvas', () => {
+        const widgetPath = path.resolve(__dirname, '../portal/feedback-widget.js');
+        const content = fs.readFileSync(widgetPath, 'utf-8');
+        expect(content).toContain('adr-fb-capture-btn');
+        expect(content).toContain('adr-fb-edge-dismiss');
+        expect(content).toContain('adr_fb_edge_dismissed');
+        expect(content).toContain('sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==');
+        expect(content).toContain('_origConsoleError');
+        expect(content).not.toMatch(/^export\s+/m);
+    });
 });
 
 describe('Antigravity LLM Format Generator', () => {
+    it('genera il blocco [BUG] ultra-compatto arricchito con tab attivo, contesto e rete', () => {
+        const report = {
+            category: 'BUG',
+            app_version: '1.06.18',
+            page_url: '/portal/dashboard.html?tab=soci',
+            company_name: 'Adrenalina Club ASD - Mario Rossi',
+            user_email: 'mario@rossi.it',
+            title: 'Tabella soci non carica',
+            message: 'Cliccando su soci la tabella resta vuota',
+            diagnostic_data: {
+                browser: 'Chrome (Google Chrome)',
+                os: 'Windows',
+                viewport: '1920x1080',
+                active_tab: 'soci',
+                role_context: 'board',
+                connection: '4g',
+                errors: [
+                    { time: '15:20:01', message: 'TypeError: failed to fetch', source: 'dashboard.js', lineno: 100, colno: 5 }
+                ]
+            },
+            attachment_name: 'screenshot-automatico.jpg'
+        };
+
+        const result = formatForAntigravity(report);
+
+        expect(result).toBe(
+            `[BUG] v1.06.18 route:/portal/dashboard.html?tab=soci\n` +
+            `client:Adrenalina Club ASD - Mario Rossi (mario@rossi.it)\n` +
+            `title:Tabella soci non carica\n` +
+            `desc:Cliccando su soci la tabella resta vuota\n` +
+            `env:Chrome/Windows 1920x1080 tab:soci ctx:board net:4g\n` +
+            `err:-[15:20:01] TypeError: failed to fetch (dashboard.js:100:5)\n` +
+            `file:screenshot-automatico.jpg`
+        );
+    });
     it('genera il blocco [BUG] ultra-compatto con env, err e file quando presenti', () => {
         const report = {
             category: 'BUG',

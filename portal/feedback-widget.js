@@ -2,13 +2,14 @@
  * portal/feedback-widget.js
  * 
  * Widget Globale di Segnalazioni & Feedback Utenti per Adrenalina Club.
- * - Floating Action Button discreto ed elegante in basso a destra
- * - Ring buffer passivo in background per errori runtime (window.onerror & unhandledrejection)
+ * - Floating Action Button desktop / Edge Bookmark laterale a destra su mobile (22px con dismiss)
+ * - Ring buffer passivo per errori runtime (window.onerror, unhandledrejection e console.error)
  * - Switch interattivo tra "Suggerimento / Nuova Funzione" e "Errore / Blocco Tecnico"
+ * - Cattura Screenshot 1-Click con html2canvas lazy-loaded on-demand con SRI
  * - Compressione automatica client-side via HTML5 Canvas (max 1600px, JPEG 0.75 ~150-250KB)
- * - Raccolta silenziosa dei metadati ambiente
+ * - Raccolta silenziosa dei metadati ambiente (tab attivo, contesto, connessione, durata sessione)
  * - Invio all'endpoint /api/feedback con autenticazione Supabase
- * - Nascosto in stampa (@media print) e con anti-collisione automatica per Timer Dock e Mobile Nav
+ * - Nascosto in stampa (@media print) e con anti-collisione automatica per Timer Dock
  */
 
 (function () {
@@ -18,7 +19,7 @@
     if (window.__ADR_FEEDBACK_WIDGET_INIT__) return;
     window.__ADR_FEEDBACK_WIDGET_INIT__ = true;
 
-    const VERSION = "1.06.18";
+    const VERSION = "1.06.19";
 
     // Pagine di autenticazione da escludere tassativamente
     const EXCLUDED_PATHS = ['login.html', 'forgot-password.html', 'reset-password.html'];
@@ -71,6 +72,28 @@
         } catch (_) {}
     });
 
+    // Intercettazione passiva di console.error per catturare errori API/Supabase silenti
+    const _origConsoleError = console.error;
+    console.error = function (...args) {
+        try {
+            const timeStr = new Date().toTimeString().split(' ')[0];
+            const text = args.map(a => {
+                if (typeof a === 'string') return a;
+                if (a instanceof Error) return a.message || String(a);
+                try { return JSON.stringify(a); } catch (_) { return String(a); }
+            }).join(' ');
+
+            pushRuntimeError({
+                message: `[console.error] ${text}`.substring(0, 400),
+                source: 'console',
+                lineno: 0,
+                colno: 0,
+                time: timeStr
+            });
+        } catch (_) {}
+        _origConsoleError.apply(console, args);
+    };
+
     // ==========================================
     // 2. METADATI AMBIENTE
     // ==========================================
@@ -89,12 +112,44 @@
         else if (ua.includes('Mac')) os = 'macOS';
         else if (ua.includes('Linux')) os = 'Linux';
 
+        // Rileva tab attivo in Dashboard, Nestore o Epika
+        let activeTab = null;
+        try {
+            const visiblePanel = document.querySelector('.tab-panel:not(.hidden)');
+            if (visiblePanel && visiblePanel.id) {
+                activeTab = visiblePanel.id.replace(/^panel-/, '');
+            } else {
+                const activeNestore = document.querySelector('[id^="nst-tab-"].active');
+                if (activeNestore) activeTab = activeNestore.id.replace(/^nst-tab-/, '');
+            }
+        } catch (_) {}
+
+        // Rileva contesto ruolo attivo
+        let roleContext = null;
+        try {
+            roleContext = localStorage.getItem('currentViewContext') || null;
+        } catch (_) {}
+
+        // Connessione di rete
+        let connectionType = null;
+        try {
+            if (navigator.connection) {
+                connectionType = navigator.connection.effectiveType || (navigator.connection.saveData ? 'save-data' : null);
+            }
+        } catch (_) {}
+
         return {
             browser: `${browser} (${navigator.userAgentData?.brands?.[0]?.brand || browser})`,
             os: os,
             viewport: `${window.innerWidth}x${window.innerHeight}`,
             online: navigator.onLine !== false,
-            lang: navigator.language || 'it-IT'
+            lang: navigator.language || 'it-IT',
+            active_tab: activeTab,
+            role_context: roleContext,
+            connection: connectionType,
+            dpr: window.devicePixelRatio || 1,
+            session_sec: Math.round(performance.now() / 1000),
+            scroll_y: Math.round(window.scrollY || 0)
         };
     }
 
@@ -177,6 +232,27 @@
         });
     }
 
+    // Caricamento on-demand di html2canvas con verifica di integrità crittografica SRI
+    function loadHtml2Canvas() {
+        if (window.html2canvas) return Promise.resolve(window.html2canvas);
+        return new Promise((resolve, reject) => {
+            const existing = document.getElementById('adr-html2canvas-script');
+            if (existing) {
+                existing.addEventListener('load', () => resolve(window.html2canvas));
+                existing.addEventListener('error', () => reject(new Error('Impossibile caricare il modulo screenshot.')));
+                return;
+            }
+            const s = document.createElement('script');
+            s.id = 'adr-html2canvas-script';
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            s.integrity = 'sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==';
+            s.crossOrigin = 'anonymous';
+            s.onload = () => resolve(window.html2canvas);
+            s.onerror = () => reject(new Error('Impossibile caricare il modulo screenshot dal CDN.'));
+            document.head.appendChild(s);
+        });
+    }
+
     // ==========================================
     // 5. INIEZIONE STILI CSS DEL WIDGET
     // ==========================================
@@ -233,26 +309,72 @@
                 text-transform: uppercase;
                 color: #e5e5e5;
             }
+            #adr-feedback-fab .fab-edge-dismiss {
+                display: none;
+            }
 
-            /* Responsive e collisione con Timer Dock o Mobile Nav */
+            /* Responsive: Edge Bookmark Laterale sul Bordo Destro su Mobile */
             @media (max-width: 768px) {
                 #adr-feedback-fab {
-                    bottom: 84px;
-                    right: 14px;
-                    padding: 7px 11px 7px 7px;
+                    position: fixed;
+                    top: 36%;
+                    bottom: auto !important;
+                    right: 0 !important;
+                    width: 22px;
+                    min-height: 58px;
+                    padding: 8px 0 6px 0;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: rgba(14, 14, 14, 0.72);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    border: 1px solid rgba(223, 41, 62, 0.45);
+                    border-right: none;
+                    border-radius: 8px 0 0 8px;
+                    box-shadow: -2px 4px 14px rgba(0, 0, 0, 0.6), 0 0 8px rgba(223, 41, 62, 0.2);
+                    gap: 6px;
+                }
+                #adr-feedback-fab:hover {
+                    transform: translateX(-2px);
+                    border-color: #df293e;
+                }
+                #adr-feedback-fab .fab-icon {
+                    width: 18px;
+                    height: 18px;
+                    background: transparent;
+                    box-shadow: none;
+                    color: #ff4d61;
+                    font-size: 14px;
+                }
+                #adr-feedback-fab .fab-icon span {
+                    font-size: 14px !important;
                 }
                 #adr-feedback-fab .fab-label {
-                    display: none; /* Icon only su schermi piccoli */
+                    display: none;
+                }
+                #adr-feedback-fab .fab-edge-dismiss {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: transparent;
+                    border: none;
+                    color: #888888;
+                    font-size: 11px;
+                    line-height: 1;
+                    cursor: pointer;
+                    padding: 2px;
+                    transition: color 0.15s;
+                }
+                #adr-feedback-fab .fab-edge-dismiss:hover {
+                    color: #ffffff;
                 }
             }
 
-            /* Anti-collisione automatica con timer dock aperto */
-            body.adr-has-dock #adr-feedback-fab {
-                bottom: 96px;
-            }
-            @media (max-width: 768px) {
+            /* Anti-collisione con timer dock aperto solo su desktop */
+            @media (min-width: 769px) {
                 body.adr-has-dock #adr-feedback-fab {
-                    bottom: 152px;
+                    bottom: 96px;
                 }
             }
 
@@ -428,20 +550,59 @@
                 min-height: 90px;
             }
 
-            /* Upload Area */
-            .adr-fb-upload-box {
-                border: 1px dashed rgba(255, 255, 255, 0.2);
+            /* Screenshot 1-Click e Fallback Upload */
+            .adr-fb-capture-btn {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                background: rgba(223, 41, 62, 0.12);
+                border: 1px dashed rgba(223, 41, 62, 0.45);
+                color: #ffffff;
+                padding: 12px 16px;
                 border-radius: 6px;
-                padding: 14px;
-                text-align: center;
+                font-family: inherit;
+                font-size: 12px;
+                font-weight: 700;
                 cursor: pointer;
-                transition: border-color 0.2s, background 0.2s;
-                background: rgba(0, 0, 0, 0.2);
+                transition: background 0.2s, border-color 0.2s, transform 0.1s;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
             }
-            .adr-fb-upload-box:hover {
+            .adr-fb-capture-btn:hover:not(:disabled) {
+                background: rgba(223, 41, 62, 0.22);
                 border-color: #df293e;
-                background: rgba(223, 41, 62, 0.03);
+                transform: translateY(-1px);
             }
+            .adr-fb-capture-btn:disabled {
+                opacity: 0.6;
+                cursor: wait;
+            }
+            .adr-fb-upload-fallback-row {
+                display: flex;
+                justify-content: center;
+                margin-top: 6px;
+            }
+            .adr-fb-fallback-link {
+                background: none;
+                border: none;
+                color: #888888;
+                font-size: 11px;
+                font-family: inherit;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 6px;
+                transition: color 0.15s;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+            }
+            .adr-fb-fallback-link:hover {
+                color: #df293e;
+            }
+
             .adr-fb-preview-wrap {
                 position: relative;
                 display: flex;
@@ -549,21 +710,27 @@
     // 6. RENDER FAB E MODALE
     // ==========================================
     let currentCategory = 'SUGGERIMENTO';
-    let currentAttachment = null; // { base64, name, sizeKb }
+    let currentAttachment = null; // { base64, name, sizeKb, width, height }
 
     function createDOM() {
-        // FAB Button
+        // FAB Button / Edge Bookmark
         const fab = document.createElement('div');
         fab.id = 'adr-feedback-fab';
         fab.setAttribute('role', 'button');
         fab.setAttribute('title', 'Segnala un errore o proponi un miglioramento');
         fab.innerHTML = `
             <div class="fab-icon">
-                <span class="material-symbols-outlined" style="font-size: 16px;">feedback</span>
+                <span class="material-symbols-outlined" style="font-size: 16px;">bug_report</span>
             </div>
             <span class="fab-label">Feedback</span>
+            <button type="button" class="fab-edge-dismiss" id="adr-fb-edge-dismiss" title="Nascondi per questa sessione">&times;</button>
         `;
         document.body.appendChild(fab);
+
+        // Se l'utente ha precedentemente chiuso la linguetta su mobile in questa sessione, nascondila
+        if (window.innerWidth <= 768 && sessionStorage.getItem('adr_fb_edge_dismissed') === '1') {
+            fab.style.display = 'none';
+        }
 
         // Modal Overlay
         const overlay = document.createElement('div');
@@ -594,7 +761,7 @@
                     <div class="adr-fb-diag-banner" id="adr-fb-diag-banner" style="display: none;">
                         <span style="font-size: 15px;">🛡️</span>
                         <div>
-                            <b>Diagnosi tecnica attiva:</b> metadati di sistema (browser, viewport) e gli ultimi errori JavaScript verranno allegati silenziosamente per facilitare la risoluzione.
+                            <b>Diagnosi tecnica attiva:</b> metadati di contesto (tab attivo, browser, errori JS silenti e sessione) verranno allegati per facilitare la risoluzione immediata.
                         </div>
                     </div>
 
@@ -611,24 +778,31 @@
                         <textarea class="adr-fb-textarea" id="adr-fb-input-message" placeholder="Descrivi il miglioramento che vorresti vedere..." maxlength="4000" required></textarea>
                     </div>
 
-                    <!-- Upload Screenshot Facoltativo -->
+                    <!-- Screenshot 1-Click e Fallback Upload -->
                     <div class="adr-fb-field">
-                        <label class="adr-fb-label">Screenshot o Allegato Visivo (facoltativo, max 5MB)</label>
+                        <label class="adr-fb-label">Schermata della Pagina o Allegato (facoltativo)</label>
                         
-                        <div id="adr-fb-upload-box" class="adr-fb-upload-box">
-                            <span class="material-symbols-outlined" style="font-size: 24px; color: #888888; display: block; margin-bottom: 4px;">add_photo_alternate</span>
-                            <div style="font-size: 11px; color: #aaaaaa;">Trascina un'immagine o <b style="color: #df293e;">clicca per caricare</b></div>
-                            <div style="font-size: 9px; color: #666666; margin-top: 2px;">Compressione client-side automatica JPEG a ~150-250KB</div>
-                            <input type="file" id="adr-fb-file-input" accept="image/*" style="display: none;">
+                        <div id="adr-fb-upload-container">
+                            <button type="button" class="adr-fb-capture-btn" id="adr-fb-capture-btn">
+                                <span class="material-symbols-outlined" style="font-size: 18px;">photo_camera</span>
+                                <span>Cattura Schermata della Pagina (1-Click)</span>
+                            </button>
+                            <div class="adr-fb-upload-fallback-row">
+                                <button type="button" class="adr-fb-fallback-link" id="adr-fb-upload-fallback-btn">
+                                    <span class="material-symbols-outlined" style="font-size: 14px;">attach_file</span>
+                                    <span>oppure carica un'immagine dal dispositivo</span>
+                                </button>
+                                <input type="file" id="adr-fb-file-input" accept="image/*" style="display: none;">
+                            </div>
                         </div>
 
                         <div id="adr-fb-preview-wrap" class="adr-fb-preview-wrap" style="display: none;">
                             <img id="adr-fb-preview-thumb" class="adr-fb-preview-thumb" src="" alt="Anteprima">
                             <div class="adr-fb-preview-info">
                                 <div id="adr-fb-preview-name" style="font-weight: 700; color: #fff;">screenshot.jpg</div>
-                                <div id="adr-fb-preview-size" style="color: #888888; font-size: 10px;">~180 KB (Compresso via Canvas)</div>
+                                <div id="adr-fb-preview-size" style="color: #888888; font-size: 10px;">~180 KB</div>
                             </div>
-                            <button type="button" id="adr-fb-preview-remove" class="adr-fb-preview-remove">Rimuovi</button>
+                            <button type="button" id="adr-fb-preview-remove" class="adr-fb-preview-remove" title="Rimuovi schermata">Rimuovi</button>
                         </div>
                     </div>
 
@@ -658,7 +832,9 @@
         const lblMessage = document.getElementById('adr-lbl-message');
         const inputTitle = document.getElementById('adr-fb-input-title');
         const inputMessage = document.getElementById('adr-fb-input-message');
-        const uploadBox = document.getElementById('adr-fb-upload-box');
+        const uploadContainer = document.getElementById('adr-fb-upload-container');
+        const captureBtn = document.getElementById('adr-fb-capture-btn');
+        const uploadFallbackBtn = document.getElementById('adr-fb-upload-fallback-btn');
         const fileInput = document.getElementById('adr-fb-file-input');
         const previewWrap = document.getElementById('adr-fb-preview-wrap');
         const previewThumb = document.getElementById('adr-fb-preview-thumb');
@@ -667,6 +843,7 @@
         const previewRemove = document.getElementById('adr-fb-preview-remove');
         const submitBtn = document.getElementById('adr-fb-submit-btn');
         const toast = document.getElementById('adr-fb-toast');
+        const dismissBtn = document.getElementById('adr-fb-edge-dismiss');
 
         function openModal() {
             modalOverlay.classList.remove('hidden');
@@ -683,7 +860,7 @@
             inputMessage.value = '';
             currentAttachment = null;
             previewWrap.style.display = 'none';
-            uploadBox.style.display = 'block';
+            if (uploadContainer) uploadContainer.style.display = 'block';
             fileInput.value = '';
             toast.className = 'adr-fb-toast';
             toast.textContent = '';
@@ -715,6 +892,14 @@
         closeBtn.addEventListener('click', closeModal);
         cancelBtn.addEventListener('click', closeModal);
 
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                sessionStorage.setItem('adr_fb_edge_dismissed', '1');
+                fab.style.display = 'none';
+            });
+        }
+
         modalOverlay.addEventListener('click', function (e) {
             if (e.target === modalOverlay) closeModal();
         });
@@ -722,22 +907,106 @@
         tabSuggerimento.addEventListener('click', () => setCategory('SUGGERIMENTO'));
         tabBug.addEventListener('click', () => setCategory('BUG'));
 
-        // File upload trigger
-        uploadBox.addEventListener('click', () => fileInput.click());
-        uploadBox.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadBox.style.borderColor = '#df293e';
-        });
-        uploadBox.addEventListener('dragleave', () => {
-            uploadBox.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-        });
-        uploadBox.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadBox.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-            if (e.dataTransfer.files?.[0]) {
-                handleFileSelection(e.dataTransfer.files[0]);
+        // Gestione Cattura Screenshot Automatica 1-Click
+        async function capturePageScreenshot() {
+            if (!captureBtn) return;
+            const origHtml = captureBtn.innerHTML;
+            captureBtn.disabled = true;
+            captureBtn.innerHTML = `
+                <span class="material-symbols-outlined" style="animation: spin 1s linear infinite; font-size: 16px;">sync</span>
+                <span>Cattura in corso...</span>
+            `;
+            toast.className = 'adr-fb-toast';
+            toast.textContent = '';
+
+            try {
+                await loadHtml2Canvas();
+
+                // Nasconde temporaneamente la modale e il FAB per fotografare la pagina sottostante pulita
+                modalOverlay.style.visibility = 'hidden';
+                fab.style.visibility = 'hidden';
+
+                // Doppio frame per consentire al browser di eseguire il render pulito
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                const canvas = await window.html2canvas(document.body, {
+                    useCORS: true,
+                    allowTaint: false,
+                    logging: false,
+                    scale: Math.min(window.devicePixelRatio || 1, 1.5),
+                    windowWidth: document.documentElement.clientWidth,
+                    windowHeight: window.innerHeight,
+                    x: window.scrollX,
+                    y: window.scrollY,
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    backgroundColor: '#0a0a0a',
+                    ignoreElements: (el) => el.id === 'adr-feedback-modal-overlay' || el.id === 'adr-feedback-fab'
+                });
+
+                // Ridimensionamento su Canvas
+                let w = canvas.width;
+                let h = canvas.height;
+                const maxDim = 1600;
+                let finalCanvas = canvas;
+
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                    const resized = document.createElement('canvas');
+                    resized.width = w;
+                    resized.height = h;
+                    const ctx = resized.getContext('2d');
+                    ctx.drawImage(canvas, 0, 0, w, h);
+                    finalCanvas = resized;
+                }
+
+                const base64 = finalCanvas.toDataURL('image/jpeg', 0.75);
+                const approxBytes = Math.round((base64.length * 3) / 4);
+                const sizeKb = Math.round(approxBytes / 1024);
+
+                currentAttachment = {
+                    base64,
+                    name: 'screenshot-automatico.jpg',
+                    width: w,
+                    height: h,
+                    sizeKb
+                };
+
+                previewThumb.src = base64;
+                previewName.textContent = 'screenshot-automatico.jpg';
+                previewSize.textContent = `~${sizeKb} KB (Cattura Automatica ${w}x${h}px)`;
+                if (uploadContainer) uploadContainer.style.display = 'none';
+                previewWrap.style.display = 'flex';
+
+                toast.className = 'adr-fb-toast success';
+                toast.textContent = '📸 Schermata della pagina catturata con successo!';
+
+            } catch (err) {
+                console.warn('[FEEDBACK] Cattura automatica fallita, fallback:', err);
+                toast.className = 'adr-fb-toast error';
+                toast.textContent = 'Impossibile catturare automaticamente lo schermo. Puoi caricare un file manualmente.';
+            } finally {
+                modalOverlay.style.visibility = '';
+                fab.style.visibility = '';
+                captureBtn.disabled = false;
+                captureBtn.innerHTML = origHtml;
             }
-        });
+        }
+
+        if (captureBtn) {
+            captureBtn.addEventListener('click', capturePageScreenshot);
+        }
+
+        // File upload trigger fallback
+        if (uploadFallbackBtn) {
+            uploadFallbackBtn.addEventListener('click', () => fileInput.click());
+        }
 
         fileInput.addEventListener('change', () => {
             if (fileInput.files?.[0]) {
@@ -753,7 +1022,7 @@
                 previewThumb.src = compressed.base64;
                 previewName.textContent = compressed.name;
                 previewSize.textContent = `~${compressed.sizeKb} KB (Canvas ${compressed.width}x${compressed.height}px)`;
-                uploadBox.style.display = 'none';
+                if (uploadContainer) uploadContainer.style.display = 'none';
                 previewWrap.style.display = 'flex';
             } catch (err) {
                 toast.className = 'adr-fb-toast error';
@@ -765,7 +1034,7 @@
             currentAttachment = null;
             fileInput.value = '';
             previewWrap.style.display = 'none';
-            uploadBox.style.display = 'block';
+            if (uploadContainer) uploadContainer.style.display = 'block';
         });
 
         // ==========================================
@@ -860,7 +1129,7 @@
             }
         });
 
-        // Anti-collision observer con Timer Dock
+        // Anti-collision observer con Timer Dock su Desktop
         function checkTimerDockCollision() {
             const dock = document.getElementById('nst-timer-dock-global');
             const hasDock = dock && !dock.classList.contains('dock-hidden') && dock.style.display !== 'none';

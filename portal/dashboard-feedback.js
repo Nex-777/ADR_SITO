@@ -44,7 +44,10 @@
             const b = (diag.browser || '').split(' ')[0];
             const o = diag.os || '';
             const vp = diag.viewport || '';
-            const envStr = `${b}/${o} ${vp}`.trim();
+            let envStr = `${b}/${o} ${vp}`.trim();
+            if (diag.active_tab) envStr += ` tab:${diag.active_tab}`;
+            if (diag.role_context) envStr += ` ctx:${diag.role_context}`;
+            if (diag.connection) envStr += ` net:${diag.connection}`;
             if (envStr && envStr !== '/') {
                 lines.push(`env:${envStr}`);
             }
@@ -307,12 +310,15 @@
                     </div>
 
                     <!-- Sezione Diagnostica Tecnico (se presente) -->
-                    ${(diag.browser || diag.os || errors.length > 0) ? `
+                    ${(diag.browser || diag.os || diag.active_tab || errors.length > 0) ? `
                         <div class="bg-black/50 border border-white/5 p-3 space-y-2 text-[11px] font-mono text-gray-400 rounded-sm">
                             <div class="flex flex-wrap items-center gap-3 text-gray-300">
                                 <span>🖥️ ${escapeHtml(diag.browser || '-')} / ${escapeHtml(diag.os || '-')}</span>
                                 <span>📐 ${escapeHtml(diag.viewport || '-')}</span>
-                                <span>🌐 ${diag.online ? 'Online' : 'Offline'}</span>
+                                <span>🌐 ${diag.online ? 'Online' : 'Offline'}${diag.connection ? ` (${escapeHtml(diag.connection)})` : ''}</span>
+                                ${diag.active_tab ? `<span class="text-primary font-bold">📑 Tab: ${escapeHtml(diag.active_tab)}</span>` : ''}
+                                ${diag.role_context ? `<span class="text-amber-400">👤 Ctx: ${escapeHtml(diag.role_context)}</span>` : ''}
+                                ${diag.session_sec ? `<span class="text-gray-400">⏱️ ${escapeHtml(diag.session_sec)}s</span>` : ''}
                             </div>
                             ${errors.length > 0 ? `
                                 <div class="mt-2 pt-2 border-t border-white/5 space-y-1">

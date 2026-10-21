@@ -206,7 +206,11 @@ export async function handleFeedback(req, res) {
 
             const diag = validatedData.diagnostic_data || {};
             if (diag.browser || diag.os || diag.viewport) {
-                tgMessage += `\n🖥️ <b>Ambiente:</b> ${escapeTelegramHtml(diag.browser || '-')} / ${escapeTelegramHtml(diag.os || '-')} (${escapeTelegramHtml(diag.viewport || '-')})\n`;
+                let envLine = `🖥️ <b>Ambiente:</b> ${escapeTelegramHtml(diag.browser || '-')} / ${escapeTelegramHtml(diag.os || '-')} (${escapeTelegramHtml(diag.viewport || '-')})`;
+                if (diag.active_tab) envLine += ` | <b>Tab:</b> <code>${escapeTelegramHtml(diag.active_tab)}</code>`;
+                if (diag.role_context) envLine += ` | <b>Contesto:</b> <i>${escapeTelegramHtml(diag.role_context)}</i>`;
+                if (diag.connection) envLine += ` | <b>Rete:</b> ${escapeTelegramHtml(diag.connection)}`;
+                tgMessage += `\n${envLine}\n`;
             }
 
             if (Array.isArray(diag.errors) && diag.errors.length > 0) {
