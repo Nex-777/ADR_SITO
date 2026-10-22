@@ -4256,3 +4256,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - **Diagnostica Tecnica Avanzata per BUG**: Integrato wrapper passivo su `console.error` per catturare gli errori silenti nel ring buffer. Arricchiti i metadati con tab attivo (`active_tab`), contesto ruolo (`role_context`), tipo connessione (`connection`), durata sessione (`session_sec`) e scroll verticale (`scroll_y`).
 - **Allineamento Formato Antigravity & Telegram**: Aggiornati `portal/dashboard-feedback.js` e `api/_utils/feedback-handler.js` per serializzare ed evidenziare i nuovi campi diagnostici.
 - **Suite di Test**: Aggiunti test di verifica in `tests/feedback.test.js` (247/247 test passati).
+
+## [2026-10-22] chore | Hardening Runtime Node.js 22.x (.nvmrc, engines) & Bonifica CVE
+- **Vincolo Runtime Node 22.x**: Introdotto file di blocco .nvmrc (22) e configurato "engines": { "node": "22.x" } in package.json per conformità con Vercel Serverless Functions e tool di versioning locale (nvm/fnm), garantendo l'allineamento automatico delle micro-patch di sicurezza sul ramo Node 22 LTS.
+- **Mitigazione Vulnerabilità Transitive**: Aggiornato qs alla versione patchata 6.16.1 (dipendenza di stripe), azzerando le vulnerabilità note sulle dipendenze di produzione (
+pm audit --omit=dev riporta 0 vulnerabilità).
+- **Validazione Funzionale**: Eseguiti i test di regressione (itest run, 247/247 test passati) e analisi Knip (knip, codice 0) a conferma della totale stabilità e assenza di warning strutturali.
