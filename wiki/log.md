@@ -2,6 +2,13 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-25] fix | Ripristino sicurezza OpenSSL e path pg_restore v17 nello Smoke Test Backup (v1.06.21)
+- **Hardening Esecuzione Smoke Test (`scripts/test_backup_restore.js`)**:
+  - Ripristinato passaggio sicuro di `BACKUP_PASSPHRASE` via variabile d'ambiente `env:BACKUP_PASSPHRASE` evitando l'interpolazione bash in chiaro (`-k`) che generava l'errore di sintassi `/bin/sh: 1: Syntax error: EOF in backquote substitution`.
+  - Ripristinati i parametri crittografici conformi alle specifiche di backup (`-iter 100000`).
+  - Forzato il path assoluto `/usr/lib/postgresql/17/bin/pg_restore` su Linux per evitare conflitti con wrapper di sistema.
+  - Mantenuto il monitoraggio della tabella `feedback_reports` e il fallback su `GITHUB_TOKEN_REPO`.
+
 ## [2026-10-11] fix | Forzatura Riga Orizzontale Fissa (flex-row) nel Registro Corsi (v1.06.14)
 - **Frontend Dashboard Corsi & Registro (`portal/dashboard.js`)**:
   - Eliminati tutti i breakpoint condizionali (`lg:`) che provocavano lo stack verticale accidentale su 3 righe su schermi compatti con sidebar aperta.

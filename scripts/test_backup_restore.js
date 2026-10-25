@@ -113,7 +113,7 @@ async function main() {
         } else {
             // 3. Scarica da GitHub Releases
             const repo = process.env.GITHUB_REPOSITORY || 'Nex-777/ADR_SITO';
-            const token = process.env.GITHUB_TOKEN;
+            const token = process.env.GITHUB_TOKEN || process.env.GITHUB_TOKEN_REPO;
             const res = await getLatestReleaseAsset(repo, token);
             encDumpPath = res.filePath;
             shouldCleanupEnc = res.isTempDownload;
@@ -128,11 +128,14 @@ async function main() {
     const decDumpPath = path.join(tempDir, 'smoke_test.dump');
 
     try {
-        console.log(`\n🔓 Decifratura AES-256-CBC con pbkdf2...`);
-        // Decifra
-        execSync(`openssl enc -d -aes-256-cbc -pbkdf2 -in "${encDumpPath}" -out "${decDumpPath}" -k "${passphrase}"`, {
-            stdio: 'inherit'
-        });
+        console.log(`\n🔓 Decifratura AES-256-CBC (PBKDF2, 100k iter)...`);
+        execSync(
+            `openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -d -in "${encDumpPath}" -out "${decDumpPath}" -pass env:BACKUP_PASSPHRASE`,
+            {
+                stdio: 'pipe',
+                env: { ...process.env, BACKUP_PASSPHRASE: passphrase }
+            }
+        );
 
         const stat = fs.statSync(decDumpPath);
         if (stat.size === 0) {
@@ -141,15 +144,20 @@ async function main() {
         console.log(`✅ Decifratura completata con successo! Dimensione dump: ${(stat.size / 1024).toFixed(1)} KB`);
 
         console.log(`\n📋 Verifica integrità formato pg_dump (TOC Table of Contents)...`);
-        const tocOutput = execSync(`pg_restore --list "${decDumpPath}"`, { encoding: 'utf8' });
-        console.log(`✅ pg_restore --list ha completato la scansione della TOC (${tocOutput.split('\n').length} elementi rilevati).`);
+        const pgRestoreCmd = process.platform === 'linux' ? '/usr/lib/postgresql/17/bin/pg_restore' : 'pg_restore';
+        const tocOutput = execSync(`${pgRestoreCmd} --list "${decDumpPath}"`, {
+            encoding: 'utf8',
+            maxBuffer: 10 * 1024 * 1024
+        });
+        console.log(`✅ ${pgRestoreCmd} --list ha completato la scansione della TOC (${tocOutput.split('\n').length} elementi rilevati).`);
 
         console.log(`\n🔍 Controllo presenza tabelle critiche nella TOC del dump:`);
         const missingTables = [];
         for (const tbl of CRITICAL_TABLES) {
             // Cerca "TABLE DATA public <tbl>" o "TABLE public <tbl>"
-            const regex = new RegExp(`TABLE (DATA )?public ${tbl} `, 'i');
-            if (regex.test(tocOutput)) {
+            const regex = new RegExp(`TABLE (DATA )?public ${tbl}( |$)`, 'i');
+            const found = regex.test(tocOutput) || tocOutput.split('\n').some(line => line.includes(` ${tbl} `) || line.endsWith(` ${tbl}`));
+            if (found) {
                 console.log(`  ✓ Tabella '${tbl}' presente`);
             } else {
                 console.log(`  ❌ Tabella '${tbl}' ASSENTE`);
