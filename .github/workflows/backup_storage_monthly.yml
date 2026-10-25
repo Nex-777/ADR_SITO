@@ -7,7 +7,7 @@ on:
 
 jobs:
   backup_storage_monthly:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: write # Necessario per creare la GitHub Release mensile e allegare il backup cifrato

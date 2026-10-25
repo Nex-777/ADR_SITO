@@ -1,0 +1,17 @@
+name: 'Setup PostgreSQL 17 Client'
+description: 'Configura il repository ufficiale PGDG e installa postgresql-client-17 con path garantito'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configura PGDG e installa postgresql-client-17
+      shell: bash
+      run: |
+        sudo install -d -m 0755 /etc/apt/keyrings
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/keyrings/pgdg.asc >/dev/null
+        echo "deb [signed-by=/etc/apt/keyrings/pgdg.asc] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+        sudo apt-get update -qq
+        sudo apt-get install -y postgresql-client-17
+        echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
+        echo "PG17_BIN=/usr/lib/postgresql/17/bin" >> $GITHUB_ENV
+        echo "✅ postgresql-client-17 configurato correttamente nel PATH."

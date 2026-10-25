@@ -1,11 +1,12 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const CRITICAL_TABLES = [
+export const CRITICAL_TABLES = [
     'utenti',
     'anagrafiche',
     'atti_adesione',
@@ -18,6 +19,43 @@ const CRITICAL_TABLES = [
     'nestore_pasti',
     'feedback_reports'
 ];
+
+/**
+ * Analizza e valida rigorosamente la Table of Contents (TOC) di pg_restore.
+ * Verifica che gli schemi attesi (public e auth) siano inclusi e che tutte
+ * le tabelle critiche siano presenti con le loro definizioni o segmenti dati.
+ */
+export function verifyTocTables(tocOutput, criticalTables = CRITICAL_TABLES) {
+    if (!tocOutput || typeof tocOutput !== 'string') {
+        throw new Error("Output TOC non valido o vuoto.");
+    }
+
+    const lines = tocOutput.split('\n');
+    const results = {
+        totalItems: lines.length,
+        hasAuthSchema: lines.some(l => /SCHEMA\s+-\s+auth\b/i.test(l) || /auth\s+[a-z0-9_]+\s+[a-z0-9_]+/i.test(l)),
+        hasPublicSchema: lines.some(l => /SCHEMA\s+-\s+public\b/i.test(l) || /public\s+[a-z0-9_]+\s+[a-z0-9_]+/i.test(l)),
+        verified: [],
+        missing: []
+    };
+
+    for (const tbl of criticalTables) {
+        // Match rigoroso sui formati standard TOC di pg_restore:
+        // Esempi:
+        // 3210; 0 123456 TABLE DATA public utenti postgres
+        // 1234; 1259 123455 TABLE public utenti postgres
+        const hasData = lines.some(l => new RegExp(`\\bTABLE DATA public ${tbl}\\b`, 'i').test(l));
+        const hasSchema = lines.some(l => new RegExp(`\\bTABLE public ${tbl}\\b`, 'i').test(l));
+
+        if (hasData || hasSchema) {
+            results.verified.push({ table: tbl, hasData, hasSchema });
+        } else {
+            results.missing.push(tbl);
+        }
+    }
+
+    return results;
+}
 
 async function getLatestReleaseAsset(repo, token) {
     console.log(`🔍 Ricerca dell'ultima release di backup su GitHub (${repo})...`);
@@ -152,23 +190,21 @@ async function main() {
         console.log(`✅ ${pgRestoreCmd} --list ha completato la scansione della TOC (${tocOutput.split('\n').length} elementi rilevati).`);
 
         console.log(`\n🔍 Controllo presenza tabelle critiche nella TOC del dump:`);
-        const missingTables = [];
-        for (const tbl of CRITICAL_TABLES) {
-            // Cerca "TABLE DATA public <tbl>" o "TABLE public <tbl>"
-            const regex = new RegExp(`TABLE (DATA )?public ${tbl}( |$)`, 'i');
-            const found = regex.test(tocOutput) || tocOutput.split('\n').some(line => line.includes(` ${tbl} `) || line.endsWith(` ${tbl}`));
-            if (found) {
-                console.log(`  ✓ Tabella '${tbl}' presente`);
-            } else {
-                console.log(`  ❌ Tabella '${tbl}' ASSENTE`);
-                missingTables.push(tbl);
+        const report = verifyTocTables(tocOutput, CRITICAL_TABLES);
+
+        for (const item of report.verified) {
+            const dataTag = item.hasData ? '[DATA]' : '[SCHEMA ONLY]';
+            console.log(`  ✓ Tabella '${item.table}' presente ${dataTag}`);
+        }
+
+        if (report.missing.length > 0) {
+            for (const missing of report.missing) {
+                console.log(`  ❌ Tabella '${missing}' ASSENTE`);
             }
+            throw new Error(`Controllo integrità fallito: ${report.missing.length} tabelle critiche mancanti (${report.missing.join(', ')}).`);
         }
 
-        if (missingTables.length > 0) {
-            throw new Error(`Controllo integrità fallito: ${missingTables.length} tabelle critiche mancanti (${missingTables.join(', ')}).`);
-        }
-
+        console.log(`\n📊 Schemi archiviati: public=${report.hasPublicSchema ? 'SI' : 'NO'}, auth=${report.hasAuthSchema ? 'SI' : 'NO'}`);
         console.log("\n🎉 TUTTE LE TABELLE CRITICHE SONO STATE IDENTIFICATE CON SUCCESSO.");
         console.log("🛡️ SMOKE TEST COMPLETATO CON SUCCESSO — BACKUP VALIDO E RIPRISTINABILE.");
 
@@ -189,7 +225,10 @@ async function main() {
     }
 }
 
-main().catch(err => {
-    console.error("Fatal error:", err);
-    process.exit(1);
-});
+const isDirectRun = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (isDirectRun) {
+    main().catch(err => {
+        console.error("Fatal error:", err);
+        process.exit(1);
+    });
+}

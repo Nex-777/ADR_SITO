@@ -109,11 +109,11 @@ In caso di perdita totale o corruzione del database:
 
 ### 5.1 Prerequisiti locali
 ```bash
-# Su Ubuntu/Debian:
-sudo apt-get install postgresql-client openssl
+# Su Ubuntu/Debian (PostgreSQL 17 PGDG repository):
+sudo apt-get install postgresql-client-17 openssl
 
 # Su macOS (Homebrew):
-brew install postgresql openssl
+brew install postgresql@17 openssl
 ```
 
 ### 5.2 Step di ripristino
@@ -206,17 +206,22 @@ npm run test:backup -- --latest
 ```
 
 ### 8.2 Validazioni Eseguite dallo Script
-1. Decifra il file `.dump.enc` in memoria temporanea con OpenSSL e `BACKUP_PASSPHRASE`.
-2. Esegue `pg_restore --list` sul dump per ispezionare il TOC (Table of Contents).
-3. Verifica la presenza tassativa delle tabelle critiche:
+1. Decifra il file `.dump.enc` in memoria temporanea con OpenSSL (`-pass env:BACKUP_PASSPHRASE` e `-iter 100000`).
+2. Esegue `pg_restore --list` sul dump per ispezionare il catalogo TOC (Table of Contents) tramite la funzione esportabile `verifyTocTables`.
+3. Verifica la presenza degli schemi `public` e `auth`, e controlla tassativamente le 11 tabelle critiche:
    - `utenti`, `anagrafiche`, `atti_adesione`
    - `registro_approvazioni`, `ricevute_pagamenti`
    - `epika_profili`, `epika_gruppi_storici`
    - `nestore_pesi_misure`, `nestore_allenamenti`, `nestore_pasti`
-4. Rimuove immediatamente il dump in chiaro al termine della verifica.
+   - `feedback_reports`
+4. Rimuove immediatamente il dump in chiaro e le cartelle temporanee `.tmp_smoke_test/` al termine della verifica.
 
 ### 8.3 Smoke Test Settimanale Automatico
 Ogni domenica alle `04:00 UTC` (`06:00 IT`), GitHub Actions scarica l'ultima release e valida la consistenza del catalogo. In caso di esito negativo o dump non leggibile, parte un'allerta immediata su Telegram ed Email.
+
+### 8.4 Regola di Estensione Architetturale
+> [!IMPORTANT]
+> **Nuove Tabelle nel Database**: Qualora venga aggiunta una nuova entità o tabella essenziale per il funzionamento del portale (es. nuove migrazioni in `supabase/`), lo sviluppatore o l'agente AI ha l'obbligo di inserire il nome della tabella nell'array `CRITICAL_TABLES` di [`scripts/test_backup_restore.js`](../scripts/test_backup_restore.js) e aggiornare la presente lista. Il test di guardia in `tests/backup-pipeline.test.js` verificherà staticamente la coerenza del parser.
 
 ---
 

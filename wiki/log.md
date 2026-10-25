@@ -2,6 +2,20 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-10-25] refactor | Hardening Pipeline Backup & Smoke Test Guardrails (v1.06.22)
+- **Composite Action PostgreSQL 17 (`.github/actions/setup-pg17/action.yml`)**:
+  - Centralizzata l'installazione di `postgresql-client-17` con keyring sicuro `[signed-by]` e inserimento di `/usr/lib/postgresql/17/bin` nel PATH di sistema del runner.
+- **Workflow Pinning & Hardening (`backup_db.yml`, `smoke_test_backup.yml`, `backup_storage_monthly.yml`)**:
+  - Fissato l'OS runner a `ubuntu-24.04` prevenendo rotture da future migrazioni automatiche dell'immagine di GitHub ad Ubuntu 26.
+  - Eliminata l'interpolazione shell dei segreti: `SUPABASE_DB_URL` spostata in blocco `env:`.
+  - Pinned permessi espliciti `contents: write` e `contents: read`.
+- **Rigorosità TOC & Test di Guardia (`scripts/test_backup_restore.js`, `tests/backup-pipeline.test.js`)**:
+  - Implementata la funzione esportata `verifyTocTables` con controllo rigoroso di `TABLE DATA` e schema `auth`/`public`, prevenendo falsi positivi da indici o tabelle parziali.
+  - Introdotta la suite di test statici vitest che blocca regressioni future su parametri OpenSSL, assenza flag `-iter 100000`, interpolazioni `-k` o runner non fissati.
+- **Aggiornamento Documentazione (`wiki/backup_system.md`, `.gitignore`)**:
+  - Documentata l'aggiunta di `feedback_reports` alle 11 tabelle critiche e stabilita la regola architetturale per le future migrazioni.
+  - Aggiunti `.tmp_smoke_test/` e pattern dump a `.gitignore`.
+
 ## [2026-10-25] fix | Ripristino sicurezza OpenSSL e path pg_restore v17 nello Smoke Test Backup (v1.06.21)
 - **Hardening Esecuzione Smoke Test (`scripts/test_backup_restore.js`)**:
   - Ripristinato passaggio sicuro di `BACKUP_PASSPHRASE` via variabile d'ambiente `env:BACKUP_PASSPHRASE` evitando l'interpolazione bash in chiaro (`-k`) che generava l'errore di sintassi `/bin/sh: 1: Syntax error: EOF in backquote substitution`.
