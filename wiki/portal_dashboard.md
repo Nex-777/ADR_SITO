@@ -19,6 +19,21 @@ The management board organizes athletes and verification files via three registr
 2.   **Registro Tesserati**: Course participants/athletes with valid sports licenses.
 3.   **Storico Approvazioni**: Archive of past registration approvals and signatures.
 
+### 🛡️ Gestione Code Approvazione e Risoluzione Loop (v1.06.23+)
+- **Tracking Revisione Manuale (`revisionato_manualmente`)**:
+  - Le tabelle `certificati_medici` e `documenti_identita` includono la colonna `revisionato_manualmente BOOLEAN NOT NULL DEFAULT false`.
+  - La coda `loadCertificatiGialli` interroga esclusivamente i record con `revisionato_manualmente = false`.
+  - Quando un amministratore delibera manualmente (`APPROVA` o `RIFIUTA`), il flag viene impostato a `true` e l'elemento viene rimosso istantaneamente dal DOM, prevenendo la riapparizione continua del certificato o del documento nella lista da approvare.
+- **Deduplicazione per Atleta**:
+  - Se un utente carica più versioni o rinnovi di un certificato, la coda deduplica per `anagrafica_id`, mostrando solo l'ultima versione sottomessa.
+- **Filtro Candidati Respinti**:
+  - I certificati o documenti appartenenti a soggetti la cui domanda di iscrizione è stata respinta dal Direttivo (senza un tesseramento attivo) vengono automaticamente esclusi dalla coda operativa.
+- **Cascata Automatica su Delibera Negativa Verbale (`salva_verbale_relazionale`)**:
+  - Quando il Direttivo delibera il rifiuto dei soci (`p_soci_da_respingere`), la procedura RPC aggiorna in cascata tutti i documenti e certificati pendenti associati impostando `stato_validazione = 'ROSSO'` e `revisionato_manualmente = true`, chiudendo definitivamente la pratica senza residui orfani nelle code.
+- **Distinzione Badges e Prevenzione Doppio Rifiuto**:
+  - Nel tab Tesserati in Attesa (`pendingTess`), la UI distingue visivamente tra `[RIFIUTATO DIRETTIVO]` (manuale) e `[RIFIUTATO AI]` (automatico).
+  - Se il certificato è già contrassegnato con stato `ROSSO`, il pulsante `RIFIUTA CERT.` viene nascosto per prevenire deliberazioni ridondanti o l'invio di notifiche duplicate all'utente.
+
 ---
 
 ## 👻 Ghost Users Resolution Panel

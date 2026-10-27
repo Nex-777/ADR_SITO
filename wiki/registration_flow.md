@@ -42,6 +42,15 @@ graph TD
 - Selezione tipologia adesione (*Tesserato*, *Socio + Tesserato*, *Socio*).
 - Selezione Tessera Sportiva se atleta (*Silver*, *Gold*, *Integrativa A/B*).
 - Caricamento Certificato Medico con precheck AI Mistral in tempo reale (estrazione tipologia e scadenza).
+- **Motore di Valutazione Deterministico Certificati Medici (`api/_utils/cert-evaluator.js`) (v1.06.23+)**:
+  - *Heuristica Anti-Confusione Giorno/Anno*: Risolve l'ambiguità OCR tra giorno e anno nei formati italiani `GG/MM/AAAA` (es. giorno `23` scambiato dall'OCR per anno `2023` in data `23/10/2026`). Corregge la data di emissione confrontandola con la data dichiarata dall'utente.
+  - *Idoneità Sportiva vs Ludico-Motoria*: Distingue rigorosamente i certificati per attività agonistica o non agonistica da quelli per attività ludico-motoria/amatoriale. L'attività ludico-motoria determina blocco `ROSSO` insindacabile.
+  - *Veridicità delle Note di Rifiuto*: Se il certificato è respinto per idoneità ludico-motoria ma la data di validità è futura, la nota evidenzia unicamente il motivo reale (`"Certificato non valido per il tesseramento sportivo: rilevata attività ludico-motoria..."`) senza mai generare allucinazioni su presunte scadenze passate.
+  - *Calcolo Scadenza Automatico*: Se la scadenza non è esplicita nel testo ma la data di rilascio è valida, applica la regola annuale ministeriale (`+1 anno` esatto).
+  - *Rilevamento Facsimile / Specimen*: Blocca istantaneamente copie o documenti di prova con stato `ROSSO`.
+- **Politica di Notifica a Singola Email (v1.06.23+)**:
+  - Le esecuzioni automatiche dell'AI (`isManual: false`) **non inviano mai email all'utente**, scongiurando doppi messaggi fuorvianti o contraddittori. L'esito AI viene notificato esclusivamente al Direttivo tramite notifica push Telegram su **ADR_BOT**.
+  - L'invio dell'email ufficiale di delibera/rifiuto con la motivazione personalizzata avviene **esclusivamente su azione manuale dell'amministratore** (`isManual: true`), garantendo all'utente una comunicazione unica, chiara e verificata.
 
 ### 5. Passo 5: Dati Genitore / Tutore (Solo Minorenni)
 - Mostrato condizionalmente se l'età calcolata dalla data di nascita è < 18 anni.

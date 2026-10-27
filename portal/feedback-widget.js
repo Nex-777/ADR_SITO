@@ -19,7 +19,7 @@
     if (window.__ADR_FEEDBACK_WIDGET_INIT__) return;
     window.__ADR_FEEDBACK_WIDGET_INIT__ = true;
 
-    const VERSION = "1.06.23";
+    const VERSION = "1.06.24";
 
     // Pagine di autenticazione da escludere tassativamente
     const EXCLUDED_PATHS = ['login.html', 'forgot-password.html', 'reset-password.html'];

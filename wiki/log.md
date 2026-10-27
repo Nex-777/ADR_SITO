@@ -4289,3 +4289,23 @@ pm audit --omit=dev riporta 0 vulnerabilità).
 - Added multi-line diff details to Telegram approval alerts (`ADR_BOT`) formatted as `- Campo: Nuovo [doc: Originale]` with Telegram HTML escaping.
 - Integrated diff visualization box in Admin Dashboard across Soci in Attesa, Tesserati in Attesa, Pagamenti in Attesa, and Athlete Dossier.
 - Added comprehensive unit tests covering all 8 fields, omocodia, apostrophe normalization, and server-side anti-bypass guards.
+
+
+## [2026-10-27] edit | Fix OCR Date Certificati, Rimozione Loop Approvazioni e Singola Email
+- **Motore Deterministico Valutazione Certificati (`api/_utils/cert-evaluator.js`)**:
+  - Risolta la confusione OCR tra giorno e anno nei certificati medici con date in formato `GG/MM/AAAA` (es. giorno 23 non più scambiato per anno 2023 per certificati emessi ad ottobre 2026).
+  - Rilevamento rigoroso delle diciture di idoneità: agonistica o non agonistica per tesseramento sportivo vs attività ludico-motoria/amatoriale (che determina blocco ROSSO).
+  - Veridicità delle motivazioni: se un certificato è bloccato per idoneità ludico-motoria ma non è scaduto, la nota generata non dichiara mai false scadenze.
+  - Calcolo automatico della scadenza ministeriale (+1 anno esatto dalla data di rilascio) se omessa nel testo.
+  - Rilevamento facsimile / specimen per blocco immediato di documenti di prova.
+- **Risoluzione Loop e Ri-apparizione in Registro Approvazioni (`portal/dashboard.js`, DB migration, RPC `salva_verbale_relazionale`)**:
+  - Introdotto campo `revisionato_manualmente BOOLEAN NOT NULL DEFAULT false` su `certificati_medici` e `documenti_identita`.
+  - La coda `loadCertificatiGialli` filtra esclusivamente per `revisionato_manualmente = false`, deduplica per `anagrafica_id` (mostrando solo il certificato più recente) ed esclude candidati con delibera `RESPINTO` privi di tesseramento attivo.
+  - Rimozione immediata della riga dal DOM alla delibera manuale dell'amministratore (`APPROVA` o `RIFIUTA`).
+  - Aggiornata la RPC `salva_verbale_relazionale` per impostare in cascata `stato_validazione = 'ROSSO'` e `revisionato_manualmente = true` su tutti i certificati e documenti non revisionati dei soci respinti.
+  - Bonificata la posizione di Daniele Sturba (`eec20746-3ab9-45f5-9907-74b02a134c16`) con `revisionato_manualmente = true`, data di rilascio `2026-10-23`, scadenza `2027-10-23` e nota esatta.
+- **Politica di Notifica a Singola Email (`api/validate.js`)**:
+  - Le esecuzioni di validazione automatica AI (`isManual: false`) non inviano mai email all'utente (prevenendo il doppio invio fuorviante) e notificano solo il Direttivo tramite ADR_BOT.
+  - L'invio dell'email all'utente con la motivazione dell'amministratore avviene esclusivamente all'atto della delibera manuale (`isManual: true`).
+- **Test Unitari**:
+  - Creata suite `tests/cert-evaluator-single-email.test.js` con 9 test unitari per coprire heuristica giorno/anno, idoneità sportiva vs ludico-motoria, note veritiere, gate singola email e filtro coda approvazioni (278/278 test passati).
