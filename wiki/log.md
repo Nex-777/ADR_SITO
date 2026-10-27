@@ -4283,3 +4283,9 @@ Chronological append-only record of ingestions, lint passes, and updates to the 
 - **Mitigazione Vulnerabilità Transitive**: Aggiornato qs alla versione patchata 6.16.1 (dipendenza di stripe), azzerando le vulnerabilità note sulle dipendenze di produzione (
 pm audit --omit=dev riporta 0 vulnerabilità).
 - **Validazione Funzionale**: Eseguiti i test di regressione (itest run, 247/247 test passati) e analisi Knip (knip, codice 0) a conferma della totale stabilità e assenza di warning strutturali.
+
+## [2026-10-27] edit | Registration Diff & Admin Dashboard Visibility
+- Implemented 8-field server-side before/after diffing engine (`Nome`, `Cognome`, `Codice Fiscale`, `Data di Nascita`, `Luogo di Nascita`, `Indirizzo Residenza`, `Comune Residenza`, `Scadenza Documento`).
+- Added multi-line diff details to Telegram approval alerts (`ADR_BOT`) formatted as `- Campo: Nuovo [doc: Originale]` with Telegram HTML escaping.
+- Integrated diff visualization box in Admin Dashboard across Soci in Attesa, Tesserati in Attesa, Pagamenti in Attesa, and Athlete Dossier.
+- Added comprehensive unit tests covering all 8 fields, omocodia, apostrophe normalization, and server-side anti-bypass guards.

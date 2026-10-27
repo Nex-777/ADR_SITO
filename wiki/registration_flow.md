@@ -51,8 +51,31 @@ graph TD
 - Firma elettronica avanzata con codice OTP via email.
 - Consensi GDPR, audiovisivi e marketing.
 - Verifica firma HMAC di token doc e token cert su `/api/otp-verify.js`.
-- **Anti-Bypass Guard Server-Side (v1.06.09)**: il server non si fida del flag client `doc_modificato_manualmente`, ma confronta in modo non manomettibile `nome`, `cognome` e `codice_fiscale` del profilo salvato con quelli crittografati nel `doc_token`. In caso di discrepanza, la pratica viene forzata a stato `GIALLO` per revisione manuale.
-- **Notifica Push Telegram Istantanea (`api/_utils/telegram-bot.js`)**: Quando una registrazione viene archiviata con richiesta di delibera o approvazione manuale (nuovi soci, documenti `GIALLO`, modifiche anagrafiche a mano), il server invia con `await` asincrono garantito una notifica formattata ad **ADR_BOT** sul canale Telegram del Consiglio Direttivo con link diretto al pannello approvazioni della dashboard.
+- **Anti-Bypass Guard Server-Side & Motore di Diffing Anagrafico a 8 Campi (v1.06.23+)**:
+  Il server non si fida ciecamente dei flag client, ma riesegue il controllo crittografico del `doc_token` e valuta le discrepanze su **8 campi chiave**:
+  1. *Nome*
+  2. *Cognome*
+  3. *Codice Fiscale*
+  4. *Data di Nascita* (anche decodificata da CF se omessa nel token, previene bypass di minore/tutore)
+  5. *Luogo di Nascita (Comune/Provincia)* (decodificato da codice catastale CF)
+  6. *Indirizzo Residenza* (non bloccante, segnala il prima/dopo per audit)
+  7. *Comune / Provincia Residenza* (non bloccante)
+  8. *Scadenza Documento* (impedisce alterazioni arbitrarie della data di validità)
+  Se vengono rilevate modifiche o sblocchi manuali, il server calcola il diff esatto nel formato standard `- Campo: Nuovo [doc: Originale]` e lo memorizza in `documento_identita_note_ai`.
+- **Notifica Push Telegram Istantanea con Dettaglio Diff (`api/_utils/telegram-bot.js` & `api/otp-verify.js`)**:
+  Quando una registrazione richiede revisione per modifiche anagrafiche, la notifica Telegram inviata ad **ADR_BOT** include l'elenco puntato indentato dei campi modificati:
+  ```text
+  • Dati anagrafici modificati manualmente rispetto al documento:
+    - Cognome: D'ISIDORO [doc: DISIDORO]
+    - Indirizzo Residenza: Via Roma 10 [doc: VIA DEI MILLE 12]
+  ```
+  Tutti i valori sono protetti contro problemi di parsing con `escapeTelegramHtml`.
+- **Visibilità nel Cruscotto Direttivo (`portal/dashboard.js`)**:
+  I diff sono resi visibili con apposito box styled (`renderDocModificheBox`) in:
+  - *Tab Soci in Attesa* (`pendingSoci`)
+  - *Tab Tesserati in Attesa* (`pendingTess`)
+  - *Tab Pagamenti in Attesa* (`pendingPag`)
+  - *Dossier Atleta / Tesserato* (`apriDossierTesserato`) con link al documento d'identità.
 
 ---
 

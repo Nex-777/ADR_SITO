@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.22"
+                VERSION: "1.06.23"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -127,6 +127,32 @@
                 return sorted[0];
             }
             return anag.documenti_identita;
+        }
+
+        function renderDocModificheBox(noteAi, statoValidazione) {
+            if (!noteAi || typeof noteAi !== 'string') return '';
+            const cleanNote = noteAi.trim();
+            if (!cleanNote) return '';
+
+            // Non mostrare il box se è una validazione standard verde senza variazioni/note rilevanti
+            if (statoValidazione === 'VERDE' && !cleanNote.toLowerCase().includes('modificat') && !cleanNote.toLowerCase().includes('discordant')) {
+                return '';
+            }
+
+            const isWarning = cleanNote.toLowerCase().includes('modificat') || cleanNote.toLowerCase().includes('discordant') || cleanNote.toLowerCase().includes('revisione');
+            const boxClass = isWarning
+                ? 'border-amber-500/40 bg-amber-950/40 text-amber-300'
+                : 'border-white/10 bg-black/40 text-gray-300';
+            const icon = isWarning ? 'warning' : 'info';
+
+            return `
+                <div class="mt-2 p-2 rounded border text-left font-mono text-[9px] leading-relaxed whitespace-pre-line ${boxClass}">
+                    <div class="flex items-center gap-1 font-bold font-headline uppercase mb-1 ${isWarning ? 'text-amber-400' : 'text-gray-400'}">
+                        <span class="material-symbols-outlined text-[12px]">${icon}</span> DETTAGLIO VERIFICA DOCUMENTO
+                    </div>
+                    ${escapeHtml(cleanNote)}
+                </div>
+            `;
         }
 
         function generateProgressBarHtml(dateStr) {
@@ -1740,42 +1766,62 @@
             try {
                 const { data: docs, error } = await supabaseClient
                     .from('documenti_identita')
-                    .select('id, anagrafica_id, tipo_documento, file_url, stato_validazione, note_ai, data_scadenza, created_at, anagrafiche(nome, cognome, codice_fiscale)')
+                    .select('id, anagrafica_id, tipo_documento, file_url, stato_validazione, revisionato_manualmente, note_ai, data_scadenza, created_at, anagrafiche(nome, cognome, codice_fiscale, registro_approvazioni(stato), registro_tesserati(stato_tesseramento))')
                     .in('stato_validazione', ['GIALLO', 'IN_ATTESA'])
+                    .eq('revisionato_manualmente', false)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
-                if (!docs || docs.length === 0) {
+                // Esclude candidati respinti dal Direttivo (senza tesseramento attivo) e deduplica per anagrafica
+                const filteredDocs = (docs || []).filter(doc => {
+                    const anag = doc.anagrafiche;
+                    const raList = Array.isArray(anag?.registro_approvazioni) ? anag.registro_approvazioni : [anag?.registro_approvazioni];
+                    const rtList = Array.isArray(anag?.registro_tesserati) ? anag.registro_tesserati : [anag?.registro_tesserati];
+                    const isSocioRespinto = raList.some(r => r?.stato === 'RESPINTO');
+                    const hasActiveTess = rtList.some(t => t?.stato_tesseramento === 'ATTIVO');
+                    if (isSocioRespinto && !hasActiveTess) return false;
+                    return true;
+                });
+
+                const seenAnagDoc = new Set();
+                const visibleDocs = [];
+                for (const d of filteredDocs) {
+                    if (d.anagrafica_id && seenAnagDoc.has(d.anagrafica_id)) continue;
+                    if (d.anagrafica_id) seenAnagDoc.add(d.anagrafica_id);
+                    visibleDocs.push(d);
+                }
+
+                if (!visibleDocs || visibleDocs.length === 0) {
                     listEl.innerHTML = `<p class="text-xs text-gray-500 uppercase">✓ Nessun documento in attesa di verifica.</p>`;
                     if (badgeEl) badgeEl.classList.add('hidden');
                     return;
                 }
 
                 if (badgeEl) {
-                    badgeEl.textContent = `${docs.length} IN ATTESA`;
+                    badgeEl.textContent = `${visibleDocs.length} IN ATTESA`;
                     badgeEl.classList.remove('hidden');
                 }
 
-                listEl.innerHTML = docs.map(doc => {
+                listEl.innerHTML = visibleDocs.map(doc => {
                     const anag = doc.anagrafiche;
-                    const nomeCognome = anag ? `${anag.nome} ${anag.cognome}` : 'N/D';
+                    const nomeCognome = anag ? `${anag.nome || ''} ${anag.cognome || ''}`.trim() : 'N/D';
                     const cf = anag?.codice_fiscale || 'N/D';
-                    const dataScad = doc.data_scadenza ? new Date(doc.data_scadenza).toLocaleDateString('it-IT') : 'N/D';
+                    const dataScad = doc.data_scadenza ? formatToItalianDate(doc.data_scadenza) : 'N/D';
                     const tipoDoc = doc.tipo_documento || 'PERSONALE';
-                    const dataCar = new Date(doc.created_at).toLocaleDateString('it-IT');
+                    const dataCar = doc.created_at ? formatToItalianDate(doc.created_at) : 'N/D';
                     const note = doc.note_ai || '';
 
                     return `
                         <div class="border border-white/10 p-4 bg-black/30 space-y-3" data-doc-id="${doc.id}">
                             <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-xs font-headline font-bold text-white uppercase">${nomeCognome}</p>
-                                    <p class="text-[9px] text-gray-400 font-mono">${cf} — ${tipoDoc} — Caricato il ${dataCar}</p>
-                                    <p class="text-[9px] text-gray-400">Scadenza doc: <span class="text-amber-300">${dataScad}</span></p>
-                                    ${note ? `<p class="text-[9px] text-amber-400 mt-1">AI: "${note}"</p>` : ''}
+                                <div class="flex-1">
+                                    <p class="text-xs font-headline font-bold text-white uppercase">${escapeHtml(nomeCognome)}</p>
+                                    <p class="text-[9px] text-gray-400 font-mono">${escapeHtml(cf)} — ${escapeHtml(tipoDoc)} — Caricato il ${escapeHtml(dataCar)}</p>
+                                    <p class="text-[9px] text-gray-400">Scadenza doc: <span class="text-amber-300">${escapeHtml(dataScad)}</span></p>
+                                    ${renderDocModificheBox(note, doc.stato_validazione)}
                                 </div>
-                                <span class="px-1.5 py-0.5 text-[8px] ${note.toLowerCase().includes('revisione') ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40' : 'bg-amber-900 text-amber-300'} font-headline font-bold rounded uppercase shrink-0">${note.toLowerCase().includes('revisione') ? 'REVISIONE RICHIESTA' : doc.stato_validazione}</span>
+                                <span class="px-1.5 py-0.5 text-[8px] ${note.toLowerCase().includes('revisione') || doc.stato_validazione === 'GIALLO' ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40' : 'bg-amber-900 text-amber-300'} font-headline font-bold rounded uppercase shrink-0">${note.toLowerCase().includes('revisione') ? 'REVISIONE RICHIESTA' : escapeHtml(doc.stato_validazione)}</span>
                             </div>
                             <div class="flex gap-2 flex-wrap">
                                 ${doc.file_url ? `<button onclick="openSignedFile('${doc.tipo_documento === 'TUTORE' ? 'documenti_tutori' : 'documenti_identita'}', '${escapeHtml(doc.file_url)}', this)" class="bg-blue-900 hover:bg-blue-700 active:scale-95 text-white text-[10px] font-headline font-bold px-3 py-1.5 uppercase transition-all flex items-center gap-1"><span class="material-symbols-outlined text-xs">visibility</span> VEDI DOCUMENTO</button>` : ''}
@@ -1853,6 +1899,7 @@
 
                         setTimeout(async () => {
                             await loadDocsAttesa();
+                            await loadApprovazioni();
                         }, 500);
 
                     } catch (err) {
@@ -1911,6 +1958,7 @@
                                 medico_rilascio,
                                 file_url,
                                 stato_validazione,
+                                revisionato_manualmente,
                                 note_ai,
                                 created_at
                             ),
@@ -1920,6 +1968,7 @@
                                 tipo_documento,
                                 file_url,
                                 stato_validazione,
+                                revisionato_manualmente,
                                 note_ai,
                                 data_scadenza,
                                 data_caricamento,
@@ -2295,11 +2344,28 @@
                     }
 
                     const eliminaBtn = canDelete ? `<button onclick="eliminaUtente('${item.anagrafica_id}', '${nome.replace(/'/g, "\\'")}')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-1 transition-all uppercase">ELIMINA</button>` : '';
+
+                    const docId = getIdDocInfo(anag);
+                    let docBadgeSociHtml = '';
+                    if (docId) {
+                        const docLabel = docId.stato_validazione === 'ROSSO' ? 'DOC RIFIUTATO' : (docId.stato_validazione === 'GIALLO' ? 'DOC REVISIONE' : 'DOC OK');
+                        const badgeColor = docId.stato_validazione === 'ROSSO' ? 'bg-primary/20 text-primary border-primary/30' : (docId.stato_validazione === 'GIALLO' ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40' : 'bg-green-500/10 text-green-400 border-green-500/20');
+                        docBadgeSociHtml = `
+                            <div class="mt-1 flex flex-col items-start gap-1">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${badgeColor}">${docLabel}</span>
+                                    ${docId.file_url ? `<a href="#" data-file-url="${escapeHtml(docId.file_url)}" class="approvazioni-view-id-btn underline text-blue-400 font-bold text-[9px] uppercase inline-flex items-center gap-0.5"><span class="material-symbols-outlined text-[10px]">badge</span>DOC. IDENTITÀ</a>` : ''}
+                                </div>
+                                ${renderDocModificheBox(docId.note_ai, docId.stato_validazione)}
+                            </div>
+                        `;
+                    }
                     
                     row.innerHTML = `
                         <td class="p-3 font-bold text-white">
                             ${nome}<br>
                             <span class="text-[9px] text-gray-500 font-light">Nascita: ${dataN} a ${escapeHtml(anag.comune_nascita || '')} (${escapeHtml(anag.provincia_nascita || '')})</span>
+                            ${docBadgeSociHtml}
                         </td>
                         <td class="p-3 text-gray-400 font-mono">${cf}</td>
                         <td class="p-3 text-xs lowercase">${contattiHtml}</td>
@@ -2310,6 +2376,14 @@
                             ${eliminaBtn}
                         </td>
                     `;
+                    const viewIdBtn = row.querySelector('.approvazioni-view-id-btn');
+                    if (viewIdBtn) {
+                        viewIdBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const url = e.currentTarget.getAttribute('data-file-url');
+                            openSignedFile('documenti_identita', url);
+                        });
+                    }
                     sociBody.appendChild(row);
                 });
             }
@@ -2351,9 +2425,26 @@
                     let docIdHtml = '<span class="text-gray-500 font-bold text-[9px]">-</span>';
                     const docId = getIdDocInfo(anag);
                     if (docId) {
+                        let docIdStatusLabel = '';
+                        let docIdColor = 'text-blue-400';
+                        if (docId.stato_validazione === 'ROSSO') {
+                            docIdColor = 'text-primary';
+                            docIdStatusLabel = '<span class="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">DOC RIFIUTATO</span>';
+                        } else if (docId.stato_validazione === 'GIALLO') {
+                            docIdColor = 'text-amber-400';
+                            docIdStatusLabel = '<span class="text-[8px] bg-amber-950/80 text-amber-300 border border-amber-500/40 px-1 py-0.5 rounded uppercase font-bold">DOC REVISIONE</span>';
+                        } else if (docId.stato_validazione === 'IN_ATTESA') {
+                            docIdColor = 'text-yellow-400';
+                            docIdStatusLabel = '<span class="text-[8px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">DOC ATTESA</span>';
+                        } else {
+                            docIdColor = 'text-green-400';
+                            docIdStatusLabel = '<span class="text-[8px] bg-green-500/10 text-green-400 border border-green-500/20 px-1 py-0.5 rounded uppercase font-bold">DOC OK</span>';
+                        }
                         docIdHtml = `
-                            <div class="mt-2 text-center border-t border-white/10 pt-2">
-                                <a href="#" data-file-url="${escapeHtml(docId.file_url)}" class="approvazioni-view-id-btn underline text-blue-400 font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">badge</span>DOC. IDENTITÀ</a>
+                            <div class="mt-2 text-center border-t border-white/10 pt-2 flex flex-col items-center gap-1">
+                                <a href="#" data-file-url="${escapeHtml(docId.file_url)}" class="approvazioni-view-id-btn underline ${docIdColor} font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-1 align-middle">badge</span>DOC. IDENTITÀ</a>
+                                ${docIdStatusLabel}
+                                ${renderDocModificheBox(docId.note_ai, docId.stato_validazione)}
                             </div>
                         `;
                     }
@@ -2381,7 +2472,8 @@
                         let statusLabel = '';
                         if (certInfo.stato_validazione === 'ROSSO') {
                             color = 'text-primary';
-                            statusLabel = '<span class="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">RIFIUTATO</span>';
+                            const labelRed = certInfo.revisionato_manualmente ? 'RIFIUTATO DIRETTIVO' : 'RIFIUTATO AI';
+                            statusLabel = `<span class="text-[9px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">${labelRed}</span>`;
                         } else if (certInfo.stato_validazione === 'GIALLO') {
                             color = 'text-yellow-500';
                             statusLabel = '<span class="text-[9px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">REVISIONE</span>';
@@ -2400,6 +2492,14 @@
                             ${docIdHtml}
                             ${csenFormsHtml}
                         `;
+                    } else {
+                        certHtml = `
+                            <div class="flex flex-col items-center gap-1 pb-2">
+                                <span class="text-primary font-bold text-[10px]">CERT: MANCANTE</span>
+                            </div>
+                            ${docIdHtml}
+                            ${csenFormsHtml}
+                        `;
                     }
 
                     let actionBtn = '';
@@ -2413,10 +2513,14 @@
                                 </div>
                             `;
                         } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
+                            const isAlreadyRed = certInfo.stato_validazione === 'ROSSO';
+                            const rifiutaBtn = !isAlreadyRed
+                                ? `<button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" class="bg-primary text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-red-600 transition-all uppercase">RIFIUTA CERT.</button>`
+                                : '';
                             mainBtn = `
                                 <div class="flex flex-col gap-1">
-                                    <button onclick="if(confirm('Procedere con l\\'approvazione manuale del certificato medico?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" class="bg-yellow-500 text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-500 hover:text-white transition-all uppercase">APPROVA CERT.</button>
-                                    <button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" class="bg-primary text-white font-headline text-[9px] font-bold px-3 py-1 hover:bg-red-600 transition-all uppercase">RIFIUTA CERT.</button>
+                                    <button onclick="if(confirm('Procedere con l\\'approvazione manuale del certificato medico?')) validaCertificatoManual('${certInfo.id}', 'VERDE')" class="bg-yellow-500 text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-500 hover:text-white transition-all uppercase">${isAlreadyRed ? 'FORZA APPROVA' : 'APPROVA CERT.'}</button>
+                                    ${rifiutaBtn}
                                 </div>
                             `;
                         } else {
@@ -2434,7 +2538,10 @@
                     }
 
                     row.innerHTML = `
-                        <td class="p-3 font-bold text-white">${nome}</td>
+                        <td class="p-3 font-bold text-white">
+                            ${nome}
+                            ${(docId && (docId.stato_validazione === 'GIALLO' || (docId.note_ai && docId.note_ai.toLowerCase().includes('modificat')))) ? `<div class="mt-1"><span class="px-1.5 py-0.5 text-[8px] font-bold rounded uppercase bg-amber-950/80 text-amber-300 border border-amber-500/40 inline-block">⚠ REVISIONE DOC RICHIESTA</span></div>` : ''}
+                        </td>
                         <td class="p-3 text-gray-400 font-mono">${cf}</td>
                         <td class="p-3 text-xs lowercase">${contattiHtml}</td>
                         <td class="p-3 text-gray-400">${escapeHtml(item.livello_copertura || 'BASE')}</td>
@@ -2530,6 +2637,9 @@
                             if (docId.stato_validazione === 'ROSSO') {
                                 docIdColor = 'text-primary';
                                 docIdStatusLabel = '<span class="text-[8px] bg-primary/10 text-primary border border-primary/20 px-1 py-0.5 rounded uppercase font-bold">DOC RIFIUTATO</span>';
+                            } else if (docId.stato_validazione === 'GIALLO') {
+                                docIdColor = 'text-amber-400';
+                                docIdStatusLabel = '<span class="text-[8px] bg-amber-950/80 text-amber-300 border border-amber-500/40 px-1 py-0.5 rounded uppercase font-bold">DOC REVISIONE</span>';
                             } else if (docId.stato_validazione === 'IN_ATTESA') {
                                 docIdColor = 'text-yellow-400';
                                 docIdStatusLabel = '<span class="text-[8px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-1 py-0.5 rounded uppercase font-bold">DOC ATTESA</span>';
@@ -2541,6 +2651,7 @@
                                 <div class="flex flex-col items-center gap-0.5 mt-1 border-t border-white/10 pt-1">
                                     <a href="#" data-file-url="${escapeHtml(docId.file_url)}" class="approvazioni-view-id-btn underline ${docIdColor} font-bold text-[9px] uppercase"><span class="material-symbols-outlined text-[10px] mr-0.5 align-middle">badge</span>DOC. IDENTITÀ</a>
                                     ${docIdStatusLabel}
+                                    ${renderDocModificheBox(docId.note_ai, docId.stato_validazione)}
                                 </div>
                             `;
                         }
@@ -2555,7 +2666,7 @@
                         let statoWarningHtml = '';
                         if ((docId && docId.stato_validazione === 'ROSSO') || (certInfo && certInfo.stato_validazione === 'ROSSO')) {
                             statoWarningHtml = `<div class="mt-1"><span class="px-1.5 py-0.5 border text-[8px] font-bold rounded uppercase text-red-400 bg-red-950/60 border-red-500/60 animate-pulse block">⚠ DOC/CERT RIFIUTATO</span></div>`;
-                        } else if ((docId && docId.stato_validazione === 'IN_ATTESA') || (certInfo && certInfo.stato_validazione === 'IN_ATTESA')) {
+                        } else if ((docId && (docId.stato_validazione === 'IN_ATTESA' || docId.stato_validazione === 'GIALLO')) || (certInfo && (certInfo.stato_validazione === 'IN_ATTESA' || certInfo.stato_validazione === 'GIALLO'))) {
                             statoWarningHtml = `<div class="mt-1"><span class="px-1.5 py-0.5 border text-[8px] font-bold rounded uppercase text-yellow-400 bg-yellow-950/60 border-yellow-500/60 block">⏳ NUOVO DOC DA VALIDARE</span></div>`;
                         }
 
@@ -2827,16 +2938,36 @@
                 const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
                 const { data: certs, error } = await supabaseClient
                     .from('certificati_medici')
-                    .select('id, tipologia, data_rilascio, data_scadenza, note_ai, file_url, stato_validazione, created_at, anagrafiche(nome, cognome, codice_fiscale)')
+                    .select('id, anagrafica_id, tipologia, data_rilascio, data_scadenza, note_ai, file_url, stato_validazione, revisionato_manualmente, created_at, anagrafiche(nome, cognome, codice_fiscale, registro_approvazioni(stato), registro_tesserati(stato_tesseramento))')
                     .not('file_url', 'is', null)
                     .neq('file_url', '')
                     .neq('file_url', 'fittizio')
+                    .eq('revisionato_manualmente', false)
                     .or(`stato_validazione.in.(GIALLO,IN_ATTESA),and(stato_validazione.eq.ROSSO,created_at.gte.${sevenDaysAgo})`)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
-                if (!certs || certs.length === 0) {
+                // Esclude candidati respinti dal Direttivo (senza tesseramento attivo) e deduplica per anagrafica
+                const filteredCerts = (certs || []).filter(cert => {
+                    const anag = cert.anagrafiche;
+                    const raList = Array.isArray(anag?.registro_approvazioni) ? anag.registro_approvazioni : [anag?.registro_approvazioni];
+                    const rtList = Array.isArray(anag?.registro_tesserati) ? anag.registro_tesserati : [anag?.registro_tesserati];
+                    const isSocioRespinto = raList.some(r => r?.stato === 'RESPINTO');
+                    const hasActiveTess = rtList.some(t => t?.stato_tesseramento === 'ATTIVO');
+                    if (isSocioRespinto && !hasActiveTess) return false;
+                    return true;
+                });
+
+                const seenAnag = new Set();
+                const visibleCerts = [];
+                for (const c of filteredCerts) {
+                    if (c.anagrafica_id && seenAnag.has(c.anagrafica_id)) continue;
+                    if (c.anagrafica_id) seenAnag.add(c.anagrafica_id);
+                    visibleCerts.push(c);
+                }
+
+                if (!visibleCerts || visibleCerts.length === 0) {
                     container.classList.add('hidden');
                     body.innerHTML = '';
                     return;
@@ -2844,7 +2975,7 @@
 
                 container.classList.remove('hidden');
 
-                body.innerHTML = certs.map(cert => {
+                body.innerHTML = visibleCerts.map(cert => {
                     const anag = cert.anagrafiche;
                     const nomeComp = escapeHtml(`${anag?.nome || ''} ${anag?.cognome || ''}`);
                     const cf = escapeHtml(anag?.codice_fiscale || 'N/D');
@@ -2997,9 +3128,13 @@
                 if (targetBtn) {
                     targetBtn.innerHTML = `<span class="material-symbols-outlined text-xs">check_circle</span> AGGIORNATO!`;
                 }
+                const gialloRow = document.querySelector(`tr[data-cert-id="${certId}"]`);
+                if (gialloRow) gialloRow.remove();
+
                 showToastNotification(`✓ Certificato medico impostato a ${nuovoStato} con successo!`);
 
                 setTimeout(() => {
+                    loadCertificatiGialli();
                     loadTesserati();
                     loadApprovazioni();
                 }, 500);
@@ -3337,7 +3472,9 @@
                         }
                     } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
                         actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'VERDE')" style="background:#eab308;color:#000;border:none;padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;margin-bottom:4px;">APPROVA CERT.</button>`;
-                        actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" style="background:rgba(223,41,62,0.2);color:#df293e;border:1px solid rgba(223,41,62,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">RIFIUTA CERT.</button>`;
+                        if (certInfo.stato_validazione !== 'ROSSO') {
+                            actionHtml += `<button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" style="background:rgba(223,41,62,0.2);color:#df293e;border:1px solid rgba(223,41,62,0.4);padding:10px 20px;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;cursor:pointer;min-height:44px;">RIFIUTA CERT.</button>`;
+                        }
                     }
                 } else if (tess.stato_tesseramento === 'SOSPESO' && typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                     if (certInfo && certInfo.stato_validazione !== 'VERDE') {
@@ -10641,7 +10778,7 @@ async function apriDossierTesserato(utente_id) {
             try {
                 const { data: docs } = await supabaseClient
                     .from('documenti_identita')
-                    .select('*')
+                    .select('id, tipo_documento, tipologia, file_url, stato_validazione, note_ai, data_scadenza, created_at')
                     .eq('anagrafica_id', ana.id)
                     .order('created_at', { ascending: false });
                 if (docs && docs.length > 0) {
@@ -10673,10 +10810,11 @@ async function apriDossierTesserato(utente_id) {
                             <span class="material-symbols-outlined text-[16px] text-gray-400">badge</span> Documento salvato
                             <span class="border ${badgeClass} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">${badgeLabel}</span>
                         </span>
-                        ${dataScad ? `<p class="text-[10px] text-gray-400 font-mono">Scadenza: ${dataScad}</p>` : ''}
+                        ${dataScad ? `<p class="text-[10px] text-gray-400 font-mono">Scadenza: ${escapeHtml(dataScad)}</p>` : ''}
                     </div>
                     <button onclick="openSignedFile('documenti_identita', '${escapeHtml(docUrl)}')" class="bg-primary/20 text-primary border border-primary/30 font-headline text-[10px] font-bold px-3 py-1 hover:bg-primary hover:text-white transition-all uppercase rounded">VEDI FILE</button>
                 </div>
+                ${renderDocModificheBox(docIdentita?.note_ai, stato)}
             `;
         } else {
             idContainer.innerHTML = `<span class="text-gray-500 text-xs italic flex items-center gap-2"><span class="material-symbols-outlined text-[16px]">warning</span> Nessun documento caricato</span>`;
@@ -10740,7 +10878,7 @@ async function apriDossierTesserato(utente_id) {
         if (ana) {
             const { data: certs, error: errCerts } = await supabaseClient
                 .from('certificati_medici')
-                .select('*')
+                .select('id, anagrafica_id, tipologia, data_rilascio, data_scadenza, note_ai, file_url, stato_validazione, revisionato_manualmente, created_at')
                 .eq('anagrafica_id', ana.id)
                 .order('created_at', { ascending: false });
             
@@ -10749,7 +10887,10 @@ async function apriDossierTesserato(utente_id) {
                     const scaduto = isCertificatoScaduto(c.data_scadenza);
                     if (!scaduto && c.stato_validazione === 'VERDE') hasActiveCert = true;
                     let valBadgeHtml = '';
-                    if (c.stato_validazione === 'ROSSO') valBadgeHtml = '<span class="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">RIFIUTATO</span>';
+                    if (c.stato_validazione === 'ROSSO') {
+                        const labelRed = c.revisionato_manualmente ? 'RIFIUTATO DIRETTIVO' : 'RIFIUTATO AI';
+                        valBadgeHtml = `<span class="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">${labelRed}</span>`;
+                    }
                     else if (c.stato_validazione === 'GIALLO') valBadgeHtml = '<span class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">ATTESA REVISIONE</span>';
                     else if (c.stato_validazione === 'VERDE') valBadgeHtml = '<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded text-[9px] font-bold ml-2">VALIDATO</span>';
                     
@@ -10769,6 +10910,10 @@ async function apriDossierTesserato(utente_id) {
                         ? `<span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-headline text-[9px] font-bold px-2.5 py-1 rounded flex-shrink-0 uppercase">FILE NON DISPONIBILE (CARTACEO)</span>`
                         : `<button onclick="openSignedFile('certificati_medici', '${escapeHtml(c.file_url)}')" class="bg-white/10 text-white font-headline text-[10px] font-bold px-3 py-1 hover:bg-white/20 transition-all uppercase rounded flex-shrink-0">VEDI FILE</button>`;
 
+                    const noteAiHtml = c.note_ai 
+                        ? `<div class="text-[9px] text-red-300 font-mono mt-0.5">${c.revisionato_manualmente ? 'Direttivo:' : '🤖 AI:'} "${escapeHtml(c.note_ai)}"</div>`
+                        : '';
+
                     certHtml += `
                         <div class="flex items-center justify-between border-b border-white/5 pb-2 mb-2 last:border-0 last:pb-0 last:mb-0">
                             <div>
@@ -10777,6 +10922,7 @@ async function apriDossierTesserato(utente_id) {
                                     ${statusBadge}
                                 </div>
                                 <div class="text-[10px] text-gray-400 mt-1">Scadenza: ${escapeHtml(formatToItalianDate(c.data_scadenza))}</div>
+                                ${noteAiHtml}
                                 ${adminDossierBtns}
                             </div>
                             ${viewFileBtnHtml}

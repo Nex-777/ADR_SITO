@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { sendEmail } from './_utils/resend-mail.js';
-import { verifyPrecheck, normalizeText } from './_utils/precheck-token.js';
+import { verifyPrecheck, normalizeText, evaluateDocumentAnagrafica, escapeTelegramHtml } from './_utils/precheck-token.js';
 import { sendTelegramAlert } from './_utils/telegram-bot.js';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
@@ -296,7 +296,7 @@ export default async function handler(req, res) {
         let docStato = 'IN_ATTESA';
         let docNote = null;
         let anagraficaMismatch = false;
-        let mismatchMotivi = [];
+        let docEvaluation = null;
 
         if (profile.documento_identita_url) {
             let docScadenza = profile.documento_identita_scadenza || null;
@@ -306,46 +306,14 @@ export default async function handler(req, res) {
                 if (verifiedDoc && verifiedDoc.kind === 'doc') {
                     if (verifiedDoc.data_scadenza) docScadenza = verifiedDoc.data_scadenza;
 
-                    // Controllo severo anti-tamper: verifica corrispondenza tra dati profilo e token autenticato
-                    if (verifiedDoc.codice_fiscale) {
-                        const tokenCf = verifiedDoc.codice_fiscale.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-                        const profileCf = (profile.codice_fiscale || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-                        if (tokenCf && profileCf && tokenCf !== profileCf) {
-                            anagraficaMismatch = true;
-                            mismatchMotivi.push(`CF (${profileCf} vs doc ${tokenCf})`);
-                        }
-                    }
+                    docEvaluation = evaluateDocumentAnagrafica(profile, verifiedDoc, {
+                        docModificatoManualmente: Boolean(doc_modificato_manualmente),
+                        docRevisioneUmana: Boolean(doc_revisione_umana)
+                    });
 
-                    if (verifiedDoc.cognome) {
-                        const tokenCognome = normalizeText(verifiedDoc.cognome);
-                        const profileCognome = normalizeText(profile.cognome);
-                        if (tokenCognome && profileCognome && tokenCognome !== profileCognome) {
-                            anagraficaMismatch = true;
-                            mismatchMotivi.push(`Cognome (${profile.cognome} vs doc ${verifiedDoc.cognome})`);
-                        }
-                    }
-
-                    if (verifiedDoc.nome) {
-                        const tokenNome = normalizeText(verifiedDoc.nome);
-                        const profileNome = normalizeText(profile.nome);
-                        if (tokenNome && profileNome && tokenNome !== profileNome) {
-                            anagraficaMismatch = true;
-                            mismatchMotivi.push(`Nome (${profile.nome} vs doc ${verifiedDoc.nome})`);
-                        }
-                    }
-
-                    if (doc_modificato_manualmente || anagraficaMismatch) {
-                        docStato = 'GIALLO';
-                        docNote = anagraficaMismatch
-                            ? `Dati anagrafici discordanti rispetto al documento autenticato: ${mismatchMotivi.join('; ')}. Richiesta revisione manuale del Direttivo.`
-                            : 'Dati anagrafici modificati manualmente dall\'utente rispetto a quanto rilevato dal documento. Richiesta revisione manuale del Direttivo.';
-                    } else if (doc_revisione_umana || verifiedDoc.esito !== 'VERDE') {
-                        docStato = 'GIALLO';
-                        docNote = verifiedDoc.note ? `Revisione manuale richiesta. Nota AI: ${verifiedDoc.note}` : 'Revisione manuale richiesta dall\'utente.';
-                    } else if (verifiedDoc.esito === 'VERDE') {
-                        docStato = 'VERDE';
-                        docNote = verifiedDoc.note || 'Documento identità validato con successo da Mistral AI';
-                    }
+                    docStato = docEvaluation.docStato;
+                    docNote = docEvaluation.docNote;
+                    anagraficaMismatch = docEvaluation.anagraficaMismatch;
                 }
             } else if (doc_modificato_manualmente) {
                 docStato = 'GIALLO';
@@ -471,7 +439,7 @@ export default async function handler(req, res) {
                 <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
                     <h1 style="color: #df293e; font-size: 22px;">ADRENALINA CLUB</h1>
                     <p style="color: #ccc;">Ciao ${profile.nome}, la tua richiesta di tesseramento sportivo CSEN è stata registrata con successo.</p>
-                    <p style="color: #aaa; font-size: 13px;">${isCertVerde ? "Il tuo certificato medico è stato verificato con successo! Puoi procedere direttamente al pagamento della quota per attivare la tua tessera." : "I nostri sistemi o la segreteria stanno verificando la validità del certificato medico da te caricato. Riceverai un'e-mail non appena il certificato sarà approvato."}</p>
+                    <p style="color: #aaa; font-size: 13px;">${(isCertVerde && docStato === 'VERDE') ? "I tuoi documenti (certificato medico e documento d'identità) sono stati verificati con successo! Puoi procedere direttamente al pagamento della quota per attivare la tua tessera." : "I nostri sistemi o la segreteria stanno verificando la validità della documentazione caricata. Riceverai un'e-mail non appena la verifica sarà approvata."}</p>
                 </div>
             `;
         }
@@ -761,25 +729,41 @@ export default async function handler(req, res) {
 
         // 8. Notifica Telegram ad ADR_BOT per pratiche in attesa di approvazione / bloccate
         try {
-            const escapeTg = (text) => {
-                if (!text) return '';
-                return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            };
+            const escapeTg = escapeTelegramHtml;
 
             const motiviBlocco = [];
+            const diffLines = docEvaluation?.formattedDiffLines || [];
+
             if (anagraficaMismatch) {
-                motiviBlocco.push(`Dati anagrafici discordanti rispetto al documento autenticato (${mismatchMotivi.join(', ')})`);
+                let motivo = 'Dati anagrafici discordanti rispetto al documento autenticato (anti-bypass)';
+                if (diffLines.length > 0) {
+                    motivo += ':\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
+                }
+                motiviBlocco.push(motivo);
             } else if (doc_modificato_manualmente) {
-                motiviBlocco.push("Dati anagrafici modificati manualmente rispetto al documento");
+                let motivo = 'Dati anagrafici modificati manualmente rispetto al documento';
+                if (diffLines.length > 0) {
+                    motivo += ':\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
+                }
+                motiviBlocco.push(motivo);
+            } else if (docStato === 'GIALLO') {
+                let motivo = `Documento identità in revisione (${escapeTg(docNote || 'Dubbio AI')})`;
+                if (diffLines.length > 0) {
+                    motivo += '\n  Differenze rilevate:\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
+                }
+                motiviBlocco.push(motivo);
             }
-            if (docStato === 'GIALLO' && !anagraficaMismatch && !doc_modificato_manualmente) {
-                motiviBlocco.push(`Documento identità in revisione (${docNote || 'Dubbio AI'})`);
-            }
+
             if (profile.certificato_medico_url && certStato !== 'VERDE') {
-                motiviBlocco.push(`Certificato medico in revisione (${certNote || 'Dubbio AI'})`);
+                motiviBlocco.push(`Certificato medico in revisione (${escapeTg(certNote || 'Dubbio AI')})`);
             }
             if (adesione === 'socio' || adesione === 'socio_tesserato') {
-                motiviBlocco.push("Richiesta ammissione socio in attesa di delibera del Direttivo");
+                motiviBlocco.push('Richiesta ammissione socio in attesa di delibera del Direttivo');
+            }
+
+            // Se la notifica parte per socio o cert ma ci sono modifiche di residenza tracciate
+            if (motiviBlocco.length > 0 && !anagraficaMismatch && !doc_modificato_manualmente && diffLines.length > 0 && docStato === 'VERDE') {
+                motiviBlocco.push('Variazioni residenza rispetto al documento:\n  ' + diffLines.map(d => escapeTg(d)).join('\n  '));
             }
 
             if (motiviBlocco.length > 0) {
@@ -788,7 +772,7 @@ export default async function handler(req, res) {
                     `👤 <b>Atleta:</b> ${escapeTg(profile.nome)} ${escapeTg(profile.cognome)}\n` +
                     `📄 <b>Codice Fiscale:</b> <code>${escapeTg(cf)}</code>\n` +
                     `🎯 <b>Tipo Adesione:</b> ${escapeTg(adesione.toUpperCase())}\n` +
-                    `⚠️ <b>Motivo:</b>\n• ${motiviBlocco.map(m => escapeTg(m)).join('\n• ')}\n\n` +
+                    `⚠️ <b>Motivo:</b>\n• ${motiviBlocco.join('\n• ')}\n\n` +
                     `📅 <b>Data/Ora:</b> ${nowStr}\n\n` +
                     `👉 <i>Accedi al portale direttivo per verificare la pratica.</i>`;
 

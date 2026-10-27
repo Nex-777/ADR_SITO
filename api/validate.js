@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Mistral } from '@mistralai/mistralai';
 import { sendEmail } from './_utils/resend-mail.js';
 import { signPrecheck, matchIntestatario, isValidCodiceFiscale } from './_utils/precheck-token.js';
+import { sendTelegramAlert, escapeTelegramHtml } from './_utils/telegram-bot.js';
+import { evaluateMedicalCertificate, formatToItalianDate, normalizeIsoDate } from './_utils/cert-evaluator.js';
 
 // ═══════════════════════════════════════════════════════════════════
 //  /api/validate  —  Endpoint unificato di validazione AI
@@ -91,9 +93,15 @@ export default async function handler(req, res) {
         const todayStr = new Date().toISOString().split('T')[0];
 
         if (targetType === 'precheck_cert') {
-            const prompt = `Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date).
+            const prompt = `Oggi è il ${todayStr} (data odierna di riferimento).
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
 Sto per fornirti l'immagine di un certificato medico.
+
+REGOLE CRITICHE SUL FORMATO DATE ITALIANO:
+1. In Italia le date sui certificati medici sono scritte in formato GG/MM/AAAA (es. "23/10/2026" significa 23 Ottobre 2026).
+2. Non confondere MAI il giorno a due cifre (es. 23) con l'anno (es. 2023).
+3. Non confondere la data di nascita dell'atleta con la data di rilascio del certificato.
+4. Se il certificato indica "validità annuale dalla data di rilascio" o "validità 1 anno", la scadenza è esattamente 1 anno dopo la data di rilascio.
 
 REQUISITO FONDAMENTALE SULLE DICITURE DI IDONEITÀ:
 Affinché il certificato sia valido per il tesseramento sportivo, sul documento DEVE ESSERE PRESENTE IN MODO CHIARO ED ESPLICITO almeno una delle seguenti parole/diciture (senza distinzione tra maiuscole e minuscole):
@@ -106,14 +114,16 @@ Se il certificato NON contiene nessuna di queste parole esplicite (ad esempio se
 
 Devi estrarre le seguenti informazioni in formato JSON STRICT:
 1. data_emissione (formato YYYY-MM-DD, la data in cui il certificato è stato rilasciato, null se non leggibile)
-2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato, null se non leggibile)
+2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato, null se non specificata/leggibile)
 3. agonistico (booleano, true se specifica idoneità agonistica, false se specifica non agonistica)
-4. stato (stringa: "VERDE" se il certificato è originale, ben leggibile e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se l'immagine è sfuocata, tagliata o c'è qualcosa di incomprensibile o manca la scadenza; "ROSSO" se il certificato non contiene la dicitura obbligatoria o è palesemente non medico o scaduto).
+4. stato (stringa: "VERDE" se il certificato è originale, ben leggibile e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se l'immagine è sfuocata, tagliata o mancano elementi certi; "ROSSO" se il certificato non contiene la dicitura obbligatoria o è non conforme).
 5. note (una breve spiegazione del perché hai assegnato quello stato).
 6. intestatario_rilevato (stringa: nome e cognome del paziente/atleta indicato sul certificato, null se non leggibile).
+7. diciture_idoneita_presenti (booleano: true se contiene chiaramente AGONISTICO o NON AGONISTICO, false se ludico-motoria o non sportivo).
+8. validita_annuale_indicata (booleano: true se specificata validità annuale).
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote:
-{"data_emissione": "2026-10-01", "data_scadenza": "2027-10-01", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico valido.", "intestatario_rilevato": "Mario Rossi"}`;
+{"data_emissione": "2026-10-15", "data_scadenza": "2027-10-15", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico valido.", "intestatario_rilevato": "Mario Rossi", "diciture_idoneita_presenti": true, "validita_annuale_indicata": true}`;
 
             try {
                 const content = [{ type: 'text', text: prompt }];
@@ -132,36 +142,14 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote:
                     .replace(/```json/g, '').replace(/```/g, '').trim();
                 const aiResult = JSON.parse(responseText);
 
-                let finalStatus = aiResult.stato || 'GIALLO';
-                let finalNotes = aiResult.note || 'Analisi completata';
-                let finalRelease = aiResult.data_emissione || null;
-                let finalExpiry = aiResult.data_scadenza || null;
-                let finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
+                const evaluation = evaluateMedicalCertificate({ aiResult });
+                let finalStatus = evaluation.finalStatus;
+                let finalNotes = evaluation.finalNotes;
+                let finalRelease = evaluation.finalRelease;
+                let finalExpiry = evaluation.finalExpiry;
+                let finalType = evaluation.finalType;
 
-                // Guardrail 1: Scadenza mancante -> GIALLO (rigoroso: nessuna estrapolazione arbitraria)
-                if (!finalExpiry) {
-                    if (finalStatus === 'VERDE') finalStatus = 'GIALLO';
-                    finalNotes = `Data di scadenza non chiaramente indicata sul documento. Richiesta revisione manuale. (${finalNotes})`;
-                } else {
-                    const expiryDate = new Date(finalExpiry);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (expiryDate < today) {
-                        finalStatus = 'ROSSO';
-                        finalNotes = `Certificato medico scaduto il ${finalExpiry}.`;
-                    } else {
-                        const rawLower = (finalNotes + ' ' + (aiResult.note || '')).toLowerCase();
-                        const isFacsimile = rawLower.includes('facsimile') || rawLower.includes('fac-simile') || rawLower.includes('specimen') || rawLower.includes('campione');
-                        if (isFacsimile) {
-                            finalStatus = 'ROSSO';
-                            finalNotes = 'Certificato non valido: rilevata dicitura facsimile/copia.';
-                        } else if (finalStatus === 'ROSSO' && /scadut/i.test(finalNotes)) {
-                            finalNotes = 'Certificato non conforme: idoneità o requisiti non validi ai fini sportivi.';
-                        }
-                    }
-                }
-
-                // Guardrail 2: Controllo corrispondenza intestatario
+                // Guardrail: Controllo corrispondenza intestatario
                 if (aiResult.intestatario_rilevato && (nome || cognome)) {
                     const isMatch = matchIntestatario(aiResult.intestatario_rilevato, nome, cognome);
                     if (!isMatch) {
@@ -233,16 +221,18 @@ Devi estrarre queste informazioni con la massima accuratezza in formato JSON STR
 2. nome (stringa: il solo nome dell'intestatario, es. "MARIO", oppure null se non leggibile)
 3. cognome (stringa: il solo cognome dell'intestatario, es. "ROSSI", oppure null se non leggibile)
 4. codice_fiscale (stringa di 16 caratteri alfanumerici in maiuscolo, es. "RSSMRA85M01H501Z", oppure null se non presente o non leggibile)
-5. data_scadenza (formato YYYY-MM-DD, null se non leggibile)
-6. indirizzo_residenza (stringa con via/piazza e civico, es. "VIA DEI MILLE 12", oppure null se non presente come su patenti europee o non leggibile)
-7. comune_residenza (stringa con il solo nome del comune, es. "ROMA", oppure null se non presente o non leggibile)
-8. leggibile (booleano)
-9. stato (stringa: "VERDE" se il documento è autentico, originale, valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o mancano dati certi; "ROSSO" se l'immagine è un facsimile/specimen, non è un documento d'identità valido o la data di scadenza è già passata rispetto a oggi)
-10. note (breve spiegazione coerente)
-11. intestatario_rilevato (stringa: nome e cognome dell'intestatario riportato sul documento, o null se non leggibile)
+5. data_nascita (formato YYYY-MM-DD, null se non presente o non leggibile)
+6. luogo_nascita (stringa con comune o stato estero di nascita, es. "PESCARA", oppure null se non leggibile o assente)
+7. data_scadenza (formato YYYY-MM-DD, null se non leggibile)
+8. indirizzo_residenza (stringa con via/piazza e civico, es. "VIA DEI MILLE 12", oppure null se non presente come su patenti europee o non leggibile)
+9. comune_residenza (stringa con il solo nome del comune, es. "ROMA", oppure null se non presente o non leggibile)
+10. leggibile (booleano)
+11. stato (stringa: "VERDE" se il documento è autentico, originale, valido e ben leggibile; "GIALLO" se l'immagine è sfuocata, tagliata o mancano dati certi; "ROSSO" se l'immagine è un facsimile/specimen, non è un documento d'identità valido o la data di scadenza è già passata rispetto a oggi)
+12. note (breve spiegazione coerente)
+13. intestatario_rilevato (stringa: nome e cognome dell'intestatario riportato sul documento, o null se non leggibile)
 
 Rispondi SOLO con il JSON senza markdown:
-{"tipo_documento":"CARTA_IDENTITA","nome":"MARIO","cognome":"ROSSI","codice_fiscale":"RSSMRA85M01H501Z","data_scadenza":"2029-05-10","indirizzo_residenza":"VIA DEI MILLE 12","comune_residenza":"ROMA","leggibile":true,"stato":"VERDE","note":"Documento d'identità valido e ben leggibile.","intestatario_rilevato":"MARIO ROSSI"}`;
+{"tipo_documento":"CARTA_IDENTITA","nome":"MARIO","cognome":"ROSSI","codice_fiscale":"RSSMRA85M01H501Z","data_nascita":"1985-08-01","luogo_nascita":"ROMA","data_scadenza":"2029-05-10","indirizzo_residenza":"VIA DEI MILLE 12","comune_residenza":"ROMA","leggibile":true,"stato":"VERDE","note":"Documento d'identità valido e ben leggibile.","intestatario_rilevato":"MARIO ROSSI"}`;
 
             try {
                 const content = [{ type: 'text', text: prompt }];
@@ -269,6 +259,8 @@ Rispondi SOLO con il JSON senza markdown:
                 let extractedNome = (aiResult.nome || '').trim() || null;
                 let extractedCognome = (aiResult.cognome || '').trim() || null;
                 let extractedCodiceFiscale = (aiResult.codice_fiscale || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase() || null;
+                let extractedDataNascita = (aiResult.data_nascita || '').trim() || null;
+                let extractedLuogoNascita = (aiResult.luogo_nascita || '').trim() || null;
                 
                 if (extractedCodiceFiscale) {
                     if (extractedCodiceFiscale.length === 16 && isValidCodiceFiscale(extractedCodiceFiscale)) {
@@ -346,9 +338,11 @@ Rispondi SOLO con il JSON senza markdown:
                     tipo_documento: finalDocType,
                     data_scadenza: finalExpiry,
                     sha256_file,
-                    nome: extractedNome || nome,
-                    cognome: extractedCognome || cognome,
+                    nome: extractedNome,
+                    cognome: extractedCognome,
                     codice_fiscale: extractedCodiceFiscale,
+                    data_nascita: extractedDataNascita,
+                    luogo_nascita: extractedLuogoNascita,
                     indirizzo_residenza: extractedIndirizzo,
                     comune_residenza: extractedComune,
                     note: finalNotes
@@ -362,6 +356,8 @@ Rispondi SOLO con il JSON senza markdown:
                     nome: extractedNome,
                     cognome: extractedCognome,
                     codice_fiscale: extractedCodiceFiscale,
+                    data_nascita: extractedDataNascita,
+                    luogo_nascita: extractedLuogoNascita,
                     indirizzo_residenza: extractedIndirizzo,
                     comune_residenza: extractedComune,
                     note: finalNotes,
@@ -377,9 +373,11 @@ Rispondi SOLO con il JSON senza markdown:
                     tipo_documento: 'CARTA_IDENTITA',
                     data_scadenza: null,
                     sha256_file,
-                    nome,
-                    cognome,
+                    nome: (nome || '').trim() || null,
+                    cognome: (cognome || '').trim() || null,
                     codice_fiscale: null,
+                    data_nascita: null,
+                    luogo_nascita: null,
                     indirizzo_residenza: null,
                     comune_residenza: null,
                     note: fallbackNotes
@@ -392,6 +390,8 @@ Rispondi SOLO con il JSON senza markdown:
                     nome: null,
                     cognome: null,
                     codice_fiscale: null,
+                    data_nascita: null,
+                    luogo_nascita: null,
                     indirizzo_residenza: null,
                     comune_residenza: null,
                     note: fallbackNotes,
@@ -495,6 +495,19 @@ Rispondi SOLO con il JSON senza markdown:
 
             if (!targetAnagraficaId) return res.status(400).json({ error: 'Parametri mancanti: anagrafica_id o cert_id non validi.' });
 
+            // Concurrency guard per esecuzioni parallele (trigger DB + fetch client): claim atomico su IN_ATTESA
+            if (!isManual && cert_id) {
+                const { data: checkCert } = await supabase
+                    .from('certificati_medici')
+                    .select('stato_validazione, data_rilascio')
+                    .eq('id', cert_id)
+                    .maybeSingle();
+                if (checkCert && checkCert.stato_validazione !== 'IN_ATTESA') {
+                    console.log(`[CERT AI] Certificato ${cert_id} già processato (${checkCert.stato_validazione}). Skip.`);
+                    return res.status(200).json({ message: 'Certificato già elaborato.', stato: checkCert.stato_validazione });
+                }
+            }
+
             let finalStatus = 'GIALLO';
             let finalNotes = '';
             let finalRelease = null;
@@ -550,7 +563,8 @@ Rispondi SOLO con il JSON senza markdown:
                         console.warn(`[CERT AI] Miniatura non trovata per: ${relativePath}. Fallback a GIALLO per revisione manuale.`);
                         await supabase.from('certificati_medici').update({
                             stato_validazione: 'GIALLO',
-                            note_ai: 'File PDF senza miniatura. Richiesta revisione manuale.'
+                            note_ai: 'File PDF senza miniatura. Richiesta revisione manuale.',
+                            revisionato_manualmente: false
                         }).eq('id', cert_id);
                         return res.status(200).json({ message: 'Miniatura mancante, impostato a GIALLO.' });
                     }
@@ -583,11 +597,15 @@ Rispondi SOLO con il JSON senza markdown:
                     const mistral = new Mistral({ apiKey: mistralApiKey });
                     const todayStr = new Date().toISOString().split('T')[0];
                     const prompt = `
-Oggi è il ${todayStr} (fornita come riferimento contestuale per il formato delle date — NON usarla per calcolare se il certificato è scaduto, la verifica temporale è delegata a un sistema separato).
+Oggi è il ${todayStr} (data odierna di riferimento per il formato delle date).
 Sei un assistente medico-legale esperto in certificati medici sportivi italiani.
-Sto per fornirti un'immagine di un certificato medico.
+Sto per fornirti l'immagine di un certificato medico.
 
-Devi estrarre le date esatte scritte sul documento. Ignora qualsiasi altra informazione esterna.
+REGOLE CRITICHE SUL FORMATO DATE ITALIANO:
+1. In Italia le date sui certificati medici sono scritte in formato GG/MM/AAAA (es. "23/10/2026" significa 23 Ottobre 2026).
+2. Non confondere MAI il giorno a due cifre (es. 23) con l'anno (es. 2023).
+3. Non confondere la data di nascita dell'atleta/paziente con la data di rilascio o di scadenza del certificato.
+4. Se il certificato indica "validità annuale dalla data di rilascio" o "ha validità di 1 anno", la scadenza è esattamente 1 anno dopo la data di rilascio.
 
 REQUISITO FONDAMENTALE SULLE DICITURE DI IDONEITÀ:
 Affinché il certificato sia valido per il tesseramento sportivo, sul documento DEVE ESSERE PRESENTE IN MODO CHIARO ED ESPLICITO almeno una delle seguenti parole/diciture (senza distinzione tra maiuscole e minuscole):
@@ -600,13 +618,15 @@ Se il certificato NON contiene nessuna di queste parole esplicite (ad esempio se
 
 Devi estrarre le seguenti informazioni in formato JSON STRICT:
 1. data_emissione (formato YYYY-MM-DD, la data in cui il certificato è stato rilasciato, null se non leggibile)
-2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato, null se non leggibile)
+2. data_scadenza (formato YYYY-MM-DD, la data in cui scade la validità del certificato, null se non specificata/leggibile)
 3. agonistico (booleano, true se specifica idoneità agonistica, false se specifica non agonistica)
-4. stato (stringa: "VERDE" se il certificato è originale, ben leggibile e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se l'immagine è sfuocata, tagliata o c'è qualcosa di incomprensibile; "ROSSO" se il certificato non contiene la dicitura obbligatoria o non è un certificato medico).
+4. stato (stringa: "VERDE" se il certificato è originale, ben leggibile e contiene esplicitamente una delle diciture obbligatorie AGONISTICO/NON AGONISTICO; "GIALLO" se l'immagine è sfuocata, tagliata o mancano elementi certi; "ROSSO" se il certificato non contiene la dicitura obbligatoria o è non conforme).
 5. note (una breve spiegazione del perché hai assegnato quello stato).
+6. diciture_idoneita_presenti (booleano: true se contiene chiaramente AGONISTICO o NON AGONISTICO, false se ludico-motoria o non sportivo).
+7. validita_annuale_indicata (booleano: true se specificata validità annuale).
 
 Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
-{"data_emissione": "2025-10-15", "data_scadenza": "2026-10-14", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico leggibile e ben fotografato."}
+{"data_emissione": "2026-10-15", "data_scadenza": "2027-10-15", "agonistico": false, "stato": "VERDE", "note": "Certificato non agonistico leggibile e valido.", "diciture_idoneita_presenti": true, "validita_annuale_indicata": true}
                     `;
 
                     const response = await mistral.chat.complete({
@@ -626,31 +646,20 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     console.log('[CERT AI] Mistral response length:', responseText.length);
                     const aiResult = JSON.parse(responseText);
 
-                    finalStatus = aiResult.stato || 'GIALLO';
-                    finalNotes = aiResult.note || 'Impossibile interpretare la risposta AI';
-                    finalRelease = aiResult.data_emissione || new Date().toISOString().split('T')[0];
-                    finalType = aiResult.agonistico ? 'AGONISTICO' : 'NON_AGONISTICO';
-
-                    if (aiResult.data_scadenza) {
-                        finalExpiry = aiResult.data_scadenza;
-                    } else {
-                        // Se l'AI non trova la data di scadenza esplicita, autocalcola 1 anno dalla data di rilascio
-                        const relDate = new Date(finalRelease);
-                        relDate.setFullYear(relDate.getFullYear() + 1);
-                        finalExpiry = relDate.toISOString().split('T')[0];
+                    // Recupera data_rilascio dichiarata salvata al momento dell'upload
+                    let declaredEmissionDate = null;
+                    if (cert_id) {
+                        const { data: cRow } = await supabase.from('certificati_medici').select('data_rilascio').eq('id', cert_id).maybeSingle();
+                        if (cRow?.data_rilascio) declaredEmissionDate = cRow.data_rilascio;
                     }
 
-                    // Guardrail Deterministico Javascript su Date Scadenza Certificati
-                    if (finalExpiry) {
-                        const expiryDate = new Date(finalExpiry);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
+                    const evaluation = evaluateMedicalCertificate({ aiResult, declaredEmissionDate });
+                    finalStatus = evaluation.finalStatus;
+                    finalNotes = evaluation.finalNotes;
+                    finalRelease = evaluation.finalRelease;
+                    finalExpiry = evaluation.finalExpiry;
+                    finalType = evaluation.finalType;
 
-                        if (expiryDate < today) {
-                            finalStatus = 'ROSSO';
-                            finalNotes = `Certificato scaduto il ${finalExpiry}. (Nota AI: ${finalNotes})`;
-                        }
-                    }
                 } catch (aiErr) {
                     console.error('[CERT AI ERROR] Fallback a GIALLO:', aiErr.message);
                     finalStatus = 'GIALLO';
@@ -658,12 +667,29 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 }
             }
 
-            const updatePayload = { stato_validazione: finalStatus, note_ai: finalNotes, data_rilascio: finalRelease, data_scadenza: finalExpiry, tipologia: finalType };
+            const isManualReview = isManual === true;
+            const updatePayload = { 
+                stato_validazione: finalStatus, 
+                note_ai: finalNotes, 
+                data_rilascio: finalRelease, 
+                data_scadenza: finalExpiry, 
+                tipologia: finalType,
+                revisionato_manualmente: isManualReview
+            };
             let dbQuery = supabase.from('certificati_medici').update(updatePayload);
             dbQuery = cert_id ? dbQuery.eq('id', cert_id) : dbQuery.eq('anagrafica_id', targetAnagraficaId);
             const { error: updateError } = await dbQuery;
             if (updateError) throw updateError;
-            console.log(`[CERT VALIDATION] Updated. cert_id: ${cert_id || 'N/A'}, stato: ${finalStatus}`);
+            console.log(`[CERT VALIDATION] Updated. cert_id: ${cert_id || 'N/A'}, stato: ${finalStatus}, revisionato: ${isManualReview}`);
+
+            // Chiude eventuali altri certificati della stessa anagrafica rimasti aperti/non revisionati
+            if (targetAnagraficaId && cert_id) {
+                await supabase.from('certificati_medici')
+                    .update({ revisionato_manualmente: true })
+                    .eq('anagrafica_id', targetAnagraficaId)
+                    .neq('id', cert_id)
+                    .eq('revisionato_manualmente', false);
+            }
 
             // Post-validation notifications
             const { data: profile } = await supabase.from('anagrafiche')
@@ -673,6 +699,7 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
             if (profile) {
                 const userEmail = profile.utenti?.email;
                 const nomeUtente = profile.nome;
+                const cognomeUtente = profile.cognome || '';
                 const quota = parseFloat(profile.utenti?.quota_totale || 0);
                 const { data: approvazione } = await supabase.from('registro_approvazioni')
                     .select('stato').eq('anagrafica_id', targetAnagraficaId).maybeSingle();
@@ -690,12 +717,39 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 } else if (finalStatus === 'ROSSO') {
                     await supabase.from('registro_tesserati').update({ stato_tesseramento: 'SOSPESO' })
                         .eq('anagrafica_id', targetAnagraficaId).in('stato_tesseramento', ['ATTIVO', 'IN_ELABORAZIONE']);
-                    if (userEmail) {
-                        await sendEmail({
-                            to: userEmail,
-                            subject: 'Certificato Medico Non Valido - Tesseramento Sospeso',
-                            html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il certificato medico caricato è stato rifiutato.</p><p style="color:#aaa;font-size:13px">Motivazione: <strong>${finalNotes}</strong></p><p style="color:#f87171;font-size:13px;font-weight:bold;margin-top:15px">Il tuo tesseramento è stato temporaneamente SOSPESO. Carica al più presto un certificato medico in corso di validità (Non Agonistico o Agonistico) per riattivare il tuo profilo.</p><a href="https://portal.adrenalinaclub.it/portal/dashboard.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">RICARICA CERTIFICATO MEDICO</a></div>`
-                        });
+
+                    if (isManualReview) {
+                        // Singola email ufficiale del Direttivo con motivazione verificata
+                        if (userEmail && !req.body.silent_cascade) {
+                            await sendEmail({
+                                to: userEmail,
+                                subject: 'Certificato Medico Non Conforme - Tesseramento Sospeso',
+                                html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il certificato medico caricato è stato rifiutato.</p><p style="color:#aaa;font-size:13px">Motivazione del Direttivo: <strong>${finalNotes}</strong></p><p style="color:#f87171;font-size:13px;font-weight:bold;margin-top:15px">Il tuo tesseramento è stato temporaneamente SOSPESO. Carica al più presto un certificato medico in corso di validità (Non Agonistico o Agonistico) per riattivare il tuo profilo.</p><a href="https://portal.adrenalinaclub.it/portal/dashboard.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">RICARICA CERTIFICATO MEDICO</a></div>`
+                            });
+                        }
+                    } else {
+                        // Rilevamento automatico AI: NESSUNA email all'utente, solo alert push interno al Direttivo
+                        try {
+                            const tgMsg = `⚠️ <b>CERTIFICATO MEDICO BLOCCATO DALL'AI</b>\n\n` +
+                                `👤 <b>Atleta:</b> ${escapeTelegramHtml(nomeUtente)} ${escapeTelegramHtml(cognomeUtente)}\n` +
+                                `📄 <b>Esito:</b> 🔴 ROSSO\n` +
+                                `📝 <b>Motivo:</b> ${escapeTelegramHtml(finalNotes)}\n\n` +
+                                `<i>L'atleta non è stato notificato via email. Verifica nel Registro Approvazioni.</i>`;
+                            await sendTelegramAlert(tgMsg);
+                        } catch (tgErr) {
+                            console.warn('[CERT AI TELEGRAM] Alert error:', tgErr.message);
+                        }
+                    }
+                } else if (finalStatus === 'GIALLO' && !isManualReview) {
+                    try {
+                        const tgMsg = `🟡 <b>CERTIFICATO MEDICO IN REVISIONE</b>\n\n` +
+                            `👤 <b>Atleta:</b> ${escapeTelegramHtml(nomeUtente)} ${escapeTelegramHtml(cognomeUtente)}\n` +
+                            `📄 <b>Esito:</b> 🟡 GIALLO\n` +
+                            `📝 <b>Nota AI:</b> ${escapeTelegramHtml(finalNotes)}\n\n` +
+                            `<i>Revisione richiesta nel Registro Approvazioni.</i>`;
+                        await sendTelegramAlert(tgMsg);
+                    } catch (tgErr) {
+                        console.warn('[CERT AI TELEGRAM] Alert error:', tgErr.message);
                     }
                 }
             }
@@ -734,6 +788,19 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
             }
 
             if (!targetAnagraficaId) return res.status(400).json({ error: 'Parametri mancanti: anagrafica_id o doc_id non validi.' });
+
+            // Concurrency guard per esecuzioni parallele (trigger DB + fetch client): claim atomico su IN_ATTESA
+            if (!isManual && doc_id) {
+                const { data: checkDoc } = await supabase
+                    .from('documenti_identita')
+                    .select('stato_validazione')
+                    .eq('id', doc_id)
+                    .maybeSingle();
+                if (checkDoc && checkDoc.stato_validazione !== 'IN_ATTESA') {
+                    console.log(`[DOC AI] Documento ${doc_id} già processato (${checkDoc.stato_validazione}). Skip.`);
+                    return res.status(200).json({ message: 'Documento già elaborato.', stato: checkDoc.stato_validazione });
+                }
+            }
 
             let finalStatus = 'GIALLO';
             let finalNotes = '';
@@ -847,10 +914,16 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 }
             }
 
-            const updatePayload = { stato_validazione: finalStatus, note_ai: finalNotes };
+            const isManualReview = isManual === true;
+            const updatePayload = { 
+                stato_validazione: finalStatus, 
+                note_ai: finalNotes,
+                revisionato_manualmente: isManualReview
+            };
             if (finalExpiry) updatePayload.data_scadenza = finalExpiry;
 
             let dbQuery = supabase.from('documenti_identita').update(updatePayload);
+            let resolvedDocId = doc_id;
             if (doc_id) {
                 dbQuery = dbQuery.eq('id', doc_id);
             } else {
@@ -866,28 +939,49 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     console.warn('[DOC VALIDATION] Nessun doc IN_ATTESA trovato per anagrafica_id:', targetAnagraficaId);
                     return res.status(200).json({ message: 'Nessun documento IN_ATTESA trovato, skip.' });
                 }
+                resolvedDocId = latestDoc.id;
                 dbQuery = dbQuery.eq('id', latestDoc.id);
             }
             const { error: updateError } = await dbQuery;
             if (updateError) throw updateError;
-            console.log(`[DOC VALIDATION] Updated. doc_id: ${doc_id || 'N/A'}, stato: ${finalStatus}`);
+            console.log(`[DOC VALIDATION] Updated. doc_id: ${resolvedDocId || 'N/A'}, stato: ${finalStatus}, revisionato: ${isManualReview}`);
 
-            const { data: profile } = await supabase.from('anagrafiche').select('nome, utenti(email)').eq('id', targetAnagraficaId).single();
+            // Chiude eventuali altri documenti della stessa anagrafica rimasti aperti/non revisionati
+            if (targetAnagraficaId && resolvedDocId) {
+                await supabase.from('documenti_identita')
+                    .update({ revisionato_manualmente: true })
+                    .eq('anagrafica_id', targetAnagraficaId)
+                    .neq('id', resolvedDocId)
+                    .eq('revisionato_manualmente', false);
+            }
+
+            const { data: profile } = await supabase.from('anagrafiche').select('nome, cognome, utenti(email)').eq('id', targetAnagraficaId).single();
             if (profile?.utenti?.email) {
                 const userEmail = profile.utenti.email;
                 const nomeUtente = profile.nome;
+                const cognomeUtente = profile.cognome || '';
                 if (finalStatus === 'ROSSO') {
-                    await sendEmail({
-                        to: userEmail,
-                        subject: 'Problema con il tuo Documento di Identità - Adrenalina Club',
-                        html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il documento di identità caricato non è stato accettato.</p><p style="color:#aaa;font-size:13px">Motivazione: <strong>${finalNotes}</strong></p><a href="https://portal.adrenalinaclub.it/portal/dashboard.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">AGGIORNA DOCUMENTO</a></div>`
-                    });
-                } else if (finalStatus === 'GIALLO' && !isManual) {
-                    await sendEmail({
-                        to: userEmail,
-                        subject: 'Documento di Identità in Verifica - Adrenalina Club',
-                        html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il documento di identità è in attesa di verifica manuale. Riceverai una conferma a breve.</p></div>`
-                    });
+                    if (isManualReview) {
+                        if (!req.body.silent_cascade) {
+                            await sendEmail({
+                                to: userEmail,
+                                subject: 'Problema con il tuo Documento di Identità - Adrenalina Club',
+                                html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il documento di identità caricato non è stato accettato.</p><p style="color:#aaa;font-size:13px">Motivazione del Direttivo: <strong>${finalNotes}</strong></p><a href="https://portal.adrenalinaclub.it/portal/dashboard.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">AGGIORNA DOCUMENTO</a></div>`
+                            });
+                        }
+                    } else {
+                        // Elaborazione AI automatica: nessuna email all'utente, solo alert push interno su Telegram
+                        try {
+                            const tgMsg = `⚠️ <b>DOCUMENTO IDENTITÀ BLOCCATO DALL'AI</b>\n\n` +
+                                `👤 <b>Atleta:</b> ${escapeTelegramHtml(nomeUtente)} ${escapeTelegramHtml(cognomeUtente)}\n` +
+                                `📄 <b>Esito:</b> 🔴 ROSSO\n` +
+                                `📝 <b>Motivo:</b> ${escapeTelegramHtml(finalNotes)}\n\n` +
+                                `<i>L'atleta non è stato notificato via email. Verifica nel Registro Approvazioni.</i>`;
+                            await sendTelegramAlert(tgMsg);
+                        } catch (tgErr) {
+                            console.warn('[DOC AI TELEGRAM] Alert error:', tgErr.message);
+                        }
+                    }
                 }
             }
 
@@ -906,10 +1000,10 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
 
                 if (targetType === 'cert') {
                     const certId = req.body?.cert_id || req.body?.record?.id;
-                    if (certId) await supaFallback.from('certificati_medici').update({ stato_validazione: 'GIALLO', note_ai: fallbackNote }).eq('id', certId);
+                    if (certId) await supaFallback.from('certificati_medici').update({ stato_validazione: 'GIALLO', note_ai: fallbackNote, revisionato_manualmente: false }).eq('id', certId);
                 } else {
                     const docId = req.body?.doc_id || req.body?.record?.id;
-                    if (docId) await supaFallback.from('documenti_identita').update({ stato_validazione: 'GIALLO', note_ai: fallbackNote }).eq('id', docId);
+                    if (docId) await supaFallback.from('documenti_identita').update({ stato_validazione: 'GIALLO', note_ai: fallbackNote, revisionato_manualmente: false }).eq('id', docId);
                 }
             } catch (dbErr) {
                 console.error('[VALIDATE] Failed fallback GIALLO:', dbErr);

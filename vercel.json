@@ -42,7 +42,7 @@
     ],
     "functions": {
         "api/otp-verify.js": {
-            "includeFiles": "{CSEN_moduli/**,assets/**}"
+            "includeFiles": "{CSEN_moduli/**,assets/**,portal/comuni.json,portal/stati.json}"
         },
         "api/validate.js": {
             "maxDuration": 30
