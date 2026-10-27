@@ -3653,61 +3653,156 @@ input:checked + .nst-slider:before {
     -webkit-overflow-scrolling: touch;
 }
 
-/* Tabella Comparativa Metcon & Schede (Best / Last / Today) */
+/* Tabella HUD Comparativa (REC / ULT / ATTUALE) */
+.nst-hud-table,
 .nst-metcon-compare-table {
     width: 100%;
-    min-width: 460px;
+    min-width: 0;
+    table-layout: fixed;
     border-collapse: collapse;
     margin-top: 8px;
     font-size: 11px;
 }
 
+.nst-hud-table th,
 .nst-metcon-compare-table th {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 9px;
+    font-family: 'Orbitron', monospace, sans-serif;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.05em;
-    padding: 8px 6px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 3px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
     white-space: nowrap;
 }
 
-.nst-metcon-compare-table th.nst-th-best {
-    color: var(--nst-lime);
-    background: rgba(118, 255, 3, 0.06);
+.nst-hud-table th:first-child,
+.nst-metcon-compare-table th:first-child {
+    text-align: left;
+    padding-left: 4px;
 }
 
-.nst-metcon-compare-table th.nst-th-last {
-    color: #cbd5e1;
-    background: rgba(255, 255, 255, 0.02);
-}
-
-.nst-metcon-compare-table th.nst-th-today {
-    color: var(--nst-cyan);
-    background: rgba(0, 229, 255, 0.08);
-    border-left: 1px solid rgba(0, 229, 255, 0.2);
-}
-
+.nst-hud-table td,
 .nst-metcon-compare-table td {
-    padding: 8px 6px;
+    padding: 6px 3px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
 }
 
-.nst-metcon-compare-table td.nst-td-best {
-    text-align: center;
-    background: rgba(118, 255, 3, 0.02);
+.nst-hud-table td:first-child,
+.nst-metcon-compare-table td:first-child {
+    text-align: left;
+    padding-left: 4px;
 }
 
-.nst-metcon-compare-table td.nst-td-last {
+/* Colonne Numeriche HUD: Grandezza Massimizzata, Tabular Nums */
+.nst-hud-num-col {
     text-align: center;
-    background: rgba(255, 255, 255, 0.01);
+    font-family: 'Orbitron', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    padding: 4px 2px;
+    white-space: nowrap;
 }
 
-.nst-metcon-compare-table td.nst-td-today {
+.nst-hud-num-col.rec {
+    color: var(--nst-lime, #76ff03);
+    text-shadow: 0 0 6px rgba(118, 255, 3, 0.25);
+}
+
+.nst-hud-num-col.ult {
+    color: #cbd5e1;
+}
+
+.nst-hud-attuale-col {
     text-align: center;
-    background: rgba(0, 229, 255, 0.03);
-    border-left: 1px solid rgba(0, 229, 255, 0.15);
+    padding: 3px 2px;
+}
+
+/* Input HUD: Grandi cifre, compatti, zero zoom iOS */
+.nst-hud-input {
+    font-family: 'Orbitron', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 16px !important;
+    font-weight: 800;
+    height: 38px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    background: rgba(6, 12, 24, 0.9);
+    color: #ffffff;
+    text-align: center;
+    padding: 2px 4px;
+    width: 100%;
+    max-width: 68px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.nst-hud-input:focus {
+    border-color: var(--nst-cyan, #00e5ff);
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+    outline: none;
+}
+
+.nst-hud-input-dual {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+}
+
+.nst-hud-input-dual .nst-hud-input {
+    width: 46px;
+    max-width: 48px;
+    font-size: 15px !important;
+    padding: 2px 2px;
+    height: 36px;
+}
+
+.nst-hud-input-sep {
+    font-family: 'Orbitron', monospace;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    user-select: none;
+    padding: 0 1px;
+}
+
+.nst-hud-set-badge {
+    display: inline-block;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.nst-hud-set-badge.warmup {
+    color: var(--nst-amber, #ffb300);
+}
+
+.nst-hud-set-badge.work {
+    color: #ffffff;
+}
+
+.nst-hud-set-badge.extra {
+    color: var(--nst-lime, #76ff03);
+}
+
+.nst-hud-info-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #94a3b8;
+    background: rgba(0, 229, 255, 0.05);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
 }
 
 .nst-metcon-cfg-row {
@@ -4702,39 +4797,55 @@ input:checked + .nst-slider:before {
         margin: 0;
     }
 
-    /* Adattamenti Mobile Tabella Comparativa Metcon */
+    /* Adattamenti Mobile Tabella Comparativa Metcon & HUD (Zero Scroll Orizzontale a 360px) */
     .nst-ex-preview-container {
-        padding-bottom: 6px;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(0, 229, 255, 0.4) rgba(0, 0, 0, 0.2);
+        padding-bottom: 2px;
+        overflow-x: hidden;
+        width: 100%;
     }
 
-    .nst-ex-preview-container::-webkit-scrollbar {
-        height: 4px;
+    .nst-metcon-compare-table,
+    .nst-hud-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        table-layout: fixed;
     }
 
-    .nst-ex-preview-container::-webkit-scrollbar-thumb {
-        background: rgba(0, 229, 255, 0.5);
-        border-radius: 4px;
-    }
-
-    .nst-metcon-compare-table {
-        min-width: 440px;
-    }
-
+    .nst-hud-table th,
     .nst-metcon-compare-table th {
-        font-size: 8px;
-        padding: 6px 4px;
+        font-size: 9px;
+        padding: 5px 2px;
     }
 
+    .nst-hud-table td,
     .nst-metcon-compare-table td {
-        padding: 6px 4px;
+        padding: 5px 2px;
+    }
+
+    .nst-hud-num-col {
+        font-size: 14px;
+        padding: 4px 1px;
+    }
+
+    .nst-hud-input {
+        min-height: 34px;
+        height: 36px;
+        font-size: 15px !important;
+        padding: 2px 2px;
+        max-width: 58px;
+    }
+
+    .nst-hud-input-dual .nst-hud-input {
+        width: 40px;
+        max-width: 42px;
+        font-size: 13px !important;
+        height: 34px;
     }
 
     .nst-metcon-cfg-input {
         min-height: 34px;
-        font-size: 13px !important;
-        padding: 4px 4px;
+        font-size: 14px !important;
+        padding: 2px 4px;
         width: 52px;
     }
 }

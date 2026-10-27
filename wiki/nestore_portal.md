@@ -448,6 +448,25 @@ Introdotta nella versione **1.05.68**:
    - Per gli esercizi di pesistica con bilanciere (*Panca Piana*, *Squat*, *Stacco*) resta invece attivo il fallback sul peso corporeo come stima iniziale standard quando non vi siano PR pregressi.
 2. **Aggiornamento Setup Forza & Rampa Warmup**:
    - Sia in `ottieniBaseMassimaleEsercizio` sia nel generatore del setup per sessioni Forza (`renderAnteprimaSessioneIbrido`), gli esercizi calisthenics non applicano percentuali al peso corporeo dell'atleta, azzerando le serie di riscaldamento finché l'atleta non imposta esplicitamente un carico o registra un PR.
+
+### 9.11. Workout HUD Records (RECORD / ULTIMO / ATTUALE) & Mobile Zero-Scroll
+Introdotta nella versione **1.06.25**:
+Riforma trasversale dell'esposizione dati e della grafica su **tutti i programmi di allenamento** (Forza 1–4, Metcon 1–4, Schede Coach Libreria e Benchmark Invictus):
+1. **Triade Dati per Programma, Esercizio e Serie**:
+   - **RECORD (`REC`)**: la prestazione più alta mai conseguita dall'atleta per quella serie o giro. Se mai eseguito, impostato rigorosamente a `0`.
+   - **ULTIMO (`ULT`)**: la prestazione conseguita nell'ultima seduta registrata in cui è stato eseguito quell'esercizio e serie/giro. Se mai eseguito, impostato a `0`.
+   - **ATTUALE**: valore di partenza coincidente con `ULTIMO` (oppure `0` se mai eseguito), liberamente modificabile dall'atleta durante la sessione.
+2. **Formula di Superiorità Analitica (`confrontaPrestazioneSerie`)**:
+   - *Esercizi con sovraccarico* ($kg > 0$): vince il Volume complessivo calcolato come $\text{kg} \times \text{rip}$; tie-breaker: a parità di volume vince il carico maggiore ($\text{kg}$).
+   - *Corpo libero puro / non zavorrato* (`isBw` o $kg = 0$): vince il numero di ripetizioni (o calorie/metri).
+   - *Esclusione serie nulle*: serie saltate (`stato_esecutivo === 'saltata'`) o con ripetizioni $\le 0$ vengono scartate dai record.
+3. **Estetica HUD ad Alto Rendimento & Mobile Zero-Scroll (360px)**:
+   - Eliminazione del `min-width: 440px/460px` su `.nst-metcon-compare-table` e introduzione di `.nst-hud-table` (`table-layout: fixed; width: 100%;`).
+   - Cifre numeriche massimizzate in `Orbitron` monospace con `font-variant-numeric: tabular-nums` (15px bold per REC e ULT, 16px per ATTUALE per prevenire zoom Safari iOS).
+   - Palette cromatica HUD: verde Lime (`var(--nst-lime)`) per REC, Slate (`#94a3b8`) per ULT, Ciano (`var(--nst-cyan)`) per ATTUALE.
+   - Rimozione delle cornici pesanti, sfondi ridondanti ed emoji di distrazione (`🏆`, `🔥`, `🎯`, `💡`, `⚡`), garantendo piena leggibilità anche sotto fatica su smartphone compatti.
+4. **Hardening Sicurezza e Proiezione Colonne**:
+   - Sostituito ogni `.select('*')` residuo su `nestore_allenamenti` con query a proiezione esplicita di colonne (`id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, created_at`).
 3. **Bonifica Dati Storici su Supabase**:
    - Corretto il record sessione `93c95e54-1481-4ce2-ac93-49387afdf3ee` del 19/09/2026 azzerando le ripetizioni delle serie di riscaldamento fittizie di Trazioni Pesate. Questo permette al PR reale dell'atleta (4 serie x 4 rip con 22 kg del 21/09/2026) di emergere correttamente e senza distorsioni nella bacheca.
 

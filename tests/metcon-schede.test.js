@@ -521,20 +521,20 @@ describe('NESTORE — METCON Schede Overhaul & Giro Corrente', () => {
 
             nestore.renderMetconAnteprimaEsercizi(prog, mockExListEl, null, null);
 
-            expect(mockExListEl.innerHTML).toContain('Prima seduta di questo programma');
             expect(mockExListEl.innerHTML).toContain('nst-metcon-compare-table');
             expect(mockExListEl.innerHTML).toContain('ESERCIZIO');
-            expect(mockExListEl.innerHTML).toContain('MIGLIORE 🏆');
-            expect(mockExListEl.innerHTML).toContain('ULTIMA SEDUTA');
-            expect(mockExListEl.innerHTML).toContain('OGGI (TARGET)');
+            expect(mockExListEl.innerHTML).toContain('REC');
+            expect(mockExListEl.innerHTML).toContain('ULT');
+            expect(mockExListEl.innerHTML).toContain('ATTUALE');
 
-            // Colonne storico vuote
-            expect(mockExListEl.innerHTML).toContain('—');
+            // Colonne storico vuote impostate rigorosamente a 0
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col rec">0</td>');
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col ult">0</td>');
 
-            // Input precompilati con valori di default
-            expect(mockExListEl.innerHTML).toContain('value="15"');
-            expect(mockExListEl.innerHTML).toContain('value="4"');
-            expect(mockExListEl.innerHTML).toContain('value="90"');
+            // Input ATTUALE precompilati con 0 se mai eseguito
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-0"');
+            expect(mockExListEl.innerHTML).toContain('value="0"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-peso-1"');
         });
 
         it('renderMetconAnteprimaEsercizi precompila con ultima seduta e mostra record storico migliore', () => {
@@ -571,19 +571,25 @@ describe('NESTORE — METCON Schede Overhaul & Giro Corrente', () => {
 
             nestore.renderMetconAnteprimaEsercizi(prog, mockExListEl, ultimaSessione, miglioreSessione);
 
-            expect(mockExListEl.innerHTML).toContain("Dati precompilati dall'ultima seduta");
-            expect(mockExListEl.innerHTML).toContain('🏆');
-            expect(mockExListEl.innerHTML).toContain('20 rip');
-            expect(mockExListEl.innerHTML).toContain('@ 100kg');
+            expect(mockExListEl.innerHTML).toContain('REC');
+            expect(mockExListEl.innerHTML).toContain('ULT');
+            expect(mockExListEl.innerHTML).toContain('ATTUALE');
+
+            // Record storico migliore
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col rec">20</td>');
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col rec">100×6</td>');
 
             // Ultima seduta
-            expect(mockExListEl.innerHTML).toContain('18 rip');
-            expect(mockExListEl.innerHTML).toContain('@ 95kg');
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col ult">18</td>');
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col ult">95×5</td>');
 
             // Input di oggi precompilati con i dati dell'ultima seduta
-            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-0" class="nst-metcon-cfg-input" value="18"');
-            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-1" class="nst-metcon-cfg-input" value="5"');
-            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-peso-1" class="nst-metcon-cfg-input nst-weight-input" value="95"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-0"');
+            expect(mockExListEl.innerHTML).toContain('value="18"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-1"');
+            expect(mockExListEl.innerHTML).toContain('value="5"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-peso-1"');
+            expect(mockExListEl.innerHTML).toContain('value="95"');
         });
 
         it('avviaIbridoSeduta acquisisce i valori personalizzati prima dell avvio del Metcon', async () => {

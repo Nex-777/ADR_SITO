@@ -1698,7 +1698,7 @@ async function ottieniBaseMassimaleEsercizio(nomeEsercizio) {
         try {
             const { data: allW } = await client
                 .from('nestore_allenamenti')
-                .select('*')
+                .select('id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, created_at')
                 .eq('utente_id', user.id)
                 .eq('attivo', true);
             if (allW && allW.length > 0) {
@@ -1917,7 +1917,7 @@ async function renderGraficoAllenamenti() {
         // Query ALL-TIME per calcolare i Record Personali di tutti gli allenamenti registrati
         const { data: allData, error } = await supabaseClient
             .from('nestore_allenamenti')
-            .select('*')
+            .select('id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, created_at')
             .eq('utente_id', u.id)
             .eq('attivo', true)
             .order('data_allenamento', { ascending: true });
@@ -6676,7 +6676,7 @@ function costruisciSchedaDatiInvictus(numGiri = 1, pullBase = 5) {
 }
 
 function modificaInvictusPull(delta) {
-    invictusPullBase = Math.max(1, Math.min(100, invictusPullBase + delta));
+    invictusPullBase = Math.max(0, Math.min(100, (parseInt(invictusPullBase, 10) || 0) + delta));
     const pullEl = document.getElementById('nst-invictus-pull-val');
     const targetPullEl = document.getElementById('nst-invictus-target-pull');
     const targetPushEl = document.getElementById('nst-invictus-target-push');
@@ -6690,6 +6690,39 @@ function modificaInvictusPull(delta) {
 
 function apriAnteprimaInvictus() {
     const modal = document.getElementById('nst-invictus-preview-modal');
+    const invStorico = calcolaStoricoInvictus();
+
+    // Se mai fatto -> 0; se fatto -> precompila con ULTIMO
+    if (invStorico.hasHistory && parseInt(invStorico.ultPull, 10) > 0) {
+        invictusPullBase = parseInt(invStorico.ultPull, 10);
+    } else if (!invStorico.hasHistory) {
+        invictusPullBase = 0;
+    }
+
+    const pullEl = document.getElementById('nst-invictus-pull-val');
+    const targetPullEl = document.getElementById('nst-invictus-target-pull');
+    const targetPushEl = document.getElementById('nst-invictus-target-push');
+    const targetSquatEl = document.getElementById('nst-invictus-target-squat');
+
+    if (pullEl) pullEl.textContent = invictusPullBase;
+    if (targetPullEl) targetPullEl.textContent = invictusPullBase;
+    if (targetPushEl) targetPushEl.textContent = invictusPullBase * 2;
+    if (targetSquatEl) targetSquatEl.textContent = invictusPullBase * 4;
+
+    const recPullEl = document.getElementById('nst-invictus-rec-pull');
+    const ultPullEl = document.getElementById('nst-invictus-ult-pull');
+    const recPushEl = document.getElementById('nst-invictus-rec-push');
+    const ultPushEl = document.getElementById('nst-invictus-ult-push');
+    const recSquatEl = document.getElementById('nst-invictus-rec-squat');
+    const ultSquatEl = document.getElementById('nst-invictus-ult-squat');
+
+    if (recPullEl) recPullEl.textContent = invStorico.recPull;
+    if (ultPullEl) ultPullEl.textContent = invStorico.ultPull;
+    if (recPushEl) recPushEl.textContent = invStorico.recPush;
+    if (ultPushEl) ultPushEl.textContent = invStorico.ultPush;
+    if (recSquatEl) recSquatEl.textContent = invStorico.recSquat;
+    if (ultSquatEl) ultSquatEl.textContent = invStorico.ultSquat;
+
     if (modal) modal.classList.remove('nst-hidden');
 }
 
@@ -6700,7 +6733,7 @@ function chiudiAnteprimaInvictus() {
 
 function avviaAllenamentoInvictus() {
     chiudiAnteprimaInvictus();
-    // 1. Configura target nella modale
+    // 1. Configura target e colonne REC | ULT | ATTUALE nella modale attiva
     const pullReps = invictusPullBase;
     const pushReps = invictusPullBase * 2;
     const squatReps = invictusPullBase * 4;
@@ -6711,6 +6744,21 @@ function avviaAllenamentoInvictus() {
     if (pullEl) pullEl.textContent = pullReps;
     if (pushEl) pushEl.textContent = pushReps;
     if (squatEl) squatEl.textContent = squatReps;
+
+    const invStorico = calcolaStoricoInvictus();
+    const recPullEl = document.getElementById('nst-modal-rec-pull');
+    const ultPullEl = document.getElementById('nst-modal-ult-pull');
+    const recPushEl = document.getElementById('nst-modal-rec-push');
+    const ultPushEl = document.getElementById('nst-modal-ult-push');
+    const recSquatEl = document.getElementById('nst-modal-rec-squat');
+    const ultSquatEl = document.getElementById('nst-modal-ult-squat');
+
+    if (recPullEl) recPullEl.textContent = invStorico.recPull;
+    if (ultPullEl) ultPullEl.textContent = invStorico.ultPull;
+    if (recPushEl) recPushEl.textContent = invStorico.recPush;
+    if (ultPushEl) ultPushEl.textContent = invStorico.ultPush;
+    if (recSquatEl) recSquatEl.textContent = invStorico.recSquat;
+    if (ultSquatEl) ultSquatEl.textContent = invStorico.ultSquat;
 
     // 2. Ripristina vista running e nasconde vista save
     const runningView = document.getElementById('nst-workout-running-view');
@@ -7237,6 +7285,440 @@ function trovaEsercizioInSessione(eserciziSessione, nomeCercato) {
     return null;
 }
 
+// ===========================================================================
+// MOTORE ANALITICO STORICO ESERCIZI & SERIE (RECORD | ULTIMO | ATTUALE)
+// ===========================================================================
+
+/**
+ * Confronta due prestazioni su una serie/giro:
+ * - Se pesato (!isBw e almeno uno ha peso > 0): Volume = peso * rip. A parità di volume, vince peso maggiore.
+ * - Se corpo libero o entrambi 0 kg: vince ripetizioni (o metri/calorie) maggiori.
+ */
+function confrontaPrestazioneSerie(cand, best, isBw) {
+    if (!best) return true;
+    if (!cand) return false;
+    if (cand.stato_esecutivo === 'saltata' || cand.saltata) return false;
+    if (best.stato_esecutivo === 'saltata' || best.saltata) return true;
+
+    const candPeso = parseFloat(cand.peso !== undefined ? cand.peso : (cand.peso_kg !== undefined ? cand.peso_kg : 0)) || 0;
+    const bestPeso = parseFloat(best.peso !== undefined ? best.peso : (best.peso_kg !== undefined ? best.peso_kg : 0)) || 0;
+    const candRip = parseInt(cand.rip !== undefined ? cand.rip : (cand.ripetizioni !== undefined ? cand.ripetizioni : (cand.valNum !== undefined ? cand.valNum : (cand.effettivo_num || cand.effettivo || cand.val || 0))), 10) || 0;
+    const bestRip = parseInt(best.rip !== undefined ? best.rip : (best.ripetizioni !== undefined ? best.ripetizioni : (best.valNum !== undefined ? best.valNum : (best.effettivo_num || best.effettivo || best.val || 0))), 10) || 0;
+
+    if (candRip <= 0 && candPeso <= 0) return false;
+    if (bestRip <= 0 && bestPeso <= 0) return true;
+
+    // Se è corpo libero puro (isBw o entrambi a 0 kg)
+    if (isBw || (candPeso === 0 && bestPeso === 0)) {
+        return candRip > bestRip;
+    }
+
+    // Esercizio con sovraccarico: Volume = peso * rip
+    const volCand = candPeso * candRip;
+    const volBest = bestPeso * bestRip;
+
+    if (volCand !== volBest) {
+        return volCand > volBest;
+    }
+    // Tie-breaker: a parità di volume, vince il carico più alto
+    if (candPeso !== bestPeso) {
+        return candPeso > bestPeso;
+    }
+    return candRip > bestRip;
+}
+
+/**
+ * Formatta in notazione HUD ultra-compatta una prestazione:
+ * - Se mai fatto o 0 -> "0"
+ * - Se pesato e peso > 0 -> "75×5"
+ * - Se corpo libero o metcon -> "18"
+ */
+function formattaPrestazioneCompatta(peso, rip, isBw, hasData) {
+    if (!hasData) return '0';
+    const p = parseFloat(peso) || 0;
+    const r = parseInt(rip, 10) || 0;
+    if (p <= 0 && r <= 0) return '0';
+    if (!isBw && p > 0) {
+        return `${p}×${r}`;
+    }
+    return String(r > 0 ? r : '0');
+}
+
+/**
+ * Ritorna lo storico unificato di tutti gli allenamenti dell'atleta (in memoria + extra)
+ * deduplicati e ordinati cronologicamente dal più recente al più vecchio.
+ */
+function ottieniStoricoUnificatoAtleta(extraSessions = []) {
+    const inMem = (typeof window !== 'undefined' && Array.isArray(window.currentAllenamentiData))
+        ? window.currentAllenamentiData
+        : (typeof currentAllenamentiData !== 'undefined' && Array.isArray(currentAllenamentiData) ? currentAllenamentiData : []);
+    const merged = [...inMem, ...(Array.isArray(extraSessions) ? extraSessions : [])];
+    const seen = new Set();
+    const result = [];
+    for (const item of merged) {
+        if (!item || item.attivo === false) continue;
+        const key = item.id || `${item.data_allenamento}_${item.corso_disciplina}_${item.durata_minuti}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            result.push(item);
+        }
+    }
+    result.sort((a, b) => {
+        const da = a.data_allenamento || '';
+        const db = b.data_allenamento || '';
+        if (da !== db) return db.localeCompare(da);
+        const ca = a.created_at || '';
+        const cb = b.created_at || '';
+        return cb.localeCompare(ca);
+    });
+    return result;
+}
+
+/**
+ * Calcola RECORD e ULTIMO per ogni serie (Riscaldamento e Serie Allenanti) di un esercizio Forza.
+ */
+function calcolaStoricoSerieForza(nomeEsercizio, isBw, numWarmup = 5, numWork = 4, sessioni = null) {
+    const allSessions = ottieniStoricoUnificatoAtleta(sessioni);
+
+    const warmups = Array.from({ length: numWarmup }, () => ({
+        rec: { peso: 0, rip: 0, display: '0', hasData: false },
+        ult: { peso: 0, rip: 0, display: '0', hasData: false }
+    }));
+
+    const workSets = Array.from({ length: numWork }, () => ({
+        rec: { peso: 0, rip: 0, display: '0', hasData: false },
+        ult: { peso: 0, rip: 0, display: '0', hasData: false }
+    }));
+
+    let recAssoluto = { peso: 0, rip: 0, display: '0', hasData: false };
+    let ultWarmupFound = false;
+    let ultWorkFound = false;
+
+    for (const sessione of allSessions) {
+        const sd = sessione.scheda_dati;
+        if (!sd) continue;
+        const exList = Array.isArray(sd.esercizi) ? sd.esercizi : (Array.isArray(sd) ? sd : []);
+        const ex = trovaEsercizioInSessione(exList, nomeEsercizio);
+        if (!ex) continue;
+
+        // Riscaldamento
+        const warmupsArr = Array.isArray(ex.riscaldamento_effettivo) && ex.riscaldamento_effettivo.length > 0
+            ? ex.riscaldamento_effettivo
+            : (Array.isArray(ex.riscaldamento) ? ex.riscaldamento : []);
+
+        if (warmupsArr.length > 0) {
+            for (let wIdx = 0; wIdx < numWarmup; wIdx++) {
+                const w = warmupsArr[wIdx];
+                if (w && w.stato_esecutivo !== 'saltata') {
+                    const p = parseFloat(w.peso_kg) || 0;
+                    const r = parseInt(w.rip !== undefined ? w.rip : w.ripetizioni, 10) || 0;
+                    if (p > 0 || r > 0) {
+                        if (!warmups[wIdx].ult.hasData) {
+                            warmups[wIdx].ult = {
+                                peso: p,
+                                rip: r,
+                                display: formattaPrestazioneCompatta(p, r, isBw, true),
+                                hasData: true
+                            };
+                        }
+                        if (confrontaPrestazioneSerie({ peso: p, rip: r }, warmups[wIdx].rec, isBw)) {
+                            warmups[wIdx].rec = {
+                                peso: p,
+                                rip: r,
+                                display: formattaPrestazioneCompatta(p, r, isBw, true),
+                                hasData: true
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Serie allenanti
+        const workArr = Array.isArray(ex.serie_dettaglio) && ex.serie_dettaglio.length > 0
+            ? ex.serie_dettaglio
+            : (Array.isArray(ex.serie_effettive) ? ex.serie_effettive : []);
+
+        if (workArr.length > 0) {
+            for (let sIdx = 0; sIdx < numWork; sIdx++) {
+                const s = workArr[sIdx];
+                if (s && s.stato_esecutivo !== 'saltata') {
+                    const p = parseFloat(s.peso_kg) || 0;
+                    const r = parseInt(s.rip !== undefined ? s.rip : (s.ripetizioni !== undefined ? s.ripetizioni : s.rip_completate), 10) || 0;
+                    if (p > 0 || r > 0) {
+                        if (!workSets[sIdx].ult.hasData) {
+                            workSets[sIdx].ult = {
+                                peso: p,
+                                rip: r,
+                                display: formattaPrestazioneCompatta(p, r, isBw, true),
+                                hasData: true
+                            };
+                        }
+                        if (confrontaPrestazioneSerie({ peso: p, rip: r }, workSets[sIdx].rec, isBw)) {
+                            workSets[sIdx].rec = {
+                                peso: p,
+                                rip: r,
+                                display: formattaPrestazioneCompatta(p, r, isBw, true),
+                                hasData: true
+                            };
+                        }
+                        if (confrontaPrestazioneSerie({ peso: p, rip: r }, recAssoluto, isBw)) {
+                            recAssoluto = {
+                                peso: p,
+                                rip: r,
+                                display: formattaPrestazioneCompatta(p, r, isBw, true),
+                                hasData: true
+                            };
+                        }
+                    }
+                }
+            }
+        } else if (ex.peso_kg > 0 || ex.ripetizioni > 0) {
+            // Scheda legacy aggregata
+            const p = parseFloat(ex.peso_kg) || 0;
+            const r = parseInt(ex.ripetizioni, 10) || 0;
+            const count = Math.min(numWork, parseInt(ex.serie || 1, 10));
+            for (let sIdx = 0; sIdx < count; sIdx++) {
+                if (!workSets[sIdx].ult.hasData) {
+                    workSets[sIdx].ult = {
+                        peso: p,
+                        rip: r,
+                        display: formattaPrestazioneCompatta(p, r, isBw, true),
+                        hasData: true
+                    };
+                }
+            }
+            if (confrontaPrestazioneSerie({ peso: p, rip: r }, recAssoluto, isBw)) {
+                recAssoluto = {
+                    peso: p,
+                    rip: r,
+                    display: formattaPrestazioneCompatta(p, r, isBw, true),
+                    hasData: true
+                };
+            }
+        }
+    }
+
+    warmups.forEach(w => {
+        w.rec_display = w.rec ? w.rec.display : '0';
+        w.ult_display = w.ult ? w.ult.display : '0';
+    });
+
+    workSets.forEach(ws => {
+        ws.rec_display = ws.rec ? ws.rec.display : '0';
+        ws.ult_display = ws.ult ? ws.ult.display : '0';
+    });
+
+    return { warmups, workSets, recAssoluto };
+}
+
+/**
+ * Calcola RECORD e ULTIMO per un esercizio Metcon (sia a livello anteprima sia per ogni giro).
+ */
+function calcolaStoricoGiriMetcon(exDef, numRounds = 6, sessioni = null) {
+    const allSessions = ottieniStoricoUnificatoAtleta(sessioni);
+    const hasWeight = estraiPesoDaEsercizioMetcon(exDef) !== null;
+
+    const rounds = Array.from({ length: numRounds }, () => ({
+        rec: { peso: 0, val: '0', valNum: 0, display: '0', hasData: false },
+        ult: { peso: 0, val: '0', valNum: 0, display: '0', hasData: false }
+    }));
+
+    let recPreview = { peso: 0, val: '0', valNum: 0, display: '0', hasData: false };
+    let ultPreview = { peso: 0, val: '0', valNum: 0, display: '0', hasData: false };
+    let ultFound = false;
+
+    for (const sessione of allSessions) {
+        const sd = sessione.scheda_dati;
+        if (!sd) continue;
+        const exList = Array.isArray(sd.esercizi) ? sd.esercizi : (Array.isArray(sd) ? sd : []);
+        const ex = trovaEsercizioInSessione(exList, exDef.nome);
+        if (!ex) continue;
+
+        const exPeso = typeof ex.peso_kg === 'number' && ex.peso_kg > 0 ? ex.peso_kg : (estraiPesoDaEsercizioMetcon(ex) || 0);
+        const giri = Array.isArray(ex.giri_dettaglio) ? ex.giri_dettaglio : [];
+
+        if (giri.length > 0) {
+            giri.forEach((g, rIdx) => {
+                const valStr = String(g.effettivo || g.target || '');
+                const valNum = parseMetconResultNumber(valStr);
+                if (valNum > 0) {
+                    if (rIdx < numRounds && !rounds[rIdx].ult.hasData) {
+                        rounds[rIdx].ult = {
+                            peso: exPeso,
+                            rip: valNum,
+                            val: valStr,
+                            valNum,
+                            display: hasWeight && exPeso > 0 ? `${exPeso}×${valStr}` : valStr,
+                            hasData: true
+                        };
+                    }
+                    if (!ultPreview.hasData) {
+                        ultPreview = {
+                            peso: exPeso,
+                            rip: valNum,
+                            val: valStr,
+                            valNum,
+                            display: hasWeight && exPeso > 0 ? `${exPeso}×${valStr}` : valStr,
+                            hasData: true
+                        };
+                    }
+                    const cand = { peso: exPeso, rip: valNum };
+                    if (rIdx < numRounds && confrontaPrestazioneSerie(cand, rounds[rIdx].rec, !hasWeight)) {
+                        rounds[rIdx].rec = {
+                            peso: exPeso,
+                            rip: valNum,
+                            val: valStr,
+                            valNum,
+                            display: hasWeight && exPeso > 0 ? `${exPeso}×${valStr}` : valStr,
+                            hasData: true
+                        };
+                    }
+                    if (confrontaPrestazioneSerie(cand, recPreview, !hasWeight)) {
+                        recPreview = {
+                            peso: exPeso,
+                            rip: valNum,
+                            val: valStr,
+                            valNum,
+                            display: hasWeight && exPeso > 0 ? `${exPeso}×${valStr}` : valStr,
+                            hasData: true
+                        };
+                    }
+                }
+            });
+        } else if (ex.totale_effettivo > 0 || ex.risultato) {
+            const valStr = String(ex.target_val || ex.totale_effettivo || ex.risultato || '');
+            const valNum = parseMetconResultNumber(valStr);
+            if (valNum > 0) {
+                if (!ultPreview.hasData) {
+                    ultPreview = {
+                        peso: exPeso,
+                        rip: valNum,
+                        val: valStr,
+                        valNum,
+                        display: hasWeight && exPeso > 0 ? `${exPeso}×${valStr}` : valStr,
+                        hasData: true
+                    };
+                }
+                if (confrontaPrestazioneSerie({ peso: exPeso, rip: valNum }, recPreview, !hasWeight)) {
+                    recPreview = {
+                        peso: exPeso,
+                        rip: valNum,
+                        val: valStr,
+                        valNum,
+                        display: hasWeight && exPeso > 0 ? `${exPeso}×${valStr}` : valStr,
+                        hasData: true
+                    };
+                }
+            }
+        }
+    }
+
+    rounds.forEach(r => {
+        r.rec_display = r.rec ? r.rec.display : '0';
+        r.ult_display = r.ult ? r.ult.display : '0';
+    });
+
+    return { rounds, recPreview, ultPreview };
+}
+
+/**
+ * Calcola RECORD e ULTIMO per il benchmark INVICTUS (Pull-up, Push-up, Air Squat e Giri).
+ */
+function calcolaStoricoInvictus(sessioni = null) {
+    const allSessions = ottieniStoricoUnificatoAtleta(sessioni);
+
+    let ultPull = 0;
+    let ultPush = 0;
+    let ultSquat = 0;
+    let ultGiri = 0;
+    let ultFound = false;
+
+    let recPull = 0;
+    let recPush = 0;
+    let recSquat = 0;
+    let recGiri = 0;
+
+    for (const sessione of allSessions) {
+        const disc = String(sessione.corso_disciplina || '').toLowerCase();
+        const sd = sessione.scheda_dati;
+        const isInvictus = disc.includes('invictus') || (sd && (sd.tipo === 'invictus' || sd.programma_id === 'invictus'));
+        if (!isInvictus) continue;
+
+        let pullReps = 0;
+        let pushReps = 0;
+        let squatReps = 0;
+        let sessionGiri = 1;
+
+        if (Array.isArray(sd)) {
+            const pEx = sd.find(e => (e.nome || '').toLowerCase().includes('pull'));
+            const uEx = sd.find(e => (e.nome || '').toLowerCase().includes('push'));
+            const sEx = sd.find(e => (e.nome || '').toLowerCase().includes('squat'));
+            if (pEx) {
+                sessionGiri = pEx.serie || (Array.isArray(pEx.serie_dettaglio) ? pEx.serie_dettaglio.length : 1);
+                pullReps = (pEx.serie_dettaglio && pEx.serie_dettaglio[0]?.ripetizioni)
+                    ? pEx.serie_dettaglio[0].ripetizioni
+                    : Math.round((pEx.ripetizioni || 0) / Math.max(1, sessionGiri));
+            }
+            if (uEx) {
+                pushReps = (uEx.serie_dettaglio && uEx.serie_dettaglio[0]?.ripetizioni)
+                    ? uEx.serie_dettaglio[0].ripetizioni
+                    : Math.round((uEx.ripetizioni || 0) / Math.max(1, sessionGiri));
+            }
+            if (sEx) {
+                squatReps = (sEx.serie_dettaglio && sEx.serie_dettaglio[0]?.ripetizioni)
+                    ? sEx.serie_dettaglio[0].ripetizioni
+                    : Math.round((sEx.ripetizioni || 0) / Math.max(1, sessionGiri));
+            }
+        } else if (sd && Array.isArray(sd.esercizi)) {
+            const pEx = sd.esercizi.find(e => (e.nome || '').toLowerCase().includes('pull'));
+            const uEx = sd.esercizi.find(e => (e.nome || '').toLowerCase().includes('push'));
+            const sEx = sd.esercizi.find(e => (e.nome || '').toLowerCase().includes('squat'));
+            sessionGiri = sd.giri_totali || 1;
+            if (pEx) pullReps = pEx.rip_target || pEx.ripetizioni || 0;
+            if (uEx) pushReps = uEx.rip_target || uEx.ripetizioni || 0;
+            if (sEx) squatReps = sEx.rip_target || sEx.ripetizioni || 0;
+        } else if (sd && (typeof sd.pull_base === 'number' || typeof sd.total_pull === 'number')) {
+            sessionGiri = sd.giri_completati || sd.giri_totali || 10;
+            pullReps = typeof sd.pull_base === 'number' ? sd.pull_base : Math.round((sd.total_pull || 0) / Math.max(1, sessionGiri));
+            pushReps = typeof sd.push_base === 'number' ? sd.push_base : (typeof sd.total_push === 'number' ? Math.round(sd.total_push / Math.max(1, sessionGiri)) : (pullReps * 2));
+            squatReps = typeof sd.squat_base === 'number' ? sd.squat_base : (typeof sd.total_squat === 'number' ? Math.round(sd.total_squat / Math.max(1, sessionGiri)) : (pullReps * 4));
+        }
+
+        if (pullReps > 0 || pushReps > 0 || squatReps > 0) {
+            if (!ultFound) {
+                ultPull = pullReps;
+                ultPush = pushReps;
+                ultSquat = squatReps;
+                ultGiri = sessionGiri;
+                ultFound = true;
+            }
+            if (pullReps > recPull) recPull = pullReps;
+            if (pushReps > recPush) recPush = pushReps;
+            if (squatReps > recSquat) recSquat = squatReps;
+            if (sessionGiri > recGiri) recGiri = sessionGiri;
+        }
+    }
+
+    return {
+        recPull,
+        ultPull,
+        recPush,
+        ultPush,
+        recSquat,
+        ultSquat,
+        recPullDisplay: String(recPull),
+        ultPullDisplay: String(ultPull),
+        recPushDisplay: String(recPush),
+        ultPushDisplay: String(ultPush),
+        recSquatDisplay: String(recSquat),
+        ultSquatDisplay: String(ultSquat),
+        recGiri,
+        ultGiri,
+        hasHistory: ultFound
+    };
+}
+
 async function recuperaStoricoSessioniProgramma(progId, progNome) {
     const client = (typeof window !== 'undefined' && window.supabaseClient) ? window.supabaseClient : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
     const user = (typeof window !== 'undefined' && window.currentUser) ? window.currentUser : (typeof currentUser !== 'undefined' ? currentUser : null);
@@ -7245,7 +7727,7 @@ async function recuperaStoricoSessioniProgramma(progId, progNome) {
     try {
         let q = client
             .from('nestore_allenamenti')
-            .select('scheda_dati, data_allenamento, durata_minuti');
+            .select('id, scheda_dati, data_allenamento, durata_minuti, corso_disciplina, note, created_at');
         if (typeof q.eq === 'function') q = q.eq('utente_id', user.id);
         if (typeof q.eq === 'function') q = q.eq('attivo', true);
         if (typeof q.or === 'function') q = q.or(`corso_disciplina.ilike.%${progNome}%,scheda_dati->>programma_id.eq.${progId}`);
@@ -7400,26 +7882,55 @@ function aggiungiSerieExtraForza(exIdx) {
     const currentRows = tbody.querySelectorAll('tr').length;
     const sIdx = currentRows;
     const pesoVal = ex.isBw ? 0 : (ex.peso_target_kg || 0);
+    const ripVal = ex.rip_target || 4;
+
+    const allSessions = ottieniStoricoUnificatoAtleta();
+    const warmupCount = (ex.riscaldamento || []).length;
+    const storico = calcolaStoricoSerieForza(ex.nome, ex.isBw, warmupCount, sIdx + 1, allSessions);
+    const sRec = storico?.workSets?.[sIdx]?.rec_display || '0';
+    const sUlt = storico?.workSets?.[sIdx]?.ult_display || '0';
+
     const tr = document.createElement('tr');
     tr.className = 'nst-active-set-row work-row extra-row';
+    if (tr.dataset) {
+        tr.dataset.exIdx = String(exIdx);
+        tr.dataset.setType = 'work';
+        tr.dataset.setIdx = String(sIdx);
+    }
+    if (typeof tr.setAttribute === 'function') {
+        tr.setAttribute('data-ex-idx', String(exIdx));
+        tr.setAttribute('data-set-type', 'work');
+        tr.setAttribute('data-set-idx', String(sIdx));
+    }
+
     tr.innerHTML = `
         <td class="nst-active-set-label" style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">
             Serie ${sIdx + 1} (Extra)
         </td>
-        <td style="text-align: center;">
-            <div class="nst-active-input-col">
-                <input type="number" id="nst-ibrido-ex-peso-${exIdx}-${sIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${pesoVal}" step="0.5" min="0" max="500" ${ex.isBw ? 'disabled title="Corpo Libero"' : ''}>
-                <span class="nst-active-unit-label">kg</span>
-            </div>
-        </td>
-        <td style="text-align: center;">
-            <div class="nst-active-input-col">
-                <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-ex-input nst-active-rip-input nst-active-set-input rip-input" value="${ex.rip_target}" min="0" max="100">
-                <span class="nst-active-unit-label">rip</span>
+        <td class="nst-hud-num-col rec">${escapeHtml(sRec)}</td>
+        <td class="nst-hud-num-col ult">${escapeHtml(sUlt)}</td>
+        <td class="nst-hud-attuale-col" style="text-align: center;">
+            <div class="nst-hud-input-dual">
+                <input type="number"
+                       id="nst-ibrido-ex-peso-${exIdx}-${sIdx}"
+                       class="nst-active-set-input peso-input nst-ex-input nst-hud-input"
+                       value="${pesoVal}"
+                       step="0.5" min="0" max="500"
+                       ${ex.isBw ? 'disabled title="Corpo Libero"' : 'title="Carico kg"'}
+                       placeholder="kg">
+                <span class="nst-hud-input-sep">×</span>
+                <input type="number"
+                       id="nst-ibrido-ex-rip-${exIdx}-${sIdx}"
+                       class="nst-ex-input nst-active-rip-input nst-active-set-input rip-input nst-hud-input"
+                       value="${ripVal}"
+                       min="0" max="100"
+                       title="Ripetizioni"
+                       placeholder="rip">
             </div>
         </td>
     `;
     tbody.appendChild(tr);
+    salvaStatoWorkoutAttivo();
 }
 
 function calcolaCompletamentiProgrammi(allenamenti) {
@@ -7817,11 +8328,29 @@ function renderCatalogoIbrido() {
     renderSchedeCorsoAttivo();
 }
 
-function renderForzaAnteprimaEsercizi(p, exListEl, ultimaSessione) {
+function modificaForzaSeriePreview(exIdx, delta) {
+    const input = document.getElementById(`nst-forza-cfg-serie-${exIdx}`);
+    if (!input || !ibridoSelezionato) return;
+    const curVal = parseInt(input.value, 10) || 4;
+    const newVal = Math.max(1, Math.min(20, curVal + delta));
+    input.value = newVal;
+    if (ibridoSelezionato.esercizi && ibridoSelezionato.esercizi[exIdx]) {
+        ibridoSelezionato.esercizi[exIdx].serie_target = newVal;
+    }
+    const exListEl = document.getElementById('nst-ibrido-preview-ex-list');
+    if (exListEl) {
+        renderForzaAnteprimaEsercizi(ibridoSelezionato, exListEl, null);
+    }
+}
+
+function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
+    if (!exListEl) return;
+    const sessionList = Array.isArray(sessioni) ? sessioni : (sessioni ? [sessioni] : []);
+
     let html = `
-        <div style="background: rgba(255,179,0,0.06); border: 1px solid rgba(255,179,0,0.25); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 11px; line-height: 1.4; color: #f1f5f9;">
-            <strong style="color: var(--nst-amber);">ℹ️ GUIDA SESSIONE FORZA:</strong>
-            Riscaldamento generale dinamico libero di 10'. Qui sotto puoi personalizzare i carichi di riscaldamento specifico, le serie, le ripetizioni e il carico target da eseguire.
+        <div class="nst-hud-info-strip">
+            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-amber);">info</span>
+            <span>Personalizza carichi e serie prima dell'avvio. <strong>ATTUALE</strong> è precompilato con <strong>ULTIMO</strong> (0 se mai eseguito).</span>
         </div>
     `;
 
@@ -7829,12 +8358,7 @@ function renderForzaAnteprimaEsercizi(p, exListEl, ultimaSessione) {
         const isBw = isPureBodyweight(ex.nome);
         const maxStorico = ottieniMassimoStoricoEsercizio(ex.nome);
 
-        let prevEx = null;
-        if (ultimaSessione && ultimaSessione.scheda_dati && Array.isArray(ultimaSessione.scheda_dati.esercizi)) {
-            prevEx = ultimaSessione.scheda_dati.esercizi.find(e => (e.nome || '').trim().toLowerCase() === (ex.nome || '').trim().toLowerCase());
-        }
-
-        // Schema serie strutturate se presente (da libreria coach o catalogo)
+        // Schema serie strutturate se presente (da catalogo o coach library)
         let schemaStr = '';
         if (ex.serie && Array.isArray(ex.serie) && ex.serie.length > 0) {
             schemaStr = ex.serie.map(s => `${s.rip} rip @ ${(s.pct !== undefined ? s.pct : s.percentuale)}%`).join(' · ');
@@ -7842,125 +8366,160 @@ function renderForzaAnteprimaEsercizi(p, exListEl, ultimaSessione) {
             schemaStr = ex.target;
         }
 
-        // Default serie e rip
-        const serieDef = prevEx ? (prevEx.serie_target || prevEx.serie || 4) : (ex.serie_target || (ex.serie ? ex.serie.length : 4));
-        const ripDef = prevEx ? (prevEx.rip_target || prevEx.ripetizioni || 4) : (ex.rip_target || (ex.serie && ex.serie[0] ? ex.serie[0].rip : 4));
+        const serieDef = ex.serie_target || (ex.serie ? ex.serie.length : 4);
+        const ripDef = ex.rip_target || (ex.serie && ex.serie[0] ? ex.serie[0].rip : 4);
 
-        // Base di calcolo carico
-        let baseKg = 70;
-        let fonte = 'Default: 70 kg';
-        if (maxStorico > 0) {
-            baseKg = maxStorico;
-            fonte = `PR: ${maxStorico} kg`;
-        } else if (isCalisthenicsWithOverload(ex.nome)) {
-            baseKg = 0;
-            fonte = 'Sovraccarico base: 0 kg';
-        } else {
-            const pesoKgVal = (typeof window !== 'undefined' && window.currentUserPesoKg !== undefined)
-                ? window.currentUserPesoKg
-                : (typeof currentUserPesoKg !== 'undefined' ? currentUserPesoKg : null);
-            if (typeof pesoKgVal === 'number' && pesoKgVal > 0) {
-                baseKg = pesoKgVal;
-                fonte = `Peso atleta: ${baseKg} kg`;
-            }
-        }
+        const storico = calcolaStoricoSerieForza(ex.nome, isBw, 5, serieDef, sessionList);
 
-        // Default peso allenante
-        let pesoDef = 0;
-        if (!isBw) {
-            if (prevEx && prevEx.peso_target_kg !== undefined && prevEx.peso_target_kg > 0) {
-                pesoDef = prevEx.peso_target_kg;
-            } else if (prevEx && prevEx.peso_kg !== undefined && prevEx.peso_kg > 0) {
-                pesoDef = prevEx.peso_kg;
-            } else if (ex.peso_target !== undefined && ex.peso_target > 0) {
-                pesoDef = ex.peso_target;
-            } else {
-                pesoDef = Math.round((baseKg * 0.85) * 2) / 2;
-            }
-        }
+        // Riscaldamento righe (R1..R5) se non corpo libero
+        const warmupRowsHtml = !isBw ? storico.warmups.map((w, wIdx) => {
+            const defW = DEFAULT_FORZA_WARMUP[wIdx] || { rip: 10, pct: 75 };
+            const ultPeso = w.ult.hasData ? w.ult.peso : 0;
+            const ultRip = w.ult.hasData ? w.ult.rip : 0;
+            return `
+                <tr class="nst-hud-set-row warmup-row" data-ex-idx="${exIdx}" data-set-type="warmup" data-set-idx="${wIdx}">
+                    <td class="nst-hud-set-label">
+                        <span class="nst-hud-set-tag">R${wIdx + 1}</span>
+                        <span class="nst-hud-set-sub">${defW.rip}×${defW.pct}%</span>
+                    </td>
+                    <td class="nst-hud-num-col rec">${escapeHtml(w.rec.display)}</td>
+                    <td class="nst-hud-num-col ult">${escapeHtml(w.ult.display)}</td>
+                    <td class="nst-hud-attuale-col">
+                        <div class="nst-hud-input-dual">
+                            <input type="number"
+                                   id="nst-forza-cfg-warmup-${exIdx}-${wIdx}"
+                                   class="nst-ex-input nst-hud-input peso-input"
+                                   value="${ultPeso}"
+                                   step="0.5" min="0" max="500"
+                                   title="Carico kg riscaldamento">
+                            <span class="nst-hud-dual-x">×</span>
+                            <input type="number"
+                                   id="nst-forza-cfg-warmup-rip-${exIdx}-${wIdx}"
+                                   class="nst-ex-input nst-hud-input rip-input"
+                                   value="${ultRip}"
+                                   min="0" max="100"
+                                   title="Ripetizioni riscaldamento">
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('') : '';
 
-        // Riscaldamento specifico (5 serie progressive):
-        const warmupRows = DEFAULT_FORZA_WARMUP.map((w, wIdx) => {
-            let wKg = 0;
-            if (prevEx && Array.isArray(prevEx.riscaldamento) && prevEx.riscaldamento[wIdx] && prevEx.riscaldamento[wIdx].peso_kg > 0) {
-                wKg = prevEx.riscaldamento[wIdx].peso_kg;
-            } else {
-                wKg = Math.round((baseKg * w.pct / 100) * 2) / 2;
-            }
-            return { rip: w.rip, pct: w.pct, peso_kg: wKg };
-        });
+        // Serie allenanti righe (S1..S{serieDef})
+        const workRowsHtml = storico.workSets.map((s, sIdx) => {
+            const ultPeso = s.ult.hasData ? s.ult.peso : 0;
+            const ultRip = s.ult.hasData ? s.ult.rip : 0;
+            return `
+                <tr class="nst-hud-set-row work-row" data-ex-idx="${exIdx}" data-set-type="work" data-set-idx="${sIdx}">
+                    <td class="nst-hud-set-label">
+                        <span class="nst-hud-set-tag work">S${sIdx + 1}</span>
+                    </td>
+                    <td class="nst-hud-num-col rec">${escapeHtml(s.rec.display)}</td>
+                    <td class="nst-hud-num-col ult">${escapeHtml(s.ult.display)}</td>
+                    <td class="nst-hud-attuale-col">
+                        ${!isBw ? `
+                        <div class="nst-hud-input-dual">
+                            <input type="number"
+                                   id="nst-forza-cfg-work-peso-${exIdx}-${sIdx}"
+                                   class="nst-ex-input nst-hud-input peso-input"
+                                   value="${ultPeso}"
+                                   step="0.5" min="0" max="500"
+                                   title="Carico kg serie ${sIdx + 1}"
+                                   oninput="if (${sIdx} === 0) { const el = document.getElementById('nst-forza-cfg-peso-${exIdx}'); if (el) el.value = this.value; verificaForzaMaxStorico(${exIdx}, ${maxStorico}); }">
+                            <span class="nst-hud-dual-x">×</span>
+                            <input type="number"
+                                   id="nst-forza-cfg-work-rip-${exIdx}-${sIdx}"
+                                   class="nst-ex-input nst-hud-input rip-input"
+                                   value="${ultRip}"
+                                   min="0" max="100"
+                                   title="Ripetizioni serie ${sIdx + 1}"
+                                   oninput="if (${sIdx} === 0) { const el = document.getElementById('nst-forza-cfg-rip-${exIdx}'); if (el) el.value = this.value; }">
+                        </div>
+                        ` : `
+                        <div class="nst-hud-input-single">
+                            <input type="number"
+                                   id="nst-forza-cfg-work-rip-${exIdx}-${sIdx}"
+                                   class="nst-ex-input nst-hud-input rip-input"
+                                   value="${ultRip}"
+                                   min="0" max="100"
+                                   title="Ripetizioni serie ${sIdx + 1}"
+                                   oninput="if (${sIdx} === 0) { const el = document.getElementById('nst-forza-cfg-rip-${exIdx}'); if (el) el.value = this.value; }">
+                        </div>
+                        `}
+                    </td>
+                </tr>
+            `;
+        }).join('');
 
-        const fonteTesto = prevEx
-            ? `Dati precompilati dall'ultima seduta (${formatDateShort(ultimaSessione.data_allenamento)})`
-            : `Pesi calcolati su: ${fonte}`;
+        const firstWorkUltPeso = storico.workSets[0]?.ult.hasData ? storico.workSets[0].ult.peso : 0;
+        const firstWorkUltRip = storico.workSets[0]?.ult.hasData ? storico.workSets[0].ult.rip : 0;
 
         return `
-            <div class="nst-forza-ex-card">
-                <div class="nst-forza-ex-header">
+            <div class="nst-forza-ex-card nst-hud-card">
+                <!-- Header Esercizio HUD -->
+                <div class="nst-forza-ex-header nst-hud-ex-header">
                     <div>
-                        <div style="font-weight: 700; font-size: 13px; color: #fff;">${escapeHtml(ex.nome)}</div>
-                        ${schemaStr ? `<div style="color: var(--nst-amber); font-family: 'Orbitron', monospace; font-size: 11px; margin-top: 2px;">${escapeHtml(schemaStr)}</div>` : ''}
+                        <div class="nst-hud-ex-title">${escapeHtml(ex.nome)}</div>
+                        ${schemaStr ? `<div class="nst-hud-ex-schema">${escapeHtml(schemaStr)}</div>` : ''}
                     </div>
-                    <div class="nst-forza-ex-sub">${escapeHtml(fonteTesto)}</div>
+                    <div class="nst-hud-stepper-wrap">
+                        <span class="nst-hud-stepper-label">SERIE</span>
+                        <div class="nst-hud-stepper-ctrl">
+                            <button type="button" class="nst-stepper-btn" onclick="modificaForzaSeriePreview(${exIdx}, -1)" title="Riduci serie">-</button>
+                            <input type="number" id="nst-forza-cfg-serie-${exIdx}" class="nst-hud-stepper-val" value="${serieDef}" min="1" max="20" readonly>
+                            <button type="button" class="nst-stepper-btn" onclick="modificaForzaSeriePreview(${exIdx}, 1)" title="Aumenta serie">+</button>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Input compatibilità legacy nascosti per test -->
+                <input type="hidden" id="nst-forza-cfg-peso-${exIdx}" value="${firstWorkUltPeso}">
+                <input type="hidden" id="nst-forza-cfg-rip-${exIdx}" value="${firstWorkUltRip || ripDef}">
+
                 ${!isBw ? `
-                <!-- Box Riscaldamento Specifico (Modificabile) -->
-                <div class="nst-forza-warmup-container">
-                    <div class="nst-forza-sec-title">
-                        <span class="material-symbols-outlined" style="font-size: 13px; color: var(--nst-cyan);">local_fire_department</span>
-                        <span>RISCALDAMENTO SPECIFICO (MODIFICA CARICHI SE DESIDERI)</span>
-                    </div>
-                    <div class="nst-forza-warmup-grid">
-                        ${warmupRows.map((w, wIdx) => `
-                            <div class="nst-forza-warmup-chip">
-                                <span class="chip-step">${w.rip} rip @ ${w.pct}%</span>
-                                <div style="display: flex; align-items: center; gap: 3px;">
-                                    <input type="number" id="nst-forza-cfg-warmup-${exIdx}-${wIdx}" class="nst-ex-input nst-warmup-input" value="${w.peso_kg}" step="0.5" min="0" max="500">
-                                    <span style="font-size: 10px; color: var(--nst-text-muted);">kg</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
+                <!-- Sezione Riscaldamento Specifico -->
+                <div class="nst-hud-table-sec">
+                    <div class="nst-forza-sec-title">RISCALDAMENTO SPECIFICO</div>
+                    <table class="nst-ex-table nst-hud-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 22%;">SET</th>
+                                <th style="width: 20%; text-align: center;">REC</th>
+                                <th style="width: 20%; text-align: center;">ULT</th>
+                                <th style="width: 38%; text-align: center;">ATTUALE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${warmupRowsHtml}
+                        </tbody>
+                    </table>
                 </div>
                 ` : ''}
 
-                <!-- Box Serie Allenanti (Target della Seduta) -->
-                <div class="nst-forza-work-container">
-                    <div class="nst-forza-sec-title">
-                        <span class="material-symbols-outlined" style="font-size: 13px; color: var(--nst-amber);">fitness_center</span>
-                        <span>SEQUENZA ALLENANTE (MODIFICA SERIE, RIP E CARICO)</span>
-                    </div>
-                    <div class="nst-forza-target-grid">
-                        <div class="nst-forza-param-col">
-                            <label>SERIE</label>
-                            <input type="number" id="nst-forza-cfg-serie-${exIdx}" class="nst-ex-input" value="${serieDef}" min="1" max="20" style="width: 60px;">
-                        </div>
-                        <div class="nst-forza-param-col">
-                            <label>RIPETIZIONI</label>
-                            <input type="number" id="nst-forza-cfg-rip-${exIdx}" class="nst-ex-input" value="${ripDef}" min="1" max="100" style="width: 60px;">
-                        </div>
-                        ${!isBw ? `
-                        <div class="nst-forza-param-col">
-                            <label>CARICO (KG)</label>
-                            <input type="number" id="nst-forza-cfg-peso-${exIdx}" class="nst-ex-input" value="${pesoDef}" step="0.5" min="0" max="500" style="width: 75px; color: var(--nst-lime);" oninput="verificaForzaMaxStorico(${exIdx}, ${maxStorico})">
-                        </div>
-                        ` : `
-                        <input type="hidden" id="nst-forza-cfg-peso-${exIdx}" value="0">
-                        `}
-                    </div>
+                <!-- Sezione Sequenza Allenante -->
+                <div class="nst-hud-table-sec">
+                    <div class="nst-forza-sec-title">SEQUENZA ALLENANTE</div>
+                    <table class="nst-ex-table nst-hud-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 22%;">SET</th>
+                                <th style="width: 20%; text-align: center;">REC</th>
+                                <th style="width: 20%; text-align: center;">ULT</th>
+                                <th style="width: 38%; text-align: center;">ATTUALE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${workRowsHtml}
+                        </tbody>
+                    </table>
+                </div>
 
-                    <!-- Segnale / Badge Massimo Storico -->
-                    <div id="nst-forza-badge-max-${exIdx}" class="nst-forza-badge-container ${maxStorico > 0 ? '' : 'nst-hidden'}">
-                        ${(maxStorico > 0 && pesoDef < maxStorico)
-                            ? `<span class="nst-forza-max-warn"><span class="material-symbols-outlined" style="font-size: 13px; vertical-align: middle;">warning</span> Il peso impostato (${pesoDef} kg) è inferiore al tuo massimo storico (${maxStorico} kg)</span>`
-                            : (maxStorico > 0 ? `<span class="nst-forza-max-record"><span class="material-symbols-outlined" style="font-size: 13px; vertical-align: middle;">trophy</span> Record storico: ${maxStorico} kg</span>` : '')
-                        }
-                    </div>
-
-                    <div class="nst-forza-tip-box">
-                        💡 <strong>Progressione:</strong> 4x4 → 4x5 → 4x6. A 4x6 superato: valuta 4x7 oppure aumenta il carico tornando a 4x4.
-                    </div>
+                <!-- Badge Massimo Storico (compatibilità test verificaForzaMaxStorico) -->
+                <div id="nst-forza-badge-max-${exIdx}" class="nst-forza-badge-container ${maxStorico > 0 ? '' : 'nst-hidden'}">
+                    ${(maxStorico > 0 && firstWorkUltPeso > 0 && firstWorkUltPeso < maxStorico)
+                        ? `<span class="nst-forza-max-warn"><span class="material-symbols-outlined" style="font-size: 13px; vertical-align: middle;">warning</span> Il peso impostato (${firstWorkUltPeso} kg) è inferiore al tuo massimo storico (${maxStorico} kg)</span>`
+                        : (maxStorico > 0 && firstWorkUltPeso >= maxStorico ? `<span class="nst-forza-max-record">Record storico: ${maxStorico} kg</span>` : '')
+                    }
                 </div>
             </div>
         `;
@@ -7972,16 +8531,10 @@ function renderForzaAnteprimaEsercizi(p, exListEl, ultimaSessione) {
 function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSessione) {
     if (!exListEl) return;
 
-    const dataFmt = (ultimaSessione && ultimaSessione.data_allenamento) ? formatDateShort(ultimaSessione.data_allenamento) : '';
-    const infoHtml = ultimaSessione
-        ? `<div style="background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.25); border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; font-size: 11px; line-height: 1.4; color: #f1f5f9; display: flex; align-items: center; gap: 8px;">
-               <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-cyan);">history</span>
-               <span>Dati precompilati dall'ultima seduta <strong>(${escapeHtml(dataFmt)})</strong>. Modifica liberamente i target o i carichi prima di iniziare.</span>
-           </div>`
-        : `<div style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.14); border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; font-size: 11px; line-height: 1.4; color: var(--nst-text-muted); display: flex; align-items: center; gap: 8px;">
-               <span class="material-symbols-outlined" style="font-size: 18px; color: var(--nst-lime);">verified</span>
-               <span>Prima seduta di questo programma: dati precompilati con i valori di riferimento. Modificali a piacimento prima dell'avvio!</span>
-           </div>`;
+    const allSessions = ottieniStoricoUnificatoAtleta(
+        ultimaSessione || miglioreSessione ? [ultimaSessione, miglioreSessione].filter(Boolean) : []
+    );
+    const numRounds = ibridoRounds || p.rounds_default || 6;
 
     const rowsHtml = (p.esercizi || []).map((ex, exIdx) => {
         const hasWeight = estraiPesoDaEsercizioMetcon(ex) !== null;
@@ -7990,66 +8543,11 @@ function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSess
         const defaultTargetVal = parsed.targetVal || '15';
         const defaultUnita = parsed.unita || 'rip';
 
-        // Ricerca esercizio in ultimaSessione con algoritmo robusto multi-pass
-        const lastEx = (ultimaSessione && ultimaSessione.scheda_dati)
-            ? trovaEsercizioInSessione(ultimaSessione.scheda_dati.esercizi, ex.nome)
-            : null;
+        const storico = calcolaStoricoGiriMetcon(ex, numRounds, allSessions);
 
-        // Ricerca esercizio in miglioreSessione con algoritmo robusto multi-pass
-        const bestEx = (miglioreSessione && miglioreSessione.scheda_dati)
-            ? trovaEsercizioInSessione(miglioreSessione.scheda_dati.esercizi, ex.nome)
-            : null;
-
-        // Formattazione MIGLIORE
-        let bestDisplay = '<span style="color: #64748b; font-size: 11px;">—</span>';
-        if (bestEx) {
-            const bTarget = bestEx.target_val || (bestEx.giri_dettaglio && bestEx.giri_dettaglio[0] ? bestEx.giri_dettaglio[0].effettivo : '') || (bestEx.totale_effettivo ? String(bestEx.totale_effettivo) : '');
-            const bKg = (typeof bestEx.peso_kg === 'number' && bestEx.peso_kg > 0) ? `${bestEx.peso_kg}kg` : '';
-            const bUnit = bestEx.unita || defaultUnita;
-            if (bTarget) {
-                bestDisplay = `
-                    <div style="display: inline-flex; align-items: center; gap: 4px; color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">
-                        <span>🏆</span>
-                        <span>${escapeHtml(bTarget)} ${escapeHtml(bUnit)}</span>
-                    </div>
-                    ${bKg ? `<div style="font-size: 9px; color: var(--nst-cyan); font-family: 'Orbitron', monospace;">@ ${escapeHtml(bKg)}</div>` : ''}
-                `;
-            } else if (bestEx.risultato) {
-                bestDisplay = `<span style="color: var(--nst-lime); font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700;">🏆 ${escapeHtml(bestEx.risultato)}</span>`;
-            }
-        }
-
-        // Formattazione ULTIMA
-        let lastDisplay = '<span style="color: #64748b; font-size: 11px;">—</span>';
-        if (lastEx) {
-            const lTarget = lastEx.target_val || (lastEx.giri_dettaglio && lastEx.giri_dettaglio[0] ? lastEx.giri_dettaglio[0].effettivo : '') || (lastEx.totale_effettivo ? String(lastEx.totale_effettivo) : '');
-            const lKg = (typeof lastEx.peso_kg === 'number' && lastEx.peso_kg > 0) ? `${lastEx.peso_kg}kg` : '';
-            const lUnit = lastEx.unita || defaultUnita;
-            const lData = (ultimaSessione && ultimaSessione.data_allenamento) ? formatDateShort(ultimaSessione.data_allenamento) : '';
-            if (lTarget) {
-                lastDisplay = `
-                    <div style="color: #cbd5e1; font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 600;">${escapeHtml(lTarget)} ${escapeHtml(lUnit)}</div>
-                    ${lKg ? `<div style="font-size: 9px; color: var(--nst-amber); font-family: 'Orbitron', monospace;">@ ${escapeHtml(lKg)}</div>` : ''}
-                    ${lData ? `<div style="font-size: 8px; color: var(--nst-text-muted); margin-top: 1px;">${escapeHtml(lData)}</div>` : ''}
-                `;
-            } else if (lastEx.risultato) {
-                lastDisplay = `
-                    <div style="color: #cbd5e1; font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 600;">${escapeHtml(lastEx.risultato)}</div>
-                    ${lData ? `<div style="font-size: 8px; color: var(--nst-text-muted); margin-top: 1px;">${escapeHtml(lData)}</div>` : ''}
-                `;
-            }
-        }
-
-        // Calcolo default precompilato per OGGI (da ultimaSessione o default catalogo)
-        let todayTargetVal = defaultTargetVal;
-        if (lastEx && (lastEx.target_val || (lastEx.giri_dettaglio && lastEx.giri_dettaglio[0] && lastEx.giri_dettaglio[0].effettivo))) {
-            todayTargetVal = lastEx.target_val || lastEx.giri_dettaglio[0].effettivo;
-        }
-
-        let todayKgVal = defaultWeight;
-        if (lastEx && typeof lastEx.peso_kg === 'number' && lastEx.peso_kg > 0) {
-            todayKgVal = lastEx.peso_kg;
-        }
+        // Se mai fatto -> 0; se fatto -> precompila con ULTIMO
+        let initialTarget = storico.ultPreview.hasData ? storico.ultPreview.val : '0';
+        let initialPeso = (hasWeight && storico.ultPreview.hasData) ? storico.ultPreview.peso : (hasWeight ? 0 : 0);
 
         return `
             <tr>
@@ -8057,17 +8555,28 @@ function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSess
                     <div style="font-weight: 700; color: #fff; font-size: 12px;">${escapeHtml(ex.nome)}</div>
                     <div style="font-size: 9px; color: var(--nst-text-muted); font-family: 'Orbitron', monospace;">Rif: ${escapeHtml(ex.target)}</div>
                 </td>
-                <td class="nst-td-best">${bestDisplay}</td>
-                <td class="nst-td-last">${lastDisplay}</td>
-                <td class="nst-td-today">
+                <td class="nst-hud-num-col rec">${escapeHtml(storico.recPreview.display)}</td>
+                <td class="nst-hud-num-col ult">${escapeHtml(storico.ultPreview.display)}</td>
+                <td class="nst-hud-attuale-col">
                     <div class="nst-metcon-cfg-row">
                         <div class="nst-metcon-input-wrap">
-                            <input type="text" id="nst-metcon-cfg-target-${exIdx}" class="nst-metcon-cfg-input" value="${escapeHtml(String(todayTargetVal))}" title="Target per giro (rip, cal o metri)">
+                            <input type="text"
+                                   id="nst-metcon-cfg-target-${exIdx}"
+                                   class="nst-metcon-cfg-input nst-hud-input"
+                                   value="${escapeHtml(String(initialTarget))}"
+                                   data-initial-ult="${escapeHtml(String(initialTarget))}"
+                                   title="Target per giro (rip, cal o metri)">
                             <span class="nst-metcon-unit-badge">${escapeHtml(defaultUnita)}</span>
                         </div>
                         ${hasWeight ? `
                         <div class="nst-metcon-input-wrap">
-                            <input type="number" id="nst-metcon-cfg-peso-${exIdx}" class="nst-metcon-cfg-input nst-weight-input" value="${todayKgVal}" step="0.5" min="0" max="500" title="Carico in kg">
+                            <input type="number"
+                                   id="nst-metcon-cfg-peso-${exIdx}"
+                                   class="nst-metcon-cfg-input nst-weight-input nst-hud-input"
+                                   value="${initialPeso}"
+                                   data-initial-ult-peso="${initialPeso}"
+                                   step="0.5" min="0" max="500"
+                                   title="Carico in kg">
                             <span class="nst-metcon-unit-badge kg">kg</span>
                         </div>
                         ` : `<input type="hidden" id="nst-metcon-cfg-peso-${exIdx}" value="0">`}
@@ -8078,14 +8587,17 @@ function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSess
     }).join('');
 
     exListEl.innerHTML = `
-        ${infoHtml}
-        <table class="nst-metcon-compare-table">
+        <div class="nst-hud-info-strip">
+            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-cyan);">info</span>
+            <span>Target per giro: <strong>REC</strong> e <strong>ULT</strong> indicano le prestazioni storiche (0 se mai eseguito). Modifica <strong>ATTUALE</strong> se desideri.</span>
+        </div>
+        <table class="nst-ex-table nst-hud-table nst-metcon-compare-table">
             <thead>
                 <tr>
                     <th style="width: 34%;">ESERCIZIO</th>
-                    <th style="width: 22%; text-align: center;" class="nst-th-best">MIGLIORE 🏆</th>
-                    <th style="width: 22%; text-align: center;" class="nst-th-last">ULTIMA SEDUTA</th>
-                    <th style="width: 22%; text-align: center;" class="nst-th-today">OGGI (TARGET)</th>
+                    <th style="width: 20%; text-align: center;">REC</th>
+                    <th style="width: 20%; text-align: center;">ULT</th>
+                    <th style="width: 26%; text-align: center;">ATTUALE</th>
                 </tr>
             </thead>
             <tbody>
@@ -8220,6 +8732,7 @@ async function avviaIbridoSeduta() {
     if (typeof window !== 'undefined') window.ibridoSessionMinimized = false;
     const p = ibridoSelezionato;
     const isForza = (p.tipo === 'forza' || p.categoria === 'forza');
+    const allSessions = ottieniStoricoUnificatoAtleta();
 
     // Se forza, raccogli la configurazione personalizzata dalla Preview prima di chiuderla
     if (isForza) {
@@ -8233,12 +8746,39 @@ async function avviaIbridoSeduta() {
                 const pesoVal = !isBw ? (parseFloat(document.getElementById(`nst-forza-cfg-peso-${exIdx}`)?.value) || 0) : 0;
                 const maxStorico = ottieniMassimoStoricoEsercizio(ex.nome);
 
+                const warmupCount = isBw ? 0 : DEFAULT_FORZA_WARMUP.length;
+                const storico = calcolaStoricoSerieForza(ex.nome, isBw, warmupCount, serieVal, allSessions);
+
                 const warmupList = [];
                 if (!isBw) {
                     DEFAULT_FORZA_WARMUP.forEach((w, wIdx) => {
                         const wInput = document.getElementById(`nst-forza-cfg-warmup-${exIdx}-${wIdx}`);
-                        const wKg = parseFloat(wInput?.value) || 0;
-                        warmupList.push({ rip: w.rip, pct: w.pct, peso_kg: wKg });
+                        const wKg = (wInput && wInput.value !== '') ? (parseFloat(wInput.value) || 0) : (w.peso_kg || 0);
+                        const wRec = storico.warmups[wIdx]?.rec_display || '0';
+                        const wUlt = storico.warmups[wIdx]?.ult_display || '0';
+                        warmupList.push({
+                            rip: w.rip,
+                            pct: w.pct,
+                            peso_kg: wKg,
+                            rec_display: wRec,
+                            ult_display: wUlt
+                        });
+                    });
+                }
+
+                const workSets = [];
+                for (let sIdx = 0; sIdx < serieVal; sIdx++) {
+                    const sPesoInput = document.getElementById(`nst-forza-cfg-work-peso-${exIdx}-${sIdx}`);
+                    const sRipInput = document.getElementById(`nst-forza-cfg-work-rip-${exIdx}-${sIdx}`);
+                    const sPeso = sPesoInput ? (parseFloat(sPesoInput.value) || 0) : pesoVal;
+                    const sRip = sRipInput ? (parseInt(sRipInput.value, 10) || ripVal) : ripVal;
+                    const sRec = storico.workSets[sIdx]?.rec_display || '0';
+                    const sUlt = storico.workSets[sIdx]?.ult_display || '0';
+                    workSets.push({
+                        peso_kg: isBw ? 0 : sPeso,
+                        rip: sRip,
+                        rec_display: sRec,
+                        ult_display: sUlt
                     });
                 }
 
@@ -8250,12 +8790,17 @@ async function avviaIbridoSeduta() {
                     peso_target_kg: pesoVal,
                     max_storico: maxStorico,
                     riscaldamento: warmupList,
+                    serie_iniziali: workSets,
+                    storico: storico,
                     target_descrittivo: isBw ? `${serieVal}x${ripVal} rip` : `${serieVal}x${ripVal} @ ${pesoVal}kg`
                 };
             })
         };
     } else {
         ibridoConfigurazionePersonalizzata = null;
+
+        const totalRounds = (p.timer_mode === 'tabata') ? ibridoRounds : (p.giri_target || 1);
+        const storicoPerEsercizio = (p.esercizi || []).map(ex => calcolaStoricoGiriMetcon(ex, totalRounds, allSessions));
 
         // Raccoglie i target e gli eventuali carichi personalizzati inseriti dall'utente nella tabella anteprima
         const eserciziPersonalizzati = (p.esercizi || []).map((ex, exIdx) => {
@@ -8294,22 +8839,27 @@ async function avviaIbridoSeduta() {
             esercizi: eserciziPersonalizzati
         };
 
-        const totalRounds = (p.timer_mode === 'tabata') ? ibridoRounds : (p.giri_target || 1);
         currentMetconDisplayedRound = 1;
         ibridoMetconResults = [];
         ibridoMetconSummary = null;
 
         for (let r = 0; r < totalRounds; r++) {
-            const roundExercises = eserciziPersonalizzati.map((ex) => ({
-                nome: ex.nome,
-                nome_originario: ex.nome_originario,
-                target_originario: ex.target_originario,
-                target_val: ex.target_val,
-                unita: ex.unita,
-                target_num: ex.target_num,
-                peso_kg: ex.peso_kg,
-                risultato_effettivo: ex.risultato_effettivo
-            }));
+            const roundExercises = eserciziPersonalizzati.map((ex, exIdx) => {
+                const exStorico = storicoPerEsercizio[exIdx];
+                const roundStorico = exStorico?.rounds[r] || { rec_display: '0', ult_display: '0', ult: { val: '0' } };
+                return {
+                    nome: ex.nome,
+                    nome_originario: ex.nome_originario,
+                    target_originario: ex.target_originario,
+                    target_val: ex.target_val,
+                    unita: ex.unita,
+                    target_num: ex.target_num,
+                    peso_kg: ex.peso_kg,
+                    rec_display: roundStorico.rec_display || '0',
+                    ult_display: roundStorico.ult_display || '0',
+                    risultato_effettivo: ex.risultato_effettivo
+                };
+            });
             ibridoMetconResults.push(roundExercises);
         }
     }
@@ -8401,25 +8951,35 @@ function renderForzaEserciziAttivi(p, config) {
             ${config.esercizi.map((ex, exIdx) => {
                 const hasWarmup = !ex.isBw && ex.riscaldamento && ex.riscaldamento.length > 0;
 
-                // Righe riscaldamento specifico interattive (Risc 1 10x, Risc 2 5x, etc.)
+                // Righe riscaldamento specifico interattive (Risc 1, Risc 2, etc.)
                 const warmupRowsHtml = hasWarmup ? ex.riscaldamento.map((w, wIdx) => {
                     const riscLabel = `Risc ${wIdx + 1} ${w.rip}x`;
+                    const recVal = w.rec_display || '0';
+                    const ultVal = w.ult_display || '0';
                     return `
                         <tr class="nst-active-set-row warmup-row" data-ex-idx="${exIdx}" data-set-type="warmup" data-set-idx="${wIdx}">
                             <td class="nst-active-set-label">
-                                <span style="font-size: 11px;">🔥</span>
-                                <span>${riscLabel}</span>
+                                <span class="nst-hud-set-badge warmup">${riscLabel}</span>
                             </td>
-                            <td style="text-align: center;">
-                                <div class="nst-active-input-col">
-                                    <input type="number" id="nst-ibrido-warmup-peso-${exIdx}-${wIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${w.peso_kg}" step="0.5" min="0" max="500">
-                                    <span class="nst-active-unit-label">kg</span>
-                                </div>
-                            </td>
-                            <td style="text-align: center;">
-                                <div class="nst-active-input-col">
-                                    <input type="number" id="nst-ibrido-warmup-rip-${exIdx}-${wIdx}" class="nst-active-set-input rip-input nst-ex-input" value="${w.rip}" min="0" max="100">
-                                    <span class="nst-active-unit-label">rip</span>
+                            <td class="nst-hud-num-col rec">${escapeHtml(recVal)}</td>
+                            <td class="nst-hud-num-col ult">${escapeHtml(ultVal)}</td>
+                            <td class="nst-hud-attuale-col" style="text-align: center;">
+                                <div class="nst-hud-input-dual">
+                                    <input type="number"
+                                           id="nst-ibrido-warmup-peso-${exIdx}-${wIdx}"
+                                           class="nst-active-set-input peso-input nst-ex-input nst-hud-input"
+                                           value="${w.peso_kg}"
+                                           step="0.5" min="0" max="500"
+                                           placeholder="kg"
+                                           title="Carico kg">
+                                    <span class="nst-hud-input-sep">×</span>
+                                    <input type="number"
+                                           id="nst-ibrido-warmup-rip-${exIdx}-${wIdx}"
+                                           class="nst-active-set-input rip-input nst-ex-input nst-hud-input"
+                                           value="${w.rip}"
+                                           min="0" max="100"
+                                           placeholder="rip"
+                                           title="Ripetizioni">
                                 </div>
                             </td>
                         </tr>
@@ -8428,22 +8988,36 @@ function renderForzaEserciziAttivi(p, config) {
 
                 // Righe serie allenanti interattive (Serie 1, Serie 2, etc.)
                 const workRowsHtml = Array.from({ length: ex.serie_target }).map((_, sIdx) => {
-                    const pesoVal = ex.isBw ? 0 : (ex.peso_target_kg || 0);
+                    const workItem = (ex.serie_iniziali && ex.serie_iniziali[sIdx]) ? ex.serie_iniziali[sIdx] : null;
+                    const pesoVal = workItem ? workItem.peso_kg : (ex.isBw ? 0 : (ex.peso_target_kg || 0));
+                    const ripVal = workItem ? workItem.rip : (ex.rip_target || 4);
+                    const sRec = workItem?.rec_display || (ex.storico?.workSets?.[sIdx]?.rec_display) || '0';
+                    const sUlt = workItem?.ult_display || (ex.storico?.workSets?.[sIdx]?.ult_display) || '0';
+
                     return `
                         <tr class="nst-active-set-row work-row" data-ex-idx="${exIdx}" data-set-type="work" data-set-idx="${sIdx}">
                             <td class="nst-active-set-label">
-                                <span>Serie ${sIdx + 1}</span>
+                                <span class="nst-hud-set-badge work">Serie ${sIdx + 1}</span>
                             </td>
-                            <td style="text-align: center;">
-                                <div class="nst-active-input-col">
-                                    <input type="number" id="nst-ibrido-ex-peso-${exIdx}-${sIdx}" class="nst-active-set-input peso-input nst-ex-input" value="${pesoVal}" step="0.5" min="0" max="500" ${ex.isBw ? 'disabled title="Corpo Libero"' : ''}>
-                                    <span class="nst-active-unit-label">kg</span>
-                                </div>
-                            </td>
-                            <td style="text-align: center;">
-                                <div class="nst-active-input-col">
-                                    <input type="number" id="nst-ibrido-ex-rip-${exIdx}-${sIdx}" class="nst-active-set-input rip-input nst-ex-input nst-active-rip-input" value="${ex.rip_target}" min="0" max="100">
-                                    <span class="nst-active-unit-label">rip</span>
+                            <td class="nst-hud-num-col rec">${escapeHtml(sRec)}</td>
+                            <td class="nst-hud-num-col ult">${escapeHtml(sUlt)}</td>
+                            <td class="nst-hud-attuale-col" style="text-align: center;">
+                                <div class="nst-hud-input-dual">
+                                    <input type="number"
+                                           id="nst-ibrido-ex-peso-${exIdx}-${sIdx}"
+                                           class="nst-active-set-input peso-input nst-ex-input nst-hud-input"
+                                           value="${pesoVal}"
+                                           step="0.5" min="0" max="500"
+                                           ${ex.isBw ? 'disabled title="Corpo Libero"' : 'title="Carico kg"'}
+                                           placeholder="kg">
+                                    <span class="nst-hud-input-sep">×</span>
+                                    <input type="number"
+                                           id="nst-ibrido-ex-rip-${exIdx}-${sIdx}"
+                                           class="nst-active-set-input rip-input nst-ex-input nst-active-rip-input nst-hud-input"
+                                           value="${ripVal}"
+                                           min="0" max="100"
+                                           title="Ripetizioni"
+                                           placeholder="rip">
                                 </div>
                             </td>
                         </tr>
@@ -8455,19 +9029,20 @@ function renderForzaEserciziAttivi(p, config) {
                         <div class="nst-active-ex-header">
                             <div>
                                 <span class="nst-active-ex-title">${escapeHtml(ex.nome)}</span>
-                                ${hasWarmup ? `<div style="font-size: 10px; color: var(--nst-amber); margin-top: 2px;">🔥 Riscaldamento specifico (5 serie) + Serie Allenanti</div>` : ''}
+                                ${hasWarmup ? `<div style="font-size: 10px; color: var(--nst-amber); margin-top: 2px;">Riscaldamento specifico + Serie Allenanti</div>` : ''}
                             </div>
                             <div class="nst-active-target-badge">
-                                🎯 TARGET: ${escapeHtml(ex.target_descrittivo || '')}
+                                TARGET: ${escapeHtml(ex.target_descrittivo || '')}
                             </div>
                         </div>
 
-                        <table class="nst-ex-table nst-active-series-table" style="width: 100%;">
+                        <table class="nst-ex-table nst-hud-table nst-active-series-table" style="width: 100%;">
                             <thead>
                                 <tr class="nst-active-sets-header">
-                                    <th style="width: 32%;">SET</th>
-                                    <th style="width: 34%; text-align: center;">CARICO (KG)</th>
-                                    <th style="width: 34%; text-align: center;">RIP EFFETTIVE</th>
+                                    <th style="width: 28%;">SET</th>
+                                    <th style="width: 20%; text-align: center;">REC</th>
+                                    <th style="width: 20%; text-align: center;">ULT</th>
+                                    <th style="width: 32%; text-align: center;">ATTUALE</th>
                                 </tr>
                             </thead>
                             ${hasWarmup ? `
@@ -8523,12 +9098,13 @@ function renderMetconGiroCorrente() {
             </div>
 
             <!-- Tabella Esercizi Giro Corrente -->
-            <table class="nst-ex-table nst-metcon-round-table">
+            <table class="nst-ex-table nst-hud-table nst-metcon-round-table" style="width: 100%;">
                 <thead>
                     <tr>
-                        <th style="width: 44%;">ESERCIZIO</th>
-                        <th style="width: 28%; text-align: center;">TARGET GIRO</th>
-                        <th style="width: 28%; text-align: center;">EFFETTIVO</th>
+                        <th style="width: 34%;">ESERCIZIO</th>
+                        <th style="width: 20%; text-align: center;">REC</th>
+                        <th style="width: 20%; text-align: center;">ULT</th>
+                        <th style="width: 26%; text-align: center;">ATTUALE</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -8543,20 +9119,20 @@ function renderMetconGiroCorrente() {
                                 else if (tabataEngine.state.phase === 'rest') activeRowClass = ' active-rest';
                             }
                         }
+                        const effVal = (item.risultato_effettivo !== undefined && item.risultato_effettivo !== null) ? item.risultato_effettivo : '0';
                         return `
                         <tr class="nst-metcon-ex-row${activeRowClass}" id="nst-metcon-ex-row-${exIdx}" data-ex-idx="${exIdx}">
                             <td>
-                                <div style="font-weight: 600; color: #fff; font-size: 12px;">${escapeHtml(item.nome)}</div>
-                                ${item.unita ? `<div style="font-size: 10px; color: var(--nst-text-muted);">${escapeHtml(item.unita)}</div>` : ''}
+                                <div style="font-weight: 700; color: #fff; font-size: 12px; line-height: 1.2;">${escapeHtml(item.nome)}</div>
+                                ${item.target_originario ? `<div style="font-size: 9px; color: var(--nst-text-muted); font-family: 'Orbitron', monospace;">Rif: ${escapeHtml(item.target_originario)}</div>` : ''}
                             </td>
-                            <td style="text-align: center;">
-                                <span class="nst-metcon-target-badge">${escapeHtml(item.target_originario)}</span>
-                            </td>
-                            <td style="text-align: center;">
+                            <td class="nst-hud-num-col rec">${escapeHtml(item.rec_display || '0')}</td>
+                            <td class="nst-hud-num-col ult">${escapeHtml(item.ult_display || '0')}</td>
+                            <td class="nst-hud-attuale-col" style="text-align: center;">
                                 <input type="text" 
                                        id="nst-metcon-ex-risultato-${exIdx}" 
-                                       class="nst-ex-input nst-metcon-round-input" 
-                                       value="${escapeHtml(String(item.risultato_effettivo))}" 
+                                       class="nst-ex-input nst-metcon-round-input nst-hud-input" 
+                                       value="${escapeHtml(String(effVal))}" 
                                        oninput="aggiornaMetconRisultatoInput(${exIdx}, this.value)">
                             </td>
                         </tr>
@@ -10319,6 +10895,14 @@ window.aggiornaIbridoTempoTotalePreview = aggiornaIbridoTempoTotalePreview;
 window.estraiTargetValoreEUnita = estraiTargetValoreEUnita;
 window.parseMetconResultNumber = parseMetconResultNumber;
 window.renderMetconGiroCorrente = renderMetconGiroCorrente;
+window.modificaForzaSeriePreview = modificaForzaSeriePreview;
+window.renderForzaAnteprimaEsercizi = renderForzaAnteprimaEsercizi;
+window.calcolaStoricoSerieForza = calcolaStoricoSerieForza;
+window.calcolaStoricoGiriMetcon = calcolaStoricoGiriMetcon;
+window.calcolaStoricoInvictus = calcolaStoricoInvictus;
+window.confrontaPrestazioneSerie = confrontaPrestazioneSerie;
+window.formattaPrestazioneCompatta = formattaPrestazioneCompatta;
+window.ottieniStoricoUnificatoAtleta = ottieniStoricoUnificatoAtleta;
 window.salvaMetconGiroCorrenteDaDom = salvaMetconGiroCorrenteDaDom;
 window.aggiornaMetconRisultatoInput = aggiornaMetconRisultatoInput;
 window.cambiaMetconGiro = cambiaMetconGiro;
@@ -10590,7 +11174,16 @@ if (typeof module !== 'undefined' && module.exports) {
         dockToggleTimer,
         dockExpandTimer,
         dockCloseTimer,
+        confrontaPrestazioneSerie,
+        formattaPrestazioneCompatta,
+        ottieniStoricoUnificatoAtleta,
+        calcolaStoricoSerieForza,
+        calcolaStoricoGiriMetcon,
+        calcolaStoricoInvictus,
+        renderForzaAnteprimaEsercizi,
+        modificaForzaSeriePreview,
         renderForzaEserciziAttivi,
+        renderMetconGiroCorrente,
         salvaStatoWorkoutAttivo,
         ripristinaStatoWorkoutAttivo,
         pulisciStatoWorkoutAttivo

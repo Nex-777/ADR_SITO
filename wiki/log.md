@@ -4309,3 +4309,19 @@ pm audit --omit=dev riporta 0 vulnerabilità).
   - L'invio dell'email all'utente con la motivazione dell'amministratore avviene esclusivamente all'atto della delibera manuale (`isManual: true`).
 - **Test Unitari**:
   - Creata suite `tests/cert-evaluator-single-email.test.js` con 9 test unitari per coprire heuristica giorno/anno, idoneità sportiva vs ludico-motoria, note veritiere, gate singola email e filtro coda approvazioni (278/278 test passati).
+
+## [2026-10-27] edit | Workout HUD Records (REC, ULT, ATTUALE) & Mobile Zero-Scroll
+- **Data Exposition & UI Redesign (Nestore Workouts)**:
+  - Implementata la triade dati `RECORD` (`REC`), `ULTIMO` (`ULT`) e `ATTUALE` su tutti i programmi di allenamento (`Forza 1–4`, `Metcon 1–4`, `Invictus` e schede Coach Libreria).
+  - `REC`: prestazione record storica per serie/round/esercizio calcolata con formula volume $kg \times rip$ con tie-breaker su peso (o ripetizioni per corpo libero); impostata rigorosamente a `0` se mai eseguita.
+  - `ULT`: prestazione conseguita nell'ultima seduta registrata per quello specifico set/round; impostata a `0` se mai eseguita.
+  - `ATTUALE`: input modificabile precompilato con `ULT` (o `0` se mai eseguito).
+- **Design System Mobile Zero-Scroll (360px)**:
+  - Eliminato il vincolo rigido `min-width: 440px/460px` su `.nst-metcon-compare-table`.
+  - Introdotto `.nst-hud-table` con `table-layout: fixed; width: 100%;` per garantire assenza assoluta di scroll orizzontale a 360px.
+  - Cifre massimizzate in `Orbitron` monospace `font-variant-numeric: tabular-nums` (15px bold per REC/ULT, 16px per ATTUALE contro zoom Safari iOS).
+  - Rimozione di cornici superflue ed emoji di distrazione (`🏆`, `🔥`, `🎯`, `💡`, `⚡`).
+- **Hardening Sicurezza**:
+  - Sostituito ogni `.select('*')` residuo su `nestore_allenamenti` con proiezioni esplicite di colonna (`id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, created_at`).
+- **Test di Regressione**:
+  - Creata suite `tests/workout-hud-records.test.js` con 16 test unitari per volume, tie-breaker, per-set granularity, Invictus, Metcon rounds e zero-scroll CSS. Tutti i 294 test complessivi del repository passano al 100%.
