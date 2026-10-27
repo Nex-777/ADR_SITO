@@ -1698,7 +1698,7 @@ async function ottieniBaseMassimaleEsercizio(nomeEsercizio) {
         try {
             const { data: allW } = await client
                 .from('nestore_allenamenti')
-                .select('id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, created_at')
+                .select('id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, attivo, creato_il')
                 .eq('utente_id', user.id)
                 .eq('attivo', true);
             if (allW && allW.length > 0) {
@@ -1917,7 +1917,7 @@ async function renderGraficoAllenamenti() {
         // Query ALL-TIME per calcolare i Record Personali di tutti gli allenamenti registrati
         const { data: allData, error } = await supabaseClient
             .from('nestore_allenamenti')
-            .select('id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, created_at')
+            .select('id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, attivo, creato_il')
             .eq('utente_id', u.id)
             .eq('attivo', true)
             .order('data_allenamento', { ascending: true });
@@ -4568,7 +4568,7 @@ async function caricaDatiAtletaPerCoach(atletaId) {
         // 2. Carica Allenamenti & PR
         const { data: allData } = await supabaseClient
             .from('nestore_allenamenti')
-            .select('*')
+            .select('id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, attivo, creato_il')
             .eq('utente_id', atletaId)
             .eq('attivo', true)
             .order('data_allenamento', { ascending: false });
@@ -6676,7 +6676,7 @@ function costruisciSchedaDatiInvictus(numGiri = 1, pullBase = 5) {
 }
 
 function modificaInvictusPull(delta) {
-    invictusPullBase = Math.max(0, Math.min(100, (parseInt(invictusPullBase, 10) || 0) + delta));
+    invictusPullBase = Math.max(1, Math.min(100, (parseInt(invictusPullBase, 10) || 5) + delta));
     const pullEl = document.getElementById('nst-invictus-pull-val');
     const targetPullEl = document.getElementById('nst-invictus-target-pull');
     const targetPushEl = document.getElementById('nst-invictus-target-push');
@@ -6692,11 +6692,11 @@ function apriAnteprimaInvictus() {
     const modal = document.getElementById('nst-invictus-preview-modal');
     const invStorico = calcolaStoricoInvictus();
 
-    // Se mai fatto -> 0; se fatto -> precompila con ULTIMO
+    // Se mai fatto -> precompila ATTUALE con 5 (REC e ULT restano a 0); se fatto -> precompila con ULTIMO
     if (invStorico.hasHistory && parseInt(invStorico.ultPull, 10) > 0) {
         invictusPullBase = parseInt(invStorico.ultPull, 10);
-    } else if (!invStorico.hasHistory) {
-        invictusPullBase = 0;
+    } else {
+        invictusPullBase = 5;
     }
 
     const pullEl = document.getElementById('nst-invictus-pull-val');
@@ -7367,8 +7367,8 @@ function ottieniStoricoUnificatoAtleta(extraSessions = []) {
         const da = a.data_allenamento || '';
         const db = b.data_allenamento || '';
         if (da !== db) return db.localeCompare(da);
-        const ca = a.created_at || '';
-        const cb = b.created_at || '';
+        const ca = a.creato_il || a.created_at || '';
+        const cb = b.creato_il || b.created_at || '';
         return cb.localeCompare(ca);
     });
     return result;
@@ -7727,7 +7727,7 @@ async function recuperaStoricoSessioniProgramma(progId, progNome) {
     try {
         let q = client
             .from('nestore_allenamenti')
-            .select('id, scheda_dati, data_allenamento, durata_minuti, corso_disciplina, note, created_at');
+            .select('id, scheda_dati, data_allenamento, durata_minuti, corso_disciplina, note, attivo, creato_il');
         if (typeof q.eq === 'function') q = q.eq('utente_id', user.id);
         if (typeof q.eq === 'function') q = q.eq('attivo', true);
         if (typeof q.or === 'function') q = q.or(`corso_disciplina.ilike.%${progNome}%,scheda_dati->>programma_id.eq.${progId}`);
@@ -7738,8 +7738,17 @@ async function recuperaStoricoSessioniProgramma(progId, progNome) {
 
         if (error || !data || data.length === 0) return { ultima: null, migliore: null, tutte: [] };
 
-        const ultima = data[0];
-        let migliore = data[0];
+        const sortedData = [...data].sort((a, b) => {
+            const da = a.data_allenamento || '';
+            const db = b.data_allenamento || '';
+            if (da !== db) return db.localeCompare(da);
+            const ca = a.creato_il || a.created_at || '';
+            const cb = b.creato_il || b.created_at || '';
+            return cb.localeCompare(ca);
+        });
+
+        const ultima = sortedData[0];
+        let migliore = sortedData[0];
         let bestScore = -1;
 
         for (const item of data) {
@@ -8350,7 +8359,7 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
     let html = `
         <div class="nst-hud-info-strip">
             <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-amber);">info</span>
-            <span>Personalizza carichi e serie prima dell'avvio. <strong>ATTUALE</strong> è precompilato con <strong>ULTIMO</strong> (0 se mai eseguito).</span>
+            <span>Personalizza carichi e serie prima dell'avvio. <strong>ATTUALE</strong> è precompilato con <strong>ULTIMO</strong> (o target di default se prima volta).</span>
         </div>
     `;
 
@@ -8371,11 +8380,26 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
 
         const storico = calcolaStoricoSerieForza(ex.nome, isBw, 5, serieDef, sessionList);
 
+        // Base di calcolo carico
+        let baseKg = 70;
+        if (maxStorico > 0) {
+            baseKg = maxStorico;
+        } else if (isCalisthenicsWithOverload(ex.nome)) {
+            baseKg = 0;
+        } else {
+            const pesoKgVal = (typeof window !== 'undefined' && window.currentUserPesoKg !== undefined)
+                ? window.currentUserPesoKg
+                : (typeof currentUserPesoKg !== 'undefined' ? currentUserPesoKg : null);
+            if (typeof pesoKgVal === 'number' && pesoKgVal > 0) {
+                baseKg = pesoKgVal;
+            }
+        }
+
         // Riscaldamento righe (R1..R5) se non corpo libero
         const warmupRowsHtml = !isBw ? storico.warmups.map((w, wIdx) => {
             const defW = DEFAULT_FORZA_WARMUP[wIdx] || { rip: 10, pct: 75 };
-            const ultPeso = w.ult.hasData ? w.ult.peso : 0;
-            const ultRip = w.ult.hasData ? w.ult.rip : 0;
+            const attWarmupPeso = w.ult.hasData ? w.ult.peso : (Math.round((baseKg * defW.pct / 100) * 2) / 2);
+            const attWarmupRip = w.ult.hasData ? w.ult.rip : defW.rip;
             return `
                 <tr class="nst-hud-set-row warmup-row" data-ex-idx="${exIdx}" data-set-type="warmup" data-set-idx="${wIdx}">
                     <td class="nst-hud-set-label">
@@ -8389,14 +8413,14 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
                             <input type="number"
                                    id="nst-forza-cfg-warmup-${exIdx}-${wIdx}"
                                    class="nst-ex-input nst-hud-input peso-input"
-                                   value="${ultPeso}"
+                                   value="${attWarmupPeso}"
                                    step="0.5" min="0" max="500"
                                    title="Carico kg riscaldamento">
                             <span class="nst-hud-dual-x">×</span>
                             <input type="number"
                                    id="nst-forza-cfg-warmup-rip-${exIdx}-${wIdx}"
                                    class="nst-ex-input nst-hud-input rip-input"
-                                   value="${ultRip}"
+                                   value="${attWarmupRip}"
                                    min="0" max="100"
                                    title="Ripetizioni riscaldamento">
                         </div>
@@ -8406,9 +8430,48 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
         }).join('') : '';
 
         // Serie allenanti righe (S1..S{serieDef})
-        const workRowsHtml = storico.workSets.map((s, sIdx) => {
-            const ultPeso = s.ult.hasData ? s.ult.peso : 0;
-            const ultRip = s.ult.hasData ? s.ult.rip : 0;
+        const workRowsData = storico.workSets.map((s, sIdx) => {
+            let attPeso = 0;
+            let attRip = ripDef;
+            if (s.ult.hasData) {
+                attPeso = s.ult.peso;
+                attRip = s.ult.rip;
+            } else {
+                // Se serie extra aggiunta o serie non registrata, cerca l'ultima serie storica valida
+                let prevValidWorkSet = null;
+                for (let prevIdx = sIdx - 1; prevIdx >= 0; prevIdx--) {
+                    if (storico.workSets[prevIdx]?.ult?.hasData) {
+                        prevValidWorkSet = storico.workSets[prevIdx].ult;
+                        break;
+                    }
+                }
+                if (prevValidWorkSet) {
+                    attPeso = isBw ? 0 : prevValidWorkSet.peso;
+                    attRip = prevValidWorkSet.rip;
+                } else {
+                    // Prima volta assoluta per questo esercizio
+                    const setSpec = (ex.serie && Array.isArray(ex.serie) && ex.serie[sIdx]) ? ex.serie[sIdx] : null;
+                    attRip = (setSpec && setSpec.rip !== undefined) ? setSpec.rip : ripDef;
+                    if (!isBw) {
+                        if (setSpec && typeof setSpec.peso_kg === 'number' && setSpec.peso_kg > 0) {
+                            attPeso = setSpec.peso_kg;
+                        } else if (setSpec && (setSpec.pct !== undefined || setSpec.percentuale !== undefined)) {
+                            const pPct = setSpec.pct !== undefined ? setSpec.pct : setSpec.percentuale;
+                            attPeso = Math.round((baseKg * pPct / 100) * 2) / 2;
+                        } else if (typeof ex.peso_target === 'number' && ex.peso_target > 0) {
+                            attPeso = ex.peso_target;
+                        } else {
+                            attPeso = Math.round((baseKg * 0.85) * 2) / 2;
+                        }
+                    } else {
+                        attPeso = 0;
+                    }
+                }
+            }
+            return { s, sIdx, attPeso, attRip };
+        });
+
+        const workRowsHtml = workRowsData.map(({ s, sIdx, attPeso, attRip }) => {
             return `
                 <tr class="nst-hud-set-row work-row" data-ex-idx="${exIdx}" data-set-type="work" data-set-idx="${sIdx}">
                     <td class="nst-hud-set-label">
@@ -8422,7 +8485,7 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
                             <input type="number"
                                    id="nst-forza-cfg-work-peso-${exIdx}-${sIdx}"
                                    class="nst-ex-input nst-hud-input peso-input"
-                                   value="${ultPeso}"
+                                   value="${attPeso}"
                                    step="0.5" min="0" max="500"
                                    title="Carico kg serie ${sIdx + 1}"
                                    oninput="if (${sIdx} === 0) { const el = document.getElementById('nst-forza-cfg-peso-${exIdx}'); if (el) el.value = this.value; verificaForzaMaxStorico(${exIdx}, ${maxStorico}); }">
@@ -8430,7 +8493,7 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
                             <input type="number"
                                    id="nst-forza-cfg-work-rip-${exIdx}-${sIdx}"
                                    class="nst-ex-input nst-hud-input rip-input"
-                                   value="${ultRip}"
+                                   value="${attRip}"
                                    min="0" max="100"
                                    title="Ripetizioni serie ${sIdx + 1}"
                                    oninput="if (${sIdx} === 0) { const el = document.getElementById('nst-forza-cfg-rip-${exIdx}'); if (el) el.value = this.value; }">
@@ -8440,7 +8503,7 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
                             <input type="number"
                                    id="nst-forza-cfg-work-rip-${exIdx}-${sIdx}"
                                    class="nst-ex-input nst-hud-input rip-input"
-                                   value="${ultRip}"
+                                   value="${attRip}"
                                    min="0" max="100"
                                    title="Ripetizioni serie ${sIdx + 1}"
                                    oninput="if (${sIdx} === 0) { const el = document.getElementById('nst-forza-cfg-rip-${exIdx}'); if (el) el.value = this.value; }">
@@ -8451,8 +8514,8 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
             `;
         }).join('');
 
-        const firstWorkUltPeso = storico.workSets[0]?.ult.hasData ? storico.workSets[0].ult.peso : 0;
-        const firstWorkUltRip = storico.workSets[0]?.ult.hasData ? storico.workSets[0].ult.rip : 0;
+        const firstWorkAttPeso = workRowsData[0] ? workRowsData[0].attPeso : 0;
+        const firstWorkAttRip = workRowsData[0] ? workRowsData[0].attRip : ripDef;
 
         return `
             <div class="nst-forza-ex-card nst-hud-card">
@@ -8473,8 +8536,8 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
                 </div>
 
                 <!-- Input compatibilità legacy nascosti per test -->
-                <input type="hidden" id="nst-forza-cfg-peso-${exIdx}" value="${firstWorkUltPeso}">
-                <input type="hidden" id="nst-forza-cfg-rip-${exIdx}" value="${firstWorkUltRip || ripDef}">
+                <input type="hidden" id="nst-forza-cfg-peso-${exIdx}" value="${firstWorkAttPeso}">
+                <input type="hidden" id="nst-forza-cfg-rip-${exIdx}" value="${firstWorkAttRip}">
 
                 ${!isBw ? `
                 <!-- Sezione Riscaldamento Specifico -->
@@ -8516,9 +8579,9 @@ function renderForzaAnteprimaEsercizi(p, exListEl, sessioni) {
 
                 <!-- Badge Massimo Storico (compatibilità test verificaForzaMaxStorico) -->
                 <div id="nst-forza-badge-max-${exIdx}" class="nst-forza-badge-container ${maxStorico > 0 ? '' : 'nst-hidden'}">
-                    ${(maxStorico > 0 && firstWorkUltPeso > 0 && firstWorkUltPeso < maxStorico)
-                        ? `<span class="nst-forza-max-warn"><span class="material-symbols-outlined" style="font-size: 13px; vertical-align: middle;">warning</span> Il peso impostato (${firstWorkUltPeso} kg) è inferiore al tuo massimo storico (${maxStorico} kg)</span>`
-                        : (maxStorico > 0 && firstWorkUltPeso >= maxStorico ? `<span class="nst-forza-max-record">Record storico: ${maxStorico} kg</span>` : '')
+                    ${(maxStorico > 0 && firstWorkAttPeso > 0 && firstWorkAttPeso < maxStorico)
+                        ? `<span class="nst-forza-max-warn"><span class="material-symbols-outlined" style="font-size: 13px; vertical-align: middle;">warning</span> Il peso impostato (${firstWorkAttPeso} kg) è inferiore al tuo massimo storico (${maxStorico} kg)</span>`
+                        : (maxStorico > 0 && firstWorkAttPeso >= maxStorico ? `<span class="nst-forza-max-record">Record storico: ${maxStorico} kg</span>` : '')
                     }
                 </div>
             </div>
@@ -8545,9 +8608,9 @@ function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSess
 
         const storico = calcolaStoricoGiriMetcon(ex, numRounds, allSessions);
 
-        // Se mai fatto -> 0; se fatto -> precompila con ULTIMO
-        let initialTarget = storico.ultPreview.hasData ? storico.ultPreview.val : '0';
-        let initialPeso = (hasWeight && storico.ultPreview.hasData) ? storico.ultPreview.peso : (hasWeight ? 0 : 0);
+        // Se mai fatto -> target di riferimento / peso default; se fatto -> precompila con ULTIMO
+        let initialTarget = storico.ultPreview.hasData ? storico.ultPreview.val : defaultTargetVal;
+        let initialPeso = hasWeight ? (storico.ultPreview.hasData ? storico.ultPreview.peso : defaultWeight) : 0;
 
         return `
             <tr>
@@ -8589,7 +8652,7 @@ function renderMetconAnteprimaEsercizi(p, exListEl, ultimaSessione, miglioreSess
     exListEl.innerHTML = `
         <div class="nst-hud-info-strip">
             <span class="material-symbols-outlined" style="font-size: 16px; color: var(--nst-cyan);">info</span>
-            <span>Target per giro: <strong>REC</strong> e <strong>ULT</strong> indicano le prestazioni storiche (0 se mai eseguito). Modifica <strong>ATTUALE</strong> se desideri.</span>
+            <span>Target per giro: <strong>REC</strong> e <strong>ULT</strong> indicano le prestazioni storiche (0 se mai eseguito). <strong>ATTUALE</strong> è precompilato con <strong>ULTIMO</strong> (o target di riferimento se prima volta).</span>
         </div>
         <table class="nst-ex-table nst-hud-table nst-metcon-compare-table">
             <thead>
@@ -8753,11 +8816,13 @@ async function avviaIbridoSeduta() {
                 if (!isBw) {
                     DEFAULT_FORZA_WARMUP.forEach((w, wIdx) => {
                         const wInput = document.getElementById(`nst-forza-cfg-warmup-${exIdx}-${wIdx}`);
+                        const wRipInput = document.getElementById(`nst-forza-cfg-warmup-rip-${exIdx}-${wIdx}`);
                         const wKg = (wInput && wInput.value !== '') ? (parseFloat(wInput.value) || 0) : (w.peso_kg || 0);
+                        const wRip = (wRipInput && wRipInput.value !== '') ? (parseInt(wRipInput.value, 10) || w.rip) : w.rip;
                         const wRec = storico.warmups[wIdx]?.rec_display || '0';
                         const wUlt = storico.warmups[wIdx]?.ult_display || '0';
                         warmupList.push({
-                            rip: w.rip,
+                            rip: wRip,
                             pct: w.pct,
                             peso_kg: wKg,
                             rec_display: wRec,

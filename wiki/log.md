@@ -4325,3 +4325,17 @@ pm audit --omit=dev riporta 0 vulnerabilità).
   - Sostituito ogni `.select('*')` residuo su `nestore_allenamenti` con proiezioni esplicite di colonna (`id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, created_at`).
 - **Test di Regressione**:
   - Creata suite `tests/workout-hud-records.test.js` con 16 test unitari per volume, tie-breaker, per-set granularity, Invictus, Metcon rounds e zero-scroll CSS. Tutti i 294 test complessivi del repository passano al 100%.
+
+
+## [2026-10-27] edit | Hotfix Schema SQL creato_il & Precompilazione ATTUALE v1.06.26
+- **Correzione Query PostgreSQL (`nestore_allenamenti`)**:
+  - Sostituito `created_at` con il nome di colonna reale `creato_il` in tutte le query client (`ottieniBaseMassimaleEsercizio`, `renderGraficoAllenamenti`, `recuperaStoricoSessioniProgramma`), risolvendo l'errore SQL 42703 e ripristinando la visualizzazione di tutti gli allenamenti a storico e dei contatori completamento sulle card.
+  - Sostituito `.select('*')` residuo nella vista Coach con proiezione di colonne esplicita (`id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, attivo, creato_il`).
+  - Aggiornato il tie-breaker cronologico per sessioni nello stesso giorno (`item.creato_il || item.created_at || ''`).
+- **Precompilazione Intelligente ATTUALE (REC=0, ULT=0, ATTUALE=target_default)**:
+  - Invictus: `ATTUALE` precompilato con default `5` Pull (`10` Push, `20` Squat) se mai eseguito, o con `ultPull` se già eseguito.
+  - Forza: `ATTUALE` precompilato con target da catalogo / coach library (`ex.peso_target`, `%` massimale calcolata, `ripDef`) se mai eseguito, o con `ULTIMO` per-set se già eseguito.
+  - Metcon: `ATTUALE` precompilato con `defaultTargetVal` e `defaultWeight` se mai eseguito, o con `ULTIMO` se già eseguito.
+  - In `avviaIbridoSeduta`, acquisizione fedele di `nst-forza-cfg-warmup-rip-*` per propagare le ripetizioni personalizzate di riscaldamento.
+- **Suite di Test Anti-Regressione**:
+  - Aggiornati test in `tests/metcon-schede.test.js` e aggiunti test di guardia schema SQL e comportamento prima seduta/successiva in `tests/workout-hud-records.test.js` (298/298 test passati con successo).

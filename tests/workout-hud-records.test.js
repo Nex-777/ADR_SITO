@@ -404,4 +404,152 @@ describe('NESTORE — Workout HUD Records (REC, ULT, ATTUALE)', () => {
             expect(htmlContent).toContain('nst-modal-pull-reps');
         });
     });
+
+    describe('5. Conformità Schema PostgreSQL & Anti-Regressione Valori Iniziali ATTUALE', () => {
+        it('garantisce che nessuna query su nestore_allenamenti selezioni created_at o usi select(*)', () => {
+            const jsPath = path.resolve(__dirname, '../portal/nestore.js');
+            const jsContent = fs.readFileSync(jsPath, 'utf8');
+
+            // Trova tutte le query .from('nestore_allenamenti').select(...)
+            const matches = jsContent.match(/\.from\(['"]nestore_allenamenti['"]\)\s*\.select\(([^)]+)\)/g) || [];
+            expect(matches.length).toBe(4); // 3 per atleta + 1 per vista coach
+
+            matches.forEach(block => {
+                expect(block).not.toContain('created_at');
+                expect(block).not.toContain('*');
+                expect(block).toContain('creato_il');
+            });
+        });
+
+        it('renderForzaAnteprimaEsercizi inizializza ATTUALE con target di default se mai eseguito (REC=0, ULT=0)', () => {
+            const mockExListEl = { innerHTML: '' };
+            const prog = {
+                id: 'ibrido_forza_1',
+                nome: 'Forza 1',
+                tipo: 'forza',
+                esercizi: [
+                    { nome: 'Panca Piana', serie_target: 4, rip_target: 5, peso_target: 105 }
+                ]
+            };
+
+            nestore.renderForzaAnteprimaEsercizi(prog, mockExListEl, []);
+
+            // REC e ULT sono 0
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col rec">0</td>');
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col ult">0</td>');
+
+            // ATTUALE per R1 riscaldamento precompila con default warmup (10 rip e peso > 0)
+            expect(mockExListEl.innerHTML).toContain('id="nst-forza-cfg-warmup-0-0"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-forza-cfg-warmup-rip-0-0"');
+            expect(mockExListEl.innerHTML).toContain('value="10"');
+
+            // ATTUALE per S1 serie allenante precompila con il target di catalogo (105kg x 5 rip)
+            expect(mockExListEl.innerHTML).toContain('id="nst-forza-cfg-work-peso-0-0"');
+            expect(mockExListEl.innerHTML).toContain('value="105"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-forza-cfg-work-rip-0-0"');
+            expect(mockExListEl.innerHTML).toContain('value="5"');
+        });
+
+        it('renderForzaAnteprimaEsercizi inizializza ATTUALE con ULTIMO se già eseguito in precedenza', () => {
+            const mockExListEl = { innerHTML: '' };
+            const prog = {
+                id: 'ibrido_forza_1',
+                nome: 'Forza 1',
+                tipo: 'forza',
+                esercizi: [
+                    { nome: 'Panca Piana', serie_target: 4, rip_target: 5, peso_target: 105 }
+                ]
+            };
+
+            const sessioni = [
+                {
+                    data_allenamento: '2026-10-25',
+                    scheda_dati: {
+                        tipo: 'forza',
+                        esercizi: [
+                            {
+                                nome: 'Panca Piana',
+                                riscaldamento_effettivo: [
+                                    { serie: 1, peso_kg: 70, rip: 10 }
+                                ],
+                                serie_effettive: [
+                                    { serie: 1, peso_kg: 100, rip: 5 }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ];
+
+            nestore.renderForzaAnteprimaEsercizi(prog, mockExListEl, sessioni);
+
+            // REC e ULT mostrano i valori reali
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col rec">100×5</td>');
+            expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col ult">100×5</td>');
+
+            // ATTUALE precompila con i valori dell'ultima sessione
+            expect(mockExListEl.innerHTML).toContain('id="nst-forza-cfg-work-peso-0-0"');
+            expect(mockExListEl.innerHTML).toContain('value="100"');
+            expect(mockExListEl.innerHTML).toContain('id="nst-forza-cfg-work-rip-0-0"');
+            expect(mockExListEl.innerHTML).toContain('value="5"');
+        });
+
+        it('apriAnteprimaInvictus precompila ATTUALE a 5 se prima volta e con ultPull se già eseguito', () => {
+            const mockPullVal = { textContent: '' };
+            const mockTargetPull = { textContent: '' };
+            const mockTargetPush = { textContent: '' };
+            const mockTargetSquat = { textContent: '' };
+            const mockRecPull = { textContent: '' };
+            const mockUltPull = { textContent: '' };
+            const mockRecPush = { textContent: '' };
+            const mockUltPush = { textContent: '' };
+            const mockRecSquat = { textContent: '' };
+            const mockUltSquat = { textContent: '' };
+            const mockModal = { classList: { remove: vi.fn(), add: vi.fn() } };
+
+            document.getElementById = vi.fn((id) => {
+                if (id === 'nst-invictus-preview-modal') return mockModal;
+                if (id === 'nst-invictus-pull-val') return mockPullVal;
+                if (id === 'nst-invictus-target-pull') return mockTargetPull;
+                if (id === 'nst-invictus-target-push') return mockTargetPush;
+                if (id === 'nst-invictus-target-squat') return mockTargetSquat;
+                if (id === 'nst-invictus-rec-pull') return mockRecPull;
+                if (id === 'nst-invictus-ult-pull') return mockUltPull;
+                if (id === 'nst-invictus-rec-push') return mockRecPush;
+                if (id === 'nst-invictus-ult-push') return mockUltPush;
+                if (id === 'nst-invictus-rec-squat') return mockRecSquat;
+                if (id === 'nst-invictus-ult-squat') return mockUltSquat;
+                return null;
+            });
+
+            // 1. Senza storico
+            window.currentAllenamentiData = [];
+            nestore.apriAnteprimaInvictus();
+            expect(mockPullVal.textContent).toBe(5);
+            expect(mockTargetPull.textContent).toBe(5);
+            expect(mockTargetPush.textContent).toBe(10);
+            expect(mockTargetSquat.textContent).toBe(20);
+            expect(mockRecPull.textContent).toBe(0);
+            expect(mockUltPull.textContent).toBe(0);
+
+            // 2. Con storico
+            window.currentAllenamentiData = [
+                {
+                    data_allenamento: '2026-10-20',
+                    corso_disciplina: 'INVICTUS',
+                    scheda_dati: {
+                        pull_base: 8,
+                        giri_completati: 10
+                    }
+                }
+            ];
+            nestore.apriAnteprimaInvictus();
+            expect(mockPullVal.textContent).toBe(8);
+            expect(mockTargetPull.textContent).toBe(8);
+            expect(mockTargetPush.textContent).toBe(16);
+            expect(mockTargetSquat.textContent).toBe(32);
+            expect(mockRecPull.textContent).toBe(8);
+            expect(mockUltPull.textContent).toBe(8);
+        });
+    });
 });

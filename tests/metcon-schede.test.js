@@ -531,10 +531,11 @@ describe('NESTORE — METCON Schede Overhaul & Giro Corrente', () => {
             expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col rec">0</td>');
             expect(mockExListEl.innerHTML).toContain('<td class="nst-hud-num-col ult">0</td>');
 
-            // Input ATTUALE precompilati con 0 se mai eseguito
+            // Input ATTUALE precompilati con i target di default se mai eseguito
             expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-target-0"');
-            expect(mockExListEl.innerHTML).toContain('value="0"');
+            expect(mockExListEl.innerHTML).toContain('value="15"');
             expect(mockExListEl.innerHTML).toContain('id="nst-metcon-cfg-peso-1"');
+            expect(mockExListEl.innerHTML).toContain('value="90"');
         });
 
         it('renderMetconAnteprimaEsercizi precompila con ultima seduta e mostra record storico migliore', () => {

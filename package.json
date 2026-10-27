@@ -1,6 +1,6 @@
 {
   "name": "adr-sito",
-  "version": "1.06.25",
+  "version": "1.06.26",
   "type": "module",
   "engines": {
     "node": "22.x"

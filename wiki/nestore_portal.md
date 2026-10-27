@@ -525,6 +525,16 @@ Riorganizzazione modulare della libreria programmi in Nestore ([`portal/nestore.
   - Switcher corsi (`.nst-course-tabs-nav`): abilitato `flex-wrap: wrap;` e rimossi `overflow-x: auto` e `scrollbar-width: thin;`, eliminando il taglio a destra e l'antiestetica scrollbar orizzontale su browser desktop Windows.
   - Card Invictus compatta (`.nst-standard-card-compact`): aumentato il padding a `16px 18px`, impostato `min-height: 68px;` e `flex-direction: column; justify-content: center;`, con `gap: 12px` e `flex-wrap: wrap;` sull'header e `line-height: 1.4; display: block;` sul sottotitolo `.nst-standard-seq`, prevenendo qualsiasi troncamento del testo della sequenza contro il bordo inferiore.
 
+### 9.13. Workout HUD Multi-Colonna (REC | ULT | ATTUALE) & Hotfix Schema SQL (v1.06.26)
+- **Triade HUD Dati & Zero-Scroll 360px**:
+  - Implementata la visualizzazione ad alta leggibilità `SET/ESERCIZIO | REC | ULT | ATTUALE` su Forza, Metcon, Invictus e schede personalizzate.
+  - `REC` e `ULT` mostrano la miglior prestazione storica e l'ultima prestazione (`0` se mai eseguito).
+  - `ATTUALE` pre-popola fedelmente `ULTIMO` per atleti che hanno già eseguito la scheda, oppure i target di default calcolati/da catalogo se eseguita per la prima volta (`5/10/20` per Invictus, ripetizioni e carichi calcolati per Forza, target e carichi base per Metcon).
+- **Correzione Schema SQL & Proiezioni Sicure**:
+  - Allineate tutte le query su `nestore_allenamenti` al nome reale della colonna timestamp PostgreSQL `creato_il` (sostituendo l'erroneo `created_at`).
+  - Sostituito ogni `.select('*')` residuo nella vista Coach con proiezione esplicita conforme a [SECURITY.md](../SECURITY.md) (`id, data_allenamento, corso_disciplina, durata_minuti, rpe_fatica, scheda_dati, note, attivo, creato_il`).
+  - Ordinamento deterministico delle sessioni multiple registrate nello stesso giorno con tie-breaker `item.creato_il || item.created_at || ''`.
+
 ---
 
 ## 10. Related Concept Pages
