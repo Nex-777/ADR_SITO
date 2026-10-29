@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.26"
+                VERSION: "1.06.27"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -3871,10 +3871,84 @@
             }
         }
 
-        // Eliminazione Utente
-        async function eliminaUtente(anagraficaId, nominativo) {
-            const confirmed = confirm(`ATTENZIONE! Sei sicuro di voler eliminare DEFINITIVAMENTE l'utente ${nominativo} e tutti i suoi dati dal database?\n\nQuesta operazione libererà l'email e il codice fiscale per permettere una nuova iscrizione da capo.\nAVVISO: Assicurarsi prima che l'utente non abbia effettuato un pagamento non ancora registrato!`);
-            if (!confirmed) return;
+        // ==========================================
+        // GESTIONE ELIMINAZIONE UTENTE & SBLOCCO RI-REGISTRAZIONE
+        // ==========================================
+        let pendingDeleteUser = null;
+
+        function eliminaUtente(anagraficaId, nominativo) {
+            pendingDeleteUser = { anagraficaId, nominativo };
+
+            const modal = document.getElementById('modal-elimina-utente');
+            const nomEl = document.getElementById('elimina-utente-nominativo');
+            const errBox = document.getElementById('elimina-utente-error-box');
+            const errText = document.getElementById('elimina-utente-error-text');
+            const btnConferma = document.getElementById('btn-conferma-elimina-utente');
+            const btnAnnulla = document.getElementById('btn-annulla-elimina-utente');
+
+            if (nomEl) nomEl.textContent = nominativo || 'Utente';
+            if (errBox) errBox.classList.add('hidden');
+            if (errText) errText.textContent = '';
+            
+            if (btnConferma) {
+                btnConferma.disabled = false;
+                btnConferma.classList.remove('hidden');
+                btnConferma.innerHTML = '<span class="material-symbols-outlined text-sm">delete_forever</span><span>CONFERMA ELIMINAZIONE</span>';
+            }
+            if (btnAnnulla) {
+                btnAnnulla.disabled = false;
+                btnAnnulla.textContent = 'ANNULLA';
+            }
+
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function chiudiModalEliminaUtente() {
+            pendingDeleteUser = null;
+            const modal = document.getElementById('modal-elimina-utente');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function purgeDeletedUserStorageFiles(utenteId) {
+            if (!utenteId) return;
+            const buckets = ['certificati_medici', 'documenti_identita', 'documenti_adesione', 'documenti_tutori'];
+            for (const bucket of buckets) {
+                try {
+                    const { data: fileList, error: listError } = await supabaseClient
+                        .storage
+                        .from(bucket)
+                        .list(utenteId);
+
+                    if (!listError && fileList && fileList.length > 0) {
+                        const pathsToRemove = fileList.map(f => `${utenteId}/${f.name}`);
+                        await supabaseClient.storage.from(bucket).remove(pathsToRemove);
+                    }
+                } catch (stgErr) {
+                    console.warn(`[STORAGE_CLEANUP] Fallita rimozione file orfani per bucket ${bucket}:`, stgErr);
+                }
+            }
+        }
+
+        async function eseguiEliminazioneUtenteConfermata() {
+            if (!pendingDeleteUser || !pendingDeleteUser.anagraficaId) {
+                chiudiModalEliminaUtente();
+                return;
+            }
+
+            const { anagraficaId, nominativo } = pendingDeleteUser;
+            const errBox = document.getElementById('elimina-utente-error-box');
+            const errText = document.getElementById('elimina-utente-error-text');
+            const btnConferma = document.getElementById('btn-conferma-elimina-utente');
+            const btnAnnulla = document.getElementById('btn-annulla-elimina-utente');
+
+            if (errBox) errBox.classList.add('hidden');
+            if (errText) errText.textContent = '';
+
+            if (btnConferma) {
+                btnConferma.disabled = true;
+                btnConferma.innerHTML = '<span class="material-symbols-outlined text-xs animate-spin">progress_activity</span> ELIMINAZIONE IN CORSO...';
+            }
+            if (btnAnnulla) btnAnnulla.disabled = true;
 
             try {
                 const { data, error } = await supabaseClient
@@ -3882,12 +3956,19 @@
 
                 if (error) throw error;
 
-                if (typeof showToastNotification === 'function') {
-                    showToastNotification(`Utente ${nominativo} eliminato e sbloccato per la ri-registrazione.`, 'success');
-                } else {
-                    alert(`Utente ${nominativo} eliminato con successo.`);
+                // Cleanup best-effort su Supabase Storage (GDPR Art. 9 / Art. 17)
+                const deletedUtenteId = data?.deleted_utente_id;
+                if (deletedUtenteId) {
+                    purgeDeletedUserStorageFiles(deletedUtenteId).catch(e => console.warn(e));
                 }
-                // Ricarica tutti i pannelli per aggiornare i dati
+
+                chiudiModalEliminaUtente();
+
+                if (typeof showToastNotification === 'function') {
+                    showToastNotification(`✓ Iscrizione di ${nominativo} eliminata con successo. Email e CF sbloccati per una nuova registrazione.`, 'success');
+                }
+
+                // Ricarica tutti i pannelli per sincronizzare i dati
                 loadSoci();
                 loadTesserati();
                 loadQuote();
@@ -3895,13 +3976,32 @@
                 if (typeof loadApprovazioni === 'function') loadApprovazioni();
                 loadStats();
             } catch (err) {
-                if (typeof showToastNotification === 'function') {
-                    showToastNotification("Errore durante l'eliminazione dell'utente: " + err.message, 'error');
-                } else {
-                    alert("Errore durante l'eliminazione dell'utente: " + err.message);
+                console.error("Errore eliminazione utente:", err);
+
+                let displayMsg = "Si è verificato un errore durante l'eliminazione dell'utente. Riprova più tardi.";
+                const rawMsg = err.message || '';
+                if (rawMsg.includes('[BLOCCO_NORMATIVO]')) {
+                    displayMsg = rawMsg.replace(/.*\[BLOCCO_NORMATIVO\]\s*/, '').trim();
+                } else if (rawMsg) {
+                    displayMsg = rawMsg;
+                }
+
+                if (errText) errText.textContent = displayMsg;
+                if (errBox) errBox.classList.remove('hidden');
+
+                if (btnConferma) {
+                    btnConferma.classList.add('hidden'); // Nasconde il pulsante per evitare retry falliti consecutivi
+                }
+                if (btnAnnulla) {
+                    btnAnnulla.disabled = false;
+                    btnAnnulla.textContent = 'CHIUDI';
                 }
             }
         }
+
+        window.eliminaUtente = eliminaUtente;
+        window.chiudiModalEliminaUtente = chiudiModalEliminaUtente;
+        window.eseguiEliminazioneUtenteConfermata = eseguiEliminazioneUtenteConfermata;
 
         // Registrazione Pagamento (con emissione ricevuta progressiva e audit log)
         async function registraPagamento(userId) {

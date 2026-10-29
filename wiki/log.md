@@ -4339,3 +4339,14 @@ pm audit --omit=dev riporta 0 vulnerabilità).
   - In `avviaIbridoSeduta`, acquisizione fedele di `nst-forza-cfg-warmup-rip-*` per propagare le ripetizioni personalizzate di riscaldamento.
 - **Suite di Test Anti-Regressione**:
   - Aggiornati test in `tests/metcon-schede.test.js` e aggiunti test di guardia schema SQL e comportamento prima seduta/successiva in `tests/workout-hud-records.test.js` (298/298 test passati con successo).
+
+## [2026-10-29] fix | Risoluzione blocco eliminazione utenti & Guardrail normativo (v1.06.27)
+- **Supabase Database RPC (`public.elimina_utente_completo`)**:
+  - Risolto il blocco di eliminazione per utenti con auto-log di audit personali (`CARICAMENTO_CERTIFICATO`, `AGGIORNAMENTO_PROFILO`), separando rigorosamente le auto-azioni dalle azioni direttive su terzi.
+  - Implementato Guardrail Normativo e Fiscale multilivello: tutela assoluta di ricevute fiscali progressive (`ricevute_pagamenti`, Art. 2220 c.c. / DPR 600/73), spese (`registro_spese`), verbali del CD e Assemblea (`verbali_consiglio`, `verbali_assemblea`, `riunioni_consiglio`), soci già a Libro Soci (`registro_soci` ATTIVO/numerato), tesserati già attivi (`registro_tesserati` ATTIVO/numerato) e storico consolidato Epika.
+  - Aggiunta cancellazione a cascata per vincoli `RESTRICT` su `nestore_schede_allenamento` e audit trail immutabile a carico dell'operatore direttivo chiamante (`ELIMINAZIONE_UTENTE_COMPLETA`).
+  - Creata policy Storage RLS `DELETE` su `storage.objects` per i bucket privati (`certificati_medici`, `documenti_identita`, `documenti_adesione`, `documenti_tutori`) per il Direttivo.
+- **Frontend Dashboard (`portal/dashboard.html`, `portal/dashboard.js`)**:
+  - Sostituito il prompt nativo `window.confirm()` e il toast a scomparsa rapida con un modale dedicato del design system Stitch Dark Brutalist (`#modal-elimina-utente`).
+  - Implementata state machine con spinner anti-doppio click (`progress_activity`), visualizzazione persistente in-modal degli errori normativi/di blocco, e pulizia automatica asincrona dei file orfani da Supabase Storage (GDPR Art. 9 e Art. 17).
+

@@ -210,6 +210,13 @@ A secure function executing with `SECURITY DEFINER` privileges allowing Authoriz
 -   Cleans up related table traces in `public.registro_audit_operazioni`, `public.ricevute_pagamenti`, and `public.atti_adesione`.
 -   Cascades deletion directly to the identity authentication profile in `auth.users` via triggers or direct deletion commands.
 
+### 3. RPC Function: `public.elimina_utente_completo(target_anagrafica_id)`
+Funzione `SECURITY DEFINER` riservata al Direttivo (`presidente`, `vice_presidente`, `segretario`, `tesoriere`) per la cancellazione atomica e sicura di pratiche errate/incomplete (es. tesserati/soci in attesa o pagamenti non perfezionati), liberando `email` e `codice_fiscale` per una nuova registrazione:
+- **Guardrail Normativo & Fiscale Multilivello**: Impedisce la distruzione se risultano ricevute progressive emesse in `ricevute_pagamenti` (obbligo decennale Art. 2220 c.c. e DPR 600/73), spese in `registro_spese`, verbali del CD o Assemblea (`verbali_consiglio`, `verbali_assemblea`, `riunioni_consiglio`), soci già iscritti a Libro Soci (`registro_soci` ATTIVO o numerato), tesserati già attivi con matricola (`registro_tesserati` ATTIVO o numerato), storico consolidato Epika (`epika_presenze_eventi`, `epika_storico_ruoli_gruppi`) o incarichi direttivi in carica.
+- **Separazione Auto-Azioni**: Rimuove i soli log di audit personali dell'utente target (`CARICAMENTO_CERTIFICATO`, `AGGIORNAMENTO_PROFILO`), evitando blocchi da falsi positivi.
+- **Pulizia Bottom-Up**: Rimuove ordinatamente record collegati in `registro_approvazioni`, `certificati_medici`, `documenti_identita`, `contatti`, `indirizzi_residenza`, `atti_adesione`, `nestore_*`, `epika_*`, `anagrafiche`, `utenti` e `auth.users`.
+- **Tracciabilità e Storage Cleanup**: Registra immutabilmente l'operazione in `registro_audit_operazioni` con `operatore_id = auth.uid()` e restituisce `deleted_utente_id` per consentire al client la rimozione controllata dei file personali orfani su Supabase Storage.
+
 ---
 
 ## ⚡ DB Trigger & API Modifications

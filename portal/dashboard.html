@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.06.26"></script>
+    <script src="config.js?v=1.06.27"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -504,7 +504,7 @@
             color: #00e5ff;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.06.26">
+    <link rel="stylesheet" href="../output.css?v=1.06.27">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -531,7 +531,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.26</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.27</span>
             </div>
 
             <!-- Item 2: Azioni Logout + Hamburger (Order 2 su Mobile, 4 su Desktop) -->
@@ -2548,6 +2548,48 @@
         </section>
     </main>
 
+    <!-- Modal per Eliminazione Utente / Pratica (Presidente, VP, Segretario, Tesoriere) -->
+    <div id="modal-elimina-utente" class="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center hidden p-4">
+        <div class="border border-red-500/30 bg-[#121212] p-6 max-w-lg w-full space-y-4 shadow-2xl relative">
+            <div class="flex items-center gap-2 border-b border-white/10 pb-3">
+                <span class="material-symbols-outlined text-primary text-xl">warning</span>
+                <h3 class="font-headline text-sm font-bold uppercase tracking-wider text-primary">ELIMINAZIONE DEFINITIVA ISCRIZIONE</h3>
+            </div>
+
+            <p class="text-xs text-gray-300">
+                Sei sicuro di voler eliminare la pratica dell'utente <strong id="elimina-utente-nominativo" class="text-white font-bold font-mono"></strong>?
+            </p>
+
+            <div class="bg-zinc-900/90 border border-white/10 p-3 text-[11px] text-gray-300 space-y-1.5 font-sans leading-relaxed">
+                <div class="flex items-start gap-1.5 text-amber-400 font-bold uppercase text-[10px]">
+                    <span class="material-symbols-outlined text-xs shrink-0 mt-0.5">info</span>
+                    <span>EFFETTO DELLO SBLOCCO:</span>
+                </div>
+                <p>Questa operazione rimuove l'anagrafica e l'account di autenticazione, <strong>liberando l'email e il codice fiscale</strong> per consentire una nuova registrazione da capo.</p>
+                <p class="text-gray-400 text-[10px]">I documenti personali caricati per questa richiesta verranno distrutti. L'operazione è consentita solo per pratiche prive di ricevute fiscali o delibere a verbale.</p>
+            </div>
+
+            <!-- Box Errore Persistente in-modal -->
+            <div id="elimina-utente-error-box" class="hidden bg-red-950/80 border border-red-500/60 p-3 text-red-200 text-xs font-sans space-y-1">
+                <div class="flex items-center gap-1.5 text-red-400 font-bold uppercase text-[10px]">
+                    <span class="material-symbols-outlined text-xs shrink-0">error</span>
+                    <span>OPERAZIONE BLOCCATA DAL SISTEMA:</span>
+                </div>
+                <p id="elimina-utente-error-text" class="text-[11px] leading-snug"></p>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button id="btn-annulla-elimina-utente" onclick="chiudiModalEliminaUtente()" class="flex-1 border border-white/20 text-gray-400 hover:text-white py-2 text-xs font-headline uppercase transition-all">
+                    ANNULLA
+                </button>
+                <button id="btn-conferma-elimina-utente" onclick="eseguiEliminazioneUtenteConfermata()" class="flex-1 bg-primary text-white font-headline font-bold py-2 text-xs uppercase hover:bg-red-600 transition-all flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-sm">delete_forever</span>
+                    <span>CONFERMA ELIMINAZIONE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal per Approva Socio (Presidente / VP / Segretario) -->
     <div id="modal-approvazione" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
         <div class="border border-white/10 bg-[#121212] p-6 max-w-md w-full space-y-4">
@@ -3429,9 +3471,9 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.06.26"></script>
-    <script src="dashboard-feedback.js?v=1.06.26"></script>
-    <script src="dashboard.js?v=1.06.26"></script>
+    <script src="password-validator.js?v=1.06.27"></script>
+    <script src="dashboard-feedback.js?v=1.06.27"></script>
+    <script src="dashboard.js?v=1.06.27"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -3652,8 +3694,8 @@
     </div>
 
     <!-- Floating Timer Dock for Active Timers from Nestore -->
-    <script src="timer-dock.js?v=1.06.26"></script>
-    <script src="feedback-widget.js?v=1.06.26"></script>
+    <script src="timer-dock.js?v=1.06.27"></script>
+    <script src="feedback-widget.js?v=1.06.27"></script>
 </body></html>
 
 
