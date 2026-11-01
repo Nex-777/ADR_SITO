@@ -30,7 +30,21 @@ This page details the login entry point and the registration checkout workflow.
 
 ---
 
-## 🛡️ Payment Guardrail & Financial Security
+## 🏷️ Descrizioni Transazioni Stripe (Stripe Dashboard)
+
+Per garantire massima chiarezza e trasparenza contabile nella lista *Pagamenti* di Stripe, ogni transazione viene valorizzata con descrizioni deterministiche e leggibili:
+
+| Tipologia Pagamento | Modalità | Formato Descrizione Stripe | Esempio |
+| :--- | :--- | :--- | :--- |
+| **Tesseramento / Quota Associativa** | Saldo Unico (`payment`) | `Tesseramento {Anno} - {LIVELLO/SOCIO} per {Nome Cognome}` | `Tesseramento 2026 - BASE per Mario Rossi` |
+| **Tesseramento a Rate** | Ricorrente (`subscription`) | `Abb {N} Rate - Tesseramento - {Nome Cognome}` | `Abb 12 Rate - Tesseramento - Mario Rossi` |
+| **Corso / Evento Sportivo** | Saldo Unico (`payment`) | `Iscrizione {Titolo Evento} ({Piano}) per {Nome Cognome}` | `Iscrizione Strongman (Semestrale) per Mario Rossi` |
+| **Corso Sportivo a Rate** | Ricorrente (`subscription`) | `Abb {N} Rate - {Titolo Evento} - {Nome Cognome}` | `Abb 6 Rate - Strongman - Mario Rossi` |
+| **Evento Storico Epika** | Saldo Unico (`payment`) | `Epika {Titolo Evento} per {Nome Cognome}` | `Epika Battaglia del Metauro per Mario Rossi` |
+
+- **Implementazione Checkout**: i pagamenti unici popolano `payment_intent_data.description` su [create-checkout-session.js](../api/create-checkout-session.js), mentre gli abbonamenti popolano `subscription_data.description`.
+- **Sincronizzazione Webhook**: in [stripe-webhook.js](../api/stripe-webhook.js), all'evento `invoice.paid` / `invoice.payment_succeeded`, il `PaymentIntent` associato all'abbonamento viene aggiornato programmaticamente con la descrizione della sottoscrizione, garantendo che su Stripe Dashboard compaia sempre la causale parlante anziché la dicitura generica `Subscription creation`.
+- **Integrità Contabile**: i campi `metadata.causale` e `description` delle ricevute fiscali in `ricevute_pagamenti` rimangono intatti e protetti.
 
 -   **Database Enforcement (`public.approva_tesserato`)**:
     -   Strictly forbids activating an athlete (`stato_tesseramento = 'ATTIVO'`) if `utenti.quota_totale > 0` and no receipt exists in `ricevute_pagamenti` (`evento_id IS NULL`).

@@ -1,6 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
+function stripeDesc(...parts) {
+    return parts
+        .filter(p => p !== undefined && p !== null)
+        .map(p => String(p).trim())
+        .filter(s => s.length > 0)
+        .join(' ')
+        .replace(/[\u0000-\u001F\u007F]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 250);
+}
+
+function fullName(profile) {
+    return `${profile?.nome || ''} ${profile?.cognome || ''}`.trim();
+}
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Credentials', true);
     const allowedOrigins = [
@@ -202,6 +218,9 @@ export default async function handler(req, res) {
                     },
                 ],
                 mode: 'payment',
+                payment_intent_data: {
+                    description: stripeDesc('Epika', evento.titolo, 'per', fullName(profile))
+                },
                 customer_email: userEmail,
                 metadata: {
                     tipo: 'epika_evento',
@@ -392,6 +411,10 @@ export default async function handler(req, res) {
             const tipoPianoVal = piano?.tipo || 'abbonamento';
             const ingressiVal = piano?.ingressi ? String(piano.ingressi) : '';
 
+            const nomeCompleto = fullName(profile);
+            const descUnico = stripeDesc('Iscrizione', evento.titolo, piano ? `(${piano.nome})` : '', 'per', nomeCompleto);
+            const descRate = stripeDesc(`Abb ${numRate} Rate -`, evento.titolo, '-', nomeCompleto);
+
             if (isInstallment) {
 
                 const monthlyBaseQuota = Math.round((prezzo / numRate) * 100);
@@ -434,6 +457,7 @@ export default async function handler(req, res) {
                     mode: 'subscription',
                     customer_email: userEmail,
                     subscription_data: {
+                        description: descRate,
                         metadata: {
                             utenteId: utenteId,
                             eventId: eventId,
@@ -504,6 +528,9 @@ export default async function handler(req, res) {
                     },
                 ],
                 mode: 'payment',
+                payment_intent_data: {
+                    description: descUnico
+                },
                 customer_email: userEmail,
                 metadata: {
                     utenteId: utenteId,
@@ -552,8 +579,8 @@ export default async function handler(req, res) {
 
             // Determina la causale dinamica del tesseramento/adesione
             let description = '';
+            let livelloCopertura = 'BASE';
             if (profile.tipo_adesione === 'tesserato' || profile.tipo_adesione === 'tesserato_esterno') {
-                let livelloCopertura = 'BASE';
                 const anag = Array.isArray(profile.anagrafiche) ? profile.anagrafiche[0] : profile.anagrafiche;
                 if (anag) {
                     const rt = Array.isArray(anag.registro_tesserati) ? anag.registro_tesserati[0] : anag.registro_tesserati;
@@ -575,6 +602,14 @@ export default async function handler(req, res) {
                 description = `Quota annuale 2026 - ${tipoAdesioneLabel} per ${profile.nome} ${profile.cognome}`;
             }
 
+            const nomeCompleto = fullName(profile);
+            const annoCorrente = new Date().getFullYear();
+            const etichettaTess = (profile.tipo_adesione === 'tesserato' || profile.tipo_adesione === 'tesserato_esterno')
+                ? livelloCopertura.replace(/_/g, ' ').toUpperCase()
+                : (profile.tipo_adesione ? profile.tipo_adesione.replace(/_/g, ' ').toUpperCase() : 'SOCIO');
+
+            const descTessUnico = stripeDesc('Tesseramento', annoCorrente, '-', etichettaTess, 'per', nomeCompleto);
+
             const isInstallment = req.body?.is_installment === true || req.body?.is_installment === 'true';
 
             if (isInstallment) {
@@ -582,6 +617,8 @@ export default async function handler(req, res) {
                 let numRate = parseInt(req.body?.num_rate || '12');
                 if (isNaN(numRate) || numRate <= 0) numRate = 12;
                 if (numRate > 12) numRate = 12; // limite massimo annuale
+
+                const descTessRate = stripeDesc(`Abb ${numRate} Rate -`, 'Tesseramento', '-', nomeCompleto);
 
                 // Calcola la rata mensile e la commissione del 2%
                 const monthlyBaseQuota = Math.round((quota / numRate) * 100);
@@ -624,6 +661,7 @@ export default async function handler(req, res) {
                     mode: 'subscription',
                     customer_email: profile.email,
                     subscription_data: {
+                        description: descTessRate,
                         metadata: {
                             utenteId: utenteId,
                             is_installment: 'true',
@@ -678,6 +716,9 @@ export default async function handler(req, res) {
                     },
                 ],
                 mode: 'payment',
+                payment_intent_data: {
+                    description: descTessUnico
+                },
                 customer_email: profile.email,
                 metadata: {
                     utenteId: utenteId,

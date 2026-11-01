@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-01] feature | Descrizioni Parlanti e Trasparenza Transazioni Stripe
+- **`api/create-checkout-session.js`**:
+  - Introdotto helper `stripeDesc` e `fullName` per la generazione uniforme e sanitizzata delle causali transazionali su Stripe.
+  - Aggiunto `payment_intent_data.description` su tutti i flussi di pagamento a saldo unico (Tesseramento, Corsi sportivi, Eventi Epika) risolvendo il problema delle transazioni con descrizione vuota (`—`) su Stripe Dashboard.
+  - Aggiunto `subscription_data.description` sui flussi rateali (es. `Abb 6 Rate - Strongman - Mario Rossi`).
+- **`api/stripe-webhook.js`**:
+  - Implementato hook su `invoice.paid` e `invoice.payment_succeeded` per sincronizzare la descrizione della subscription sul rispettivo PaymentIntent Stripe, sovrascrivendo la dicitura generica `Subscription creation` con la causale reale.
+- **`wiki/auth_and_payments.md`**:
+  - Documentata la matrice dei formati delle descrizioni Stripe e architettura del webhook.
+
 ## [2026-11-01] test | Unit Test Suite Modalità Assistenza & Regression Guard (v1.06.29)
 - **Suite di Test Vitest (`tests/assistenza-tesserato.test.js`)**:
   - Introdotto file di test per verificare la persistenza delle variabili di backup admin, il parsing sicuro dei ruoli postgres, l'azzeramento e lo swap di `userRoles`, l'invocazione di `applyRolePermissions` e l'assenza categorica del bypass `_nestoreBtnOverride`.

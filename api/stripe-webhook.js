@@ -497,6 +497,22 @@ export default async function handler(req, res) {
             || invoice.parent?.subscription_details?.subscription 
             || invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription;
 
+        // Sincronizza la descrizione dell'abbonamento sul PaymentIntent per visualizzarla su Stripe Dashboard
+        if (subId) {
+            try {
+                const stripe = new Stripe(stripeSecretKey);
+                const subscription = await stripe.subscriptions.retrieve(subId);
+                const subDesc = subscription.description;
+                const piId = typeof invoice.payment_intent === 'string' ? invoice.payment_intent : invoice.payment_intent?.id;
+                if (subDesc && piId) {
+                    await stripe.paymentIntents.update(piId, { description: subDesc });
+                    console.log(`[INVOICE DESC] Aggiornata descrizione PaymentIntent ${piId} a: "${subDesc}"`);
+                }
+            } catch (descErr) {
+                console.warn('[INVOICE DESC] Impossibile aggiornare descrizione PaymentIntent:', descErr.message);
+            }
+        }
+
         // Processa solo le rate periodiche mensili successive (subscription_cycle)
         if (subId && invoice.billing_reason === 'subscription_cycle') {
             try {
