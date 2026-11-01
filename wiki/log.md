@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-01] test | Unit Test Suite Modalità Assistenza & Regression Guard (v1.06.29)
+- **Suite di Test Vitest (`tests/assistenza-tesserato.test.js`)**:
+  - Introdotto file di test per verificare la persistenza delle variabili di backup admin, il parsing sicuro dei ruoli postgres, l'azzeramento e lo swap di `userRoles`, l'invocazione di `applyRolePermissions` e l'assenza categorica del bypass `_nestoreBtnOverride`.
+  - Suite globale Vitest validata con successo: 25 file di test passati (303 test totali, 0 errori).
+
 ## [2026-11-01] bugfix | Fedeltà Modalità Assistenza Tesserato (v1.06.28)
 - **Frontend Dashboard (`portal/dashboard.js`)**:
   - **Isolamento e Swapping `userRoles`**: In `apriAssistenzaTesserato`, implementato il salvataggio in backup delle variabili globali dell'Admin (`_backupUserRoles`, `_backupViewContext`, `_backupHeaderName`, `_backupHeaderRole`) e il loro swapping dinamico con i soli ruoli reali del tesserato assistito tramite `parseRuoliAssistenza(targetProfile.ruolo)`.
