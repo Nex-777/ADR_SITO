@@ -4365,3 +4365,19 @@ pm audit --omit=dev riporta 0 vulnerabilità).
   - Sostituito il prompt nativo `window.confirm()` e il toast a scomparsa rapida con un modale dedicato del design system Stitch Dark Brutalist (`#modal-elimina-utente`).
   - Implementata state machine con spinner anti-doppio click (`progress_activity`), visualizzazione persistente in-modal degli errori normativi/di blocco, e pulizia automatica asincrona dei file orfani da Supabase Storage (GDPR Art. 9 e Art. 17).
 
+
+## [2026-11-01] fix | Payment Guardrail, Anomaly Detection & Solleciti v1.06.30
+- **Database Hardening & Stored Procedures (`public.approva_tesserato`, `public.aggiorna_stato_approvazione`)**:
+  - Risolto bypass attivazione tesserati senza ricevuta di pagamento: la SP `approva_tesserato` solleva un'eccezione bloccante di sicurezza se `utenti.quota_totale > 0` e non è presente una ricevuta corrispondente in `ricevute_pagamenti` (`evento_id IS NULL`).
+  - Corretta query certificati in `aggiorna_stato_approvazione` ordinando per `created_at DESC LIMIT 1`, prevenendo il blocco con vecchi certificati obsoleti.
+  - Aggiunto trigger automatico `trigger_update_approvazione_on_doc` su `documenti_identita` per transizionare lo stato a `IN_ATTESA_PAGAMENTO` non appena documento e certificato sono conformi (`VERDE`).
+- **Backend API & Webhooks (`api/stripe-webhook.js`, `api/otp-verify.js`, `api/validate.js`)**:
+  - `api/stripe-webhook.js`: integrata notifica push automatica verso Telegram `ADR_BOT` alla ricezione del saldo quota tesseramento con dettagli socio, importo, causale e numero progressivo ricevuta fiscale.
+  - `api/validate.js`: implementato branch `sollecita_pagamento` che invia una mail transazionale con pulsante diretto Stripe e invia un push Telegram su ADR_BOT con il testo pronto per la copia rapida e inoltro su WhatsApp.
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - Inserito badge di allarme rosso ad alta visibilità `🚨 ANOMALIA: QUOTA NON SALDATA (€...)` nella tabella e card mobile tesserati e nel modale Dossier Socio per tesserati attivi con quote insolute.
+  - Aggiunti pulsanti dedicati di azione rapida `SOLLECITO` (invio email + Telegram/WhatsApp) e `INCASSO` (registrazione manuale pagamento con rilascio ricevuta fiscale).
+- **Sanatoria & Solleciti Eseguiti**:
+  - Eseguito sollecito tramite email e inviati su ADR_BOT i 3 messaggi Telegram pronti per WhatsApp per Marco Giuseppe Balloni (€14.00), Andrea D'Isidoro (€14.00) e Andrea Gentili (€30.00).
+- **Security & Testing**:
+  - Aggiunta sezione § 2.6 in `SECURITY.md`. Creata suite `tests/payment-guardrail.test.js` con 6 test unitari. Tutti i 309 test del repository passano al 100%.

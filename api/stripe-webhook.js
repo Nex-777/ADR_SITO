@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+import { sendTelegramAlert, escapeTelegramHtml } from './_utils/telegram-bot.js';
 
 // Disabilita il body parser automatico di Vercel per poter validare la firma con il raw body
 export const config = {
@@ -464,6 +465,22 @@ export default async function handler(req, res) {
                 });
 
             console.log(`✅ Pagamento registrato con successo! Generata Ricevuta n. ${nextNum}/${annoFiscale} per utente ${utenteId}`);
+
+            if (!isEventPayment) {
+                try {
+                    const { data: uData } = await supabase.from('utenti').select('nome, cognome').eq('id', utenteId).maybeSingle();
+                    const nomeCompleto = uData ? `${uData.nome} ${uData.cognome}` : 'Atleta';
+                    const tgMsg = `💳 <b>PAGAMENTO QUOTA RICEVUTO (STRIPE)</b>\n\n` +
+                        `👤 <b>Atleta:</b> ${escapeTelegramHtml(nomeCompleto)}\n` +
+                        `💶 <b>Importo:</b> €${parseFloat(importo).toFixed(2)}\n` +
+                        `🧾 <b>Ricevuta:</b> n. ${nextNum}/${annoFiscale}\n` +
+                        `📋 <b>Causale:</b> ${escapeTelegramHtml(causale)}\n` +
+                        `✅ <b>Stato:</b> Tesseramento / Quota Saldata`;
+                    await sendTelegramAlert(tgMsg);
+                } catch (tgErr) {
+                    console.warn('[STRIPE WEBHOOK TELEGRAM] Alert error:', tgErr.message);
+                }
+            }
 
         } catch (err) {
             console.error('❌ Errore durante l\'aggiornamento del database post-pagamento:', err);

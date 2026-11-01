@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.29"
+                VERSION: "1.06.30"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1718,6 +1718,10 @@
                             comune_nascita,
                             provincia_nascita,
                             sesso,
+                            utenti (
+                                id,
+                                quota_totale
+                            ),
                             indirizzi_residenza (
                                 via_piazza,
                                 civico,
@@ -2149,6 +2153,133 @@
 
 
 
+        window.sollecitaPagamentoUtente = async (anagraficaId) => {
+            if (!confirm("Vuoi inviare un sollecito di pagamento via email all'atleta e ricevere il messaggio pronto per WhatsApp su Telegram?")) return;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session?.access_token) throw new Error("Sessione non valida");
+
+                const resp = await fetch('/api/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        target_type: 'sollecita_pagamento',
+                        anagrafica_id: anagraficaId
+                    })
+                });
+
+                const resData = await resp.json();
+                if (!resp.ok) throw new Error(resData.error || "Errore invio sollecito");
+
+                alert("✓ Sollecito inviato con successo all'atleta!\n\nÈ stato inoltre inviato un messaggio formattato per WhatsApp sul bot Telegram ADR_BOT.");
+            } catch (err) {
+                console.error("Errore sollecitaPagamentoUtente:", err);
+                alert("Errore invio sollecito: " + err.message);
+            }
+        };
+
+        window.registraPagamentoManualeDaApprovazioni = async (userId, anagraficaId) => {
+            const metodo = prompt("Seleziona metodo di pagamento:\n1 = CONTANTI\n2 = BONIFICO\n(Inserisci 1 o 2):", "1");
+            if (!metodo) return;
+            const metodoStr = metodo === '2' ? 'BONIFICO' : 'CONTANTI';
+            if (!confirm(`Confermi la registrazione dell'incasso della quota tramite ${metodoStr}? Verrà emessa immediatamente la ricevuta fiscale progressiva e regolarizzato il tesseramento.`)) return;
+
+            try {
+                const { data: userProfile, error: userError } = await supabaseClient
+                    .from('utenti')
+                    .select('nome, cognome, quota_totale, tipo_adesione, anagrafiche(id, registro_tesserati(livello_copertura), registro_approvazioni(livello_copertura))')
+                    .eq('id', userId)
+                    .single();
+                if (userError || !userProfile) throw new Error("Utente non trovato");
+
+                const importo = parseFloat(userProfile.quota_totale) || 14.00;
+                const annoFiscale = new Date().getFullYear();
+
+                const { data: maxReceipt, error: maxError } = await supabaseClient
+                    .from('ricevute_pagamenti')
+                    .select('numero_ricevuta')
+                    .eq('anno_fiscale', annoFiscale)
+                    .order('numero_ricevuta', { ascending: false })
+                    .limit(1);
+
+                let nextNum = 1;
+                if (!maxError && maxReceipt && maxReceipt.length > 0) {
+                    nextNum = maxReceipt[0].numero_ricevuta + 1;
+                }
+
+                let causale = `Quota associativa annuale - ${userProfile.tipo_adesione ? userProfile.tipo_adesione.replace(/_/g, ' ') : 'Socio'}`;
+                if (userProfile.tipo_adesione === 'tesserato' || userProfile.tipo_adesione === 'tesserato_esterno') {
+                    let livelloCopertura = 'BASE';
+                    const anag = Array.isArray(userProfile.anagrafiche) ? userProfile.anagrafiche[0] : userProfile.anagrafiche;
+                    if (anag) {
+                        const rt = Array.isArray(anag.registro_tesserati) ? anag.registro_tesserati[0] : anag.registro_tesserati;
+                        const ra = Array.isArray(anag.registro_approvazioni) ? anag.registro_approvazioni : [anag.registro_approvazioni];
+                        if (rt && rt.livello_copertura) {
+                            livelloCopertura = rt.livello_copertura;
+                        } else {
+                            const pendingTess = ra?.find(r => r && r.livello_copertura);
+                            if (pendingTess && pendingTess.livello_copertura) {
+                                livelloCopertura = pendingTess.livello_copertura;
+                            }
+                        }
+                    }
+                    causale = `Quota tesseramento annuale - ${livelloCopertura.replace(/_/g, ' ').toUpperCase()}`;
+                }
+
+                const { data: recData, error: recError } = await supabaseClient
+                    .from('ricevute_pagamenti')
+                    .insert({
+                        numero_ricevuta: nextNum,
+                        anno_fiscale: annoFiscale,
+                        utente_id: userId,
+                        importo: importo,
+                        causale: causale,
+                        metodo_pagamento: metodoStr
+                    })
+                    .select()
+                    .single();
+
+                if (recError) throw recError;
+
+                await supabaseClient
+                    .from('utenti')
+                    .update({ quota_totale: 0.00 })
+                    .eq('id', userId);
+
+                // Se presente anagraficaId, esegue l'attivazione ufficiale
+                if (anagraficaId) {
+                    try {
+                        await supabaseClient.rpc('approva_tesserato', {
+                            p_anagrafica_id: anagraficaId,
+                            p_deciso_da: currentUser?.id
+                        });
+                    } catch (rpcE) {
+                        console.warn("Attivazione approva_tesserato post-incasso:", rpcE.message);
+                    }
+                }
+
+                await scriviAuditLog('EMISSIONE_RICEVUTA_PAGAMENTO', 'ricevute_pagamenti', recData.id, {
+                    numero_ricevuta: nextNum,
+                    anno_fiscale: annoFiscale,
+                    utente_id: userId,
+                    importo: importo,
+                    metodo_pagamento: metodoStr
+                });
+
+                alert(`Incasso registrato con successo! Generata Ricevuta n. ${nextNum}/${annoFiscale} (${metodoStr}). Tesseramento regolarizzato.`);
+                loadApprovazioni();
+                loadTesserati();
+                loadQuote();
+                loadStats();
+            } catch (err) {
+                console.error("Errore registraPagamentoManualeDaApprovazioni:", err);
+                alert("Errore registrazione incasso: " + err.message);
+            }
+        };
+
         window.attivaTesseramentoApprovazioni = async (anagraficaId) => {
             if (!confirm("Confermi l'attivazione immediata di questo Tesserato?")) return;
             try {
@@ -2505,13 +2636,34 @@
                     let actionBtn = '';
                     if (userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
                         let mainBtn = '';
+                        const utenteId = anag?.utente_id || anag?.utenti?.id;
+                        const quotaUtente = parseFloat(anag?.utenti?.quota_totale) || 0;
+                        const hasQuotaPendente = quotaUtente > 0;
+
                         if (isCertVerde) {
-                            mainBtn = `
-                                <div class="flex flex-col gap-1">
-                                    <button onclick="attivaTesseramentoApprovazioni('${item.anagrafica_id}')" class="bg-white text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-500 hover:text-white transition-all uppercase">ATTIVA</button>
-                                    <button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase">RIFIUTA CERT.</button>
-                                </div>
-                            `;
+                            if (hasQuotaPendente) {
+                                mainBtn = `
+                                    <div class="flex flex-col gap-1 items-end">
+                                        <span class="text-[8px] bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">ATTESA PAGAMENTO (€${quotaUtente.toFixed(2)})</span>
+                                        <div class="flex items-center gap-1 mt-0.5">
+                                            <button onclick="sollecitaPagamentoUtente('${item.anagrafica_id}')" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white font-headline text-[8px] font-bold px-2 py-0.5 rounded transition-all uppercase flex items-center gap-0.5" title="Invia sollecito email + WhatsApp su Telegram">
+                                                <span class="material-symbols-outlined text-[10px]">send</span> SOLLECITO
+                                            </button>
+                                            <button onclick="registraPagamentoManualeDaApprovazioni('${utenteId}', '${item.anagrafica_id}')" class="bg-green-600/20 border border-green-500/40 text-green-400 hover:bg-green-600 hover:text-white font-headline text-[8px] font-bold px-2 py-0.5 rounded transition-all uppercase flex items-center gap-0.5" title="Registra incasso contanti/bonifico ed emetti ricevuta">
+                                                <span class="material-symbols-outlined text-[10px]">payments</span> INCASSO
+                                            </button>
+                                        </div>
+                                        <button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[8px] font-bold px-2 py-0.5 transition-all uppercase mt-0.5">RIFIUTA CERT.</button>
+                                    </div>
+                                `;
+                            } else {
+                                mainBtn = `
+                                    <div class="flex flex-col gap-1">
+                                        <button onclick="attivaTesseramentoApprovazioni('${item.anagrafica_id}')" class="bg-white text-black font-headline text-[9px] font-bold px-3 py-1 hover:bg-green-500 hover:text-white transition-all uppercase">ATTIVA</button>
+                                        <button onclick="validaCertificatoManual('${certInfo.id}', 'ROSSO')" class="bg-primary/20 border border-primary/40 text-primary hover:bg-primary hover:text-white font-headline text-[9px] font-bold px-2 py-0.5 transition-all uppercase">RIFIUTA CERT.</button>
+                                    </div>
+                                `;
+                            }
                         } else if (certInfo && certInfo.stato_validazione !== 'VERDE') {
                             const isAlreadyRed = certInfo.stato_validazione === 'ROSSO';
                             const rifiutaBtn = !isAlreadyRed
@@ -2698,7 +2850,15 @@
                                 ${statoWarningHtml}
                             </td>
                             <td class="p-3 text-right">
-                                ${eliminaBtn || '-'}
+                                <div class="flex items-center justify-end gap-1.5">
+                                    <button onclick="sollecitaPagamentoUtente('${item.anagrafica_id}')" class="bg-blue-600/20 border border-blue-500/40 text-blue-400 hover:bg-blue-600 hover:text-white font-headline text-[8px] font-bold px-2 py-1 rounded transition-all uppercase flex items-center gap-0.5" title="Invia sollecito email + WhatsApp su Telegram">
+                                        <span class="material-symbols-outlined text-[11px]">send</span> SOLLECITO
+                                    </button>
+                                    <button onclick="registraPagamentoManualeDaApprovazioni('${anag.utente_id}', '${item.anagrafica_id}')" class="bg-green-600/20 border border-green-500/40 text-green-400 hover:bg-green-600 hover:text-white font-headline text-[8px] font-bold px-2 py-1 rounded transition-all uppercase flex items-center gap-0.5" title="Registra incasso contanti/bonifico">
+                                        <span class="material-symbols-outlined text-[11px]">payments</span> INCASSO
+                                    </button>
+                                    ${eliminaBtn}
+                                </div>
                             </td>
                         `;
                         const viewBtn = row.querySelector('.approvazioni-view-cert-btn');
@@ -3319,10 +3479,25 @@
                     </div>`;
                 }
 
+                const rawQuota = Array.isArray(tess.anagrafiche?.utenti) ? tess.anagrafiche?.utenti[0]?.quota_totale : tess.anagrafiche?.utenti?.quota_totale;
+                const quotaInsoluta = (rawQuota !== undefined && rawQuota !== null && parseFloat(rawQuota) > 0) ? parseFloat(rawQuota) : 0;
+                const hasQuotaInsoluta = (tess.stato_tesseramento === 'ATTIVO' && quotaInsoluta > 0);
+
                 row.innerHTML = `
                     <td class="p-4 font-mono font-bold text-gray-500">${escapeHtml(tess.numero_registro || 'T-PND')}</td>
                     <td class="p-4 text-white">
                         <span class="font-bold">${nomeComp}</span>
+                        ${hasQuotaInsoluta ? `
+                            <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                                <span class="px-1.5 py-0.5 text-[8px] bg-red-950/90 text-red-400 border border-red-500/50 font-bold rounded uppercase animate-pulse">🚨 ANOMALIA: QUOTA NON SALDATA (€${quotaInsoluta.toFixed(2)})</span>
+                                <button onclick="sollecitaPagamentoUtente('${tess.anagrafiche.id}')" class="text-[8px] bg-blue-950/60 hover:bg-blue-600 border border-blue-500/40 text-blue-400 hover:text-white px-1.5 py-0.5 rounded font-bold uppercase cursor-pointer transition-all inline-flex items-center gap-0.5">
+                                    <span class="material-symbols-outlined text-[10px]">send</span> SOLLECITO
+                                </button>
+                                <button onclick="registraPagamentoManualeDaApprovazioni('${tess.anagrafiche.utente_id}', '${tess.anagrafiche.id}')" class="text-[8px] bg-green-950/60 hover:bg-green-600 border border-green-500/40 text-green-400 hover:text-white px-1.5 py-0.5 rounded font-bold uppercase cursor-pointer transition-all inline-flex items-center gap-0.5">
+                                    <span class="material-symbols-outlined text-[10px]">payments</span> INCASSO
+                                </button>
+                            </div>
+                        ` : ''}
                         <div class="text-[10px] text-gray-400 mt-0.5">CF: ${cf}</div>
                         <div class="text-[10px] text-gray-500 mt-0.5">Nascita: ${birthInfo}</div>
                     </td>
@@ -3487,6 +3662,10 @@
                     actionHtml += `<button onclick="apriAssistenzaTesserato('${tess.anagrafiche.utente_id}', '${nomeComp.replace(/'/g, "\\'")}')" style="background:rgba(124,58,237,0.2);color:#a78bfa;border:1px solid rgba(124,58,237,0.4);padding:10px 14px;font-family:'Orbitron',sans-serif;font-size:11px;cursor:pointer;min-height:44px;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;" title="Assistenza Account"><span class="material-symbols-outlined" style="font-size:16px;">visibility</span></button>`;
                 }
 
+                const rawQuotaMobile = Array.isArray(tess.anagrafiche?.utenti) ? tess.anagrafiche?.utenti[0]?.quota_totale : tess.anagrafiche?.utenti?.quota_totale;
+                const quotaInsolutaMobile = (rawQuotaMobile !== undefined && rawQuotaMobile !== null && parseFloat(rawQuotaMobile) > 0) ? parseFloat(rawQuotaMobile) : 0;
+                const hasQuotaInsolutaMobile = (tess.stato_tesseramento === 'ATTIVO' && quotaInsolutaMobile > 0);
+
                 const card = document.createElement('div');
                 card.className = 'mobile-card-item';
                 card.innerHTML = `
@@ -3494,6 +3673,15 @@
                         <span class="card-name">${escapeHtml(nomeComp)}</span>
                         <span style="padding:4px 10px;border:1px solid ${tessColor}33;background:${tessColor}1a;color:${tessColor};font-size:10px;font-weight:700;text-transform:uppercase;border-radius:4px;font-family:'Orbitron',sans-serif;">${escapeHtml(tess.stato_tesseramento)}</span>
                     </div>
+                    ${hasQuotaInsolutaMobile ? `
+                        <div style="background:rgba(223,41,62,0.15);border:1px solid rgba(223,41,62,0.4);padding:8px 12px;margin:8px 12px;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <span style="color:#f87171;font-size:10px;font-weight:700;font-family:'Orbitron',sans-serif;">🚨 ANOMALIA: QUOTA NON SALDATA (€${quotaInsolutaMobile.toFixed(2)})</span>
+                            <div style="display:flex;gap:6px;">
+                                <button onclick="sollecitaPagamentoUtente('${tess.anagrafiche.id}')" style="background:rgba(59,130,246,0.3);border:1px solid #3b82f6;color:#93c5fd;font-size:9px;font-weight:700;padding:4px 8px;border-radius:4px;cursor:pointer;text-transform:uppercase;">SOLLECITO</button>
+                                <button onclick="registraPagamentoManualeDaApprovazioni('${tess.anagrafiche.utente_id}', '${tess.anagrafiche.id}')" style="background:rgba(34,197,94,0.3);border:1px solid #22c55e;color:#86efac;font-size:9px;font-weight:700;padding:4px 8px;border-radius:4px;cursor:pointer;text-transform:uppercase;">INCASSO</button>
+                            </div>
+                        </div>
+                    ` : ''}
                     <div class="card-details">
                         <div class="card-detail">
                             <span class="card-detail-label">C.F.</span>
@@ -10758,6 +10946,11 @@ async function apriDossierTesserato(utente_id) {
             badgesContainer.innerHTML += `<span class="bg-blue-500/20 text-blue-500 border border-blue-500/30 px-2 py-1 rounded text-[10px] font-bold">CSEN: ${tess.tipo_copertura_csen || 'ND'}</span>`;
         }
 
+        const quotaInsolutaDossier = (ut && parseFloat(ut.quota_totale) > 0) ? parseFloat(ut.quota_totale) : 0;
+        if (quotaInsolutaDossier > 0) {
+            badgesContainer.innerHTML += `<span class="bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-1 rounded text-[10px] font-bold animate-pulse">🚨 QUOTA NON SALDATA: €${quotaInsolutaDossier.toFixed(2)}</span>`;
+        }
+
         // ETA e MINORENNE
         let isMinorenne = false;
         if (ana && ana.data_nascita) {
@@ -11067,6 +11260,27 @@ async function apriDossierTesserato(utente_id) {
             });
         }
         if (!ricHtml) ricHtml = `<span class="text-gray-500 text-xs italic">Nessuna ricevuta trovata</span>`;
+        if (quotaInsolutaDossier > 0) {
+            ricHtml = `
+                <div class="p-3 bg-red-950/40 border border-red-500/50 rounded mb-3 flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <div class="text-xs font-bold text-red-400 flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">warning</span>
+                            QUOTA ISCRIZIONE INSOLUTA: €${quotaInsolutaDossier.toFixed(2)}
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-0.5">Nessun pagamento registrato per il tesseramento in corso.</p>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="sollecitaPagamentoUtente('${ana?.id}')" class="text-[9px] bg-blue-900/60 hover:bg-blue-600 border border-blue-500/40 text-blue-300 hover:text-white px-2.5 py-1 rounded font-bold uppercase cursor-pointer transition-all inline-flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[12px]">send</span> SOLLECITO EMAIL & WA
+                        </button>
+                        <button onclick="registraPagamentoManualeDaApprovazioni('${utente_id}', '${ana?.id}')" class="text-[9px] bg-green-900/60 hover:bg-green-600 border border-green-500/40 text-green-300 hover:text-white px-2.5 py-1 rounded font-bold uppercase cursor-pointer transition-all inline-flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[12px]">payments</span> REGISTRA INCASSO
+                        </button>
+                    </div>
+                </div>
+            ` + ricHtml;
+        }
         ricContainer.innerHTML = ricHtml;
 
         document.getElementById('modal-dossier-socio').classList.remove('hidden');

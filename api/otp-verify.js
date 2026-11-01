@@ -423,23 +423,28 @@ export default async function handler(req, res) {
 
         } else if (adesione === 'tesserato') {
             // Casistica 3: Solo Tesserato (No delibera - Iter Diretto)
-            await supabase.from('registro_approvazioni').delete().eq('anagrafica_id', anagraficaId).eq('stato', 'IN_ATTESA');
+            const isReadyForPayment = isCertVerde && docStato === 'VERDE' && (!profile.tutore_documento_url || tutoreStato === 'VERDE');
+            const initialStato = isReadyForPayment ? 'IN_ATTESA_PAGAMENTO' : 'IN_ATTESA';
+            await supabase.from('registro_approvazioni').delete().eq('anagrafica_id', anagraficaId).in('stato', ['IN_ATTESA', 'IN_ATTESA_PAGAMENTO']);
             const { error: tessError } = await supabase
                 .from('registro_approvazioni')
                 .insert({
                     anagrafica_id: anagraficaId,
                     tipo: 'TESSERATO',
-                    stato: 'IN_ATTESA',
+                    stato: initialStato,
                     livello_copertura: csenCoverage
                 });
             if (tessError) throw tessError;
 
-            emailSubject = 'Tesseramento Sportivo Registrato - Adrenalina Club';
+            emailSubject = isReadyForPayment
+                ? 'Tesseramento Sportivo Approvato - Procedi al Pagamento'
+                : 'Tesseramento Sportivo Registrato - Adrenalina Club';
             emailHtml = `
                 <div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 30px; text-align: center;">
                     <h1 style="color: #df293e; font-size: 22px;">ADRENALINA CLUB</h1>
                     <p style="color: #ccc;">Ciao ${profile.nome}, la tua richiesta di tesseramento sportivo CSEN è stata registrata con successo.</p>
-                    <p style="color: #aaa; font-size: 13px;">${(isCertVerde && docStato === 'VERDE') ? "I tuoi documenti (certificato medico e documento d'identità) sono stati verificati con successo! Puoi procedere direttamente al pagamento della quota per attivare la tua tessera." : "I nostri sistemi o la segreteria stanno verificando la validità della documentazione caricata. Riceverai un'e-mail non appena la verifica sarà approvata."}</p>
+                    <p style="color: #aaa; font-size: 13px;">${isReadyForPayment ? `I tuoi documenti (certificato medico e documento d'identità) sono stati verificati con successo! Puoi procedere subito al pagamento della quota di <strong>€${(parseFloat(profile.quota_totale) || 14).toFixed(2)}</strong> per completare la tua iscrizione ed attivare la tua tessera:` : "I nostri sistemi o la segreteria stanno verificando la validità della documentazione caricata. Riceverai un'e-mail non appena la verifica sarà approvata."}</p>
+                    ${isReadyForPayment ? `<a href="https://portal.adrenalinaclub.it/portal/pagamento.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">PAGA ORA LA QUOTA</a>` : ''}
                 </div>
             `;
         }

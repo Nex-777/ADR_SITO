@@ -66,8 +66,8 @@ export default async function handler(req, res) {
         if (req.body.table === 'certificati_medici') targetType = 'cert';
         if (req.body.table === 'documenti_identita') targetType = 'doc';
     }
-    if (!targetType || !['cert', 'doc', 'precheck_cert', 'precheck_doc'].includes(targetType)) {
-        return res.status(400).json({ error: 'target_type mancante o non valido. Usa "cert", "doc", "precheck_cert" o "precheck_doc".' });
+    if (!targetType || !['cert', 'doc', 'precheck_cert', 'precheck_doc', 'sollecita_pagamento'].includes(targetType)) {
+        return res.status(400).json({ error: 'target_type mancante o non valido. Usa "cert", "doc", "precheck_cert", "precheck_doc" o "sollecita_pagamento".' });
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -463,6 +463,82 @@ Rispondi SOLO con il JSON senza markdown:
             if (allowed === false) return res.status(429).json({ error: 'Troppe richieste. Riprova tra qualche minuto.' });
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        //  BRANCH: SOLLECITO PAGAMENTO QUOTA (sollecita_pagamento)
+        // ═══════════════════════════════════════════════════════════════════
+        if (targetType === 'sollecita_pagamento') {
+            const anagraficaId = req.body.anagrafica_id;
+            if (!anagraficaId) {
+                return res.status(400).json({ error: 'anagrafica_id mancante.' });
+            }
+
+            const { data: anag, error: anagErr } = await supabase
+                .from('anagrafiche')
+                .select('id, nome, cognome, utente_id, utenti(id, email, cellulare, quota_totale, tipo_adesione, tipo_tessera)')
+                .eq('id', anagraficaId)
+                .maybeSingle();
+
+            if (anagErr || !anag) {
+                return res.status(404).json({ error: 'Atleta non trovato.' });
+            }
+
+            const nome = anag.nome || '';
+            const cognome = anag.cognome || '';
+            const email = anag.utenti?.email;
+            const cellulare = anag.utenti?.cellulare || 'Non indicato';
+            const quota = parseFloat(anag.utenti?.quota_totale) || 14.00;
+            const quotaStr = quota.toFixed(2);
+            const paymentUrl = 'https://portal.adrenalinaclub.it/portal/pagamento.html';
+
+            let emailSent = false;
+            if (email) {
+                try {
+                    await sendEmail({
+                        to: email,
+                        subject: 'Sollecito Pagamento Quota Tesseramento - Adrenalina Club',
+                        html: `
+                            <div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center">
+                                <h1 style="color:#df293e;font-size:22px">ADRENALINA CLUB</h1>
+                                <p style="color:#ccc">Ciao ${escapeTelegramHtml(nome)}, ti ricordiamo che per completare e regolarizzare la tua posizione di tesseramento sportivo è necessario saldare la quota annuale di <strong>€${quotaStr}</strong>.</p>
+                                <p style="color:#aaa;font-size:13px">Puoi effettuare il pagamento in tutta sicurezza tramite carta di credito, bancomat o prepagata cliccando sul pulsante sottostante:</p>
+                                <a href="${paymentUrl}" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px;border-radius:4px">PAGA ORA LA QUOTA (€${quotaStr})</a>
+                                <p style="color:#666;font-size:11px;margin-top:20px">Se hai già effettuato il pagamento tramite bonifico o contanti in segreteria, ignora pure questo avviso.</p>
+                            </div>
+                        `
+                    });
+                    emailSent = true;
+                } catch (eErr) {
+                    console.error('[SOLLECITO EMAIL ERROR]', eErr);
+                }
+            }
+
+            // Telegram push su ADR_BOT con testo pronto per WhatsApp
+            let telegramSent = false;
+            try {
+                const waText = `Ciao ${nome}! Ti informiamo che la tua documentazione per il tesseramento ad Adrenalina Club è verificata. Per completare la regolarizzazione della tua tessera CSEN, puoi saldare la quota di ${quotaStr} € direttamente dal tuo smartphone a questo link sicuro:\n${paymentUrl}\nA presto!\nASD Adrenalina Club`;
+
+                const tgMsg = `📲 <b>SOLLECITO PAGAMENTO INVIATO</b>\n\n` +
+                    `👤 <b>Atleta:</b> ${escapeTelegramHtml(nome)} ${escapeTelegramHtml(cognome)}\n` +
+                    `💶 <b>Quota:</b> €${quotaStr}\n` +
+                    `✉️ <b>Email:</b> ${escapeTelegramHtml(email || 'N/D')} ${emailSent ? '✅' : '❌'}\n` +
+                    `📞 <b>Cellulare:</b> ${escapeTelegramHtml(cellulare)}\n\n` +
+                    `<i>Testo pronto per WhatsApp (tocca per copiare):</i>\n` +
+                    `<code>${escapeTelegramHtml(waText)}</code>`;
+
+                const tgRes = await sendTelegramAlert(tgMsg);
+                telegramSent = tgRes.success === true;
+            } catch (tgErr) {
+                console.warn('[SOLLECITO TELEGRAM ERROR]', tgErr);
+            }
+
+            return res.status(200).json({
+                success: true,
+                emailSent,
+                telegramSent,
+                message: `Sollecito inviato con successo a ${nome} ${cognome}.`
+            });
+        }
+
         // ═══════════════════════════════════
         //  BRANCH: CERTIFICATO MEDICO (cert)
         // ═══════════════════════════════════
@@ -701,10 +777,11 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                 const nomeUtente = profile.nome;
                 const cognomeUtente = profile.cognome || '';
                 const quota = parseFloat(profile.utenti?.quota_totale || 0);
-                const { data: approvazione } = await supabase.from('registro_approvazioni')
-                    .select('stato').eq('anagrafica_id', targetAnagraficaId).maybeSingle();
-
                 if (finalStatus === 'VERDE') {
+                    await supabase.rpc('aggiorna_stato_approvazione', { p_anagrafica_id: targetAnagraficaId });
+                    const { data: approvazione } = await supabase.from('registro_approvazioni')
+                        .select('stato').eq('anagrafica_id', targetAnagraficaId).maybeSingle();
+
                     await supabase.from('registro_tesserati').update({ stato_tesseramento: 'ATTIVO' })
                         .eq('anagrafica_id', targetAnagraficaId).eq('stato_tesseramento', 'SOSPESO');
                     if (approvazione?.stato === 'IN_ATTESA_PAGAMENTO' && userEmail) {
@@ -955,12 +1032,26 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                     .eq('revisionato_manualmente', false);
             }
 
-            const { data: profile } = await supabase.from('anagrafiche').select('nome, cognome, utenti(email)').eq('id', targetAnagraficaId).single();
+            const { data: profile } = await supabase.from('anagrafiche').select('nome, cognome, utenti(email, quota_totale)').eq('id', targetAnagraficaId).single();
             if (profile?.utenti?.email) {
                 const userEmail = profile.utenti.email;
                 const nomeUtente = profile.nome;
                 const cognomeUtente = profile.cognome || '';
-                if (finalStatus === 'ROSSO') {
+                const quota = parseFloat(profile.utenti?.quota_totale || 0);
+
+                if (finalStatus === 'VERDE') {
+                    await supabase.rpc('aggiorna_stato_approvazione', { p_anagrafica_id: targetAnagraficaId });
+                    const { data: approvazione } = await supabase.from('registro_approvazioni')
+                        .select('stato').eq('anagrafica_id', targetAnagraficaId).maybeSingle();
+
+                    if (approvazione?.stato === 'IN_ATTESA_PAGAMENTO' && userEmail) {
+                        await sendEmail({
+                            to: userEmail,
+                            subject: 'Documentazione Approvata - Procedi al pagamento',
+                            html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il tuo documento d'identità è stato approvato con successo!</p><p style="color:#aaa;font-size:13px">Puoi ora procedere al pagamento della quota associativa/tesseramento di <strong>€${quota.toFixed(2)}</strong> per completare la tua iscrizione ed attivare la tua tessera:</p><a href="https://portal.adrenalinaclub.it/portal/pagamento.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">PAGA ORA LA QUOTA</a></div>`
+                        });
+                    }
+                } else if (finalStatus === 'ROSSO') {
                     if (isManualReview) {
                         if (!req.body.silent_cascade) {
                             await sendEmail({

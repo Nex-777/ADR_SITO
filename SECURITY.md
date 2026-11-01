@@ -93,6 +93,12 @@ END IF;
 - Importi monetari (`quota_totale`) DEVONO essere calcolati da trigger/funzioni database, MAI dal client.
 - Numeri progressivi (ricevute, verbali) DEVONO usare SEQUENCE o `FOR UPDATE` per evitare race condition.
 
+### 2.6 Integrità Finanziaria e Divieto Attivazione Senza Pagamento (Payment Guardrail)
+- **Nessuna attivazione senza quietanza**: È SEVERAMENTE VIETATO attivare lo stato di tesseramento (`stato_tesseramento = 'ATTIVO'` o invocare `approva_tesserato`) per qualsiasi atleta la cui quota di iscrizione (`utenti.quota_totale > 0`) non risulti registrata e saldata con una ricevuta fiscale valida in `ricevute_pagamenti` (con `evento_id IS NULL`).
+- **Controllo Database Stretto**: La stored procedure `public.approva_tesserato` solleva un'eccezione bloccante (`RAISE EXCEPTION 'ERRORE SICUREZZA: Impossibile attivare il tesseramento senza pagamento registrato...'`) qualora manchi la ricevuta. Nessun client o operatore direttivo può bypassare questo vincolo.
+- **Rilevamento Anomalie nella Dashboard**: Qualora un tesserato risulti con `stato_tesseramento = 'ATTIVO'` ma `quota_totale > 0` senza quietanza, la Dashboard direttiva DEVE esporre chiaramente un badge di allarme rosso lampeggiante `🚨 ANOMALIA: QUOTA NON SALDATA (€...)` con strumenti diretti di sollecito (`SOLLECITO`) o registrazione incasso manuale (`INCASSO`).
+- **Notifica Push Finanziaria**: Ad ogni saldo quota tesseramento confermato dal webhook Stripe, viene emessa immediatamente una notifica Telegram verso `ADR_BOT` con importo, causale, numero progressivo ricevuta e nominativo socio.
+
 ---
 
 ## 3. API Serverless (Vercel Functions)
