@@ -2,6 +2,16 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-01] bugfix | Fedeltà Modalità Assistenza Tesserato (v1.06.28)
+- **Frontend Dashboard (`portal/dashboard.js`)**:
+  - **Isolamento e Swapping `userRoles`**: In `apriAssistenzaTesserato`, implementato il salvataggio in backup delle variabili globali dell'Admin (`_backupUserRoles`, `_backupViewContext`, `_backupHeaderName`, `_backupHeaderRole`) e il loro swapping dinamico con i soli ruoli reali del tesserato assistito tramite `parseRuoliAssistenza(targetProfile.ruolo)`.
+  - **Sincronizzazione Context & Header**: Sostituito il forzamento `switchContext('athlete')` con `currentViewContext = null; applyRolePermissions(targetProfile);`, garantendo che lo switcher di contesto, i badge e l'header riflettano esattamente la vista e i permessi del tesserato.
+  - **Chiusura Falla Menu Presidenza in Assistenza**: Poiché `userRoles` viene azzerato sui ruoli del tesserato (es. `tesserato_esterno`), la voce di menu `FEEDBACK & BUG` (`#tab-btn-feedback_reports`) viene nascosta correttamente.
+  - **Rimozione Override Arbitrario Nestore**: Rimosso il listener forzato `_nestoreBtnOverride.onclick = openNestore()` che scavalcava i controlli; ora il click su Nestore AI esegue la regolare validazione dell'iscrizione al corso e dello stato dei documenti del tesserato, aprendo il modale bloccante se non in regola.
+  - **Ripristino Integrale Stato Admin**: In `chiudiAssistenzaTesserato` (e nel blocco `catch` di salvaguardia), ripristinate tutte le variabili globali dell'Admin, i testi dell'header e la riconfigurazione completa della UI del Direttivo tramite `applyRolePermissions(currentUserProfile)`.
+- **Documentazione Wiki (`wiki/nestore_portal.md`)**:
+  - Aggiornata la sezione §8.1 specificando la valutazione reale dei requisiti di accesso a Nestore anche in Modalità Assistenza.
+
 ## [2026-10-25] refactor | Hardening Pipeline Backup & Smoke Test Guardrails (v1.06.22)
 - **Composite Action PostgreSQL 17 (`.github/actions/setup-pg17/action.yml`)**:
   - Centralizzata l'installazione di `postgresql-client-17` con keyring sicuro `[signed-by]` e inserimento di `/usr/lib/postgresql/17/bin` nel PATH di sistema del runner.

@@ -221,7 +221,7 @@ Nestore introduce le modalità operative dedicate al corpo docenti e alla direzi
 
 ### 8.1. Regola di Accesso & Switcher Ruoli
 1. **Punto di Ingresso Unificato**: Tutti gli utenti (atleti, istruttori certificati e membri del Consiglio Direttivo) accedono a NESTORE visualizzando sempre per default la propria vista personale **ATLETA**.
-2. **Accesso Incondizionato (v1.05.15 & v1.05.42)**: Tutti i componenti del Consiglio Direttivo (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`) e gli istruttori in `registro_istruttori` hanno accesso incondizionato a NESTORE (senza necessità di corso attivo a pagamento).
+2. **Accesso Incondizionato (v1.05.15 & v1.05.42)**: Tutti i componenti del Consiglio Direttivo (`presidente`, `vice_presidente`, `segretario`, `tesoriere`, `consigliere`) e gli istruttori in `registro_istruttori` hanno accesso incondizionato a NESTORE (senza necessità di corso attivo a pagamento). In Modalità Assistenza i controlli di accesso sono valutati sull'utente assistito (nessun override).
 3. **Selettore di Ruolo (`#nst-view-switcher`) & Principio del Minimo Privilegio**:
    - Se l'utente dispone solo della vista Atleta (es. consigliere/segretario/tesoriere che non è istruttore, o atleta comune), il selettore resta **nascosto**.
    - Se l'utente dispone di ruoli aggiuntivi, il selettore compare permettendo di passare tra le viste autorizzate:

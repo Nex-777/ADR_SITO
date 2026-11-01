@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.27"
+                VERSION: "1.06.28"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -12150,7 +12150,19 @@ async function generatePdfThumbnail(fileOrBlob) {
 // ================================================
 let _backupCurrentUser = null;
 let _backupCurrentUserProfile = null;
+let _backupUserRoles = null;
+let _backupViewContext = null;
+let _backupHeaderName = null;
+let _backupHeaderRole = null;
 let _assistenzaAttiva = false;
+
+function parseRuoliAssistenza(raw) {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+        return raw.replace(/[{}]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+}
 
 window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
     if (!utenteId) return;
@@ -12179,23 +12191,41 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
         // 2. Salva backup delle variabili globali dell'Admin
         _backupCurrentUser = currentUser;
         _backupCurrentUserProfile = currentUserProfile;
+        _backupUserRoles = Array.isArray(userRoles) ? [...userRoles] : [];
+        _backupViewContext = currentViewContext;
+        const nameEl = document.getElementById('user-display-name');
+        _backupHeaderName = nameEl ? nameEl.textContent : '';
+        const roleEl = document.getElementById('user-display-role');
+        _backupHeaderRole = roleEl ? roleEl.textContent : '';
         _assistenzaAttiva = true;
 
         // 3. Sostituisci le variabili globali con i dati del tesserato
         currentUser = { id: utenteId, email: targetProfile.email || '' };
         currentUserProfile = targetProfile;
+        userRoles = parseRuoliAssistenza(targetProfile.ruolo);
+
+        // Aggiorna indicazioni utente e ruoli nell'header desktop e mobile
+        const targetNomeComp = nomeCompleto || `${targetProfile.nome || ''} ${targetProfile.cognome || ''}`.trim() || 'N/D';
+        const roleText = `Ruoli: ${userRoles.length > 0 ? userRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'N/D'}`;
+        if (nameEl) nameEl.textContent = targetNomeComp;
+        if (roleEl) roleEl.textContent = roleText;
+        const mobileNameEl = document.getElementById('mobile-user-display-name');
+        if (mobileNameEl) mobileNameEl.textContent = targetNomeComp;
+        const mobileRoleEl = document.getElementById('mobile-user-display-role');
+        if (mobileRoleEl) mobileRoleEl.textContent = roleText;
 
         // 4. Mostra il banner di avviso
         const banner = document.getElementById('banner-assistenza-admin');
         const nomeBanner = document.getElementById('assistenza-target-nome');
         if (banner) {
-            if (nomeBanner) nomeBanner.textContent = nomeCompleto || `${targetProfile.nome || ''} ${targetProfile.cognome || ''}`;
+            if (nomeBanner) nomeBanner.textContent = targetNomeComp;
             banner.style.display = 'flex';
             document.body.style.paddingTop = banner.offsetHeight + 'px';
         }
 
-        // 5. Passa alla vista 'athlete' (mostra le schede utente nella sidebar)
-        switchContext('athlete');
+        // 5. Configura i permessi e la vista reale dell'utente assistito
+        currentViewContext = null;
+        applyRolePermissions(targetProfile);
 
         // 6. Carica tutti i dati utente con le variabili globali ora puntate al tesserato
         await populateUserPanoramicaSummary();
@@ -12215,14 +12245,6 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
             };
         }
 
-        const _nestoreBtnOverride = document.getElementById('tab-btn-user-nestore');
-        if (_nestoreBtnOverride) {
-            _nestoreBtnOverride.onclick = (e) => {
-                e.preventDefault();
-                openNestore();
-            };
-        }
-
         // 7. Naviga alla prima scheda utente (Il Mio Profilo)
         const tabProfilo = document.getElementById('tab-btn-user_profilo');
         if (tabProfilo) tabProfilo.click();
@@ -12231,6 +12253,32 @@ window.apriAssistenzaTesserato = async function(utenteId, nomeCompleto) {
         console.error('[ASSISTENZA] Errore apertura assistenza:', err);
         if (_backupCurrentUser) currentUser = _backupCurrentUser;
         if (_backupCurrentUserProfile) currentUserProfile = _backupCurrentUserProfile;
+        if (_backupUserRoles) userRoles = _backupUserRoles;
+        if (_backupViewContext) {
+            currentViewContext = _backupViewContext;
+            localStorage.setItem('currentViewContext', _backupViewContext);
+        }
+        if (_backupHeaderName) {
+            const el = document.getElementById('user-display-name');
+            if (el) el.textContent = _backupHeaderName;
+            const mEl = document.getElementById('mobile-user-display-name');
+            if (mEl) mEl.textContent = _backupHeaderName;
+        }
+        if (_backupHeaderRole) {
+            const el = document.getElementById('user-display-role');
+            if (el) el.textContent = _backupHeaderRole;
+            const mEl = document.getElementById('mobile-user-display-role');
+            if (mEl) mEl.textContent = _backupHeaderRole;
+        }
+        if (currentUserProfile) {
+            try { applyRolePermissions(currentUserProfile); } catch (e) {}
+        }
+        _backupCurrentUser = null;
+        _backupCurrentUserProfile = null;
+        _backupUserRoles = null;
+        _backupViewContext = null;
+        _backupHeaderName = null;
+        _backupHeaderRole = null;
         _assistenzaAttiva = false;
         alert('Si è verificato un errore durante l\'apertura della modalità assistenza: ' + err.message);
     }
@@ -12242,18 +12290,47 @@ window.chiudiAssistenzaTesserato = function() {
     // 1. Ripristina variabili globali Admin originali
     currentUser = _backupCurrentUser;
     currentUserProfile = _backupCurrentUserProfile;
+    if (_backupUserRoles) userRoles = _backupUserRoles;
+    if (_backupViewContext) {
+        currentViewContext = _backupViewContext;
+        localStorage.setItem('currentViewContext', _backupViewContext);
+    }
+
+    // 2. Ripristina header desktop e mobile dell'Admin
+    if (_backupHeaderName) {
+        const el = document.getElementById('user-display-name');
+        if (el) el.textContent = _backupHeaderName;
+        const mEl = document.getElementById('mobile-user-display-name');
+        if (mEl) mEl.textContent = _backupHeaderName;
+    }
+    if (_backupHeaderRole) {
+        const el = document.getElementById('user-display-role');
+        if (el) el.textContent = _backupHeaderRole;
+        const mEl = document.getElementById('mobile-user-display-role');
+        if (mEl) mEl.textContent = _backupHeaderRole;
+    }
+
     _backupCurrentUser = null;
     _backupCurrentUserProfile = null;
+    _backupUserRoles = null;
+    _backupViewContext = null;
+    _backupHeaderName = null;
+    _backupHeaderRole = null;
     _assistenzaAttiva = false;
 
-    // 2. Nascondi banner e rimuovi padding body
+    // 3. Nascondi banner e rimuovi padding body
     const banner = document.getElementById('banner-assistenza-admin');
     if (banner) {
         banner.style.display = 'none';
         document.body.style.paddingTop = '';
     }
 
-    // 3. Torna al contesto board e al pannello tesserati
+    // 4. Ripristina i permessi e la UI dell'Admin
+    if (currentUserProfile) {
+        try { applyRolePermissions(currentUserProfile); } catch (e) {}
+    }
+
+    // 5. Torna al contesto board e al pannello tesserati
     switchContext('board');
     if (typeof switchTab === 'function') {
         switchTab('tesserati');
