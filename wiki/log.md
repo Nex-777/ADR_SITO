@@ -2,6 +2,15 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-02] fix | Risoluzione Export Orfano namesMatch in precheck-token.js (v1.06.32)
+- **Backend Utility (`api/_utils/precheck-token.js`)**:
+  - Rimossa la keyword `export` dalla funzione helper `namesMatch`, rendendola funzione privata interna al modulo come da principio di minimo privilegio.
+  - La funzione continua a essere impiegata internamente da `evaluateDocumentAnagrafica` per il matching tollerante di nomi, cognomi e comuni (es. apostrofi e spaziature).
+- **Code Quality & CI (KNIP)**:
+  - Eseguito `npm run knip`: 0 file orfani, 0 dipendenze orfane, 0 export orfani (exit code 0).
+  - Validata l'intera suite Vitest (26 file di test passati, 309 test eseguiti con successo).
+- **Versione**: Incrementata la versione globale a `v1.06.32`.
+
 ## [2026-11-01] feature | Descrizioni Parlanti e Trasparenza Transazioni Stripe
 - **`api/create-checkout-session.js`**:
   - Introdotto helper `stripeDesc` e `fullName` per la generazione uniforme e sanitizzata delle causali transazionali su Stripe.

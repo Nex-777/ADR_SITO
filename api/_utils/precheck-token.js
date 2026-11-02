@@ -25,7 +25,7 @@ export function normalizeText(text) {
 /**
  * Confronta due nomi/denominazioni verificando corrispondenza testuale standard o collassando gli spazi (es. DISIDORO vs D'ISIDORO, SANT'OMERO vs SANT OMERO).
  */
-export function namesMatch(a, b) {
+function namesMatch(a, b) {
     if (!a || !b) return false;
     const na = normalizeText(a);
     const nb = normalizeText(b);
