@@ -55,3 +55,13 @@ Every tabular data visualization must support column-based sorting:
     -   Sort indicator spans use `text-primary font-bold ml-1`.
     -   Clickable headers use classes `cursor-pointer hover:bg-white/10 select-none transition-all`.
 -   **Implementation**: Done client-side via utility functions `sortArray` and `updateSortIcon` operating on global components state arrays (e.g., `sociData`, `tesseratiData`, `quoteData`, `direttivoData`, `bilanciData`, `contabilitaData`).
+
+---
+
+## 🤝 Official Partners & Sponsors Section
+
+A dedicated brutalist showcase section `#sponsors` is positioned immediately above `#contact`:
+- **Content**: 3 verified official sponsors (Agenzia Italia 2 S.n.c., Euro 3 Immobiliare S.a.s., Z New Progect S.r.l.).
+- **Visuals**: Logo containers with high-contrast neutral backing (`bg-white/[0.03]`), brutalist badges, direct website/phone/email actions, and full tax/address disclosures.
+- **Navigation**: Integrated in desktop topbar (`href="#sponsors"`) and mobile bottom navigation bar.
+- **Assets**: Optimized PNG files stored in `assets/sponsors/`.

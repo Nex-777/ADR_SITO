@@ -57,6 +57,7 @@ Standard athletes and members (`!isBoardMember` such as `tesserato_esterno` or `
 -   **Medical Certificate Status**: Quick overview of validity.
 -   **Noticeboard (Bacheca)**: Renders recent club announcements fetched from `public.comunicazioni`.
 -   **Download Area**: Section with links to download corporate documents (Statutes, Rules, Waivers).
+-   **Partner Ufficiali & Convenzioni Club**: Dedicated widget displaying official club supporters (Agenzia Italia 2 Snc, Euro 3 Immobiliare, Z New Progect SRL) with direct contact and service links.
 
 ### 2. Il Mio Profilo (My Profile)
 -   **Profile Data Update**: Allows editing contact information, phone, address, and emergency contact details.

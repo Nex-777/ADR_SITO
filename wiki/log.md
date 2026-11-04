@@ -4400,3 +4400,15 @@ pm audit --omit=dev riporta 0 vulnerabilità).
   - Eseguito sollecito tramite email e inviati su ADR_BOT i 3 messaggi Telegram pronti per WhatsApp per Marco Giuseppe Balloni (€14.00), Andrea D'Isidoro (€14.00) e Andrea Gentili (€30.00).
 - **Security & Testing**:
   - Aggiunta sezione § 2.6 in `SECURITY.md`. Creata suite `tests/payment-guardrail.test.js` con 6 test unitari. Tutti i 309 test del repository passano al 100%.
+
+## [2026-11-04] ingest | Official Partners & Sponsors Integration v1.06.33
+- **Sezione Sponsor Home Page (index.html)**:
+  - Creata sezione #sponsors ('OFFICIAL PARTNERS & SPONSORS') prima di #contact in stile Kinetic Brutalism (design consultivo Stitch MCP).
+  - Integrati i 3 partner con loghi, badge categoria, sede legale, P.IVA e canali di contatto: Agenzia Italia 2 S.n.c., Euro 3 Immobiliare S.a.s., Z New Progect S.r.l.
+  - Aggiunti collegamenti rapidi 'Partners' nella TopAppBar desktop e nella bottom navigation mobile.
+- **Sezione Partner & Convenzioni Dashboard (portal/dashboard.html)**:
+  - Inserito widget 'PARTNER UFFICIALI & CONVENZIONI CLUB' in #user-panoramica-widgets per dare massima visibilità ai servizi dedicati ai soci senza impatto su query/database.
+- **Asset Optimization (ssets/sponsors/)**:
+  - Ottimizzati ed estratti i loghi (genzia-italia-2.png, euro3-immobiliare.png, z-new-progect.png) con dimensioni compatte e caricamento lazy/async.
+- **Testing & Quality Assurance**:
+  - Creata suite 	ests/sponsors.test.js con 4 test di conformità asset e markup. Test globali: 27 file passati (313 test su 313).

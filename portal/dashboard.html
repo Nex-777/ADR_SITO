@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.06.32"></script>
+    <script src="config.js?v=1.06.33"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -504,7 +504,7 @@
             color: #00e5ff;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.06.32">
+    <link rel="stylesheet" href="../output.css?v=1.06.33">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -531,7 +531,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.32</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.33</span>
             </div>
 
             <!-- Item 2: Azioni Logout + Hamburger (Order 2 su Mobile, 4 su Desktop) -->
@@ -983,6 +983,77 @@
                                     </a>
                                 </li>
                             </ul>
+                        </div>
+                    </div>
+
+                    <!-- Partner Ufficiali & Convenzioni Club -->
+                    <div class="border border-white/10 p-6 bg-black/40 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+                            <h3 class="font-headline text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-sm">handshake</span> PARTNER UFFICIALI &amp; CONVENZIONI CLUB
+                            </h3>
+                            <span class="text-[9px] font-mono text-gray-500 uppercase tracking-wider">Servizi dedicati ad atleti e soci Adrenalina</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Sponsor 1: Agenzia Italia 2 Snc -->
+                            <div class="bg-black/30 border border-white/5 p-4 rounded hover:border-primary/40 transition-all flex flex-col justify-between group">
+                                <div class="space-y-3">
+                                    <div class="h-14 w-full bg-white/[0.02] border border-white/5 rounded flex items-center justify-center p-2">
+                                        <img src="../assets/sponsors/agenzia-italia-2.png" alt="Agenzia Italia 2 Snc" class="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform" loading="lazy">
+                                    </div>
+                                    <div>
+                                        <span class="text-[8px] font-mono text-primary font-bold uppercase tracking-wider block">CONSULENZA AZIENDALE &amp; FISCALE</span>
+                                        <h4 class="font-headline text-xs font-bold text-white uppercase group-hover:text-primary transition-colors">AGENZIA ITALIA 2 S.N.C.</h4>
+                                        <p class="text-[10px] text-gray-400 font-mono mt-1">Consulenza societaria, fiscale, paghe e lavoro per PMI e professionisti.</p>
+                                    </div>
+                                </div>
+                                <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[9px] font-mono">
+                                    <span class="text-gray-500">Ascoli Piceno</span>
+                                    <a href="http://www.agenziaitalia2.it" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline flex items-center gap-0.5 font-bold">
+                                        <span>INFO &amp; SITO</span>
+                                        <span class="material-symbols-outlined text-[10px]">open_in_new</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Sponsor 2: Euro 3 Immobiliare -->
+                            <div class="bg-black/30 border border-white/5 p-4 rounded hover:border-primary/40 transition-all flex flex-col justify-between group">
+                                <div class="space-y-3">
+                                    <div class="h-14 w-full bg-white/[0.02] border border-white/5 rounded flex items-center justify-center p-2">
+                                        <img src="../assets/sponsors/euro3-immobiliare.png" alt="Euro 3 Immobiliare" class="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform" loading="lazy">
+                                    </div>
+                                    <div>
+                                        <span class="text-[8px] font-mono text-primary font-bold uppercase tracking-wider block">INTERMEDIAZIONE IMMOBILIARE</span>
+                                        <h4 class="font-headline text-xs font-bold text-white uppercase group-hover:text-primary transition-colors">EURO 3 IMMOBILIARE</h4>
+                                        <p class="text-[10px] text-gray-400 font-mono mt-1">Sviluppo, compravendite e locazioni residenziali e commerciali.</p>
+                                    </div>
+                                </div>
+                                <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[9px] font-mono">
+                                    <span class="text-gray-500">Ascoli Piceno</span>
+                                    <a href="https://www.euro3immobiliare.it" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline flex items-center gap-0.5 font-bold">
+                                        <span>IMMOBILI</span>
+                                        <span class="material-symbols-outlined text-[10px]">open_in_new</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Sponsor 3: Z New Progect SRL -->
+                            <div class="bg-black/30 border border-white/5 p-4 rounded hover:border-primary/40 transition-all flex flex-col justify-between group">
+                                <div class="space-y-3">
+                                    <div class="h-14 w-full bg-white/[0.02] border border-white/5 rounded flex items-center justify-center p-2">
+                                        <img src="../assets/sponsors/z-new-progect.png" alt="Z New Progect SRL" class="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform" loading="lazy">
+                                    </div>
+                                    <div>
+                                        <span class="text-[8px] font-mono text-primary font-bold uppercase tracking-wider block">MOVIMENTO TERRA &amp; COSTRUZIONI</span>
+                                        <h4 class="font-headline text-xs font-bold text-white uppercase group-hover:text-primary transition-colors">Z NEW PROGECT S.R.L.</h4>
+                                        <p class="text-[10px] text-gray-400 font-mono mt-1">Costruzioni generali, scavi, demolizioni e pavimentazioni stradali.</p>
+                                    </div>
+                                </div>
+                                <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[9px] font-mono">
+                                    <span class="text-gray-500">San Severino Marche</span>
+                                    <span class="text-primary text-[9px] font-bold">OPERE CIVILI</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -3471,9 +3542,9 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.06.32"></script>
-    <script src="dashboard-feedback.js?v=1.06.32"></script>
-    <script src="dashboard.js?v=1.06.32"></script>
+    <script src="password-validator.js?v=1.06.33"></script>
+    <script src="dashboard-feedback.js?v=1.06.33"></script>
+    <script src="dashboard.js?v=1.06.33"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -3694,8 +3765,8 @@
     </div>
 
     <!-- Floating Timer Dock for Active Timers from Nestore -->
-    <script src="timer-dock.js?v=1.06.32"></script>
-    <script src="feedback-widget.js?v=1.06.32"></script>
+    <script src="timer-dock.js?v=1.06.33"></script>
+    <script src="feedback-widget.js?v=1.06.33"></script>
 </body></html>
 
 
