@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.38"
+                VERSION: "1.06.39"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -3816,9 +3816,124 @@
             }
         });
 
+        const TARIFFE_KEYS_PRESIDENZA = [
+            'quota_socio',
+            'tessera_base_silver',
+            'tessera_base_gold',
+            'tessera_integrativa_a',
+            'tessera_integrativa_b'
+        ];
+        let _tariffeCachePresidenza = {};
+
+        async function loadTariffePresidenza() {
+            const panel = document.getElementById('presidenza-tariffe-panel');
+            if (!panel) return;
+            const isPresidenza = userRoles.some(r => ['presidente', 'vice_presidente'].includes(r));
+            if (!isPresidenza) {
+                panel.classList.add('hidden');
+                return;
+            }
+            panel.classList.remove('hidden');
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('configurazioni_tariffe')
+                    .select('chiave, valore')
+                    .in('chiave', TARIFFE_KEYS_PRESIDENZA);
+                if (error) throw error;
+
+                const map = {};
+                (data || []).forEach(r => {
+                    map[r.chiave] = parseFloat(r.valore);
+                });
+                _tariffeCachePresidenza = map;
+
+                TARIFFE_KEYS_PRESIDENZA.forEach(k => {
+                    const inp = document.getElementById(`tariffa-input-${k}`);
+                    if (inp && map[k] !== undefined && !isNaN(map[k])) {
+                        inp.value = map[k].toFixed(2);
+                    }
+                });
+                const statusEl = document.getElementById('presidenza-tariffe-status');
+                if (statusEl) statusEl.textContent = '';
+            } catch (err) {
+                console.error('Errore caricamento tariffe presidenza:', err);
+                const statusEl = document.getElementById('presidenza-tariffe-status');
+                if (statusEl) {
+                    statusEl.textContent = 'Errore nel caricamento delle tariffe attuali.';
+                    statusEl.className = 'text-[11px] font-mono text-primary';
+                }
+            }
+        }
+
+        window.salvaTariffePresidenza = async () => {
+            if (!userRoles.some(r => ['presidente', 'vice_presidente'].includes(r))) {
+                alert('Solo Presidente e Vice Presidente possono modificare le tariffe.');
+                return;
+            }
+
+            const nuoviValori = {};
+            for (const k of TARIFFE_KEYS_PRESIDENZA) {
+                const inp = document.getElementById(`tariffa-input-${k}`);
+                const val = parseFloat(inp?.value);
+                if (isNaN(val) || val <= 0) {
+                    alert(`Inserisci un importo valido (> 0) per "${k.replace(/_/g, ' ')}".`);
+                    return;
+                }
+                nuoviValori[k] = Number(val.toFixed(2));
+            }
+
+            if (!confirm('Confermi l\'aggiornamento delle tariffe ufficiali per nuove iscrizioni e rinnovi?')) return;
+
+            const btn = document.getElementById('btn-salva-tariffe-presidenza');
+            const statusEl = document.getElementById('presidenza-tariffe-status');
+            if (btn) btn.disabled = true;
+
+            try {
+                const variazioni = {};
+                for (const k of TARIFFE_KEYS_PRESIDENZA) {
+                    const vecchio = _tariffeCachePresidenza[k];
+                    const nuovo = nuoviValori[k];
+                    if (vecchio !== nuovo) {
+                        variazioni[k] = { prima: vecchio ?? null, dopo: nuovo };
+                    }
+                    const { error } = await supabaseClient
+                        .from('configurazioni_tariffe')
+                        .update({ valore: nuovo })
+                        .eq('chiave', k);
+                    if (error) throw error;
+                }
+
+                await scriviAuditLog('AGGIORNAMENTO_TARIFFE_QUOTE', 'configurazioni_tariffe', 'tariffe', {
+                    nuovi_valori: nuoviValori,
+                    variazioni: variazioni
+                });
+
+                _tariffeCachePresidenza = { ...nuoviValori };
+                if (statusEl) {
+                    statusEl.textContent = '✓ Tariffe aggiornate con successo.';
+                    statusEl.className = 'text-[11px] font-mono text-green-400';
+                }
+                if (typeof populateUserPanoramicaSummary === 'function' && currentViewContext !== 'board') {
+                    await populateUserPanoramicaSummary();
+                }
+                alert('Tariffe aggiornate con successo!');
+            } catch (err) {
+                console.error('Errore salvataggio tariffe:', err);
+                if (statusEl) {
+                    statusEl.textContent = 'Errore durante il salvataggio delle tariffe.';
+                    statusEl.className = 'text-[11px] font-mono text-primary';
+                }
+                alert('Errore durante il salvataggio delle tariffe: ' + err.message);
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        };
+
         // Caricamento Tabella Quote Associative
         async function loadQuote() {
             try {
+                await loadTariffePresidenza();
                 // 1. Carica gli utenti con relative scadenze
                 const { data: users, error: usersError } = await supabaseClient
                     .from('utenti')

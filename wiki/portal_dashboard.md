@@ -55,6 +55,7 @@ Standard athletes and members (`!isBoardMember` such as `tesserato_esterno` or `
 -   **Registration Date**: Displayed as technical information indicating when the athlete profile was approved.
 -   **Membership Expiry**: Separa dinamicamente lo *Status Socio (Indeterminato)* dalla *Scadenza Tessera CSEN / Associazione* (`data_scadenza_tessera`).
 -   **Box Rinnovo Annuale (`#user-renewal-container`)**: Compare automaticamente quando Quota Socio (dal `01/11`) o Tessera CSEN (da `-60 giorni`) entrano in finestra di rinnovo, consentendo il rinnovo congiunto o separato e il cambio copertura (es. da Silver a Integrativa B).
+-   **Pannello Configurazione Tariffe (`#presidenza-tariffe-panel`)**: Nella scheda *Quote e Cassa*, Presidente e Vice Presidente possono aggiornare in tempo reale `quota_socio` e i 4 importi tessere CSEN su `configurazioni_tariffe` (protetti da RLS dedicata e tracciati in `registro_audit_operazioni`).
 -   **Registro Soci — Morosità (`MOROSO / SCADUTO`)**: Dal `01/01` successivo alla scadenza senza pagamento, espone il badge `MOROSO / SCADUTO` e il pulsante `DICHIARA DECADUTO` collegato alla RPC `dichiara_socio_decaduto`.
 -   **Medical Certificate Status**: Quick overview of validity.
 -   **Noticeboard (Bacheca)**: Renders recent club announcements fetched from `public.comunicazioni`.

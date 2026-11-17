@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-17] feature | Pannello Tariffe Presidenza e Rimozione Avviso Costi Pagamento (v1.06.39)
+- Database (supabase/migration_tariffe_presidenza_rls.sql): ristretta la policy RLS di modifica su configurazioni_tariffe ai soli ruoli presidente e vice_presidente e aggiunto vincolo CHECK (valore > 0).
+- Dashboard (portal/dashboard.html, portal/dashboard.js, wiki/portal_dashboard.md): aggiunto pannello #presidenza-tariffe-panel nella scheda Quote e Cassa con salvataggio su configurazioni_tariffe e audit log AGGIORNAMENTO_TARIFFE_QUOTE; rimossa la dicitura (Servizio di pagamento online incluso nella quota) dal riepilogo rinnovo.
+- Test e Quality: aggiornata suite tests/csen-policies-renewal.test.js; verificati npm test (29 file, 325 test passati) e npm run knip (exit code 0). Versione globale aggiornata a v1.06.39.
+
 ## [2026-11-17] fix | Visibilita Bottone Rinnovo, Avviso Decorrenza Anticipata e Rimozione Spese Stripe 2% (v1.06.38)
 - UI Dashboard (portal/dashboard.html, portal/dashboard.js): aggiornato #btn-avvia-rinnovo-stripe con classi ad alto contrasto compilate in output.css (bg-white text-black hover:bg-primary hover:text-white); inserito avviso esplicito sulla decorrenza alla scadenza precedente senza perdita di giorni residui.
 - Checkout e Tariffe (api/create-checkout-session.js, portal/dashboard.js, portal/pagamento.js): rimossa completamente la maggiorazione del 2% (Spese di gestione transazione e amministrative) da tutti i flussi Stripe (rinnovi, tesseramenti, corsi/eventi, rateizzazioni ed Epika), includendo il servizio nella quota nominale e unificando la decorrenza dalla scadenza residua su tutti i rinnovi anticipati.

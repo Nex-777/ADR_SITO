@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.06.38"></script>
+    <script src="config.js?v=1.06.39"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -504,7 +504,7 @@
             color: #00e5ff;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.06.38">
+    <link rel="stylesheet" href="../output.css?v=1.06.39">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -531,7 +531,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.38</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.39</span>
             </div>
 
             <!-- Item 2: Azioni Logout + Hamburger (Order 2 su Mobile, 4 su Desktop) -->
@@ -980,7 +980,6 @@
                                 <div class="text-[10px] font-headline uppercase text-gray-400">Totale Rinnovo Selezionato</div>
                                 <div class="flex items-baseline gap-2">
                                     <span id="renew-total-amount" class="font-headline text-xl font-bold text-white">€0.00</span>
-                                    <span class="text-[10px] text-gray-500 font-mono">(Servizio di pagamento online incluso nella quota)</span>
                                 </div>
                             </div>
                             <button id="btn-avvia-rinnovo-stripe" onclick="avviaCheckoutRinnovo()" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-6 py-3 transition-all uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
@@ -1531,6 +1530,51 @@
                 <div>
                     <h2 class="font-headline text-lg font-bold uppercase">Stato Quote Associative e Tesseramenti</h2>
                     <p class="text-xs text-gray-500 uppercase">Controllo scadenze quote solari e pagamenti</p>
+                </div>
+
+                <!-- Gestione Tariffe Quote e Tessere (Solo Presidente e Vice Presidente) -->
+                <div id="presidenza-tariffe-panel" class="hidden border border-white/10 bg-black/40 p-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <h3 class="font-headline text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-base">tune</span> CONFIGURAZIONE QUOTE SOCIO E TESSERE CSEN
+                            </h3>
+                            <p class="text-[11px] text-gray-400 font-mono mt-1">
+                                Gli importi salvati si applicano immediatamente alle nuove iscrizioni e ai rinnovi. Eventuali quote di prima iscrizione già calcolate in attesa di pagamento restano invariate.
+                            </p>
+                        </div>
+                        <span class="px-2 py-0.5 text-[9px] font-headline font-bold uppercase rounded bg-white/5 text-gray-300 border border-white/10 self-start sm:self-auto">SOLO PRESIDENZA</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div class="space-y-1">
+                            <label for="tariffa-input-quota_socio" class="block text-[10px] font-headline uppercase text-gray-400">Quota Socio (€)</label>
+                            <input type="number" step="0.50" min="1" id="tariffa-input-quota_socio" class="w-full brutalist-input bg-black text-white text-xs p-2.5 border border-white/20 font-mono">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="tariffa-input-tessera_base_silver" class="block text-[10px] font-headline uppercase text-gray-400">Base Silver (€)</label>
+                            <input type="number" step="0.50" min="1" id="tariffa-input-tessera_base_silver" class="w-full brutalist-input bg-black text-white text-xs p-2.5 border border-white/20 font-mono">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="tariffa-input-tessera_base_gold" class="block text-[10px] font-headline uppercase text-gray-400">Base Gold (€)</label>
+                            <input type="number" step="0.50" min="1" id="tariffa-input-tessera_base_gold" class="w-full brutalist-input bg-black text-white text-xs p-2.5 border border-white/20 font-mono">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="tariffa-input-tessera_integrativa_a" class="block text-[10px] font-headline uppercase text-gray-400">Integrativa A (€)</label>
+                            <input type="number" step="0.50" min="1" id="tariffa-input-tessera_integrativa_a" class="w-full brutalist-input bg-black text-white text-xs p-2.5 border border-white/20 font-mono">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="tariffa-input-tessera_integrativa_b" class="block text-[10px] font-headline uppercase text-gray-400">Integrativa B (€)</label>
+                            <input type="number" step="0.50" min="1" id="tariffa-input-tessera_integrativa_b" class="w-full brutalist-input bg-black text-white text-xs p-2.5 border border-white/20 font-mono">
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2 border-t border-white/10">
+                        <span id="presidenza-tariffe-status" class="text-[11px] font-mono text-gray-400"></span>
+                        <button id="btn-salva-tariffe-presidenza" onclick="salvaTariffePresidenza()" class="bg-white text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-5 py-2.5 transition-all uppercase tracking-wider">
+                            SALVA NUOVE TARIFFE
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Quote Table -->
@@ -3826,11 +3870,11 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.06.38"></script>
-    <script src="safeguarding-docs.js?v=1.06.38"></script>
-    <script src="dashboard-safeguarding.js?v=1.06.38"></script>
-    <script src="dashboard-feedback.js?v=1.06.38"></script>
-    <script src="dashboard.js?v=1.06.38"></script>
+    <script src="password-validator.js?v=1.06.39"></script>
+    <script src="safeguarding-docs.js?v=1.06.39"></script>
+    <script src="dashboard-safeguarding.js?v=1.06.39"></script>
+    <script src="dashboard-feedback.js?v=1.06.39"></script>
+    <script src="dashboard.js?v=1.06.39"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -4052,8 +4096,8 @@
     </div>
 
     <!-- Floating Timer Dock for Active Timers from Nestore -->
-    <script src="timer-dock.js?v=1.06.38"></script>
-    <script src="feedback-widget.js?v=1.06.38"></script>
+    <script src="timer-dock.js?v=1.06.39"></script>
+    <script src="feedback-widget.js?v=1.06.39"></script>
 </body></html>
 
 

@@ -370,11 +370,15 @@ describe('Politiche CSEN & Sistema Rinnovi 2027', () => {
             expect(dashHtml).toContain('id="row-user-scadenza-socio"');
             expect(dashHtml).toContain('id="btn-avvia-rinnovo-stripe" onclick="avviaCheckoutRinnovo()" class="bg-white text-black');
             expect(dashHtml).not.toContain('spese di gestione su Stripe');
+            expect(dashHtml).not.toContain('Servizio di pagamento online incluso nella quota');
+            expect(dashHtml).toContain('id="presidenza-tariffe-panel"');
+            expect(dashHtml).toContain('id="tariffa-input-quota_socio"');
 
             expect(checkoutJs).not.toContain('Spese di gestione transazione');
             expect(dashJs).toContain('MOROSO / SCADUTO');
             expect(dashJs).toContain('window.dichiaraSocioDecaduto');
             expect(dashJs).toContain('window.avviaCheckoutRinnovo');
+            expect(dashJs).toContain('window.salvaTariffePresidenza');
             expect(dashJs).toContain('data_scadenza_tessera');
             expect(dashJs).toContain('non perderai alcun giorno di validità residua');
 
