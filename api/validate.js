@@ -790,6 +790,17 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                             subject: 'Certificato Medico Approvato - Procedi al pagamento',
                             html: `<div style="font-family:sans-serif;background:#0e0e0e;color:#fff;padding:30px;text-align:center"><h1 style="color:#df293e">ADRENALINA CLUB</h1><p>Ciao ${nomeUtente}, il tuo certificato medico è stato approvato!</p><p style="color:#aaa;font-size:13px">Puoi ora procedere al pagamento della quota associativa di <strong>€${quota.toFixed(2)}</strong> per completare la tua iscrizione:</p><a href="https://portal.adrenalinaclub.it/portal/pagamento.html" style="background:#df293e;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:15px">PAGA ORA LA QUOTA</a></div>`
                         });
+                    } else if (!isManualReview && approvazione?.stato === 'IN_ATTESA') {
+                        try {
+                            const tgMsg = `🟢 <b>CERTIFICATO VALIDATO — PRONTO PER ATTIVAZIONE</b>\n\n` +
+                                `👤 <b>Atleta:</b> ${escapeTelegramHtml(nomeUtente)} ${escapeTelegramHtml(cognomeUtente)}\n` +
+                                `📋 <b>Card:</b> 🥋 Tesserati in Attesa di Attivazione\n` +
+                                `📄 <b>Esito AI:</b> 🟢 VERDE\n\n` +
+                                `👉 <i>Accedi al Registro Approvazioni per cliccare su ATTIVA.</i>`;
+                            await sendTelegramAlert(tgMsg);
+                        } catch (tgErr) {
+                            console.warn('[CERT AI VERDE TELEGRAM] Alert error:', tgErr.message);
+                        }
                     }
                 } else if (finalStatus === 'ROSSO') {
                     await supabase.from('registro_tesserati').update({ stato_tesseramento: 'SOSPESO' })
@@ -1072,6 +1083,18 @@ Rispondi SOLO con il JSON, senza markdown, senza blockquote. Esempio:
                         } catch (tgErr) {
                             console.warn('[DOC AI TELEGRAM] Alert error:', tgErr.message);
                         }
+                    }
+                } else if (finalStatus === 'GIALLO' && !isManualReview) {
+                    try {
+                        const tgMsg = `🟡 <b>DOCUMENTO IDENTITÀ IN REVISIONE</b>\n\n` +
+                            `👤 <b>Atleta:</b> ${escapeTelegramHtml(nomeUtente)} ${escapeTelegramHtml(cognomeUtente)}\n` +
+                            `📋 <b>Card:</b> 🪪 Documenti d'Identità in Attesa di Verifica\n` +
+                            `📄 <b>Esito AI:</b> 🟡 GIALLO\n` +
+                            `📝 <b>Nota AI:</b> ${escapeTelegramHtml(finalNotes)}\n\n` +
+                            `<i>Verifica manuale richiesta nel Registro Approvazioni.</i>`;
+                        await sendTelegramAlert(tgMsg);
+                    } catch (tgErr) {
+                        console.warn('[DOC AI TELEGRAM] Alert error:', tgErr.message);
                     }
                 }
             }

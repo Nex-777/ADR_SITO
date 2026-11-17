@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { sendTelegramAlert, escapeTelegramHtml } from './_utils/telegram-bot.js';
 
 const ALLOWED_ORIGINS = [
     'https://adrenalinaclub.it',
@@ -12,6 +13,82 @@ const ALLOWED_ORIGINS = [
 ];
 
 const BOARD_ROLES = ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'];
+
+export async function handleNotifyRecoveryRequest(req, res, supabase) {
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+    const { data: allowed } = await supabase.rpc('check_rate_limit', {
+        p_key: `recovery-notify:${clientIp}`,
+        p_max_requests: 5,
+        p_window_seconds: 300
+    });
+    if (allowed === false) {
+        return res.status(429).json({ success: false, error: 'Troppe richieste. Riprova tra qualche minuto.' });
+    }
+
+    const rawEmail = req.body?.email;
+    if (!rawEmail || typeof rawEmail !== 'string' || !rawEmail.includes('@') || rawEmail.length > 254) {
+        return res.status(200).json({ success: true, tracked: false });
+    }
+    const targetEmail = rawEmail.trim().toLowerCase();
+
+    // Verifica censimento reale in public.utenti (anti-enumerazione e anti-spam bot)
+    const { data: matchedUser, error: lookupError } = await supabase
+        .from('utenti')
+        .select('id, email, nome, cognome, cellulare, anagrafiche(id, nome, cognome, codice_fiscale, contatti(telefono))')
+        .ilike('email', targetEmail)
+        .limit(1)
+        .maybeSingle();
+
+    if (lookupError || !matchedUser) {
+        return res.status(200).json({ success: true, tracked: false });
+    }
+
+    const { data: existingReq } = await supabase
+        .from('richieste_recupero_password')
+        .select('id, created_at')
+        .ilike('email', targetEmail)
+        .eq('stato', 'in_attesa')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    const fifteenMinMs = 15 * 60 * 1000;
+    const isRecentDuplicate = existingReq?.created_at && (Date.now() - new Date(existingReq.created_at).getTime() < fifteenMinMs);
+
+    if (!existingReq) {
+        await supabase.from('richieste_recupero_password').insert({
+            email: targetEmail,
+            ip_address: clientIp !== 'unknown' ? clientIp : null,
+            stato: 'in_attesa'
+        });
+    } else if (!isRecentDuplicate) {
+        await supabase.from('richieste_recupero_password')
+            .update({
+                ip_address: clientIp !== 'unknown' ? clientIp : null,
+                created_at: new Date().toISOString()
+            })
+            .eq('id', existingReq.id);
+    }
+
+    if (!isRecentDuplicate) {
+        const anag = Array.isArray(matchedUser.anagrafiche) ? matchedUser.anagrafiche[0] : matchedUser.anagrafiche;
+        const nomeComp = `${matchedUser.nome || anag?.nome || ''} ${matchedUser.cognome || anag?.cognome || ''}`.trim() || 'N/D';
+        const conObj = anag?.contatti ? (Array.isArray(anag.contatti) ? anag.contatti[0] : anag.contatti) : null;
+        const telefono = matchedUser.cellulare || conObj?.telefono || 'N/D';
+        const nowStr = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+
+        const tgMsg = `🔑 <b>RICHIESTA RECUPERO PASSWORD</b>\n\n` +
+            `👤 <b>Utente:</b> ${escapeTelegramHtml(nomeComp)}\n` +
+            `✉️ <b>Email:</b> ${escapeTelegramHtml(targetEmail)}\n` +
+            `📞 <b>Telefono:</b> ${escapeTelegramHtml(telefono)}\n` +
+            `📅 <b>Data/Ora:</b> ${nowStr}\n\n` +
+            `👉 <i>Card popolata in Registro Approvazioni → Richieste Recupero Password.</i>`;
+
+        await sendTelegramAlert(tgMsg).catch(e => console.warn('[RECOVERY TELEGRAM]', e.message));
+    }
+
+    return res.status(200).json({ success: true, tracked: true });
+}
 
 export default async function handler(req, res) {
     // --- CORS ---
@@ -39,6 +116,11 @@ export default async function handler(req, res) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
+        // --- 0. Azione pubblica rate-limited: Tracciamento & Notifica Telegram recupero password ---
+        if (req.body?.action === 'notify_request') {
+            return await handleNotifyRecoveryRequest(req, res, supabase);
+        }
+
         // --- 1. Autenticazione Chiamante ---
         const authHeader = req.headers.authorization;
         if (!authHeader) {

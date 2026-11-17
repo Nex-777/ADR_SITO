@@ -116,13 +116,24 @@ Generates secure single-use password recovery links on-demand for board members 
 -   **Body JSON Parameters**:
     ```json
     {
-      "email": "user@example.com"
+      "email": "user@example.com",
+      "action": "notify_request (opzionale)"
     }
     ```
 -   **Actions**:
-    -   Authenticates the caller via `supabase.auth.getUser()`.
-    -   Verifies board role in `public.utenti`.
-    -   Uses `supabaseAdmin.auth.admin.generateLink({ type: 'recovery', email, ... })` to generate a secure `action_link`.
-    -   Logs action in `public.registro_audit_operazioni`.
-    -   Returns `{ success: true, action_link, email }`.
+    -   **Default (Board Auth)**: Authenticates the caller via `supabase.auth.getUser()`, verifies board role in `public.utenti`, uses `supabaseAdmin.auth.admin.generateLink({ type: 'recovery', email, ... })` to generate a secure `action_link`, logs action, and returns `{ success: true, action_link, email }`.
+    -   **`action: "notify_request"` (Public Rate-Limited, max 5 req / 5 min per IP)**: Invoked fail-open by `portal/forgot-password.js`. Verifies whether the email exists in `public.utenti` (anti-enumeration), records/updates `public.richieste_recupero_password` with `ip_address` (anti-duplicate 15 min), and sends an alert to `ADR_BOT` via `[telegram-bot.js](../api/_utils/telegram-bot.js)`.
+
+---
+
+## 5. Cron Scadenze & Digest Registro Approvazioni (`/api/cron-scadenze`)
+
+### Node/Vercel Serverless Function
+-   **File Path**: `[cron-scadenze.js](../api/cron-scadenze.js)`
+-   **Endpoint Route**: `GET /api/cron-scadenze` (Vercel Cron `0 7 * * *`)
+-   **Headers**: `Authorization: Bearer <CRON_SECRET>` or `X-Cron-Secret: <CRON_SECRET>` (fail-closed).
+-   **Actions**:
+    -   Scans medical certificates and CSEN cards for expirations (-60d, -30d, -15d, expired) and social dues renewals.
+    -   Archives `richieste_recupero_password` rows older than 7 days.
+    -   Sends a daily unified Telegram digest (`buildDailyApprovalDigestMessage`) covering pending payments (`IN_ATTESA_PAGAMENTO`), stuck incomplete registrations (`vw_registrazioni_incomplete` > 1h), and summary counters of all other open cards in `#panel-approvazioni`.
 

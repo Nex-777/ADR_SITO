@@ -3,7 +3,7 @@ if (typeof APP_CONFIG === 'undefined') {
         SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
         SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
         API_BASE_URL: window.location.origin,
-        VERSION: "1.06.41"
+        VERSION: "1.06.42"
     };
 }
 const supabaseClient = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
@@ -38,12 +38,21 @@ form.addEventListener('submit', async (e) => {
 
             success = true;
 
-            // Registra la richiesta nel database per consentire assistenza immediata al Direttivo
+            // Registra la richiesta nel database e notifica il Direttivo su Telegram in modalità fail-open
             try {
-                // RPC lato server: traccia solo email di utenti censiti (anti-spam bot)
-                await supabaseClient.rpc('richiedi_recupero_password', { p_email: email });
+                const notifyRes = await fetch(`${APP_CONFIG.API_BASE_URL}/api/admin-recovery-link`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'notify_request', email })
+                });
+                if (!notifyRes.ok) {
+                    await supabaseClient.rpc('richiedi_recupero_password', { p_email: email });
+                }
             } catch (trackErr) {
-                console.warn("Tracciamento richiesta recupero password non riuscito:", trackErr);
+                console.warn("Tracciamento richiesta recupero password API non riuscito, fallback RPC:", trackErr);
+                try {
+                    await supabaseClient.rpc('richiedi_recupero_password', { p_email: email });
+                } catch (_) { /* ignore */ }
             }
 
             messageEl.textContent = "SE L'EMAIL È REGISTRATA NEL SISTEMA, RICEVERAI UN LINK. CONTROLLA ANCHE LO SPAM.";

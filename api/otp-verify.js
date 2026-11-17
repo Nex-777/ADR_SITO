@@ -335,9 +335,9 @@ export default async function handler(req, res) {
         }
 
         // C4. Insert into public.documenti_identita for tutore/genitore (if minor)
+        let tutoreStato = 'IN_ATTESA';
+        let tutoreNote = null;
         if (profile.tutore_documento_url) {
-            let tutoreStato = 'IN_ATTESA';
-            let tutoreNote = null;
             let tutoreScadenza = profile.tutore_documento_scadenza || null;
 
             if (tutore_token) {
@@ -378,6 +378,7 @@ export default async function handler(req, res) {
 
         let emailSubject = '';
         let emailHtml = '';
+        let initialStato = 'IN_ATTESA';
         if (adesione === 'socio') {
             // Casistica 1: Solo Socio (Ammissione a Delibera) Land in registro_approvazioni
             await supabase.from('registro_approvazioni').delete().eq('anagrafica_id', anagraficaId).eq('stato', 'IN_ATTESA');
@@ -424,7 +425,7 @@ export default async function handler(req, res) {
         } else if (adesione === 'tesserato') {
             // Casistica 3: Solo Tesserato (No delibera - Iter Diretto)
             const isReadyForPayment = isCertVerde && docStato === 'VERDE' && (!profile.tutore_documento_url || tutoreStato === 'VERDE');
-            const initialStato = isReadyForPayment ? 'IN_ATTESA_PAGAMENTO' : 'IN_ATTESA';
+            initialStato = isReadyForPayment ? 'IN_ATTESA_PAGAMENTO' : 'IN_ATTESA';
             await supabase.from('registro_approvazioni').delete().eq('anagrafica_id', anagraficaId).in('stato', ['IN_ATTESA', 'IN_ATTESA_PAGAMENTO']);
             const { error: tessError } = await supabase
                 .from('registro_approvazioni')
@@ -732,55 +733,25 @@ export default async function handler(req, res) {
             .update(updateUtentiData)
             .eq('id', utenteId);
 
-        // 8. Notifica Telegram ad ADR_BOT per pratiche in attesa di approvazione / bloccate
+        // 8. Notifica Telegram ad ADR_BOT (unico messaggio riepilogativo per tutte le card compilate)
         try {
-            const escapeTg = escapeTelegramHtml;
+            const tgMessage = buildRegistrationTelegramMessage({
+                profile,
+                cf,
+                adesione,
+                docStato,
+                docNote,
+                tutoreStato,
+                tutoreNote,
+                certStato,
+                certNote,
+                anagraficaMismatch,
+                docModificatoManualmente: Boolean(doc_modificato_manualmente),
+                docEvaluation,
+                initialStato
+            });
 
-            const motiviBlocco = [];
-            const diffLines = docEvaluation?.formattedDiffLines || [];
-
-            if (anagraficaMismatch) {
-                let motivo = 'Dati anagrafici discordanti rispetto al documento autenticato (anti-bypass)';
-                if (diffLines.length > 0) {
-                    motivo += ':\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
-                }
-                motiviBlocco.push(motivo);
-            } else if (doc_modificato_manualmente) {
-                let motivo = 'Dati anagrafici modificati manualmente rispetto al documento';
-                if (diffLines.length > 0) {
-                    motivo += ':\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
-                }
-                motiviBlocco.push(motivo);
-            } else if (docStato === 'GIALLO') {
-                let motivo = `Documento identità in revisione (${escapeTg(docNote || 'Dubbio AI')})`;
-                if (diffLines.length > 0) {
-                    motivo += '\n  Differenze rilevate:\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
-                }
-                motiviBlocco.push(motivo);
-            }
-
-            if (profile.certificato_medico_url && certStato !== 'VERDE') {
-                motiviBlocco.push(`Certificato medico in revisione (${escapeTg(certNote || 'Dubbio AI')})`);
-            }
-            if (adesione === 'socio' || adesione === 'socio_tesserato') {
-                motiviBlocco.push('Richiesta ammissione socio in attesa di delibera del Direttivo');
-            }
-
-            // Se la notifica parte per socio o cert ma ci sono modifiche di residenza tracciate
-            if (motiviBlocco.length > 0 && !anagraficaMismatch && !doc_modificato_manualmente && diffLines.length > 0 && docStato === 'VERDE') {
-                motiviBlocco.push('Variazioni residenza rispetto al documento:\n  ' + diffLines.map(d => escapeTg(d)).join('\n  '));
-            }
-
-            if (motiviBlocco.length > 0) {
-                const nowStr = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
-                const tgMessage = `🔔 <b>NUOVA ISCRIZIONE IN ATTESA DI APPROVAZIONE</b>\n\n` +
-                    `👤 <b>Atleta:</b> ${escapeTg(profile.nome)} ${escapeTg(profile.cognome)}\n` +
-                    `📄 <b>Codice Fiscale:</b> <code>${escapeTg(cf)}</code>\n` +
-                    `🎯 <b>Tipo Adesione:</b> ${escapeTg(adesione.toUpperCase())}\n` +
-                    `⚠️ <b>Motivo:</b>\n• ${motiviBlocco.join('\n• ')}\n\n` +
-                    `📅 <b>Data/Ora:</b> ${nowStr}\n\n` +
-                    `👉 <i>Accedi al portale direttivo per verificare la pratica.</i>`;
-
+            if (tgMessage) {
                 await sendTelegramAlert(tgMessage).catch(tgErr => console.error('[OTP] Errore invio alert Telegram:', tgErr));
             }
         } catch (tgEx) {
@@ -793,4 +764,102 @@ export default async function handler(req, res) {
         console.error('API Verify OTP Handler Error:', error);
         return res.status(500).json({ error: 'Si è verificato un errore interno. Riprova più tardi.' });
     }
+}
+
+export function buildRegistrationTelegramMessage({
+    profile,
+    cf,
+    adesione,
+    docStato,
+    docNote,
+    tutoreStato,
+    tutoreNote,
+    certStato,
+    certNote,
+    anagraficaMismatch,
+    docModificatoManualmente,
+    docEvaluation,
+    initialStato
+}) {
+    const escapeTg = escapeTelegramHtml;
+    const cardsPopolate = [];
+    const motiviBlocco = [];
+    const diffLines = docEvaluation?.formattedDiffLines || [];
+
+    const hasDocIssue = Boolean(
+        (profile?.documento_identita_url && docStato !== 'VERDE') ||
+        anagraficaMismatch ||
+        docModificatoManualmente
+    );
+    const hasTutoreIssue = Boolean(profile?.tutore_documento_url && tutoreStato !== 'VERDE');
+
+    if (hasDocIssue || hasTutoreIssue) {
+        cardsPopolate.push("🪪 Documenti d'Identità in Attesa di Verifica");
+    }
+
+    if (anagraficaMismatch) {
+        let motivo = 'Dati anagrafici discordanti rispetto al documento autenticato (anti-bypass)';
+        if (diffLines.length > 0) {
+            motivo += ':\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
+        }
+        motiviBlocco.push(motivo);
+    } else if (docModificatoManualmente) {
+        let motivo = 'Dati anagrafici modificati manualmente rispetto al documento';
+        if (diffLines.length > 0) {
+            motivo += ':\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
+        }
+        motiviBlocco.push(motivo);
+    } else if (profile?.documento_identita_url && docStato !== 'VERDE') {
+        let motivo = `Documento identità in stato ${escapeTg(docStato)} (${escapeTg(docNote || 'Verifica richiesta')})`;
+        if (diffLines.length > 0) {
+            motivo += '\n  Differenze rilevate:\n  ' + diffLines.map(d => escapeTg(d)).join('\n  ');
+        }
+        motiviBlocco.push(motivo);
+    }
+
+    if (hasTutoreIssue) {
+        motiviBlocco.push(`Documento tutore in stato ${escapeTg(tutoreStato)} (${escapeTg(tutoreNote || 'Verifica richiesta')})`);
+    }
+
+    if (profile?.certificato_medico_url && certStato !== 'VERDE') {
+        cardsPopolate.push('🩺 Certificati Medici in Revisione');
+        motiviBlocco.push(`Certificato medico in stato ${escapeTg(certStato)} (${escapeTg(certNote || 'Dubbio AI')})`);
+    }
+
+    if (adesione === 'socio' || adesione === 'socio_tesserato') {
+        cardsPopolate.push('🤝 Soci in Attesa Delibera');
+        motiviBlocco.push('Richiesta ammissione socio in attesa di delibera del Direttivo');
+    }
+
+    if ((adesione === 'tesserato' && initialStato === 'IN_ATTESA') || adesione === 'socio_tesserato') {
+        const statoCertText = certStato === 'VERDE'
+            ? 'Certificato VERDE — pronto per ATTIVA'
+            : 'in attesa verifica documentazione';
+        cardsPopolate.push(`🥋 Tesserati in Attesa di Attivazione (${statoCertText})`);
+        if (adesione === 'tesserato' && certStato === 'VERDE' && !hasDocIssue && !hasTutoreIssue) {
+            motiviBlocco.push('Nuovo tesseramento con certificato già validato: pronto per attivazione in Registro Approvazioni');
+        }
+    }
+
+    if (cardsPopolate.length > 0 && !anagraficaMismatch && !docModificatoManualmente && diffLines.length > 0 && docStato === 'VERDE') {
+        motiviBlocco.push('Variazioni residenza rispetto al documento:\n  ' + diffLines.map(d => escapeTg(d)).join('\n  '));
+    }
+
+    if (cardsPopolate.length === 0) {
+        return null;
+    }
+
+    const nowStr = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+    const dettagliSection = motiviBlocco.length > 0
+        ? `⚠️ <b>Dettagli:</b>\n• ${motiviBlocco.join('\n• ')}\n\n`
+        : '';
+
+    return `🔔 <b>NUOVA PRATICA NEL REGISTRO APPROVAZIONI</b>\n\n` +
+        `👤 <b>Atleta:</b> ${escapeTg(profile?.nome || '')} ${escapeTg(profile?.cognome || '')}\n` +
+        `📄 <b>Codice Fiscale:</b> <code>${escapeTg(cf || '')}</code>\n` +
+        `🎯 <b>Tipo Adesione:</b> ${escapeTg((adesione || '').toUpperCase())}\n` +
+        `📋 <b>Card Compilate:</b>\n• ${cardsPopolate.join('\n• ')}\n\n` +
+        dettagliSection +
+        `📅 <b>Data/Ora:</b> ${nowStr}\n\n` +
+        `👉 <i>Accedi al portale direttivo per gestire la pratica.</i>`;
 }

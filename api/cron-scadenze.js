@@ -1,14 +1,145 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from './_utils/resend-mail.js';
+import { sendTelegramAlert, escapeTelegramHtml } from './_utils/telegram-bot.js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export function buildDailyApprovalDigestMessage({
+    pendingPayments = [],
+    incompleteRegistrations = [],
+    counts = {}
+}) {
+    const escapeTg = escapeTelegramHtml;
+    const docsCount = counts.docsAttesa || 0;
+    const certsCount = counts.certGialli || 0;
+    const sociCount = counts.sociAttesa || 0;
+    const tessCount = counts.tessAttesa || 0;
+    const pwdCount = counts.recuperoPwd || 0;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Missing Supabase environment variables.');
-    throw new Error('Server configuration error');
+    const totalItems =
+        pendingPayments.length +
+        incompleteRegistrations.length +
+        docsCount +
+        certsCount +
+        sociCount +
+        tessCount +
+        pwdCount;
+
+    if (totalItems === 0) return null;
+
+    const lines = [
+        `📋 <b>PROMEMORIA GIORNALIERO — REGISTRO APPROVAZIONI</b>\n`
+    ];
+
+    if (pendingPayments.length > 0) {
+        lines.push(`💳 <b>In Attesa di Pagamento (${pendingPayments.length}):</b>`);
+        pendingPayments.slice(0, 10).forEach(item => {
+            const anag = item.anagrafiche || {};
+            const nome = `${anag.nome || ''} ${anag.cognome || ''}`.trim() || 'N/D';
+            const quota = parseFloat(anag.utenti?.quota_totale || 0);
+            const quotaTxt = quota > 0 ? ` — €${quota.toFixed(2)}` : '';
+            lines.push(`• ${escapeTg(nome)} (${escapeTg(item.tipo || 'N/D')}${quotaTxt})`);
+        });
+        if (pendingPayments.length > 10) {
+            lines.push(`  <i>...e altri ${pendingPayments.length - 10} utenti</i>`);
+        }
+        lines.push('');
+    }
+
+    if (incompleteRegistrations.length > 0) {
+        lines.push(`⚠️ <b>Registrazioni Incomplete / OTP Sospeso (&gt;1h) (${incompleteRegistrations.length}):</b>`);
+        incompleteRegistrations.slice(0, 10).forEach(g => {
+            const nome = `${g.nome || ''} ${g.cognome || ''}`.trim() || 'N/D';
+            const dateIt = g.data_creazione
+                ? new Date(g.data_creazione).toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' })
+                : '';
+            lines.push(`• ${escapeTg(nome)} (${escapeTg(g.email || '')}${dateIt ? ` — ${dateIt}` : ''})`);
+        });
+        if (incompleteRegistrations.length > 10) {
+            lines.push(`  <i>...e altre ${incompleteRegistrations.length - 10} pratiche</i>`);
+        }
+        lines.push('');
+    }
+
+    const otherCards = [];
+    if (docsCount > 0) otherCards.push(`🪪 Documenti Identità da Verificare: <b>${docsCount}</b>`);
+    if (certsCount > 0) otherCards.push(`🩺 Certificati Medici in Revisione: <b>${certsCount}</b>`);
+    if (sociCount > 0) otherCards.push(`🤝 Soci in Attesa Delibera: <b>${sociCount}</b>`);
+    if (tessCount > 0) otherCards.push(`🥋 Tesserati in Attesa Attivazione: <b>${tessCount}</b>`);
+    if (pwdCount > 0) otherCards.push(`🔑 Richieste Recupero Password: <b>${pwdCount}</b>`);
+
+    if (otherCards.length > 0) {
+        lines.push(`📌 <b>Altre Code Aperte nel Registro:</b>`);
+        otherCards.forEach(c => lines.push(`• ${c}`));
+        lines.push('');
+    }
+
+    lines.push(`👉 <i>Accedi al portale direttivo per gestire le pratiche in sospeso.</i>`);
+    return lines.join('\n');
 }
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+export async function runApprovalDigest(supabase) {
+    // 4a. Auto-archiviazione richieste recupero password più vecchie di 7 giorni
+    const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase
+        .from('richieste_recupero_password')
+        .update({ stato: 'archiviato', risolto_il: new Date().toISOString() })
+        .eq('stato', 'in_attesa')
+        .lt('created_at', sevenDaysAgoIso);
+
+    // 4b. Card 5: Tesserati e Soci in Attesa di Pagamento
+    const { data: pendingPayments } = await supabase
+        .from('registro_approvazioni')
+        .select('id, tipo, data_decisione, data_richiesta, anagrafiche(nome, cognome, utenti(quota_totale))')
+        .eq('stato', 'IN_ATTESA_PAGAMENTO')
+        .order('data_richiesta', { ascending: true });
+
+    // 4c. Card 6: Registrazioni Incomplete aperte da oltre 1 ora (esclude chi sta ancora inserendo OTP)
+    const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: incompleteRegistrations } = await supabase
+        .from('vw_registrazioni_incomplete')
+        .select('utente_id, nome, cognome, email, data_creazione')
+        .lt('data_creazione', oneHourAgoIso)
+        .order('data_creazione', { ascending: false });
+
+    // 4d. Contatori sintetici delle altre card pendenti
+    const [docsRes, certsRes, sociRes, tessRes, pwdRes] = await Promise.all([
+        supabase.from('documenti_identita')
+            .select('id', { count: 'exact', head: true })
+            .in('stato_validazione', ['GIALLO', 'IN_ATTESA'])
+            .eq('revisionato_manualmente', false),
+        supabase.from('certificati_medici')
+            .select('id', { count: 'exact', head: true })
+            .eq('stato_validazione', 'GIALLO'),
+        supabase.from('registro_approvazioni')
+            .select('id', { count: 'exact', head: true })
+            .eq('stato', 'IN_ATTESA')
+            .in('tipo', ['SOCIO', 'SOCIO_TESSERATO']),
+        supabase.from('registro_approvazioni')
+            .select('id', { count: 'exact', head: true })
+            .eq('stato', 'IN_ATTESA')
+            .in('tipo', ['TESSERATO', 'SOCIO_TESSERATO']),
+        supabase.from('richieste_recupero_password')
+            .select('id', { count: 'exact', head: true })
+            .eq('stato', 'in_attesa')
+    ]);
+
+    const digestMsg = buildDailyApprovalDigestMessage({
+        pendingPayments: pendingPayments || [],
+        incompleteRegistrations: incompleteRegistrations || [],
+        counts: {
+            docsAttesa: docsRes?.count || 0,
+            certGialli: certsRes?.count || 0,
+            sociAttesa: sociRes?.count || 0,
+            tessAttesa: tessRes?.count || 0,
+            recuperoPwd: pwdRes?.count || 0
+        }
+    });
+
+    if (digestMsg) {
+        await sendTelegramAlert(digestMsg).catch(err => console.warn('[CRON DIGEST TELEGRAM]', err.message));
+    }
+
+    return Boolean(digestMsg);
+}
 
 export default async function handler(req, res) {
     // Basic verification (e.g. check secret token to prevent unauthorized execution)
@@ -19,6 +150,14 @@ export default async function handler(req, res) {
     if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('Missing Supabase environment variables.');
+        return res.status(500).json({ error: 'Errore di configurazione del server.' });
+    }
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
         const today = new Date();
@@ -346,6 +485,13 @@ export default async function handler(req, res) {
                     });
                 }
             }
+        }
+
+        // 4. DIGEST GIORNALIERO REGISTRO APPROVAZIONI & PULIZIA RECUPERO PASSWORD
+        try {
+            await runApprovalDigest(supabase);
+        } catch (digestErr) {
+            console.warn('[CRON DIGEST] Errore durante elaborazione digest approvazioni:', digestErr.message);
         }
 
         return res.status(200).json({ success: true, processed: true });

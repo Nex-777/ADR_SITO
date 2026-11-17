@@ -4446,3 +4446,18 @@ pm audit --omit=dev riporta 0 vulnerabilità).
   - Ottimizzati ed estratti i loghi (genzia-italia-2.png, euro3-immobiliare.png, z-new-progect.png) con dimensioni compatte e caricamento lazy/async.
 - **Testing & Quality Assurance**:
   - Creata suite 	ests/sponsors.test.js con 4 test di conformità asset e markup. Test globali: 27 file passati (313 test su 313).
+
+## [2026-11-17] ingest | Password Recovery Lifecycle & Telegram Approval Notifications (v1.06.42)
+- **Database Supabase (`supabase/migration_fix_password_recovery_lifecycle.sql`)**:
+  - Eseguito backfill delle richieste in `richieste_recupero_password` già superate da login successivo (risolto record residuo `aflaiani@libero.it`).
+  - Creato trigger `trg_auto_resolve_password_recovery` su `auth.users` (`fn_auto_resolve_password_recovery`) per chiudere automaticamente (`stato = 'risolto'`) le richieste pendenti al login o al cambio password.
+- **Dashboard (`portal/dashboard.js`)**:
+  - Corretta la query PostgREST in `loadApprovazioni()` sostituendo `contatti` con `contatti(email, telefono)` e normalizzando il lookup case-insensitive delle email, eliminando il falso stato `"Utente non censito"`.
+- **Notifiche Telegram Registro Approvazioni**:
+  - `api/admin-recovery-link.js` & `portal/forgot-password.js`: integrato action `notify_request` (rate-limited, anti-enumerazione, zero nuovi endpoint Vercel) per notificare su Telegram le nuove richieste di recupero password.
+  - `api/otp-verify.js`: introdotto `buildRegistrationTelegramMessage` per inviare un **unico messaggio riepilogativo** su tutte le card compilate (Documenti, Certificati, Soci, Tesserati in attesa) e corretto scoping di `tutoreStato`.
+  - `api/validate.js`: completata copertura push per documenti d'identità in `GIALLO` e certificati `VERDE` pronti per attivazione in Card 4.
+  - `api/cron-scadenze.js`: aggiunta auto-archiviazione richieste recupero >7gg e digest giornaliero unificato (`buildDailyApprovalDigestMessage`) per Attesa Pagamento (`IN_ATTESA_PAGAMENTO`), Registrazioni Incomplete (`vw_registrazioni_incomplete` >1h) e riepilogo code aperte.
+- **Testing & Quality Assurance**:
+  - Creata suite `tests/approval-notifications.test.js` (10 test unitari). Test globali: 30 file passati (335/335 test).
+  - Aggiornati `wiki/api_endpoints.md`, `wiki/database_schema.md` e `wiki/log.md`. Versione bumped a `v1.06.42`.

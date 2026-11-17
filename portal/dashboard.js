@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.41"
+                VERSION: "1.06.42"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -3021,22 +3021,28 @@
                     }
 
                     // Recuperiamo le anagrafiche corrispondenti alle email per mostrare nome, cognome e telefono
-                    const emails = recoveryReqs.map(r => r.email.toLowerCase());
-                    const { data: matchedUsers } = await supabaseClient
-                        .from('utenti')
-                        .select('id, email, nome, cognome, cellulare, anagrafiche(id, nome, cognome, contatti)')
-                        .in('email', emails);
+                    const emails = [...new Set(recoveryReqs.map(r => (r.email || '').trim().toLowerCase()).filter(Boolean))];
+                    let matchedUsers = [];
+                    if (emails.length > 0) {
+                        const orFilter = emails.map(e => `email.ilike."${e.replace(/["\\]/g, '')}"`).join(',');
+                        const { data: usersData, error: usersErr } = await supabaseClient
+                            .from('utenti')
+                            .select('id, email, nome, cognome, cellulare, anagrafiche(id, nome, cognome, contatti(email, telefono))')
+                            .or(orFilter);
+                        if (usersErr) console.warn("Errore lookup utenti recupero password:", usersErr);
+                        matchedUsers = usersData || [];
+                    }
 
                     const userMap = {};
-                    (matchedUsers || []).forEach(u => {
-                        if (u.email) userMap[u.email.toLowerCase()] = u;
+                    matchedUsers.forEach(u => {
+                        if (u.email) userMap[u.email.trim().toLowerCase()] = u;
                     });
 
                     recoveryReqs.forEach(reqItem => {
                         const row = document.createElement('tr');
                         row.className = 'border-b border-indigo-500/10 hover:bg-indigo-900/10 transition-colors';
 
-                        const matched = userMap[reqItem.email.toLowerCase()];
+                        const matched = userMap[(reqItem.email || '').trim().toLowerCase()];
                         let nominativo = '<span class="text-gray-500 italic">Utente non censito</span>';
                         let tel = '';
                         let cleanName = '';
