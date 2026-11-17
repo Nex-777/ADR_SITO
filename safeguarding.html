@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html class="dark" lang="it">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Safeguarding &amp; Tutela (D.Lgs. 36/2021 e 39/2021) - ADRENALINA CLUB</title>
+    <meta name="description" content="Trasparenza Safeguarding ASD Adrenalina Club APS: MOCAS, Codice di Condotta, Verbale di Nomina e canale diretto riservato al Responsabile Safeguarding."/>
+    <link rel="icon" type="image/png" href="/assets/logo_icon.png"/>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Manrope:wght@400;600;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="./output.css?v=1.06.34"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.js" integrity="sha384-mI9wtY/Ee/wUkpbXE5/9Sb1NlGeIk5Ud9UBi2PSjZda46LRo1c8K+KD0Sdufrp7R" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous"></script>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #f3f4f6;
+            font-family: 'Manrope', sans-serif;
+        }
+    </style>
+</head>
+<body class="selection:bg-primary selection:text-white pt-24 pb-16">
+    <!-- Header -->
+    <nav class="fixed top-0 left-0 w-full z-50 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-between items-center">
+        <a href="/" class="flex items-center gap-2">
+            <img src="assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain"/>
+            <img src="assets/logo.png" alt="ADRENALINA" class="h-4 w-auto object-contain"/>
+        </a>
+        <div class="flex items-center gap-3">
+            <a href="/" class="text-[11px] font-headline font-bold uppercase tracking-wider text-gray-400 hover:text-primary transition-colors hidden sm:inline-block">Home</a>
+            <a href="portal/login.html" class="border border-white/20 text-white px-3 py-1 text-[10px] font-headline font-bold uppercase tracking-wider hover:border-primary hover:text-primary transition-all">Portale</a>
+            <span class="text-[9px] font-mono font-bold tracking-widest text-primary border border-primary/30 px-2 py-0.5 rounded-sm uppercase">Vs. 1.06.34</span>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-6 py-10 space-y-12">
+        <!-- Hero / Intestazione Normativa -->
+        <section class="space-y-4 border-b border-white/10 pb-8">
+            <div class="flex flex-wrap items-center gap-3">
+                <span class="inline-block bg-primary/10 border border-primary/30 px-3 py-1 text-[10px] font-headline font-bold text-primary uppercase tracking-widest">
+                    D.LGS. 36/2021 &amp; 39/2021 · TRASPARENZA PUBBLICA
+                </span>
+                <span id="sf-pub-status-badge" class="inline-block text-[10px] font-mono font-bold uppercase tracking-widest px-2.5 py-1 rounded-sm border border-white/15 bg-white/5 text-gray-300">
+                    CARICAMENTO STATO...
+                </span>
+            </div>
+            <h1 class="font-headline font-black text-3xl sm:text-5xl text-white uppercase tracking-tight">
+                SAFEGUARDING &amp; <span class="text-primary">TUTELA SPORTIVA</span>
+            </h1>
+            <p class="text-gray-300 text-sm md:text-base font-light leading-relaxed max-w-3xl">
+                In attuazione dell'art. 16 del D.Lgs. 39/2021, del D.Lgs. 36/2021 e delle Linee Guida <strong>CSEN</strong>,
+                <strong>ASD ADRENALINA CLUB APS</strong> promuove un ambiente sportivo sicuro, inclusivo e libero da qualsiasi forma di abuso, violenza, molestia o discriminazione.
+                Tutti i documenti ufficiali sono consultabili liberamente senza autenticazione.
+            </p>
+        </section>
+
+        <!-- Sezione 1: Esposizione Documentale (PDF Pubblici) -->
+        <section class="space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+                <div>
+                    <h2 class="font-headline text-white font-bold text-xl uppercase tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">folder_open</span>
+                        Documentazione Ufficiale Safeguarding
+                    </h2>
+                    <p class="text-xs text-gray-400 uppercase mt-1">Modelli organizzativi, codici etici e delibera di nomina aggiornati e scaricabili in formato PDF</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1: MOCAS -->
+                <article class="border border-white/10 bg-white/[0.02] p-6 flex flex-col justify-between space-y-5 hover:border-primary/40 transition-colors">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">ART. 16 D.LGS. 39/2021</span>
+                            <span class="material-symbols-outlined text-gray-400">picture_as_pdf</span>
+                        </div>
+                        <h3 class="font-headline font-bold text-white text-base uppercase">MOCAS — Modello Organizzativo e di Controllo</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Protocollo di prevenzione dei rischi, tutela dei minori, gestione spogliatoi, trasferte e procedure disciplinari interne dell'Associazione.
+                        </p>
+                        <p id="sf-doc-meta-mocas" class="text-[10px] font-mono text-gray-500 uppercase">Verifica pubblicazione...</p>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t border-white/10">
+                        <button type="button" id="sf-pub-view-mocas" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold uppercase py-2.5 px-3 transition-colors cursor-pointer">
+                            Visualizza PDF
+                        </button>
+                        <button type="button" id="sf-pub-dl-mocas" class="flex-1 bg-primary hover:bg-red-700 text-white font-headline text-[10px] font-bold uppercase py-2.5 px-3 transition-colors cursor-pointer">
+                            Scarica PDF
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Card 2: Codice di Condotta -->
+                <article class="border border-white/10 bg-white/[0.02] p-6 flex flex-col justify-between space-y-5 hover:border-primary/40 transition-colors">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">NORME DI COMPORTAMENTO</span>
+                            <span class="material-symbols-outlined text-gray-400">gavel</span>
+                        </div>
+                        <h3 class="font-headline font-bold text-white text-base uppercase">Codice di Condotta</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Doveri e standard etici vincolanti per istruttori, tecnici, dirigenti, volontari, atleti, soci e genitori in ogni attività del club.
+                        </p>
+                        <p id="sf-doc-meta-codice" class="text-[10px] font-mono text-gray-500 uppercase">Verifica pubblicazione...</p>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t border-white/10">
+                        <button type="button" id="sf-pub-view-codice" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold uppercase py-2.5 px-3 transition-colors cursor-pointer">
+                            Visualizza PDF
+                        </button>
+                        <button type="button" id="sf-pub-dl-codice" class="flex-1 bg-primary hover:bg-red-700 text-white font-headline text-[10px] font-bold uppercase py-2.5 px-3 transition-colors cursor-pointer">
+                            Scarica PDF
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Card 3: Verbale di Nomina -->
+                <article class="border border-white/10 bg-white/[0.02] p-6 flex flex-col justify-between space-y-5 hover:border-primary/40 transition-colors">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">DELIBERA DIRETTIVO</span>
+                            <span class="material-symbols-outlined text-gray-400">verified</span>
+                        </div>
+                        <h3 class="font-headline font-bold text-white text-base uppercase">Verbale di Nomina Responsabile</h3>
+                        <p class="text-xs text-gray-400 leading-relaxed">
+                            Atto ufficiale di adozione del MOCAS e nomina del Safeguarding Officer terzo e indipendente da parte del Consiglio Direttivo.
+                        </p>
+                        <p id="sf-doc-meta-verbale" class="text-[10px] font-mono text-gray-500 uppercase">Verifica pubblicazione...</p>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t border-white/10">
+                        <button type="button" id="sf-pub-view-verbale" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold uppercase py-2.5 px-3 transition-colors cursor-pointer">
+                            Visualizza PDF
+                        </button>
+                        <button type="button" id="sf-pub-dl-verbale" class="flex-1 bg-primary hover:bg-red-700 text-white font-headline text-[10px] font-bold uppercase py-2.5 px-3 transition-colors cursor-pointer">
+                            Scarica PDF
+                        </button>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Sezione 2: Segnalazioni & Responsabile Safeguarding (Stateless) -->
+        <section id="segnalazioni" class="border border-primary/30 bg-gradient-to-br from-primary/10 via-black to-black p-6 sm:p-8 space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
+                <div>
+                    <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-primary">CANALE DI SEGNALAZIONE DIRETTO E TERZO</span>
+                    <h2 class="font-headline text-2xl font-black text-white uppercase mt-1">Segnalazioni al Safeguarding Officer</h2>
+                </div>
+                <span class="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase px-3 py-1 border border-green-500/30 bg-green-500/10 text-green-300">
+                    <span class="material-symbols-outlined text-sm">shield_lock</span> ZERO LOG SU SERVER E DATABASE
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Info Responsabile -->
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="border border-white/10 bg-black/60 p-5 space-y-3">
+                        <div>
+                            <p class="text-[10px] font-mono uppercase text-gray-400">Responsabile Safeguarding Nominato</p>
+                            <p id="sf-pub-nome" class="font-headline text-xl font-black text-white uppercase mt-0.5">Caricamento...</p>
+                            <p id="sf-pub-qualifica" class="text-xs text-primary font-semibold mt-0.5">Responsabile contro abusi, violenze e discriminazioni</p>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-white/10 text-xs font-mono">
+                            <div>
+                                <span class="text-[10px] text-gray-500 block uppercase">Verbale Nomina</span>
+                                <span id="sf-pub-verbale" class="text-gray-200 font-bold">-</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-gray-500 block uppercase">Data Nomina</span>
+                                <span id="sf-pub-data-nomina" class="text-gray-200 font-bold">-</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-gray-500 block uppercase">Scadenza Mandato</span>
+                                <span id="sf-pub-data-scadenza" class="text-gray-200 font-bold">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border border-white/10 bg-black/60 p-5 space-y-3">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <span class="text-[10px] font-mono uppercase text-gray-400">Indirizzo Email Diretto (Protetto Anti-SpamBot)</span>
+                            <span class="text-[9px] font-mono uppercase text-gray-500">Decodifica solo lato client</span>
+                        </div>
+                        <p id="sf-pub-email-masked" class="font-mono text-sm sm:text-base font-bold text-white break-all">Caricamento...</p>
+
+                        <div id="sf-contact-actions" class="hidden flex flex-wrap gap-2 pt-2">
+                            <button type="button" id="sf-btn-mailto" class="bg-primary hover:bg-red-700 text-white font-headline text-xs font-bold uppercase py-3 px-5 transition-colors flex items-center gap-2 cursor-pointer">
+                                <span class="material-symbols-outlined text-sm">mail</span>
+                                Invia Segnalazione (Mailto)
+                            </button>
+                            <button type="button" id="sf-btn-copy-email" class="border border-white/25 hover:border-primary hover:text-primary text-white font-headline text-xs font-bold uppercase py-3 px-4 transition-colors flex items-center gap-2 cursor-pointer">
+                                <span class="material-symbols-outlined text-sm">content_copy</span>
+                                Copia Email
+                            </button>
+                            <button type="button" id="sf-btn-reveal-email" class="border border-white/15 hover:border-white/40 text-gray-300 font-headline text-[10px] font-bold uppercase py-3 px-3 transition-colors cursor-pointer">
+                                Mostra in chiaro
+                            </button>
+                        </div>
+
+                        <div id="sf-contact-pending" class="hidden text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 p-3">
+                            Il Consiglio Direttivo sta completando la pubblicazione dei recapiti del Safeguarding Officer. Nel frattempo è già possibile consultare i documenti ufficiali sopra riportati.
+                        </div>
+
+                        <div id="sf-public-feedback" class="hidden border p-3 text-xs font-mono"></div>
+                    </div>
+                </div>
+
+                <!-- Garanzia Legale & Stateless -->
+                <div class="lg:col-span-5 border border-white/10 bg-black/50 p-5 space-y-4 text-xs text-gray-300 leading-relaxed">
+                    <h3 class="font-headline text-xs font-bold uppercase text-white tracking-wider flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-sm">policy</span>
+                        Garanzia di Terzietà e Riservatezza
+                    </h3>
+                    <ul class="space-y-2.5 list-disc pl-4">
+                        <li>
+                            <strong>Nessun modulo web interno:</strong> su questo portale non è presente alcun form di invio segnalazioni, affinché i server applicativi e gli amministratori tecnici dell'Associazione non possano registrare indirizzi IP, metadati o contenuti delle denunce.
+                        </li>
+                        <li>
+                            <strong>Nessun salvataggio su database:</strong> nessuna segnalazione transita o viene archiviata su Supabase. La comunicazione avviene esclusivamente dal tuo provider email verso la casella personale del Responsabile Safeguarding.
+                        </li>
+                        <li>
+                            <strong>Tutela del segnalante:</strong> ogni segnalazione ricevuta in buona fede è trattata in via strettamente riservata nel rispetto del MOCAS e con divieto assoluto di qualsiasi ritorsione.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <div class="pt-6 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs">
+            <a href="/" class="inline-flex items-center gap-2 text-primary font-headline font-bold uppercase tracking-widest hover:text-white transition-colors">
+                <span class="material-symbols-outlined text-sm">arrow_back</span> Torna alla Home
+            </a>
+            <div class="flex flex-wrap gap-6 text-gray-400 font-bold uppercase text-[10px] tracking-widest">
+                <a href="legal.html" class="hover:text-primary transition-colors">Note Legali</a>
+                <a href="privacy.html" class="hover:text-primary transition-colors">Privacy Policy</a>
+                <a href="cookie-policy.html" class="hover:text-primary transition-colors">Cookie Policy</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="portal/config.js?v=1.06.34"></script>
+    <script src="portal/safeguarding-docs.js?v=1.06.34"></script>
+    <script src="portal/safeguarding-public.js?v=1.06.34"></script>
+</body>
+</html>

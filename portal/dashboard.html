@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.06.33"></script>
+    <script src="config.js?v=1.06.34"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -504,7 +504,7 @@
             color: #00e5ff;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.06.33">
+    <link rel="stylesheet" href="../output.css?v=1.06.34">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -531,7 +531,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.33</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.34</span>
             </div>
 
             <!-- Item 2: Azioni Logout + Hamburger (Order 2 su Mobile, 4 su Desktop) -->
@@ -714,6 +714,10 @@
 
                 <button id="tab-btn-direttivo" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
                     <span class="material-symbols-outlined text-sm">shield_person</span> GESTIONE DIRETTIVO
+                </button>
+
+                <button id="tab-btn-safeguarding" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3 hidden">
+                    <span class="material-symbols-outlined text-sm text-primary">verified_user</span> SAFEGUARDING
                 </button>
 
                 <button id="tab-btn-verbali" class="w-full text-left font-headline text-xs font-bold uppercase p-3 transition-all border border-transparent text-gray-400 hover:text-white hover:bg-white/5 flex items-center gap-3">
@@ -976,10 +980,16 @@
                                         <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
                                     </a>
                                 </li>
-                                <li class="flex items-center justify-between pb-2">
+                                <li class="flex items-center justify-between border-b border-white/5 pb-2">
                                     <span>Scarico Responsabilità Allenamenti</span>
                                     <a href="#" class="text-primary hover:underline flex items-center gap-1 font-bold" id="auto-dashboard-click-7">
                                         <span class="material-symbols-outlined text-sm">picture_as_pdf</span> SCARICA
+                                    </a>
+                                </li>
+                                <li class="flex items-center justify-between pt-1">
+                                    <span>Safeguarding (MOCAS, Codice Condotta, Nomina)</span>
+                                    <a href="../safeguarding.html" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline flex items-center gap-1 font-bold">
+                                        <span class="material-symbols-outlined text-sm">verified_user</span> APRI
                                     </a>
                                 </li>
                             </ul>
@@ -1514,6 +1524,205 @@
                             <!-- Popolato dinamicamente -->
                             <tr>
                                 <td colspan="5" class="p-4 text-center text-gray-500">Caricamento in corso...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB SAFEGUARDING (PRESIDENZA: PRESIDENTE & VICE PRESIDENTE) -->
+            <div id="panel-safeguarding" class="tab-panel space-y-6 hidden">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+                    <div>
+                        <h2 class="font-headline text-lg font-bold uppercase flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">verified_user</span>
+                            Safeguarding &amp; Nomina Responsabile (D.Lgs. 36/2021 &amp; 39/2021)
+                        </h2>
+                        <p class="text-xs text-gray-500 uppercase">Configura il Responsabile Safeguarding: i dati compilano automaticamente MOCAS, Codice di Condotta, Verbale di Nomina e la pagina pubblica</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span id="sf-active-badge" class="text-[10px] font-mono font-bold px-2.5 py-1 border border-amber-500/40 bg-amber-500/10 text-amber-300 uppercase rounded-sm">CARICAMENTO...</span>
+                        <a href="../safeguarding.html" target="_blank" rel="noopener noreferrer" class="bg-white/5 border border-white/20 text-white font-headline text-[10px] font-bold px-3 py-1.5 hover:border-primary hover:text-primary transition-all uppercase flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span> PAGINA PUBBLICA
+                        </a>
+                    </div>
+                </div>
+
+                <div class="border border-blue-500/30 bg-blue-500/10 p-4 text-xs text-blue-200 leading-relaxed">
+                    <strong class="font-headline uppercase text-[11px] text-blue-300 block mb-1">Garanzia di Terzietà e Whistleblowing Stateless</strong>
+                    Questa sezione salva su database esclusivamente il nominativo, l'email di contatto pubblica e gli estremi della delibera di nomina. Nessuna segnalazione o denuncia transita per il portale o per Supabase: le segnalazioni vengono inviate dagli utenti direttamente alla casella email del Responsabile nominato.
+                </div>
+
+                <div id="sf-admin-status" class="hidden border p-3 text-xs font-mono"></div>
+
+                <form id="sf-admin-form" class="border border-white/10 bg-black/40 p-6 space-y-6">
+                    <div>
+                        <h3 class="font-headline text-xs font-bold uppercase text-primary tracking-widest mb-4">1. Dati del Responsabile Safeguarding Nominato</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="sf-nome" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Nome Responsabile *</label>
+                                <input type="text" id="sf-nome" class="w-full brutalist-input" placeholder="Es. Mario" required>
+                            </div>
+                            <div>
+                                <label for="sf-cognome" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Cognome Responsabile *</label>
+                                <input type="text" id="sf-cognome" class="w-full brutalist-input" placeholder="Es. Rossi" required>
+                            </div>
+                            <div>
+                                <label for="sf-email" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Email Personale / Dedicata *</label>
+                                <input type="email" id="sf-email" class="w-full brutalist-input" placeholder="es. safeguarding.nomina@..." required>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label for="sf-qualifica" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Qualifica / Titolo Ufficiale</label>
+                            <input type="text" id="sf-qualifica" class="w-full brutalist-input" value="Responsabile contro abusi, violenze e discriminazioni (Safeguarding Officer)">
+                        </div>
+                    </div>
+
+                    <div class="border-t border-white/10 pt-5">
+                        <h3 class="font-headline text-xs font-bold uppercase text-primary tracking-widest mb-4">2. Estremi Delibera del Consiglio Direttivo</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div>
+                                <label for="sf-verbale" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Numero Verbale CD</label>
+                                <input type="text" id="sf-verbale" class="w-full brutalist-input" placeholder="Es. CD-04/2026">
+                            </div>
+                            <div>
+                                <label for="sf-data-nomina" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Data Nomina</label>
+                                <input type="date" id="sf-data-nomina" class="w-full brutalist-input">
+                            </div>
+                            <div>
+                                <label for="sf-data-scadenza" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Scadenza Mandato</label>
+                                <input type="date" id="sf-data-scadenza" class="w-full brutalist-input">
+                            </div>
+                            <div>
+                                <label for="sf-presidente" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Presidente Verbalizzante</label>
+                                <input type="text" id="sf-presidente" class="w-full brutalist-input" placeholder="Nome e Cognome">
+                            </div>
+                            <div>
+                                <label for="sf-segretario" class="block text-[10px] font-headline uppercase text-gray-400 mb-1">Segretario Verbalizzante</label>
+                                <input type="text" id="sf-segretario" class="w-full brutalist-input" placeholder="Nome e Cognome">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-white/10 pt-5 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <h3 class="font-headline text-xs font-bold uppercase text-primary tracking-widest">3. Documenti Legali Autocompilati (Anteprima &amp; Personalizzazione)</h3>
+                                <p class="text-[10px] text-gray-500 uppercase mt-1">Le bozze integrano automaticamente i dati inseriti sopra. Puoi visualizzare/scaricare subito i PDF o personalizzare i singoli testi.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="border border-white/10 bg-white/[0.02] p-4 space-y-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-headline text-xs font-bold uppercase text-white">MOCAS (D.Lgs. 39/2021)</span>
+                                    <span id="sf-badge-mocas" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-sm border border-green-500/40 bg-green-500/10 text-green-300 uppercase">BOZZA LEGALE AUTO-COMPILATA</span>
+                                </div>
+                                <p class="text-[11px] text-gray-400">Modello Organizzativo e di Controllo dell'Attività Sportiva.</p>
+                                <div class="flex gap-2">
+                                    <button type="button" id="sf-preview-mocas" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold py-2 px-2 uppercase transition-all">ANTEPRIMA PDF</button>
+                                    <button type="button" id="sf-download-mocas" class="flex-1 bg-primary/20 border border-primary/40 hover:bg-primary hover:text-white text-primary font-headline text-[10px] font-bold py-2 px-2 uppercase transition-all">SCARICA PDF</button>
+                                </div>
+                            </div>
+
+                            <div class="border border-white/10 bg-white/[0.02] p-4 space-y-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-headline text-xs font-bold uppercase text-white">Codice di Condotta</span>
+                                    <span id="sf-badge-codice" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-sm border border-green-500/40 bg-green-500/10 text-green-300 uppercase">BOZZA LEGALE AUTO-COMPILATA</span>
+                                </div>
+                                <p class="text-[11px] text-gray-400">Regole di condotta a tutela dei minori e contro discriminazioni e molestie.</p>
+                                <div class="flex gap-2">
+                                    <button type="button" id="sf-preview-codice" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold py-2 px-2 uppercase transition-all">ANTEPRIMA PDF</button>
+                                    <button type="button" id="sf-download-codice" class="flex-1 bg-primary/20 border border-primary/40 hover:bg-primary hover:text-white text-primary font-headline text-[10px] font-bold py-2 px-2 uppercase transition-all">SCARICA PDF</button>
+                                </div>
+                            </div>
+
+                            <div class="border border-white/10 bg-white/[0.02] p-4 space-y-3">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-headline text-xs font-bold uppercase text-white">Verbale di Nomina</span>
+                                    <span id="sf-badge-verbale" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-sm border border-green-500/40 bg-green-500/10 text-green-300 uppercase">BOZZA LEGALE AUTO-COMPILATA</span>
+                                </div>
+                                <p class="text-[11px] text-gray-400">Delibera del Consiglio Direttivo di nomina del Safeguarding Officer.</p>
+                                <div class="flex gap-2">
+                                    <button type="button" id="sf-preview-verbale" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-headline text-[10px] font-bold py-2 px-2 uppercase transition-all">ANTEPRIMA PDF</button>
+                                    <button type="button" id="sf-download-verbale" class="flex-1 bg-primary/20 border border-primary/40 hover:bg-primary hover:text-white text-primary font-headline text-[10px] font-bold py-2 px-2 uppercase transition-all">SCARICA PDF</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <details class="border border-white/10 bg-black/30 p-4">
+                            <summary class="cursor-pointer font-headline text-xs font-bold uppercase text-gray-300 hover:text-white select-none">
+                                Personalizzazione Avanzata Bozze Legali (Opzionale)
+                            </summary>
+                            <div class="mt-4 space-y-5">
+                                <p class="text-[11px] text-gray-400">Se lasci i riquadri vuoti, il sistema utilizza e autocompila automaticamente la bozza legale standard. Puoi caricare il testo standard per modificarlo manualmente o ripristinarlo in qualsiasi momento.</p>
+
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <label for="sf-draft-mocas" class="text-[10px] font-headline uppercase text-gray-300 font-bold">Testo MOCAS personalizzato</label>
+                                        <div class="flex gap-2">
+                                            <button type="button" id="sf-load-default-mocas" class="text-[10px] font-mono uppercase px-2 py-1 border border-white/20 text-gray-300 hover:text-white">Carica Bozza Standard</button>
+                                            <button type="button" id="sf-reset-default-mocas" class="text-[10px] font-mono uppercase px-2 py-1 border border-red-500/30 text-red-400 hover:bg-red-500/10">Ripristina Auto</button>
+                                        </div>
+                                    </div>
+                                    <textarea id="sf-draft-mocas" rows="6" class="w-full brutalist-input font-mono text-xs" placeholder="Lascia vuoto per usare la bozza legale standard autocompilata..."></textarea>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <label for="sf-draft-codice" class="text-[10px] font-headline uppercase text-gray-300 font-bold">Testo Codice di Condotta personalizzato</label>
+                                        <div class="flex gap-2">
+                                            <button type="button" id="sf-load-default-codice" class="text-[10px] font-mono uppercase px-2 py-1 border border-white/20 text-gray-300 hover:text-white">Carica Bozza Standard</button>
+                                            <button type="button" id="sf-reset-default-codice" class="text-[10px] font-mono uppercase px-2 py-1 border border-red-500/30 text-red-400 hover:bg-red-500/10">Ripristina Auto</button>
+                                        </div>
+                                    </div>
+                                    <textarea id="sf-draft-codice" rows="6" class="w-full brutalist-input font-mono text-xs" placeholder="Lascia vuoto per usare la bozza legale standard autocompilata..."></textarea>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <label for="sf-draft-verbale" class="text-[10px] font-headline uppercase text-gray-300 font-bold">Testo Verbale di Nomina personalizzato</label>
+                                        <div class="flex gap-2">
+                                            <button type="button" id="sf-load-default-verbale" class="text-[10px] font-mono uppercase px-2 py-1 border border-white/20 text-gray-300 hover:text-white">Carica Bozza Standard</button>
+                                            <button type="button" id="sf-reset-default-verbale" class="text-[10px] font-mono uppercase px-2 py-1 border border-red-500/30 text-red-400 hover:bg-red-500/10">Ripristina Auto</button>
+                                        </div>
+                                    </div>
+                                    <textarea id="sf-draft-verbale" rows="6" class="w-full brutalist-input font-mono text-xs" placeholder="Lascia vuoto per usare la bozza legale standard autocompilata..."></textarea>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2 border-t border-white/10">
+                        <button type="button" id="sf-btn-new" class="border border-white/30 text-white font-headline text-xs font-bold px-5 py-3 hover:border-primary hover:text-primary transition-all uppercase">
+                            ARCHIVIA ATTUALE &amp; PUBBLICA NUOVA NOMINA
+                        </button>
+                        <button type="submit" id="sf-btn-save" class="bg-primary text-white font-headline text-xs font-bold px-6 py-3 hover:bg-red-700 transition-all uppercase">
+                            SALVA E PUBBLICA SAFEGUARDING
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Storico Nomine Safeguarding -->
+                <div class="border border-white/10 bg-black/40 overflow-x-auto">
+                    <div class="p-4 border-b border-white/10 flex items-center justify-between">
+                        <h3 class="font-headline text-xs font-bold uppercase text-white">Storico Nomine Safeguarding (EPIKA Audit Trail)</h3>
+                        <span class="text-[10px] font-mono text-gray-500 uppercase">Sola lettura · Storicizzazione non distruttiva</span>
+                    </div>
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-white/5 text-gray-400 font-headline uppercase text-[10px] border-b border-white/10">
+                            <tr>
+                                <th class="p-3">Responsabile</th>
+                                <th class="p-3">Email Pubblica</th>
+                                <th class="p-3">Verbale CD</th>
+                                <th class="p-3">Data Nomina</th>
+                                <th class="p-3">Scadenza / Cessazione</th>
+                                <th class="p-3 text-right">Stato</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sf-history-body" class="divide-y divide-white/5 font-mono">
+                            <tr>
+                                <td colspan="6" class="p-4 text-center text-gray-500">Caricamento storico...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -3542,9 +3751,11 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.06.33"></script>
-    <script src="dashboard-feedback.js?v=1.06.33"></script>
-    <script src="dashboard.js?v=1.06.33"></script>
+    <script src="password-validator.js?v=1.06.34"></script>
+    <script src="safeguarding-docs.js?v=1.06.34"></script>
+    <script src="dashboard-safeguarding.js?v=1.06.34"></script>
+    <script src="dashboard-feedback.js?v=1.06.34"></script>
+    <script src="dashboard.js?v=1.06.34"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -3622,6 +3833,7 @@
                 'gestione_corsi': { icon: 'fitness_center', label: 'Corsi & Eventi' },
                 'contabilita': { icon: 'calculate', label: 'Contabilità' },
                 'direttivo': { icon: 'shield_person', label: 'Gestione Direttivo' },
+                'safeguarding': { icon: 'verified_user', label: 'Safeguarding' },
                 'verbali': { icon: 'gavel', label: 'Verbali Direttivo' },
                 'verbali_assemblea': { icon: 'groups', label: 'Verbali Assemblea' },
                 'bilanci': { icon: 'account_balance_wallet', label: 'Bilanci e Rendiconti' },
@@ -3765,8 +3977,8 @@
     </div>
 
     <!-- Floating Timer Dock for Active Timers from Nestore -->
-    <script src="timer-dock.js?v=1.06.33"></script>
-    <script src="feedback-widget.js?v=1.06.33"></script>
+    <script src="timer-dock.js?v=1.06.34"></script>
+    <script src="feedback-widget.js?v=1.06.34"></script>
 </body></html>
 
 

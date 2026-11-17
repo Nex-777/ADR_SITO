@@ -32,7 +32,9 @@
         }
     ],
     "rewrites": [
-        { "source": "/api/feedback", "destination": "/api/get-ip?route=feedback" }
+        { "source": "/api/feedback", "destination": "/api/get-ip?route=feedback" },
+        { "source": "/safeguarding", "destination": "/safeguarding.html" },
+        { "source": "/trasparenza", "destination": "/safeguarding.html" }
     ],
     "crons": [
         {

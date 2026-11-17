@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.33"
+                VERSION: "1.06.34"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -438,6 +438,11 @@
                     window.initDashboardFeedback(userRoles, currentUser, supabaseClient);
                 }
 
+                // Inizializza Modulo Safeguarding per Presidenza
+                if (window.initDashboardSafeguarding) {
+                    window.initDashboardSafeguarding(userRoles, currentUser, supabaseClient, scriviAuditLog);
+                }
+
                 const isBoardMember = userRoles.some(r => ['presidente', 'vice_presidente', 'segretario', 'tesoriere', 'consigliere'].includes(r));
                 const isApprovedSocio = userRoles.includes('socio_approvato');
 
@@ -509,7 +514,7 @@
                 const tabs = [
                     'user_profilo', 'user_certificato', 'user_corsi', 'user_eventi', 'user_pagamenti', 'user_documento',
                     'instructor_corsi', 'volunteer_eventi',
-                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf', 'sandbox',
+                    'approvazioni', 'soci', 'tesserati', 'quote', 'contabilita', 'direttivo', 'safeguarding', 'verbali', 'verbali_assemblea', 'bilanci', 'gestione_corsi', 'logiche', 'taratura_pdf', 'sandbox',
                     'registro_istruttori', 'registro_volontari', 'epika-presidente', 'user-epika', 'feedback_reports'
                 ];
                 tabs.forEach(tab => {
@@ -999,6 +1004,8 @@
                     document.getElementById('tab-btn-gestione_corsi').classList.remove('hidden');
                     document.getElementById('tab-btn-taratura_pdf').classList.remove('hidden');
                     document.getElementById('tab-btn-sandbox').classList.remove('hidden');
+                    const sfBtn = document.getElementById('tab-btn-safeguarding');
+                    if (sfBtn) sfBtn.classList.remove('hidden');
                 }
 
                 // --- SHOW EPIKA BTN FOR DIRETTIVO ---
@@ -7496,6 +7503,14 @@
                 }
             }
 
+            if (tabId === 'safeguarding') {
+                const isSafeguardingAdmin = typeof userRoles !== 'undefined' && userRoles.some(r => ['presidente', 'vice_presidente'].includes(r));
+                if (!isSafeguardingAdmin) {
+                    console.warn("Accesso negato al modulo Safeguarding.");
+                    tabId = 'panoramica';
+                }
+            }
+
             // Nasconde tutti i pannelli
             const panels = document.querySelectorAll('.tab-panel');
             panels.forEach(p => p.classList.add('hidden'));
@@ -7508,6 +7523,10 @@
             if (tabId === 'feedback_reports') {
                 if (typeof window.loadFeedbackReports === 'function') {
                     window.loadFeedbackReports();
+                }
+            } else if (tabId === 'safeguarding') {
+                if (typeof window.loadSafeguardingAdmin === 'function') {
+                    window.loadSafeguardingAdmin();
                 }
             } else if (tabId === 'gestione_corsi') {
                 loadGestioneCorsi();
@@ -9852,6 +9871,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) {
         el.addEventListener('click', function(event) {
             switchTab('direttivo')
+        });
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('tab-btn-safeguarding');
+    if (el) {
+        el.addEventListener('click', function(event) {
+            switchTab('safeguarding');
         });
     }
 });
