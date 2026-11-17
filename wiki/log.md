@@ -2,6 +2,10 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-17] ingest | Consolidamento LLM Wiki Tariffe Presidenza, Trigger Quote e Pagamenti Netti (v1.06.41)
+- Aggiornati wiki/database_schema.md e wiki/auth_and_payments.md con documentazione della RLS Modifica tariffe riservata presidenza su configurazioni_tariffe, hardening trigger_calcola_quota su INSERT/UPDATE di utenti e rimozione spese Stripe 2%.
+- Versione globale aggiornata a v1.06.41.
+
 ## [2026-11-17] security | Hardening Trigger quota_totale su utenti e Allineamento Tariffe Registrazione (v1.06.40)
 - Database (supabase/migration_hardening_calcola_quota_utente.sql): esteso trigger_calcola_quota a BEFORE INSERT OR UPDATE su public.utenti; calcolo deterministico di quota_totale da configurazioni_tariffe in fase di registrazione iniziale e blocco modifiche client su quota_totale, tipo_adesione e tipo_tessera per utenti non amministrativi.
 - Frontend (portal/registrazione.js): allineati i valori di fallback iniziali delle tariffe (50, 14, 18, 20, 30).

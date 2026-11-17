@@ -556,3 +556,15 @@ Introdotte con [migration_csen_policies_and_renewals_2027.sql](../supabase/migra
   - `public.calcola_scadenza_tessera_csen(p_data_iscrizione DATE, p_livello_copertura VARCHAR) RETURNS DATE` (`IMMUTABLE`): calcola `31/12/N` per `BASE` emesse `01/01–31/08`, `31/12/(N+1)` per `BASE` emesse `01/09–31/12`, e `+365 giorni` per `INTEGRATIVA_A`/`INTEGRATIVA_B`. Invocata automaticamente da `approva_tesserato()`.
   - `public.dichiara_socio_decaduto(p_id_socio INTEGER, p_verbale_decadenza VARCHAR) RETURNS BOOLEAN` (`SECURITY DEFINER`): riservata a `presidente`, `vice_presidente` e `segretario`; verifica che il socio sia `ATTIVO` e con `quota_scadenza < CURRENT_DATE`, impostando `stato_socio = 'DECADUTO'`, `data_decadenza = CURRENT_DATE` e `verbale_decadenza`.
 
+---
+
+## 🔐 Hardening Tariffe Presidenza & Calcolo Quote DB (v1.06.39–v1.06.40)
+
+Introdotte con [migration_tariffe_presidenza_rls.sql](../supabase/migration_tariffe_presidenza_rls.sql) e [migration_hardening_calcola_quota_utente.sql](../supabase/migration_hardening_calcola_quota_utente.sql):
+
+- **`public.configurazioni_tariffe`**:
+  - Policy RLS `"Modifica tariffe riservata presidenza"` (`FOR ALL`) ristretta esclusivamente a `presidente` e `vice_presidente`, con vincolo `CHECK (valore > 0)`.
+- **`public.utenti` (`trigger_calcola_quota` / `calcola_quota_utente()`)**:
+  - Esteso il trigger a `BEFORE INSERT OR UPDATE ON public.utenti`: in creazione o prima compilazione profilo (`OLD.tipo_adesione IS NULL`), `quota_totale` viene calcolata sempre lato database leggendo `public.configurazioni_tariffe`.
+  - Negli `UPDATE` successivi da parte di utenti non amministrativi, `quota_totale`, `tipo_adesione` e `tipo_tessera` sono protetti e non modificabili dal client.
+
