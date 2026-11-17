@@ -267,6 +267,37 @@ describe('Politiche CSEN & Sistema Rinnovi 2027', () => {
             expect(res.statusCode).toBe(400);
             expect(res.body.error).toContain('Certificato medico');
         });
+
+        it('preserva i giorni residui quando un tesserato INTEGRATIVA_B rinnova in anticipo nei -60 giorni', async () => {
+            mockSupabaseState.profile = {
+                id: 'user-123',
+                nome: 'Elena',
+                cognome: 'Neri',
+                email: 'elena@example.com',
+                tipo_adesione: 'tesserato',
+                tipo_tessera: 'tessera_integrativa_b',
+                anagrafiche: [{
+                    id: 'anag-1',
+                    registro_soci: [],
+                    registro_tesserati: [{ id_tesserato: 15, stato_tesseramento: 'ATTIVO', livello_copertura: 'INTEGRATIVA_B', data_richiesta_tesseramento: '2025-12-20', data_scadenza_tessera: '2026-12-20' }],
+                    certificati_medici: [{ id: 'c1', stato_validazione: 'VERDE', data_scadenza: '2027-08-01', created_at: '2026-08-01T10:00:00Z' }],
+                    documenti_identita: [{ id: 'd1', tipo_documento: 'PERSONALE', stato_validazione: 'VERDE', data_scadenza: '2030-01-01', created_at: '2025-12-20T10:00:00Z' }]
+                }]
+            };
+
+            const { default: handler } = await import('../api/create-checkout-session.js');
+            const req = {
+                method: 'POST',
+                headers: { authorization: 'Bearer valid-token', origin: 'https://portal.adrenalinaclub.it' },
+                body: { type: 'rinnovo_annuale', rinnova_socio: false, rinnova_tessera: true, tipo_tessera: 'tessera_integrativa_b' }
+            };
+            const res = makeRes();
+            await handler(req, res);
+
+            expect(res.statusCode).toBe(200);
+            const args = mockStripeCreate.mock.calls[0][0];
+            expect(args.metadata.nuova_scadenza_tessera).toBe('2027-12-20');
+        });
     });
 
     describe('Webhook Rinnovo Annuale (stripe-webhook)', () => {

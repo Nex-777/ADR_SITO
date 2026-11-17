@@ -281,7 +281,7 @@ export default async function handler(req, res) {
         else if (type === 'rinnovo_annuale') {
             const { data: allowed } = await supabase.rpc('check_rate_limit', {
                 p_key: `renewal_checkout:${utenteId}`,
-                p_max_requests: 20,
+                p_max_requests: 5,
                 p_window_seconds: 3600
             });
             if (allowed === false) {
@@ -433,7 +433,18 @@ export default async function handler(req, res) {
                     return res.status(500).json({ error: `Tariffa non configurata per ${chosenTipo}.` });
                 }
 
-                nuovaScadenzaTessera = calcolaScadenzaTesseraCsen(todayStr, nuovoLivelloCopertura);
+                const isCurrentIntegrativa = regTess.livello_copertura === 'INTEGRATIVA_A' || regTess.livello_copertura === 'INTEGRATIVA_B';
+                const isNewIntegrativa = nuovoLivelloCopertura === 'INTEGRATIVA_A' || nuovoLivelloCopertura === 'INTEGRATIVA_B';
+                if (isNewIntegrativa) {
+                    if (isCurrentIntegrativa && scadTessAttuale > todayStr) {
+                        nuovaScadenzaTessera = addDaysToIso(scadTessAttuale, 365);
+                    } else {
+                        nuovaScadenzaTessera = calcolaScadenzaTesseraCsen(todayStr, nuovoLivelloCopertura);
+                    }
+                } else {
+                    const baseDate = scadTessAttuale > todayStr ? scadTessAttuale : todayStr;
+                    nuovaScadenzaTessera = calcolaScadenzaTesseraCsen(baseDate, 'BASE');
+                }
                 const tessLabelMap = {
                     tessera_base_silver: 'Base Silver',
                     tessera_base_gold: 'Base Gold',

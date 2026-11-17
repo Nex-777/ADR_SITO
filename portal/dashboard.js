@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.35"
+                VERSION: "1.06.36"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -1751,14 +1751,10 @@
 
             try {
                 const todayRome = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
-                const { error } = await supabaseClient
-                    .from('registro_soci')
-                    .update({
-                        stato_socio: 'DECADUTO',
-                        data_decadenza: todayRome,
-                        verbale_decadenza: verbaleClean
-                    })
-                    .eq('id_socio', socioId);
+                const { error } = await supabaseClient.rpc('dichiara_socio_decaduto', {
+                    p_id_socio: socioId,
+                    p_verbale_decadenza: verbaleClean
+                });
 
                 if (error) throw error;
 
@@ -7992,7 +7988,9 @@
             canRenewTessera: false,
             docsReadyForTessera: true,
             annoTargetSocio: null,
-            todayStr: ''
+            todayStr: '',
+            currentLivello: null,
+            scadTessIso: null
         };
 
         function updateRenewalUIState() {
@@ -8011,11 +8009,24 @@
             if (priceTessEl) priceTessEl.textContent = `€${tessPrice.toFixed(2)}`;
             if (previewEl) {
                 const liv = mapTipoTesseraToLivello(chosenTipo);
-                const estScad = calcolaScadenzaTesseraCsenClient(_renewalState.todayStr, liv);
+                const isCurrentInt = _renewalState.currentLivello === 'INTEGRATIVA_A' || _renewalState.currentLivello === 'INTEGRATIVA_B';
+                const isNewInt = liv === 'INTEGRATIVA_A' || liv === 'INTEGRATIVA_B';
+                const hasResidual = Boolean(_renewalState.scadTessIso && _renewalState.scadTessIso > _renewalState.todayStr);
+                let estScad;
+                if (isNewInt) {
+                    estScad = (isCurrentInt && hasResidual)
+                        ? addDaysIsoClient(_renewalState.scadTessIso, 365)
+                        : calcolaScadenzaTesseraCsenClient(_renewalState.todayStr, liv);
+                } else {
+                    const baseDate = hasResidual ? _renewalState.scadTessIso : _renewalState.todayStr;
+                    estScad = calcolaScadenzaTesseraCsenClient(baseDate, 'BASE');
+                }
                 const estIt = formatToItalianDate(estScad);
                 previewEl.textContent = liv === 'BASE'
                     ? `Nuova scadenza stimata: ${estIt} (regola CSEN Base/Silver/Gold)`
-                    : `Nuova scadenza stimata: ${estIt} (+365 giorni dalla data di rinnovo)`;
+                    : (isCurrentInt && hasResidual
+                        ? `Nuova scadenza stimata: ${estIt} (+365 giorni dalla scadenza attuale)`
+                        : `Nuova scadenza stimata: ${estIt} (+365 giorni dalla data di rinnovo)`);
             }
 
             let tot = 0;
@@ -8252,7 +8263,9 @@
                         canRenewTessera,
                         docsReadyForTessera: docsReady,
                         annoTargetSocio,
-                        todayStr
+                        todayStr,
+                        currentLivello: tessReg?.livello_copertura || null,
+                        scadTessIso: scadTessIso || null
                     };
 
                     const socioBox = document.getElementById('renew-socio-box');

@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-17] security | Audit Fixes RLS, RPC Decadenza Morosita e Continuita Scadenze (v1.06.36)
+- Database (supabase/migration_audit_fixes_csen_2027.sql): rimosse le policy permissive legacy self_insert_socio e self_insert_tesserato su registro_soci e registro_tesserati; creata RPC SECURITY DEFINER dichiara_socio_decaduto(p_id_socio, p_verbale_decadenza) per presidente, vice_presidente e segretario.
+- Backend e UI (api/create-checkout-session.js, portal/dashboard.js): ridotto rate limit renewal_checkout a 5 req/ora; preservata continuita giorni residui nei rinnovi anticipati (-60gg) per tessere Integrativa A/B e allineata anteprima UI; aggiornata window.dichiaraSocioDecaduto ad usare la RPC.
+- Test e Quality (tests/csen-policies-renewal.test.js): aggiunto test rinnovo anticipato Integrativa B; verificati npm test (29 file, 325 test passati) e npm run knip (exit code 0). Versione aggiornata a v1.06.36.
+
 ## [2026-11-17] feature | Politiche Scadenze CSEN, Morosita Soci e Sistema Rinnovi 2027 (v1.06.35)
 - Database (supabase/migration_csen_policies_and_renewals_2027.sql): aggiunte colonne data_scadenza_tessera su registro_tesserati e data_decadenza/verbale_decadenza su registro_soci; funzione calcola_scadenza_tessera_csen (Base 01/01-31/08 -> 31/12/N, 01/09-31/12 -> 31/12/(N+1), Integrativa A/B -> +365gg); backfill su 128 record e aggiornamento approva_tesserato e salva_verbale_relazionale.
 - Checkout e Webhook Rinnovi (api/create-checkout-session.js, api/stripe-webhook.js): flusso server-side type rinnovo_annuale con tariffe da configurazioni_tariffe, finestre indipendenti (Socio dal 01/11/N-1, Tessera da -60gg con cambio copertura e guardrail documenti/certificato), aggiornamento post-pagamento senza alterare quota_totale; risolto bug isEventPayment non definito e req.socket?.remoteAddress in api/stripe-webhook.js.
