@@ -17,7 +17,7 @@ function togglePasswordVisibility(inputId, buttonEl) {
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.39"
+                VERSION: "1.06.40"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -68,11 +68,11 @@ function togglePasswordVisibility(inputId, buttonEl) {
 
         // --- 3. Tariffe Configuration ---
         let tariffe = {
-            quota_socio: 25.00,
-            tessera_base_silver: 10.00,
-            tessera_base_gold: 15.00,
+            quota_socio: 50.00,
+            tessera_base_silver: 14.00,
+            tessera_base_gold: 18.00,
             tessera_integrativa_a: 20.00,
-            tessera_integrativa_b: 25.00
+            tessera_integrativa_b: 30.00
         };
 
         // --- 4. Cascading Address & Birthplace Load ---

@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-17] security | Hardening Trigger quota_totale su utenti e Allineamento Tariffe Registrazione (v1.06.40)
+- Database (supabase/migration_hardening_calcola_quota_utente.sql): esteso trigger_calcola_quota a BEFORE INSERT OR UPDATE su public.utenti; calcolo deterministico di quota_totale da configurazioni_tariffe in fase di registrazione iniziale e blocco modifiche client su quota_totale, tipo_adesione e tipo_tessera per utenti non amministrativi.
+- Frontend (portal/registrazione.js): allineati i valori di fallback iniziali delle tariffe (50, 14, 18, 20, 30).
+- Test e Quality: verificati npm test (29 file, 325 test passati) e npm run knip (exit code 0). Versione globale aggiornata a v1.06.40.
+
 ## [2026-11-17] feature | Pannello Tariffe Presidenza e Rimozione Avviso Costi Pagamento (v1.06.39)
 - Database (supabase/migration_tariffe_presidenza_rls.sql): ristretta la policy RLS di modifica su configurazioni_tariffe ai soli ruoli presidente e vice_presidente e aggiunto vincolo CHECK (valore > 0).
 - Dashboard (portal/dashboard.html, portal/dashboard.js, wiki/portal_dashboard.md): aggiunto pannello #presidenza-tariffe-panel nella scheda Quote e Cassa con salvataggio su configurazioni_tariffe e audit log AGGIORNAMENTO_TARIFFE_QUOTE; rimossa la dicitura (Servizio di pagamento online incluso nella quota) dal riepilogo rinnovo.
