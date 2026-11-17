@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.37"
+                VERSION: "1.06.38"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -8009,24 +8009,22 @@
             if (priceTessEl) priceTessEl.textContent = `€${tessPrice.toFixed(2)}`;
             if (previewEl) {
                 const liv = mapTipoTesseraToLivello(chosenTipo);
-                const isCurrentInt = _renewalState.currentLivello === 'INTEGRATIVA_A' || _renewalState.currentLivello === 'INTEGRATIVA_B';
-                const isNewInt = liv === 'INTEGRATIVA_A' || liv === 'INTEGRATIVA_B';
                 const hasResidual = Boolean(_renewalState.scadTessIso && _renewalState.scadTessIso > _renewalState.todayStr);
-                let estScad;
-                if (isNewInt) {
-                    estScad = (isCurrentInt && hasResidual)
-                        ? addDaysIsoClient(_renewalState.scadTessIso, 365)
-                        : calcolaScadenzaTesseraCsenClient(_renewalState.todayStr, liv);
-                } else {
-                    const baseDate = hasResidual ? _renewalState.scadTessIso : _renewalState.todayStr;
-                    estScad = calcolaScadenzaTesseraCsenClient(baseDate, 'BASE');
-                }
+                const baseDate = hasResidual ? _renewalState.scadTessIso : _renewalState.todayStr;
+                const estScad = calcolaScadenzaTesseraCsenClient(baseDate, liv);
                 const estIt = formatToItalianDate(estScad);
-                previewEl.textContent = liv === 'BASE'
-                    ? `Nuova scadenza stimata: ${estIt} (regola CSEN Base/Silver/Gold)`
-                    : (isCurrentInt && hasResidual
-                        ? `Nuova scadenza stimata: ${estIt} (+365 giorni dalla scadenza attuale)`
-                        : `Nuova scadenza stimata: ${estIt} (+365 giorni dalla data di rinnovo)`);
+                previewEl.textContent = '';
+                const line1 = document.createElement('div');
+                line1.textContent = liv === 'BASE'
+                    ? `✓ Nuova scadenza prevista: ${estIt} (regola CSEN Base/Silver/Gold)`
+                    : `✓ Nuova scadenza prevista: ${estIt} (+365 giorni dalla decorrenza del rinnovo)`;
+                previewEl.appendChild(line1);
+                if (hasResidual) {
+                    const line2 = document.createElement('div');
+                    line2.className = 'text-green-400 mt-1 leading-relaxed';
+                    line2.textContent = `Anche se paghi oggi, il rinnovo verrà attivato alla scadenza attuale (${formatToItalianDate(_renewalState.scadTessIso)}): non perderai alcun giorno di validità residua.`;
+                    previewEl.appendChild(line2);
+                }
             }
 
             let tot = 0;
@@ -9288,10 +9286,9 @@
             const { titolo, prezzo, nomePiano } = payload;
             if (courseTitle) courseTitle.textContent = titolo || 'Iscrizione Corso';
 
-            // Calcolo Unica Soluzione (+2% spese di gestione)
+            // Calcolo Unica Soluzione (servizio di pagamento incluso nella quota)
             const baseUnico = prezzo;
-            const feeUnico = baseUnico * 0.02;
-            const totalUnico = baseUnico + feeUnico;
+            const totalUnico = baseUnico;
             if (unicoPrice) unicoPrice.textContent = `€${totalUnico.toFixed(2)}`;
 
             // Verifica deterministica se il piano è rateizzabile (Trimestrale, Semestrale, Annuale)
@@ -9324,12 +9321,11 @@
 
             if (isRateizzabile && numRate > 1) {
                 const monthlyBase = (prezzo / numRate);
-                const monthlyFee = monthlyBase * 0.02;
-                const monthlyTotal = monthlyBase + monthlyFee;
+                const monthlyTotal = monthlyBase;
 
                 if (ratealeTitle) ratealeTitle.textContent = `Abbonamento Rateale ${tipoAbbonamentoLabel} (${numRate} Rate)`;
                 if (ratealePrice) ratealePrice.textContent = `€${monthlyTotal.toFixed(2)} / mese`;
-                if (ratealeDesc) ratealeDesc.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese (€${monthlyBase.toFixed(2)} quota + €${monthlyFee.toFixed(2)} spese) per ${numRate} mesi. Cancellazione automatica a fine contratto.`;
+                if (ratealeDesc) ratealeDesc.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese per ${numRate} mesi. Cancellazione automatica a fine contratto.`;
 
                 if (cardRatealeLabel) cardRatealeLabel.classList.remove('hidden');
 

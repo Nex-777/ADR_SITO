@@ -2,6 +2,11 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-17] fix | Visibilita Bottone Rinnovo, Avviso Decorrenza Anticipata e Rimozione Spese Stripe 2% (v1.06.38)
+- UI Dashboard (portal/dashboard.html, portal/dashboard.js): aggiornato #btn-avvia-rinnovo-stripe con classi ad alto contrasto compilate in output.css (bg-white text-black hover:bg-primary hover:text-white); inserito avviso esplicito sulla decorrenza alla scadenza precedente senza perdita di giorni residui.
+- Checkout e Tariffe (api/create-checkout-session.js, portal/dashboard.js, portal/pagamento.js): rimossa completamente la maggiorazione del 2% (Spese di gestione transazione e amministrative) da tutti i flussi Stripe (rinnovi, tesseramenti, corsi/eventi, rateizzazioni ed Epika), includendo il servizio nella quota nominale e unificando la decorrenza dalla scadenza residua su tutti i rinnovi anticipati.
+- Test e Quality: aggiornata suite tests/csen-policies-renewal.test.js; verificati npm test (29 file, 325 test passati) e npm run knip (exit code 0). Versione globale aggiornata a v1.06.38.
+
 ## [2026-11-17] ingest | Consolidamento LLM Wiki Politiche CSEN e Rinnovi 2027 (v1.06.37)
 - Aggiornati wiki/database_schema.md, wiki/auth_and_payments.md e wiki/portal_dashboard.md con documentazione di data_scadenza_tessera, data_decadenza, verbale_decadenza, calcola_scadenza_tessera_csen(), dichiara_socio_decaduto(), flusso rinnovo_annuale e badge MOROSO / SCADUTO.
 - Versione globale aggiornata a v1.06.37.

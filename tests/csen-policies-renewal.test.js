@@ -170,7 +170,8 @@ describe('Politiche CSEN & Sistema Rinnovi 2027', () => {
             expect(args.metadata.rinnova_socio).toBe('true');
             expect(args.metadata.nuova_scadenza_socio).toBe('2027-12-31');
             expect(args.metadata.rinnova_tessera).toBe('false');
-            expect(args.metadata.importo).toBe('51.00'); // 50 + 2%
+            expect(args.metadata.importo).toBe('50.00'); // Servizio incluso nella quota (no +2%)
+            expect(args.line_items.some(li => li.price_data?.product_data?.name?.includes('Spese di gestione'))).toBe(false);
         });
 
         it('blocca il rinnovo della Tessera Base fatta dopo 01/09/2026 (scad. 31/12/2027) a Novembre 2026', async () => {
@@ -234,8 +235,9 @@ describe('Politiche CSEN & Sistema Rinnovi 2027', () => {
             const args = mockStripeCreate.mock.calls[0][0];
             expect(args.metadata.nuovo_tipo_tessera).toBe('tessera_integrativa_b');
             expect(args.metadata.nuovo_livello_copertura).toBe('INTEGRATIVA_B');
-            expect(args.metadata.nuova_scadenza_tessera).toBe('2027-11-17'); // 2026-11-17 + 365 giorni
-            expect(args.metadata.importo).toBe('30.60'); // 30 + 2%
+            expect(args.metadata.nuova_scadenza_tessera).toBe('2027-12-31'); // 2026-12-31 + 365 giorni (nessun giorno perso)
+            expect(args.metadata.importo).toBe('30.00'); // Servizio incluso nella quota (no +2%)
+            expect(args.line_items.some(li => li.price_data?.product_data?.name?.includes('Spese di gestione'))).toBe(false);
         });
 
         it('blocca il rinnovo tessera se il certificato medico è scaduto', async () => {
@@ -319,7 +321,7 @@ describe('Politiche CSEN & Sistema Rinnovi 2027', () => {
                             nuovo_tipo_tessera: 'tessera_integrativa_b',
                             nuovo_livello_copertura: 'INTEGRATIVA_B',
                             nuova_scadenza_tessera: '2027-11-17',
-                            importo: '81.60',
+                            importo: '80.00',
                             causale: 'Rinnovo Quota Socio 2027 + Rinnovo Tessera CSEN Integrativa B - Mario Rossi'
                         }
                     }
@@ -337,7 +339,7 @@ describe('Politiche CSEN & Sistema Rinnovi 2027', () => {
             await webhookHandler(req, res);
 
             expect(res.statusCode).toBe(200);
-            expect(mockSupabaseState.insertedReceipt?.importo).toBe(81.6);
+            expect(mockSupabaseState.insertedReceipt?.importo).toBe(80);
 
             const socioUpd = mockSupabaseState.updates.find(u => u.table === 'registro_soci');
             expect(socioUpd?.payload.quota_scadenza).toBe('2027-12-31');
@@ -361,15 +363,20 @@ describe('Politiche CSEN & Sistema Rinnovi 2027', () => {
             const dashJs = fs.readFileSync(path.join(root, 'portal/dashboard.js'), 'utf8');
             const cronJs = fs.readFileSync(path.join(root, 'api/cron-scadenze.js'), 'utf8');
             const syncJs = fs.readFileSync(path.join(root, 'scripts/csen_sync_active.js'), 'utf8');
+            const checkoutJs = fs.readFileSync(path.join(root, 'api/create-checkout-session.js'), 'utf8');
 
             expect(dashHtml).toContain('id="user-renewal-container"');
             expect(dashHtml).toContain('id="renew-tessera-select"');
             expect(dashHtml).toContain('id="row-user-scadenza-socio"');
+            expect(dashHtml).toContain('id="btn-avvia-rinnovo-stripe" onclick="avviaCheckoutRinnovo()" class="bg-white text-black');
+            expect(dashHtml).not.toContain('spese di gestione su Stripe');
 
+            expect(checkoutJs).not.toContain('Spese di gestione transazione');
             expect(dashJs).toContain('MOROSO / SCADUTO');
             expect(dashJs).toContain('window.dichiaraSocioDecaduto');
             expect(dashJs).toContain('window.avviaCheckoutRinnovo');
             expect(dashJs).toContain('data_scadenza_tessera');
+            expect(dashJs).toContain('non perderai alcun giorno di validità residua');
 
             expect(cronJs).toContain('currentMonth === 11 && currentDay === 1');
             expect(cronJs).toContain('target60Tess');

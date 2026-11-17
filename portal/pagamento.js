@@ -3,7 +3,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.37"
+                VERSION: "1.06.38"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -184,9 +184,9 @@
                 document.getElementById('total-amount').textContent = `€${quota.toFixed(2)}`;
 
                 // Determina la modalità rateale in base all'importo della quota:
-                // - Trimestrale (€180): max 3 rate da €60/mese (+ €1,20 spese = €61,20/mese)
-                // - Semestrale (€330): max 6 rate da €55/mese (+ €1,10 spese = €56,10/mese)
-                // - Annuale (€600): max 12 rate da €50/mese (+ €1,00 spese = €51,00/mese)
+                // - Trimestrale (€180): max 3 rate da €60/mese
+                // - Semestrale (€330): max 6 rate da €55/mese
+                // - Annuale (€600): max 12 rate da €50/mese
                 let maxRate = 12;
                 let tipoAbbonamento = "Annuale";
 
@@ -206,8 +206,7 @@
                 const selectorContainer = document.getElementById('installment-selector-container');
                 if (quota >= 90 && selectorContainer) {
                     const monthlyBase = (quota / maxRate);
-                    const monthlyFee = monthlyBase * 0.02;
-                    const monthlyTotal = monthlyBase + monthlyFee;
+                    const monthlyTotal = monthlyBase;
 
                     const ratealeTitle = document.getElementById('plan-rateale-title');
                     if (ratealeTitle) {
@@ -216,7 +215,7 @@
 
                     const ratealeLabel = document.getElementById('plan-rateale-label');
                     if (ratealeLabel) {
-                        ratealeLabel.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese (€${monthlyBase.toFixed(2)} quota + €${monthlyFee.toFixed(2)} spese) per ${maxRate} mesi. Cancellazione automatica alla fine del contratto.`;
+                        ratealeLabel.textContent = `Addebito automatico mensile di €${monthlyTotal.toFixed(2)}/mese per ${maxRate} mesi. Cancellazione automatica alla fine del contratto.`;
                     }
                     selectorContainer.classList.remove('hidden');
                 }

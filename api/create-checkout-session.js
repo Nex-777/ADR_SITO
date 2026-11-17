@@ -219,11 +219,9 @@ export default async function handler(req, res) {
             const userEmail = profile?.email || user.email;
             const description = `Iscrizione Evento Storico: ${evento.titolo} per ${profile?.nome || ''} ${profile?.cognome || ''}`;
 
-            // Calcolo prezzo e commissione del 2%
+            // Calcolo prezzo senza maggiorazione spese Stripe (incluse nella quota)
             const baseAmount = Math.round(costo * 100);
-            const feeAmount = Math.round(costo * 0.02 * 100);
-            const totalAmount = baseAmount + feeAmount;
-            const totalPrezzo = (totalAmount / 100).toFixed(2);
+            const totalPrezzo = (baseAmount / 100).toFixed(2);
 
             const session = await stripe.checkout.sessions.create({
                 line_items: [
@@ -235,16 +233,6 @@ export default async function handler(req, res) {
                                 description: description,
                             },
                             unit_amount: baseAmount,
-                        },
-                        quantity: 1,
-                    },
-                    {
-                        price_data: {
-                            currency: 'eur',
-                            product_data: {
-                                name: `Spese di gestione transazione e amministrative (2%)`,
-                            },
-                            unit_amount: feeAmount,
                         },
                         quantity: 1,
                     },
@@ -433,18 +421,8 @@ export default async function handler(req, res) {
                     return res.status(500).json({ error: `Tariffa non configurata per ${chosenTipo}.` });
                 }
 
-                const isCurrentIntegrativa = regTess.livello_copertura === 'INTEGRATIVA_A' || regTess.livello_copertura === 'INTEGRATIVA_B';
-                const isNewIntegrativa = nuovoLivelloCopertura === 'INTEGRATIVA_A' || nuovoLivelloCopertura === 'INTEGRATIVA_B';
-                if (isNewIntegrativa) {
-                    if (isCurrentIntegrativa && scadTessAttuale > todayStr) {
-                        nuovaScadenzaTessera = addDaysToIso(scadTessAttuale, 365);
-                    } else {
-                        nuovaScadenzaTessera = calcolaScadenzaTesseraCsen(todayStr, nuovoLivelloCopertura);
-                    }
-                } else {
-                    const baseDate = scadTessAttuale > todayStr ? scadTessAttuale : todayStr;
-                    nuovaScadenzaTessera = calcolaScadenzaTesseraCsen(baseDate, 'BASE');
-                }
+                const baseDateTessera = scadTessAttuale > todayStr ? scadTessAttuale : todayStr;
+                nuovaScadenzaTessera = calcolaScadenzaTesseraCsen(baseDateTessera, nuovoLivelloCopertura);
                 const tessLabelMap = {
                     tessera_base_silver: 'Base Silver',
                     tessera_base_gold: 'Base Gold',
@@ -469,20 +447,8 @@ export default async function handler(req, res) {
             }
 
             const baseAmountCents = Math.round(totalBase * 100);
-            const feeAmountCents = Math.round(totalBase * 0.02 * 100);
-            const totalQuota = ((baseAmountCents + feeAmountCents) / 100).toFixed(2);
+            const totalQuota = (baseAmountCents / 100).toFixed(2);
             const causale = `${causaleParts.join(' + ')} - ${fullName(profile)}`;
-
-            lineItems.push({
-                price_data: {
-                    currency: 'eur',
-                    product_data: {
-                        name: `Spese di gestione transazione e amministrative (2%)`,
-                    },
-                    unit_amount: feeAmountCents,
-                },
-                quantity: 1,
-            });
 
             const session = await stripe.checkout.sessions.create({
                 line_items: lineItems,
@@ -686,9 +652,7 @@ export default async function handler(req, res) {
             if (isInstallment) {
 
                 const monthlyBaseQuota = Math.round((prezzo / numRate) * 100);
-                const monthlyFeeQuota = Math.round((prezzo / numRate) * 0.02 * 100);
-                const monthlyTotalAmount = monthlyBaseQuota + monthlyFeeQuota;
-                const monthlyTotalStr = (monthlyTotalAmount / 100).toFixed(2);
+                const monthlyTotalStr = (monthlyBaseQuota / 100).toFixed(2);
 
                 const session = await stripe.checkout.sessions.create({
                     line_items: [
@@ -700,20 +664,6 @@ export default async function handler(req, res) {
                                     description: `${description} - Rateizzazione (${numRate} Mesi)`,
                                 },
                                 unit_amount: monthlyBaseQuota,
-                                recurring: {
-                                    interval: 'month',
-                                    interval_count: 1
-                                }
-                            },
-                            quantity: 1,
-                        },
-                        {
-                            price_data: {
-                                currency: 'eur',
-                                product_data: {
-                                    name: `Spese di gestione transazione e amministrative (2%)`,
-                                },
-                                unit_amount: monthlyFeeQuota,
                                 recurring: {
                                     interval: 'month',
                                     interval_count: 1
@@ -765,11 +715,9 @@ export default async function handler(req, res) {
                 return res.status(200).json({ url: session.url });
             }
 
-            // Calcola il prezzo base e la commissione del 2% per le spese di gestione (Pagamento Unico)
+            // Calcola il prezzo netto (servizio di pagamento incluso nella quota)
             const baseAmount = Math.round(prezzo * 100);
-            const feeAmount = Math.round(prezzo * 0.02 * 100);
-            const totalAmount = baseAmount + feeAmount;
-            const totalPrezzo = (totalAmount / 100).toFixed(2);
+            const totalPrezzo = (baseAmount / 100).toFixed(2);
 
             const session = await stripe.checkout.sessions.create({
                 line_items: [
@@ -781,16 +729,6 @@ export default async function handler(req, res) {
                                 description: description,
                             },
                             unit_amount: baseAmount,
-                        },
-                        quantity: 1,
-                    },
-                    {
-                        price_data: {
-                            currency: 'eur',
-                            product_data: {
-                                name: `Spese di gestione transazione e amministrative (2%)`,
-                            },
-                            unit_amount: feeAmount,
                         },
                         quantity: 1,
                     },
@@ -888,11 +826,9 @@ export default async function handler(req, res) {
 
                 const descTessRate = stripeDesc(`Abb ${numRate} Rate -`, 'Tesseramento', '-', nomeCompleto);
 
-                // Calcola la rata mensile e la commissione del 2%
+                // Calcola la rata mensile netta (spese di gestione incluse nella quota)
                 const monthlyBaseQuota = Math.round((quota / numRate) * 100);
-                const monthlyFeeQuota = Math.round((quota / numRate) * 0.02 * 100);
-                const monthlyTotalAmount = monthlyBaseQuota + monthlyFeeQuota;
-                const monthlyTotalStr = (monthlyTotalAmount / 100).toFixed(2);
+                const monthlyTotalStr = (monthlyBaseQuota / 100).toFixed(2);
 
                 const session = await stripe.checkout.sessions.create({
                     line_items: [
@@ -904,20 +840,6 @@ export default async function handler(req, res) {
                                     description: `${description} - Rateizzazione (${numRate} Mesi)`,
                                 },
                                 unit_amount: monthlyBaseQuota,
-                                recurring: {
-                                    interval: 'month',
-                                    interval_count: 1
-                                }
-                            },
-                            quantity: 1,
-                        },
-                        {
-                            price_data: {
-                                currency: 'eur',
-                                product_data: {
-                                    name: `Spese di gestione transazione e amministrative (2%)`,
-                                },
-                                unit_amount: monthlyFeeQuota,
                                 recurring: {
                                     interval: 'month',
                                     interval_count: 1
@@ -953,11 +875,9 @@ export default async function handler(req, res) {
                 return res.status(200).json({ url: session.url });
             }
 
-            // Calcola la quota e la commissione del 2% per le spese di gestione (Pagamento Unico)
+            // Calcola la quota netta (servizio di pagamento incluso nella quota)
             const baseAmount = Math.round(quota * 100);
-            const feeAmount = Math.round(quota * 0.02 * 100);
-            const totalAmount = baseAmount + feeAmount;
-            const totalQuota = (totalAmount / 100).toFixed(2);
+            const totalQuota = (baseAmount / 100).toFixed(2);
 
             const session = await stripe.checkout.sessions.create({
                 line_items: [
@@ -969,16 +889,6 @@ export default async function handler(req, res) {
                                 description: description,
                             },
                             unit_amount: baseAmount,
-                        },
-                        quantity: 1,
-                    },
-                    {
-                        price_data: {
-                            currency: 'eur',
-                            product_data: {
-                                name: `Spese di gestione transazione e amministrative (2%)`,
-                            },
-                            unit_amount: feeAmount,
                         },
                         quantity: 1,
                     },
