@@ -2,6 +2,10 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-17] ingest | Consolidamento LLM Wiki Politiche CSEN e Rinnovi 2027 (v1.06.37)
+- Aggiornati wiki/database_schema.md, wiki/auth_and_payments.md e wiki/portal_dashboard.md con documentazione di data_scadenza_tessera, data_decadenza, verbale_decadenza, calcola_scadenza_tessera_csen(), dichiara_socio_decaduto(), flusso rinnovo_annuale e badge MOROSO / SCADUTO.
+- Versione globale aggiornata a v1.06.37.
+
 ## [2026-11-17] security | Audit Fixes RLS, RPC Decadenza Morosita e Continuita Scadenze (v1.06.36)
 - Database (supabase/migration_audit_fixes_csen_2027.sql): rimosse le policy permissive legacy self_insert_socio e self_insert_tesserato su registro_soci e registro_tesserati; creata RPC SECURITY DEFINER dichiara_socio_decaduto(p_id_socio, p_verbale_decadenza) per presidente, vice_presidente e segretario.
 - Backend e UI (api/create-checkout-session.js, portal/dashboard.js): ridotto rate limit renewal_checkout a 5 req/ora; preservata continuita giorni residui nei rinnovi anticipati (-60gg) per tessere Integrativa A/B e allineata anteprima UI; aggiornata window.dichiaraSocioDecaduto ad usare la RPC.

@@ -57,3 +57,11 @@ Per garantire massima chiarezza e trasparenza contabile nella lista *Pagamenti* 
     -   Board members have 1-click actions:
         -   `SOLLECITO`: Sends notification email + push to Telegram `ADR_BOT` with copyable WhatsApp message.
         -   `INCASSO`: Registers cash/bank payment manually and issues official receipt.
+
+---
+
+## 🔄 Rinnovi Annuali 2027 (Socio e Tessera CSEN)
+
+- **Endpoint dedicati**: `type: 'rinnovo_annuale'` su [create-checkout-session.js](../api/create-checkout-session.js) e `session.metadata.is_membership_renewal === 'true'` su [stripe-webhook.js](../api/stripe-webhook.js).
+- **Isolamento di `utenti.quota_totale`**: Il flusso di rinnovo è avviato su iniziativa dell'utente dalla dashboard e **non** modifica `utenti.quota_totale`, evitando falsi positivi di morosità sulle iscrizioni iniziali e blocchi sul codice accesso palestra.
+- **Tariffe e Guardrail**: Gli importi sono letti server-side da `configurazioni_tariffe`; il rinnovo `Quota Socio` è abilitato dal `01/11/(anno_scadenza)`, mentre il rinnovo `Tessera CSEN` è abilitato da `60 giorni` prima della `data_scadenza_tessera` (o se `SCADUTO`), previa validità `VERDE` di Documento d'Identità e Certificato Medico, preservando eventuali giorni residui per rinnovi anticipati.

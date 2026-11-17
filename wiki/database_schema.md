@@ -540,3 +540,19 @@ Tabella per la memorizzazione di segnalazioni bug e suggerimenti utenti/atleti, 
 - **SELECT**: `select_own_or_presidenza_feedback` consente agli utenti di consultare solo i propri record, e alla Presidenza (`presidente`, `vice_presidente`) l'accesso globale.
 - **UPDATE**: `update_presidenza_feedback` riservata esclusivamente a `presidente` e `vice_presidente`.
 
+---
+
+## 📅 Politiche Scadenze CSEN, Morosità Soci & Rinnovi 2027 (v1.06.35–v1.06.36)
+
+Introdotte con [migration_csen_policies_and_renewals_2027.sql](../supabase/migration_csen_policies_and_renewals_2027.sql) e [migration_audit_fixes_csen_2027.sql](../supabase/migration_audit_fixes_csen_2027.sql):
+
+- **`public.registro_tesserati`**:
+  - Aggiunta colonna `data_scadenza_tessera DATE` (Single Source of Truth per la scadenza della tessera CSEN e, per i *Solo Tesserati*, della durata dell'iscrizione associativa).
+  - Rimossa policy permissiva legacy `self_insert_tesserato` (tutte le attivazioni passano tramite `approva_tesserato` o `service_role`).
+- **`public.registro_soci`**:
+  - Aggiunte colonne `data_decadenza DATE` e `verbale_decadenza VARCHAR(50)` per storicizzare la decadenza per morosità senza eliminazione fisica dei record.
+  - Rimossa policy permissiva legacy `self_insert_socio`.
+- **Funzioni SQL & RPC**:
+  - `public.calcola_scadenza_tessera_csen(p_data_iscrizione DATE, p_livello_copertura VARCHAR) RETURNS DATE` (`IMMUTABLE`): calcola `31/12/N` per `BASE` emesse `01/01–31/08`, `31/12/(N+1)` per `BASE` emesse `01/09–31/12`, e `+365 giorni` per `INTEGRATIVA_A`/`INTEGRATIVA_B`. Invocata automaticamente da `approva_tesserato()`.
+  - `public.dichiara_socio_decaduto(p_id_socio INTEGER, p_verbale_decadenza VARCHAR) RETURNS BOOLEAN` (`SECURITY DEFINER`): riservata a `presidente`, `vice_presidente` e `segretario`; verifica che il socio sia `ATTIVO` e con `quota_scadenza < CURRENT_DATE`, impostando `stato_socio = 'DECADUTO'`, `data_decadenza = CURRENT_DATE` e `verbale_decadenza`.
+
