@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { sendTelegramAlert, escapeTelegramHtml } from './_utils/telegram-bot.js';
+import { sendEmail } from './_utils/resend-mail.js';
 
 // Disabilita il body parser automatico di Vercel per poter validare la firma con il raw body
 export const config = {
@@ -62,6 +63,7 @@ export default async function handler(req, res) {
         const utenteId = session.metadata?.utenteId;
         const rawEventId = session.metadata?.eventId;
         const eventId = (rawEventId && typeof rawEventId === 'string' && rawEventId.trim().length === 36) ? rawEventId.trim() : null;
+        const isEventPayment = Boolean(eventId || session.metadata?.tipo === 'epika_evento');
         const importoStr = session.metadata?.importo;
         const causale = session.metadata?.causale || 'Quota associativa annuale';
         const stripePaymentId = session.payment_intent || session.subscription || session.id;
@@ -379,6 +381,114 @@ export default async function handler(req, res) {
                         console.error('❌ Errore attivazione corso SCAB promozionale:', promoErr);
                     }
                 }
+            } else if (session.metadata?.is_membership_renewal === 'true') {
+                // Rinnovo Annuale Socio e/o Tessera CSEN (su iniziativa utente)
+                const todayRome = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+                let anagraficaId = session.metadata?.anagraficaId || null;
+
+                if (!anagraficaId) {
+                    const { data: anag } = await supabase
+                        .from('anagrafiche')
+                        .select('id')
+                        .eq('utente_id', utenteId)
+                        .maybeSingle();
+                    anagraficaId = anag?.id || null;
+                }
+
+                if (!anagraficaId) {
+                    throw new Error(`Anagrafica non trovata per rinnovo utente ${utenteId}`);
+                }
+
+                const rinnovaSocio = session.metadata?.rinnova_socio === 'true';
+                const nuovaScadenzaSocio = session.metadata?.nuova_scadenza_socio || '';
+                const rinnovaTessera = session.metadata?.rinnova_tessera === 'true';
+                const nuovoTipoTessera = session.metadata?.nuovo_tipo_tessera || '';
+                const nuovoLivelloCopertura = session.metadata?.nuovo_livello_copertura || '';
+                const nuovaScadenzaTessera = session.metadata?.nuova_scadenza_tessera || '';
+
+                if (rinnovaSocio && nuovaScadenzaSocio) {
+                    const { error: socioUpdErr } = await supabase
+                        .from('registro_soci')
+                        .update({ quota_scadenza: nuovaScadenzaSocio })
+                        .eq('anagrafica_id', anagraficaId);
+                    if (socioUpdErr) {
+                        throw new Error('Errore aggiornamento scadenza quota socio: ' + socioUpdErr.message);
+                    }
+                    console.log(`✅ [RINNOVO SOCIO] Aggiornata quota_scadenza a ${nuovaScadenzaSocio} per anagrafica ${anagraficaId}`);
+                }
+
+                if (rinnovaTessera && nuovoLivelloCopertura && nuovaScadenzaTessera) {
+                    if (nuovoTipoTessera) {
+                        await supabase
+                            .from('utenti')
+                            .update({ tipo_tessera: nuovoTipoTessera })
+                            .eq('id', utenteId);
+                    }
+
+                    const { error: tessUpdErr } = await supabase
+                        .from('registro_tesserati')
+                        .update({
+                            livello_copertura: nuovoLivelloCopertura,
+                            data_richiesta_tesseramento: todayRome,
+                            data_scadenza_tessera: nuovaScadenzaTessera,
+                            stato_tesseramento: 'ATTIVO',
+                            sync_csen_status: 'PENDING',
+                            sync_csen_log: `Rinnovo pagato via Stripe (${nuovoLivelloCopertura}). In attesa invio a CSEN.`
+                        })
+                        .eq('anagrafica_id', anagraficaId);
+
+                    if (tessUpdErr) {
+                        throw new Error('Errore aggiornamento rinnovo registro_tesserati: ' + tessUpdErr.message);
+                    }
+                    console.log(`✅ [RINNOVO TESSERA] Aggiornato registro_tesserati (${nuovoLivelloCopertura}, scad ${nuovaScadenzaTessera}) per anagrafica ${anagraficaId}`);
+                }
+
+                const ipRen = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Stripe Webhook';
+                await supabase
+                    .from('registro_audit_operazioni')
+                    .insert({
+                        operatore_id: utenteId,
+                        azione: 'RINNOVO_ANNUALE_STRIPE',
+                        tabella_target: 'ricevute_pagamenti',
+                        record_target_id: String(recData.id),
+                        dettagli: {
+                            rinnova_socio: rinnovaSocio,
+                            nuova_scadenza_socio: nuovaScadenzaSocio || null,
+                            rinnova_tessera: rinnovaTessera,
+                            nuovo_tipo_tessera: nuovoTipoTessera || null,
+                            nuovo_livello_copertura: nuovoLivelloCopertura || null,
+                            nuova_scadenza_tessera: nuovaScadenzaTessera || null,
+                            importo: importo,
+                            numero_ricevuta: nextNum,
+                            anno_fiscale: annoFiscale
+                        },
+                        ip_address: typeof ipRen === 'string' ? ipRen.split(',')[0].trim() : 'Stripe Webhook'
+                    });
+
+                try {
+                    const { data: uMail } = await supabase
+                        .from('utenti')
+                        .select('nome, email')
+                        .eq('id', utenteId)
+                        .maybeSingle();
+                    if (uMail?.email) {
+                        await sendEmail({
+                            to: uMail.email,
+                            subject: `Conferma Rinnovo & Ricevuta n. ${nextNum}/${annoFiscale} - Adrenalina Club`,
+                            html: `<div style="font-family: sans-serif; background-color: #0e0e0e; color: #ffffff; padding: 25px; border-left: 4px solid #df293e;">
+                                <h2 style="color: #df293e; margin-top: 0;">ADRENALINA CLUB — CONFERMA RINNOVO</h2>
+                                <p>Ciao ${uMail.nome || 'Atleta'}, abbiamo registrato con successo il tuo pagamento di rinnovo.</p>
+                                <p><strong>Causale:</strong> ${causale}</p>
+                                <p><strong>Importo:</strong> €${importo.toFixed(2)} (Ricevuta n. ${nextNum}/${annoFiscale})</p>
+                                ${rinnovaSocio ? `<p>✅ <strong>Quota Sociale:</strong> rinnovata fino al <strong>${nuovaScadenzaSocio.split('-').reverse().join('/')}</strong></p>` : ''}
+                                ${rinnovaTessera ? `<p>✅ <strong>Tessera Sportiva CSEN (${nuovoLivelloCopertura.replace(/_/g, ' ')}):</strong> attiva, scadenza stimata al <strong>${nuovaScadenzaTessera.split('-').reverse().join('/')}</strong></p>` : ''}
+                                <p style="color: #aaa; font-size: 12px; margin-top: 15px;">Puoi consultare in ogni momento lo stato e le tue ricevute nella dashboard del portale.</p>
+                            </div>`
+                        });
+                    }
+                } catch (mailErr) {
+                    console.warn('[STRIPE WEBHOOK EMAIL] Errore invio conferma rinnovo:', mailErr.message);
+                }
             } else {
                 // Quota Associativa: Salda la quota impostando a 0.00
                 const { error: updateError } = await supabase
@@ -445,7 +555,7 @@ export default async function handler(req, res) {
             }
 
             // 4. Scrivi l'audit log
-            const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Stripe Webhook';
+            const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Stripe Webhook';
             await supabase
                 .from('registro_audit_operazioni')
                 .insert({

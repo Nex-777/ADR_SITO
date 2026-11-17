@@ -116,8 +116,10 @@ function analizzaStatoTessera(htmlContent) {
     // Estrai data di scadenza (formato CSEN: "Scade il: DD/MM/YYYY")
     const scadMatch = htmlContent.match(/Scade\s+il:\s*(\d{2})\/(\d{2})\/(\d{4})/i);
     let annoScadenza = null;
+    let dataScadenzaIso = null;
     if (scadMatch) {
         annoScadenza = parseInt(scadMatch[3], 10);
+        dataScadenzaIso = `${scadMatch[3]}-${scadMatch[2]}-${scadMatch[1]}`;
     }
 
     // Estrai numero tessera corrente dalla pagina
@@ -127,7 +129,7 @@ function analizzaStatoTessera(htmlContent) {
     const necessitaRinnovo = scaduta || (annoScadenza !== null && annoScadenza < anno);
     const tesseraAttiva = !necessitaRinnovo && numeroCorrente !== null && numeroCorrente !== '0';
 
-    return { necessitaRinnovo, tesseraAttiva, numeroCorrente, annoScadenza };
+    return { necessitaRinnovo, tesseraAttiva, numeroCorrente, annoScadenza, dataScadenzaIso };
 }
 
 // -------------------------------------------------------
@@ -467,9 +469,9 @@ async function syncCsen() {
                     // -------------------------------------------------------
                 } else {
                     // Analizza l'HTML della pagina risultati
-                    const { necessitaRinnovo, tesseraAttiva, numeroCorrente, annoScadenza } = analizzaStatoTessera(pageSource);
+                    const { necessitaRinnovo, tesseraAttiva, numeroCorrente, annoScadenza, dataScadenzaIso } = analizzaStatoTessera(pageSource);
 
-                    console.log(`   - Su CSEN: necessitaRinnovo=${necessitaRinnovo}, tesseraAttiva=${tesseraAttiva}, numero=${numeroCorrente}, annoScad=${annoScadenza}`);
+                    console.log(`   - Su CSEN: necessitaRinnovo=${necessitaRinnovo}, tesseraAttiva=${tesseraAttiva}, numero=${numeroCorrente}, annoScad=${annoScadenza}, dataScad=${dataScadenzaIso}`);
 
                     // ---- SCENARIO B1: ERA IN RENEWAL_SUBMITTED e ora ha tessera attiva ----
                     if (statoAttuale === 'RENEWAL_SUBMITTED' && tesseraAttiva && numeroCorrente) {
@@ -477,7 +479,8 @@ async function syncCsen() {
                         await supabase.from('registro_tesserati').update({
                             numero_tessera_csen: numeroCorrente,
                             sync_csen_status: 'SYNCED',
-                            sync_csen_log: `Rinnovo CSEN confermato - Tessera ${numeroCorrente} (anno ${annoScadenza})`
+                            sync_csen_log: `Rinnovo CSEN confermato - Tessera ${numeroCorrente} (anno ${annoScadenza})`,
+                            ...(dataScadenzaIso ? { data_scadenza_tessera: dataScadenzaIso } : {})
                         }).eq('id_tesserato', tess.id_tesserato);
                         risultati.successi++;
                         continue;
@@ -612,7 +615,8 @@ async function syncCsen() {
                         await supabase.from('registro_tesserati').update({
                             numero_tessera_csen: numeroCorrente,
                             sync_csen_status: 'SYNCED',
-                            sync_csen_log: `Tessera attiva confermata - N. ${numeroCorrente}`
+                            sync_csen_log: `Tessera attiva confermata - N. ${numeroCorrente}`,
+                            ...(dataScadenzaIso ? { data_scadenza_tessera: dataScadenzaIso } : {})
                         }).eq('id_tesserato', tess.id_tesserato);
                         risultati.successi++;
 

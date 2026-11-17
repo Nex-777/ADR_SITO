@@ -2,6 +2,12 @@
 
 Chronological append-only record of ingestions, lint passes, and updates to the LLM Wiki.
 
+## [2026-11-17] feature | Politiche Scadenze CSEN, Morosita Soci e Sistema Rinnovi 2027 (v1.06.35)
+- Database (supabase/migration_csen_policies_and_renewals_2027.sql): aggiunte colonne data_scadenza_tessera su registro_tesserati e data_decadenza/verbale_decadenza su registro_soci; funzione calcola_scadenza_tessera_csen (Base 01/01-31/08 -> 31/12/N, 01/09-31/12 -> 31/12/(N+1), Integrativa A/B -> +365gg); backfill su 128 record e aggiornamento approva_tesserato e salva_verbale_relazionale.
+- Checkout e Webhook Rinnovi (api/create-checkout-session.js, api/stripe-webhook.js): flusso server-side type rinnovo_annuale con tariffe da configurazioni_tariffe, finestre indipendenti (Socio dal 01/11/N-1, Tessera da -60gg con cambio copertura e guardrail documenti/certificato), aggiornamento post-pagamento senza alterare quota_totale; risolto bug isEventPayment non definito e req.socket?.remoteAddress in api/stripe-webhook.js.
+- Cron, CSEN Sync e Dashboard (api/cron-scadenze.js, scripts/csen_sync_active.js, portal/dashboard.html, portal/dashboard.js): widget interattivo rinnovo 2027 in dashboard utente, distinzione Status Socio vs Scadenza Tessera, badge MOROSO / SCADUTO e DICHIARA DECADUTO nel Registro Soci, scadenze dinamiche in Registro Tesserati e Tab Quote, promemoria dal 1 Novembre / -60gg / -15gg, salvataggio data reale CSEN in csen_sync_active.js.
+- Test e Quality: npm test (29 file, 324 test passati) e npm run knip (0 errori). Versione globale aggiornata a v1.06.35.
+
 ## [2026-11-02] fix | Risoluzione Export Orfano namesMatch in precheck-token.js (v1.06.32)
 - **Backend Utility (`api/_utils/precheck-token.js`)**:
   - Rimossa la keyword `export` dalla funzione helper `namesMatch`, rendendola funzione privata interna al modulo come da principio di minimo privilegio.

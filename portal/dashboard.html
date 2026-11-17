@@ -23,7 +23,7 @@
             mermaid.initialize({ startOnLoad: true, theme: 'dark' });
         });
     </script>
-    <script src="config.js?v=1.06.34"></script>
+    <script src="config.js?v=1.06.35"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;family=Syncopate:wght@400;700&amp;family=Manrope:wght@200;400;600;800&amp;family=Inter:wght@400;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
@@ -504,7 +504,7 @@
             color: #00e5ff;
         }
     </style>
-    <link rel="stylesheet" href="../output.css?v=1.06.34">
+    <link rel="stylesheet" href="../output.css?v=1.06.35">
 </head>
 <body class="min-h-screen flex flex-col bg-background text-on-surface">
 
@@ -531,7 +531,7 @@
                     <img src="../assets/logo_icon.png" alt="Icon" class="h-8 w-auto object-contain">
                     <img src="../assets/logo.png" alt="ADRENALINA CLUB" class="h-5 object-contain hidden sm:block">
                 </a>
-                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.34</span>
+                <span class="text-[10px] font-mono font-bold tracking-widest text-white/70 border border-white/20 bg-white/5 px-2 py-0.5 rounded-sm uppercase select-none shrink-0 self-center">Vs. 1.06.35</span>
             </div>
 
             <!-- Item 2: Azioni Logout + Hamburger (Order 2 su Mobile, 4 su Desktop) -->
@@ -922,6 +922,74 @@
                     </div>
                 </div>
 
+                <!-- Renewal 2027 Banner (Visible when Socio or Tessera is in renewal window) -->
+                <div id="user-renewal-container" class="hidden space-y-4">
+                    <div class="border border-amber-500/40 p-6 bg-amber-950/10 border-l-4 border-l-amber-500 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <h3 class="font-headline text-sm font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                                <span class="material-symbols-outlined">autorenew</span> RINNOVO ISCRIZIONE / TESSERA
+                            </h3>
+                            <span id="renew-window-badge" class="px-2 py-0.5 text-[9px] font-headline font-bold uppercase rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 self-start sm:self-auto">RINNOVO DISPONIBILE</span>
+                        </div>
+                        <p id="renew-intro-text" class="text-xs text-gray-300 font-mono leading-relaxed">
+                            Seleziona le posizioni da rinnovare. Status Socio e Tessera sportiva CSEN possono essere rinnovati insieme o separatamente in base alle rispettive scadenze.
+                        </p>
+
+                        <div class="space-y-3">
+                            <!-- Opzione Rinnovo Quota Socio -->
+                            <label id="renew-socio-box" class="hidden flex items-start justify-between gap-4 p-4 border border-white/10 bg-black/50 hover:border-amber-500/50 cursor-pointer transition-all">
+                                <div class="flex items-start gap-3">
+                                    <input type="checkbox" id="renew-socio-checkbox" class="mt-1 accent-primary w-4 h-4 cursor-pointer">
+                                    <div class="space-y-1">
+                                        <div id="renew-socio-label" class="font-headline text-xs font-bold text-white uppercase">Rinnovo Quota Associativa Socio 2027</div>
+                                        <div id="renew-socio-scadenza-info" class="text-[11px] text-gray-400 font-mono">Iscrizione a tempo indeterminato — Quota annuale entro il 31/12</div>
+                                    </div>
+                                </div>
+                                <span id="renew-socio-price" class="font-headline text-sm font-bold text-amber-400 whitespace-nowrap">€50.00</span>
+                            </label>
+
+                            <!-- Opzione Rinnovo Tessera CSEN -->
+                            <div id="renew-tessera-box" class="hidden p-4 border border-white/10 bg-black/50 space-y-3">
+                                <label class="flex items-start justify-between gap-4 cursor-pointer">
+                                    <div class="flex items-start gap-3">
+                                        <input type="checkbox" id="renew-tessera-checkbox" class="mt-1 accent-primary w-4 h-4 cursor-pointer">
+                                        <div class="space-y-1">
+                                            <div id="renew-tessera-label" class="font-headline text-xs font-bold text-white uppercase">Rinnovo Tessera Sportiva CSEN</div>
+                                            <div id="renew-tessera-current-info" class="text-[11px] text-gray-400 font-mono">Puoi confermare l'attuale copertura o scegliere un nuovo livello.</div>
+                                        </div>
+                                    </div>
+                                    <span id="renew-tessera-price" class="font-headline text-sm font-bold text-amber-400 whitespace-nowrap">€0.00</span>
+                                </label>
+
+                                <div id="renew-tessera-options-wrap" class="pl-7 space-y-2">
+                                    <label for="renew-tessera-select" class="block text-[10px] font-headline uppercase text-gray-400">Seleziona Copertura Tessera CSEN</label>
+                                    <select id="renew-tessera-select" class="w-full brutalist-input bg-black text-white text-xs p-2.5 border border-white/20 font-mono">
+                                        <option value="tessera_base_silver">Base Silver</option>
+                                        <option value="tessera_base_gold">Base Gold</option>
+                                        <option value="tessera_integrativa_a">Integrativa A (365 gg)</option>
+                                        <option value="tessera_integrativa_b">Integrativa B (365 gg)</option>
+                                    </select>
+                                    <div id="renew-tessera-scadenza-preview" class="text-[11px] text-cyan-400 font-mono"></div>
+                                    <div id="renew-tessera-doc-warning" class="hidden text-[11px] text-primary bg-primary/10 border border-primary/30 p-2.5 font-mono"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2 border-t border-white/10">
+                            <div>
+                                <div class="text-[10px] font-headline uppercase text-gray-400">Totale Rinnovo Selezionato</div>
+                                <div class="flex items-baseline gap-2">
+                                    <span id="renew-total-amount" class="font-headline text-xl font-bold text-white">€0.00</span>
+                                    <span class="text-[10px] text-gray-500 font-mono">(+ 2% spese di gestione su Stripe)</span>
+                                </div>
+                            </div>
+                            <button id="btn-avvia-rinnovo-stripe" onclick="avviaCheckoutRinnovo()" class="bg-amber-500 text-black hover:bg-primary hover:text-white font-headline text-xs font-bold px-6 py-3 transition-all uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed">
+                                PROCEDI AL RINNOVO CON STRIPE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- User Summary Widget (Visible to members only) -->
                 <div id="user-panoramica-widgets" class="hidden space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -935,8 +1003,15 @@
                                     <span class="text-gray-400">Data Iscrizione:</span>
                                     <span id="user-info-data-approvazione" class="text-white">-</span>
                                 </div>
+                                <div id="row-user-scadenza-socio" class="hidden flex justify-between items-center border-b border-white/5 pb-2 gap-2">
+                                    <span class="text-gray-400">Status Socio (Indet.):</span>
+                                    <div class="flex items-center gap-2 text-right">
+                                        <span id="user-info-scadenza-socio" class="text-white">-</span>
+                                        <span id="user-info-scadenza-socio-status" class="px-1.5 py-0.5 text-[8px] font-headline font-bold rounded"></span>
+                                    </div>
+                                </div>
                                 <div class="flex justify-between border-b border-white/5 pb-2">
-                                    <span class="text-gray-400">Scadenza Associazione:</span>
+                                    <span id="user-info-scadenza-tessera-label" class="text-gray-400">Scadenza Associazione:</span>
                                     <div class="flex items-center gap-2">
                                         <span id="user-info-scadenza-iscrizione" class="text-white">-</span>
                                         <span id="user-info-scadenza-status" class="px-1.5 py-0.5 text-[8px] font-headline font-bold rounded"></span>
@@ -3751,11 +3826,11 @@
     </div>
 
     <!-- App Logic -->
-    <script src="password-validator.js?v=1.06.34"></script>
-    <script src="safeguarding-docs.js?v=1.06.34"></script>
-    <script src="dashboard-safeguarding.js?v=1.06.34"></script>
-    <script src="dashboard-feedback.js?v=1.06.34"></script>
-    <script src="dashboard.js?v=1.06.34"></script>
+    <script src="password-validator.js?v=1.06.35"></script>
+    <script src="safeguarding-docs.js?v=1.06.35"></script>
+    <script src="dashboard-safeguarding.js?v=1.06.35"></script>
+    <script src="dashboard-feedback.js?v=1.06.35"></script>
+    <script src="dashboard.js?v=1.06.35"></script>
 
     <!-- Mobile Navigation Logic -->
     <script>
@@ -3977,8 +4052,8 @@
     </div>
 
     <!-- Floating Timer Dock for Active Timers from Nestore -->
-    <script src="timer-dock.js?v=1.06.34"></script>
-    <script src="feedback-widget.js?v=1.06.34"></script>
+    <script src="timer-dock.js?v=1.06.35"></script>
+    <script src="feedback-widget.js?v=1.06.35"></script>
 </body></html>
 
 

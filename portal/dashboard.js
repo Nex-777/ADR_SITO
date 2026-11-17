@@ -4,7 +4,7 @@
                 SUPABASE_URL: "https://zpategmkelqmexetpaot.supabase.co",
                 SUPABASE_KEY: "sb_publishable_hiNKo7e_8AKZm64nWou6zQ_YtSOaGQF",
                 API_BASE_URL: window.location.origin,
-                VERSION: "1.06.34"
+                VERSION: "1.06.35"
             };
         }
         const SUPABASE_URL = APP_CONFIG.SUPABASE_URL;
@@ -490,12 +490,14 @@
             // Se si passa a un contesto non-board, mostra e aggiorna i widget personali
             const isBoardContext = view === 'board';
             const widgetContainer = document.getElementById('user-panoramica-widgets');
+            const renewalContainer = document.getElementById('user-renewal-container');
             if (widgetContainer) {
                 if (!isBoardContext) {
                     widgetContainer.classList.remove('hidden');
                     populateUserPanoramicaSummary().catch(console.error);
                 } else {
                     widgetContainer.classList.add('hidden');
+                    if (renewalContainer) renewalContainer.classList.add('hidden');
                 }
             }
         }
@@ -1053,6 +1055,15 @@
                         switchTab('user_corsi');
                     }
                 });
+            } else if (epkParams.get('renewal_payment') === 'success') {
+                window.history.replaceState({}, document.title, window.location.pathname);
+                setTimeout(() => {
+                    if (typeof populateUserPanoramicaSummary === 'function') populateUserPanoramicaSummary();
+                    if (typeof loadUserPagamenti === 'function') loadUserPagamenti();
+                }, 1200);
+                alert('✅ Pagamento di rinnovo completato con successo! Le tue scadenze e la ricevuta fiscale sono in aggiornamento.');
+            } else if (epkParams.get('renewal_payment') === 'cancel') {
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
             // Sincronizza visibilità pulsante Feedback & BUG per Presidenza (sempre visibile in qualsiasi contesto)
             const isPresidenza = typeof userRoles !== 'undefined' && Array.isArray(userRoles) &&
@@ -1599,6 +1610,9 @@
                         data_delibera_direttivo,
                         numero_verbale,
                         quota_scadenza,
+                        data_decadenza,
+                        verbale_decadenza,
+                        motivo_rifiuto,
                         anagrafiche (
                             id,
                             utente_id,
@@ -1654,19 +1668,34 @@
                     indirizzoHtml = escapeHtml(`${ind.via_piazza} ${ind.civico}, ${ind.comune} (${ind.provincia}), CAP ${ind.cap}`);
                 }
                 
+                const todayRomeIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+                const isMoroso = socio.stato_socio === 'ATTIVO' && socio.quota_scadenza && socio.quota_scadenza < todayRomeIso;
+
                 let badgeColor = 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30';
-                if (socio.stato_socio === 'ATTIVO') badgeColor = 'text-green-500 bg-green-500/10 border-green-500/30';
-                if (socio.stato_socio === 'RESPINTO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
+                if (socio.stato_socio === 'ATTIVO') badgeColor = isMoroso ? 'text-primary bg-primary/15 border-primary/40' : 'text-green-500 bg-green-500/10 border-green-500/30';
+                if (socio.stato_socio === 'RESPINTO' || socio.stato_socio === 'DECADUTO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
 
                 let actionBtn = '';
                 if (socio.stato_socio === 'IN_ATTESA_DELIBERA') {
                     actionBtn = '<span class="text-[9px] text-yellow-500 font-bold uppercase tracking-wider bg-yellow-500/10 border border-yellow-500/20 px-2 py-1">In attesa delibera</span>';
                 } else if (socio.stato_socio === 'ATTIVO') {
-                    actionBtn = '<span class="text-[9px] text-green-500 font-bold uppercase tracking-wider bg-green-500/10 border border-green-500/20 px-2 py-1">Approvato</span>';
+                    actionBtn = isMoroso
+                        ? '<span class="text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 border border-primary/30 px-2 py-1">Moroso</span>'
+                        : '<span class="text-[9px] text-green-500 font-bold uppercase tracking-wider bg-green-500/10 border border-green-500/20 px-2 py-1">Approvato</span>';
+                } else if (socio.stato_socio === 'DECADUTO') {
+                    const decInfo = [socio.data_decadenza, socio.verbale_decadenza].filter(Boolean).join(' • ');
+                    actionBtn = `<span class="text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 px-2 py-1" title="${escapeHtml(decInfo)}">Decaduto</span>`;
                 } else if (socio.stato_socio === 'RESPINTO') {
                     actionBtn = `<span class="text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 px-2 py-1" title="${escapeHtml(socio.motivo_rifiuto || '')}">Respinto</span>`;
                 } else {
                     actionBtn = '<span class="text-[9px] text-gray-500 uppercase">Gestito</span>';
+                }
+
+                if (isMoroso && userRoles.some(r => ['presidente', 'vice_presidente', 'segretario'].includes(r))) {
+                    actionBtn = `<div class="flex items-center justify-end gap-2 flex-wrap">
+                        ${actionBtn}
+                        <button onclick="dichiaraSocioDecaduto(${socio.id_socio}, '${nomeComp.replace(/'/g, "\\'")}')" class="bg-amber-600/20 border border-amber-500/50 text-amber-400 hover:bg-amber-600 hover:text-white font-headline text-[9px] font-bold px-2.5 py-1 transition-all uppercase" title="Delibera decadenza per morosità dal 01/01">DICHIARA DECADUTO</button>
+                    </div>`;
                 }
 
                 if (userRoles.some(r => ['presidente', 'vice_presidente'].includes(r)) && socio.anagrafiche) {
@@ -1680,6 +1709,14 @@
                     ? `Delibera: ${escapeHtml(socio.data_delibera_direttivo)}<br><span class="text-[10px] text-gray-500">Verbale: ${escapeHtml(socio.numero_verbale || 'N/D')}</span>`
                     : 'In attesa delibera';
 
+                const scadenzaSocioHtml = isMoroso
+                    ? `<span class="text-primary font-bold">${escapeHtml(formatToItalianDate(socio.quota_scadenza))}</span><br><span class="inline-block mt-1 px-1.5 py-0.5 text-[8px] font-bold rounded uppercase bg-primary/20 text-primary border border-primary/40 animate-pulse">⚠ MOROSO / SCADUTO</span>`
+                    : `<span class="text-gray-400">${escapeHtml(formatToItalianDate(socio.quota_scadenza))}</span>`;
+
+                const statoBadgeHtml = isMoroso
+                    ? `<span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeColor}">MOROSO / SCADUTO</span>`
+                    : `<span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeColor}">${escapeHtml(socio.stato_socio).replace(/_/g, ' ')}</span>`;
+
                 row.innerHTML = `
                     <td class="p-4 font-mono font-bold text-gray-500">${escapeHtml(socio.numero_registro || 'S-PND')}</td>
                     <td class="p-4 text-white">
@@ -1692,15 +1729,53 @@
                         Domanda: ${escapeHtml(socio.data_domanda)}<br>
                         <span class="text-white">${deliberaHtml}</span>
                     </td>
-                    <td class="p-4 text-gray-400 font-mono">${escapeHtml(socio.quota_scadenza)}</td>
+                    <td class="p-4 font-mono">${scadenzaSocioHtml}</td>
                     <td class="p-4">
-                        <span class="px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${badgeColor}">${escapeHtml(socio.stato_socio).replace(/_/g, ' ')}</span>
+                        ${statoBadgeHtml}
                     </td>
                     <td class="p-4 text-right">${actionBtn}</td>
                 `;
                 body.appendChild(row);
             });
         }
+
+        window.dichiaraSocioDecaduto = async (socioId, nomeComp) => {
+            const verbaleRef = prompt(`Inserisci il riferimento del Verbale del Consiglio Direttivo per la decadenza per morosità di ${nomeComp} (es. Verbale n. 1/2027):`);
+            if (verbaleRef === null) return;
+            const verbaleClean = verbaleRef.trim();
+            if (!verbaleClean) {
+                alert('È necessario indicare il riferimento del verbale di delibera del Consiglio Direttivo.');
+                return;
+            }
+            if (!confirm(`Confermi di voler deliberare la DECADENZA per morosità del socio ${nomeComp} (Verbale: ${verbaleClean})? Lo storico verrà preservato.`)) return;
+
+            try {
+                const todayRome = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+                const { error } = await supabaseClient
+                    .from('registro_soci')
+                    .update({
+                        stato_socio: 'DECADUTO',
+                        data_decadenza: todayRome,
+                        verbale_decadenza: verbaleClean
+                    })
+                    .eq('id_socio', socioId);
+
+                if (error) throw error;
+
+                await scriviAuditLog('DECADENZA_SOCIO_MOROSITA', 'registro_soci', String(socioId), {
+                    stato_socio: 'DECADUTO',
+                    data_decadenza: todayRome,
+                    verbale_decadenza: verbaleClean
+                });
+
+                alert(`Decadenza registrata per ${nomeComp}.`);
+                await loadSoci();
+                await loadStats();
+            } catch (err) {
+                console.error('Errore decadenza socio:', err);
+                alert('Errore durante la registrazione della decadenza: ' + err.message);
+            }
+        };
 
         // Caricamento e rendering Registro Tesserati
         async function loadTesserati() {
@@ -1714,6 +1789,7 @@
                         stato_tesseramento,
                         livello_copertura,
                         data_richiesta_tesseramento,
+                        data_scadenza_tessera,
                         sync_csen_status,
                         anagrafiche (
                             id,
@@ -3416,7 +3492,7 @@
 
                 let badgeColor = 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30';
                 if (tess.stato_tesseramento === 'ATTIVO') badgeColor = 'text-green-500 bg-green-500/10 border-green-500/30';
-                if (tess.stato_tesseramento === 'SOSPESO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
+                if (tess.stato_tesseramento === 'SOSPESO' || tess.stato_tesseramento === 'SCADUTO') badgeColor = 'text-primary bg-primary/10 border-primary/30';
 
                 // ---- Colore e testo badge tessera CSEN (tabella) ----
                 // REGOLA: sync_csen_status === 'ERROR' ha priorità assoluta su qualsiasi valore
@@ -3490,6 +3566,20 @@
                 const quotaInsoluta = (rawQuota !== undefined && rawQuota !== null && parseFloat(rawQuota) > 0) ? parseFloat(rawQuota) : 0;
                 const hasQuotaInsoluta = (tess.stato_tesseramento === 'ATTIVO' && quotaInsoluta > 0);
 
+                const todayIsoTess = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+                const scadTessVal = tess.data_scadenza_tessera || '';
+                let scadTessClass = 'text-gray-400';
+                if (scadTessVal) {
+                    const warn60Dt = new Date();
+                    warn60Dt.setDate(warn60Dt.getDate() + 60);
+                    const warn60Iso = warn60Dt.toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+                    if (scadTessVal < todayIsoTess) scadTessClass = 'text-primary font-bold';
+                    else if (scadTessVal <= warn60Iso) scadTessClass = 'text-amber-400 font-bold';
+                }
+                const scadTessHtml = scadTessVal
+                    ? `<br><span class="text-[10px] ${scadTessClass} font-normal">Scadenza: ${escapeHtml(formatToItalianDate(scadTessVal))}</span>`
+                    : '';
+
                 row.innerHTML = `
                     <td class="p-4 font-mono font-bold text-gray-500">${escapeHtml(tess.numero_registro || 'T-PND')}</td>
                     <td class="p-4 text-white">
@@ -3511,7 +3601,7 @@
                     <td class="p-4 font-mono font-bold ${csenTextColor}">
                         ${escapeHtml(csenTextStr)}<br>
                         ${isTempReqCode ? '<span class="text-[9px] text-cyan-400/80 block uppercase font-mono font-normal">CODICE RICHIESTA</span>' : ''}
-                        <span class="text-[10px] text-gray-500 font-normal">Richiesta: ${escapeHtml(formatToItalianDate(tess.data_richiesta_tesseramento))}</span>
+                        <span class="text-[10px] text-gray-500 font-normal">Richiesta: ${escapeHtml(formatToItalianDate(tess.data_richiesta_tesseramento))}</span>${scadTessHtml}
                     </td>
                     <td class="p-4 text-gray-400">${escapeHtml(tess.livello_copertura)}</td>
                     <td class="p-4">${certHtml}</td>
@@ -3605,7 +3695,7 @@
                 // Tesseramento badge
                 let tessColor = '#eab308';
                 if (tess.stato_tesseramento === 'ATTIVO') tessColor = '#22c55e';
-                if (tess.stato_tesseramento === 'SOSPESO') tessColor = '#df293e';
+                if (tess.stato_tesseramento === 'SOSPESO' || tess.stato_tesseramento === 'SCADUTO') tessColor = '#df293e';
 
                 // ---- Colore e testo badge tessera CSEN (card) ----
                 // REGOLA: sync_csen_status === 'ERROR' ha priorità assoluta su qualsiasi valore
@@ -3703,6 +3793,10 @@
                             <span class="card-detail-value">${escapeHtml(tess.livello_copertura)}</span>
                         </div>
                         <div class="card-detail">
+                            <span class="card-detail-label">Scadenza Tessera</span>
+                            <span class="card-detail-value">${tess.data_scadenza_tessera ? escapeHtml(formatToItalianDate(tess.data_scadenza_tessera)) : 'N/D'}</span>
+                        </div>
+                        <div class="card-detail">
                             <span class="card-detail-label">Certificato</span>
                             <span class="card-detail-value" style="color:${certColor};font-weight:700;">${certStatus}</span>
                         </div>
@@ -3729,10 +3823,10 @@
         // Caricamento Tabella Quote Associative
         async function loadQuote() {
             try {
-                // 1. Carica gli utenti
+                // 1. Carica gli utenti con relative scadenze
                 const { data: users, error: usersError } = await supabaseClient
                     .from('utenti')
-                    .select('id, nome, cognome, tipo_adesione, quota_totale');
+                    .select('id, nome, cognome, tipo_adesione, quota_totale, anagrafiche(registro_soci(quota_scadenza), registro_tesserati(data_scadenza_tessera))');
 
                 if (usersError) throw usersError;
 
@@ -3758,6 +3852,10 @@
                     const quotaVal = parseFloat(userRow.quota_totale) || 0;
                     const userReceipt = receiptsList.find(r => r.utente_id === userRow.id);
                     const stato = quotaVal <= 0 ? 1 : 0; // 1 = SALDATO, 0 = DA SALDARE
+                    const anagRow = Array.isArray(userRow.anagrafiche) ? userRow.anagrafiche[0] : userRow.anagrafiche;
+                    const regSocioRow = Array.isArray(anagRow?.registro_soci) ? anagRow.registro_soci[0] : anagRow?.registro_soci;
+                    const regTessRow = Array.isArray(anagRow?.registro_tesserati) ? anagRow.registro_tesserati[0] : anagRow?.registro_tesserati;
+                    const scadRaw = regSocioRow?.quota_scadenza || regTessRow?.data_scadenza_tessera || `${new Date().getFullYear()}-12-31`;
 
                     tempQuoteData.push({
                         id: userRow.id,
@@ -3765,7 +3863,7 @@
                         nomeComp: nomeComp,
                         tipo_adesione: userRow.tipo_adesione,
                         quota_totale: quotaVal,
-                        quota_scadenza: '31-12-2026',
+                        quota_scadenza: formatToItalianDate(scadRaw),
                         stato: stato,
                         userReceipt: userReceipt
                     });
@@ -7865,56 +7963,248 @@
             await loadUserPagamenti();
         }
 
+        function addDaysIsoClient(isoStr, days) {
+            const [y, m, d] = isoStr.split('-').map(Number);
+            const dt = new Date(Date.UTC(y, m - 1, d));
+            dt.setUTCDate(dt.getUTCDate() + days);
+            return dt.toISOString().split('T')[0];
+        }
+
+        function calcolaScadenzaTesseraCsenClient(dataIso, livello) {
+            const liv = String(livello || 'BASE').toUpperCase();
+            if (liv === 'INTEGRATIVA_A' || liv === 'INTEGRATIVA_B') {
+                return addDaysIsoClient(dataIso, 365);
+            }
+            const [year, month] = dataIso.split('-').map(Number);
+            const scadYear = month >= 9 ? year + 1 : year;
+            return `${scadYear}-12-31`;
+        }
+
+        function mapTipoTesseraToLivello(tipoTessera) {
+            if (tipoTessera === 'tessera_integrativa_a') return 'INTEGRATIVA_A';
+            if (tipoTessera === 'tessera_integrativa_b') return 'INTEGRATIVA_B';
+            return 'BASE';
+        }
+
+        let _renewalState = {
+            tariffe: {},
+            canRenewSocio: false,
+            canRenewTessera: false,
+            docsReadyForTessera: true,
+            annoTargetSocio: null,
+            todayStr: ''
+        };
+
+        function updateRenewalUIState() {
+            const cbSocio = document.getElementById('renew-socio-checkbox');
+            const cbTess = document.getElementById('renew-tessera-checkbox');
+            const selTess = document.getElementById('renew-tessera-select');
+            const priceTessEl = document.getElementById('renew-tessera-price');
+            const previewEl = document.getElementById('renew-tessera-scadenza-preview');
+            const totalEl = document.getElementById('renew-total-amount');
+            const btn = document.getElementById('btn-avvia-rinnovo-stripe');
+
+            const chosenTipo = selTess ? selTess.value : 'tessera_base_silver';
+            const tessPrice = Number(_renewalState.tariffe[chosenTipo] || 0);
+            const socioPrice = Number(_renewalState.tariffe.quota_socio || 50);
+
+            if (priceTessEl) priceTessEl.textContent = `€${tessPrice.toFixed(2)}`;
+            if (previewEl) {
+                const liv = mapTipoTesseraToLivello(chosenTipo);
+                const estScad = calcolaScadenzaTesseraCsenClient(_renewalState.todayStr, liv);
+                const estIt = formatToItalianDate(estScad);
+                previewEl.textContent = liv === 'BASE'
+                    ? `Nuova scadenza stimata: ${estIt} (regola CSEN Base/Silver/Gold)`
+                    : `Nuova scadenza stimata: ${estIt} (+365 giorni dalla data di rinnovo)`;
+            }
+
+            let tot = 0;
+            if (_renewalState.canRenewSocio && cbSocio && cbSocio.checked) tot += socioPrice;
+            if (_renewalState.canRenewTessera && _renewalState.docsReadyForTessera && cbTess && cbTess.checked) tot += tessPrice;
+
+            if (totalEl) totalEl.textContent = `€${tot.toFixed(2)}`;
+            if (btn) btn.disabled = tot <= 0 || _assistenzaAttiva;
+        }
+
+        window.avviaCheckoutRinnovo = async () => {
+            if (_assistenzaAttiva) {
+                alert('In modalità assistenza non è possibile avviare un pagamento Stripe per conto dell\'atleta.');
+                return;
+            }
+            const cbSocio = document.getElementById('renew-socio-checkbox');
+            const cbTess = document.getElementById('renew-tessera-checkbox');
+            const selTess = document.getElementById('renew-tessera-select');
+
+            const rinnovaSocio = Boolean(_renewalState.canRenewSocio && cbSocio && cbSocio.checked);
+            const rinnovaTessera = Boolean(_renewalState.canRenewTessera && _renewalState.docsReadyForTessera && cbTess && cbTess.checked);
+
+            if (!rinnovaSocio && !rinnovaTessera) {
+                alert('Seleziona almeno una voce da rinnovare.');
+                return;
+            }
+
+            const btn = document.getElementById('btn-avvia-rinnovo-stripe');
+            const origText = btn ? btn.textContent : 'PROCEDI AL RINNOVO CON STRIPE';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'REINDIRIZZAMENTO A STRIPE...';
+            }
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error('Sessione scaduta. Effettua nuovamente il login.');
+
+                const resp = await fetch(`${APP_CONFIG.API_BASE_URL}/api/create-checkout-session`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        type: 'rinnovo_annuale',
+                        rinnova_socio: rinnovaSocio,
+                        rinnova_tessera: rinnovaTessera,
+                        tipo_tessera: selTess ? selTess.value : 'tessera_base_silver'
+                    })
+                });
+
+                const payload = await resp.json();
+                if (!resp.ok || !payload.url) {
+                    throw new Error(payload.error || 'Impossibile avviare il checkout Stripe.');
+                }
+                window.location.href = payload.url;
+            } catch (err) {
+                console.error('Errore checkout rinnovo:', err);
+                alert('Errore durante l\'avvio del rinnovo: ' + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = origText;
+                }
+            }
+        };
+
         async function populateUserPanoramicaSummary() {
             try {
                 if (!currentUserProfile) return;
-                
+
                 const dataAppr = currentUserProfile.data_creazione 
                     ? new Date(currentUserProfile.data_creazione).toLocaleDateString('it-IT')
                     : 'N/D';
                 document.getElementById('user-info-data-approvazione').textContent = dataAppr;
-                
-                let dataScadenzaStr = 'N/D';
-                let scaduto = false;
 
-                const anagId = currentUserProfile.anagrafiche?.[0]?.id || currentUserProfile.anagrafiche?.id;
+                const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+                const [curYear, curMonth] = todayStr.split('-').map(Number);
+                const anag = Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche;
+                const anagId = anag?.id;
+
+                let socioReg = null;
+                let tessReg = null;
 
                 if (anagId) {
-                    const { data: socioReg } = await supabaseClient
-                        .from('registro_soci')
-                        .select('quota_scadenza')
-                        .eq('anagrafica_id', anagId)
-                        .maybeSingle();
-
-                    if (socioReg && socioReg.quota_scadenza) {
-                        dataScadenzaStr = new Date(socioReg.quota_scadenza).toLocaleDateString('it-IT');
-                        scaduto = new Date(socioReg.quota_scadenza) < new Date();
-                    } else if (currentUserProfile.tipo_adesione) {
-                    dataScadenzaStr = '31/12/' + new Date().getFullYear();
-                    }
-                } else if (currentUserProfile.tipo_adesione) {
-                    dataScadenzaStr = '31/12/' + new Date().getFullYear();
+                    const [{ data: sData }, { data: tData }] = await Promise.all([
+                        supabaseClient
+                            .from('registro_soci')
+                            .select('stato_socio, quota_scadenza')
+                            .eq('anagrafica_id', anagId)
+                            .maybeSingle(),
+                        supabaseClient
+                            .from('registro_tesserati')
+                            .select('livello_copertura, stato_tesseramento, data_richiesta_tesseramento, data_scadenza_tessera')
+                            .eq('anagrafica_id', anagId)
+                            .maybeSingle()
+                    ]);
+                    socioReg = sData;
+                    tessReg = tData;
                 }
 
-                const badge = document.getElementById('user-info-scadenza-status');
-                document.getElementById('user-info-scadenza-iscrizione').textContent = dataScadenzaStr;
-                
-                if (dataScadenzaStr !== 'N/D') {
-                    badge.classList.remove('hidden');
-                    if (scaduto) {
-                        badge.textContent = 'SCADUTO';
-                        badge.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-primary text-white';
+                // 1. Riga Status Socio (solo se presente in registro_soci)
+                const rowSocio = document.getElementById('row-user-scadenza-socio');
+                const spanSocio = document.getElementById('user-info-scadenza-socio');
+                const badgeSocio = document.getElementById('user-info-scadenza-socio-status');
+
+                let canRenewSocio = false;
+                let annoTargetSocio = curYear + (curMonth >= 11 ? 1 : 0);
+
+                if (socioReg && rowSocio && spanSocio && badgeSocio) {
+                    rowSocio.classList.remove('hidden');
+                    const scadSocioIso = socioReg.quota_scadenza || `${curYear}-12-31`;
+                    const annoScadSocio = parseInt(scadSocioIso.split('-')[0], 10);
+                    const isMoroso = socioReg.stato_socio === 'ATTIVO' && scadSocioIso < todayStr;
+                    const isFinestraAperta = socioReg.stato_socio === 'ATTIVO' && todayStr >= `${annoScadSocio}-11-01`;
+                    canRenewSocio = isFinestraAperta;
+                    annoTargetSocio = Math.max(curYear + (curMonth >= 11 ? 1 : 0), annoScadSocio + 1);
+
+                    spanSocio.textContent = `QUOTA ENTRO ${formatToItalianDate(scadSocioIso)}`;
+                    badgeSocio.classList.remove('hidden');
+
+                    if (socioReg.stato_socio === 'DECADUTO') {
+                        badgeSocio.textContent = 'DECADUTO';
+                        badgeSocio.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-primary text-white';
+                    } else if (isMoroso) {
+                        badgeSocio.textContent = 'MOROSO / SCADUTO';
+                        badgeSocio.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-primary text-white animate-pulse';
+                    } else if (isFinestraAperta) {
+                        badgeSocio.textContent = 'RINNOVO APERTO';
+                        badgeSocio.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-amber-500 text-black';
                     } else {
-                        badge.textContent = 'ATTIVO';
-                        badge.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-green-500 text-white';
+                        badgeSocio.textContent = 'ATTIVO';
+                        badgeSocio.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-green-500 text-white';
                     }
-                } else {
-                    badge.classList.add('hidden');
+                } else if (rowSocio) {
+                    rowSocio.classList.add('hidden');
                 }
 
-                const anag = Array.isArray(currentUserProfile.anagrafiche) ? currentUserProfile.anagrafiche[0] : currentUserProfile.anagrafiche;
+                // 2. Riga Scadenza Tessera / Associazione
+                const tessLabelEl = document.getElementById('user-info-scadenza-tessera-label');
+                const rowTessera = tessLabelEl ? tessLabelEl.closest('.flex.justify-between') : null;
+                const badgeTess = document.getElementById('user-info-scadenza-status');
+                const spanTess = document.getElementById('user-info-scadenza-iscrizione');
+
+                let canRenewTessera = false;
+                let scadTessIso = null;
+
+                if (tessReg) {
+                    if (rowTessera) rowTessera.classList.remove('hidden');
+                    if (tessLabelEl) {
+                        tessLabelEl.textContent = socioReg ? 'Scadenza Tessera CSEN:' : 'Scadenza Tessera e Associazione:';
+                    }
+                    scadTessIso = tessReg.data_scadenza_tessera || calcolaScadenzaTesseraCsenClient(tessReg.data_richiesta_tesseramento || todayStr, tessReg.livello_copertura);
+                    const aperturaRinnovoTess = addDaysIsoClient(scadTessIso, -60);
+                    const scadutaTess = tessReg.stato_tesseramento === 'SCADUTO' || scadTessIso < todayStr;
+                    const inFinestraTess = !scadutaTess && todayStr >= aperturaRinnovoTess;
+                    canRenewTessera = scadutaTess || inFinestraTess;
+
+                    spanTess.textContent = formatToItalianDate(scadTessIso);
+                    badgeTess.classList.remove('hidden');
+                    if (scadutaTess) {
+                        badgeTess.textContent = 'SCADUTA';
+                        badgeTess.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-primary text-white';
+                    } else if (inFinestraTess) {
+                        badgeTess.textContent = 'IN SCADENZA';
+                        badgeTess.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-amber-500 text-black';
+                    } else {
+                        badgeTess.textContent = 'ATTIVO';
+                        badgeTess.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-green-500 text-white';
+                    }
+                } else if (socioReg) {
+                    // Solo Socio senza tesseramento sportivo
+                    if (rowTessera) rowTessera.classList.add('hidden');
+                } else if (currentUserProfile.tipo_adesione) {
+                    if (rowTessera) rowTessera.classList.remove('hidden');
+                    const fallbackLiv = mapTipoTesseraToLivello(currentUserProfile.tipo_tessera);
+                    const fallbackScad = calcolaScadenzaTesseraCsenClient(todayStr, fallbackLiv);
+                    spanTess.textContent = formatToItalianDate(fallbackScad);
+                    badgeTess.classList.remove('hidden');
+                    badgeTess.textContent = 'IN ATTESA';
+                    badgeTess.className = 'px-1.5 py-0.5 text-[8px] font-headline font-bold rounded bg-yellow-500 text-black';
+                } else {
+                    if (rowTessera) rowTessera.classList.add('hidden');
+                }
+
+                // 3. Certificato Medico e Documento d'Identità
                 const cert = getCertInfo(anag);
-                
+                const idDoc = getIdDocInfo(anag);
+
                 if (cert && cert.data_scadenza) {
                     document.getElementById('user-info-scadenza-certificato').textContent = new Date(cert.data_scadenza).toLocaleDateString('it-IT');
                 } else {
@@ -7922,20 +8212,8 @@
                 }
 
                 let livello = 'TESSERATO BASE';
-                if (anagId) {
-                    const { data: tessReg } = await supabaseClient
-                        .from('registro_tesserati')
-                        .select('livello_copertura')
-                        .eq('anagrafica_id', anagId)
-                        .maybeSingle();
-
-                    if (tessReg && tessReg.livello_copertura) {
-                        livello = `TESSERATO - ${tessReg.livello_copertura}`;
-                    } else if (currentUserProfile.tipo_tessera) {
-                        livello = `TESSERATO - ${currentUserProfile.tipo_tessera.replace(/_/g, ' ')}`;
-                    } else if (userRoles.includes('socio_approvato')) {
-                        livello = 'SOCIO ATTIVO';
-                    }
+                if (tessReg && tessReg.livello_copertura) {
+                    livello = `TESSERATO - ${tessReg.livello_copertura}`;
                 } else if (currentUserProfile.tipo_tessera) {
                     livello = `TESSERATO - ${currentUserProfile.tipo_tessera.replace(/_/g, ' ')}`;
                 } else if (userRoles.includes('socio_approvato')) {
@@ -7952,6 +8230,106 @@
                 const codAccInfo = document.getElementById('user-info-codice-accesso');
                 if (codAccInfo) {
                     codAccInfo.textContent = currentUserProfile.codice_accesso || 'NON ASSEGNATO';
+                }
+
+                // 4. Widget Rinnovo 2027 (visibile se non in contesto board e se non ci sono quote iniziali insolute)
+                const renewalContainer = document.getElementById('user-renewal-container');
+                const quotaInizialeInsoluta = parseFloat(currentUserProfile.quota_totale) > 0;
+                const isBoardView = currentViewContext === 'board';
+
+                if (renewalContainer && !isBoardView && !quotaInizialeInsoluta && (canRenewSocio || canRenewTessera)) {
+                    const { data: tariffeData } = await supabaseClient.from('configurazioni_tariffe').select('chiave, valore');
+                    const tariffeMap = {};
+                    if (tariffeData) tariffeData.forEach(t => tariffeMap[t.chiave] = parseFloat(t.valore) || 0);
+
+                    const certValid = Boolean(cert && cert.stato_validazione === 'VERDE' && cert.data_scadenza && cert.data_scadenza >= todayStr);
+                    const idDocValid = Boolean(idDoc && idDoc.stato_validazione === 'VERDE' && (!idDoc.data_scadenza || idDoc.data_scadenza >= todayStr));
+                    const docsReady = certValid && idDocValid;
+
+                    _renewalState = {
+                        tariffe: tariffeMap,
+                        canRenewSocio,
+                        canRenewTessera,
+                        docsReadyForTessera: docsReady,
+                        annoTargetSocio,
+                        todayStr
+                    };
+
+                    const socioBox = document.getElementById('renew-socio-box');
+                    const cbSocio = document.getElementById('renew-socio-checkbox');
+                    const lblSocio = document.getElementById('renew-socio-label');
+                    const infoSocio = document.getElementById('renew-socio-scadenza-info');
+                    const priceSocio = document.getElementById('renew-socio-price');
+
+                    if (canRenewSocio && socioBox && cbSocio) {
+                        socioBox.classList.remove('hidden');
+                        cbSocio.checked = true;
+                        if (lblSocio) lblSocio.textContent = `Rinnovo Quota Associativa Socio ${annoTargetSocio}`;
+                        if (infoSocio) infoSocio.textContent = `Iscrizione a tempo indeterminato — Copertura quota fino al 31/12/${annoTargetSocio}`;
+                        if (priceSocio) priceSocio.textContent = `€${Number(tariffeMap.quota_socio || 50).toFixed(2)}`;
+                    } else if (socioBox) {
+                        socioBox.classList.add('hidden');
+                        if (cbSocio) cbSocio.checked = false;
+                    }
+
+                    const tessBox = document.getElementById('renew-tessera-box');
+                    const cbTess = document.getElementById('renew-tessera-checkbox');
+                    const selTess = document.getElementById('renew-tessera-select');
+                    const infoTess = document.getElementById('renew-tessera-current-info');
+                    const docWarn = document.getElementById('renew-tessera-doc-warning');
+                    const optsWrap = document.getElementById('renew-tessera-options-wrap');
+
+                    if (canRenewTessera && tessBox && cbTess && selTess) {
+                        tessBox.classList.remove('hidden');
+                        const allowedKeys = ['tessera_base_silver', 'tessera_base_gold', 'tessera_integrativa_a', 'tessera_integrativa_b'];
+                        let defaultKey = allowedKeys.includes(currentUserProfile.tipo_tessera) ? currentUserProfile.tipo_tessera : 'tessera_base_silver';
+                        if (tessReg.livello_copertura === 'INTEGRATIVA_A') defaultKey = 'tessera_integrativa_a';
+                        else if (tessReg.livello_copertura === 'INTEGRATIVA_B') defaultKey = 'tessera_integrativa_b';
+                        else if (defaultKey !== 'tessera_base_gold') defaultKey = 'tessera_base_silver';
+
+                        selTess.innerHTML = `
+                            <option value="tessera_base_silver">Base Silver (€${Number(tariffeMap.tessera_base_silver || 14).toFixed(2)})</option>
+                            <option value="tessera_base_gold">Base Gold (€${Number(tariffeMap.tessera_base_gold || 18).toFixed(2)})</option>
+                            <option value="tessera_integrativa_a">Integrativa A — 365 gg (€${Number(tariffeMap.tessera_integrativa_a || 20).toFixed(2)})</option>
+                            <option value="tessera_integrativa_b">Integrativa B — 365 gg (€${Number(tariffeMap.tessera_integrativa_b || 30).toFixed(2)})</option>
+                        `;
+                        selTess.value = defaultKey;
+
+                        if (infoTess) {
+                            infoTess.textContent = `Tessera attuale: ${(tessReg.livello_copertura || 'BASE').replace(/_/g, ' ')} (scadenza ${formatToItalianDate(scadTessIso)}). Puoi confermarla o cambiare copertura.`;
+                        }
+
+                        if (!docsReady) {
+                            cbTess.checked = false;
+                            cbTess.disabled = true;
+                            selTess.disabled = true;
+                            if (docWarn) {
+                                docWarn.classList.remove('hidden');
+                                docWarn.textContent = !idDocValid
+                                    ? '⚠ Documento d\'identità mancante, scaduto o non approvato: aggiornalo nella scheda "Documento d\'Identità" per sbloccare il rinnovo tessera.'
+                                    : '⚠ Certificato medico mancante, scaduto o non approvato: caricalo nella scheda "Certificato Medico" per sbloccare il rinnovo tessera.';
+                            }
+                            if (optsWrap) optsWrap.classList.add('opacity-70');
+                        } else {
+                            cbTess.disabled = false;
+                            cbTess.checked = true;
+                            selTess.disabled = false;
+                            if (docWarn) docWarn.classList.add('hidden');
+                            if (optsWrap) optsWrap.classList.remove('opacity-70');
+                        }
+                    } else if (tessBox) {
+                        tessBox.classList.add('hidden');
+                        if (cbTess) cbTess.checked = false;
+                    }
+
+                    if (cbSocio) cbSocio.onchange = updateRenewalUIState;
+                    if (cbTess) cbTess.onchange = updateRenewalUIState;
+                    if (selTess) selTess.onchange = updateRenewalUIState;
+
+                    updateRenewalUIState();
+                    renewalContainer.classList.remove('hidden');
+                } else if (renewalContainer) {
+                    renewalContainer.classList.add('hidden');
                 }
 
             } catch (err) {

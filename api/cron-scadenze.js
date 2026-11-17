@@ -198,34 +198,104 @@ export default async function handler(req, res) {
             }
         }
 
-        // 2. SOCIAL DUES RENEWAL (December 1st)
+        // 1B. CSEN TESSERE EXPIRY & RENEWAL WINDOW REMINDERS (-60gg, -15gg, SCADUTA)
+        const target60Tess = getFutureDateStr(60);
+        const target15Tess = getFutureDateStr(15);
+
+        const { data: allActiveTesserati } = await supabase
+            .from('registro_tesserati')
+            .select(`
+                id_tesserato,
+                livello_copertura,
+                data_scadenza_tessera,
+                stato_tesseramento,
+                anagrafiche (
+                    nome,
+                    cognome,
+                    contatti ( email )
+                )
+            `)
+            .eq('stato_tesseramento', 'ATTIVO')
+            .not('data_scadenza_tessera', 'is', null);
+
+        if (allActiveTesserati) {
+            for (const tess of allActiveTesserati) {
+                const scad = tess.data_scadenza_tessera;
+                const anag = tess.anagrafiche;
+                const contObj = Array.isArray(anag?.contatti) ? anag.contatti[0] : anag?.contatti;
+                const email = contObj?.email;
+
+                if (scad < todayStr) {
+                    await supabase
+                        .from('registro_tesserati')
+                        .update({ stato_tesseramento: 'SCADUTO' })
+                        .eq('id_tesserato', tess.id_tesserato);
+
+                    if (email) {
+                        await sendEmail({
+                            to: email,
+                            subject: 'Tessera Sportiva CSEN Scaduta - Adrenalina Club',
+                            html: `<div style="font-family: sans-serif; background-color: #0e0e0e; color: #fff; padding: 25px; border-left: 5px solid #df293e;">
+                                    <h2 style="color: #df293e;">ADRENALINA CLUB</h2>
+                                    <p>Ciao ${anag.nome}, la tua tessera sportiva CSEN (${(tess.livello_copertura || 'BASE').replace(/_/g, ' ')}) è scaduta in data <strong>${scad.split('-').reverse().join('/')}</strong>.</p>
+                                    <p>Accedi alla tua dashboard su <a href="https://portal.adrenalinaclub.it" style="color: #df293e;">portal.adrenalinaclub.it</a> per procedere al rinnovo e mantenere attiva l'iscrizione e la copertura assicurativa.</p>
+                                   </div>`
+                        });
+                    }
+                } else if (email && (scad === target60Tess || scad === target15Tess)) {
+                    const giorniMancanti = scad === target60Tess ? 60 : 15;
+                    const titoloAvviso = giorniMancanti === 60
+                        ? 'Apertura Rinnovo Tessera CSEN - Adrenalina Club'
+                        : 'URGENTE: Tessera CSEN in scadenza tra 15 giorni - Adrenalina Club';
+                    await sendEmail({
+                        to: email,
+                        subject: titoloAvviso,
+                        html: `<div style="font-family: sans-serif; background-color: #0e0e0e; color: #fff; padding: 25px; border-left: 5px solid ${giorniMancanti === 15 ? '#df293e' : '#eab308'};">
+                                <h2 style="color: #df293e;">ADRENALINA CLUB</h2>
+                                <p>Ciao ${anag.nome}, ti informiamo che la tua tessera sportiva CSEN (${(tess.livello_copertura || 'BASE').replace(/_/g, ' ')}) scadrà tra <strong>${giorniMancanti} giorni</strong> (il <strong>${scad.split('-').reverse().join('/')}</strong>).</p>
+                                <p>Da oggi è aperto il rinnovo nella tua area personale su <a href="https://portal.adrenalinaclub.it" style="color: #df293e;">portal.adrenalinaclub.it</a>, dove potrai anche confermare o cambiare il livello di copertura assicurativa.</p>
+                               </div>`
+                    });
+                }
+            }
+        }
+
+        // 2. SOCIAL DUES RENEWAL (November 1st opening & December 1st reminder for unpaid members)
         const currentMonth = today.getMonth() + 1; // 1-12
         const currentDay = today.getDate();
-        
-        if (currentMonth === 12 && currentDay === 1) {
-            // Fetch all active members
+        const nextYear = today.getFullYear() + 1;
+        const nextYearEnd = `${nextYear}-12-31`;
+
+        if ((currentMonth === 11 && currentDay === 1) || (currentMonth === 12 && currentDay === 1)) {
             const { data: activeSoci } = await supabase
                 .from('registro_soci')
                 .select(`
                     id_socio,
+                    quota_scadenza,
                     anagrafiche (
                         nome,
                         contatti ( email )
                     )
                 `)
-                .eq('stato_socio', 'ATTIVO');
+                .eq('stato_socio', 'ATTIVO')
+                .lt('quota_scadenza', nextYearEnd);
 
             if (activeSoci) {
                 for (const socio of activeSoci) {
-                    const email = socio.anagrafiche?.contatti?.email;
+                    const contObj = Array.isArray(socio.anagrafiche?.contatti) ? socio.anagrafiche.contatti[0] : socio.anagrafiche?.contatti;
+                    const email = contObj?.email;
                     if (email) {
+                        const isDicembre = currentMonth === 12;
                         await sendEmail({
                             to: email,
-                            subject: 'Rinnovo Quota Sociale Annuale 2027 - Adrenalina Club',
-                            html: `<div style="font-family: sans-serif; background-color: #0e0e0e; color: #fff; padding: 25px;">
+                            subject: isDicembre
+                                ? `Promemoria: Rinnovo Quota Sociale ${nextYear} entro il 31/12 - Adrenalina Club`
+                                : `Apertura Rinnovi Quota Sociale ${nextYear} - Adrenalina Club`,
+                            html: `<div style="font-family: sans-serif; background-color: #0e0e0e; color: #fff; padding: 25px; border-left: 5px solid #df293e;">
                                     <h2 style="color: #df293e;">ADRENALINA CLUB</h2>
-                                    <p>Ciao ${socio.anagrafiche.nome}, ti comunichiamo che a partire dal 1° Dicembre sono aperti i rinnovi della quota sociale per il prossimo anno solare.</p>
-                                    <p>Ti invitiamo a saldare la quota associativa entro il 31 Dicembre per mantenere il diritto di voto e di partecipazione all'assemblea dei soci.</p>
+                                    <p>Ciao ${socio.anagrafiche.nome}, ti ricordiamo che dal <strong>1° Novembre</strong> sono aperti i rinnovi della quota associativa annuale per l'anno <strong>${nextYear}</strong>.</p>
+                                    <p>La tua iscrizione è a tempo indeterminato, ma la quota di rinnovo annuale va saldata entro il <strong>31 Dicembre</strong> per evitare lo stato di morosità (dal 1° Gennaio il Consiglio Direttivo potrà deliberare la decadenza dallo status di socio).</p>
+                                    <p>Accedi alla tua dashboard su <a href="https://portal.adrenalinaclub.it" style="color: #df293e;">portal.adrenalinaclub.it</a> per completare il rinnovo online.</p>
                                    </div>`
                         });
                     }

@@ -17,6 +17,38 @@ function fullName(profile) {
     return `${profile?.nome || ''} ${profile?.cognome || ''}`.trim();
 }
 
+function getTodayRomeStr() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
+}
+
+function addDaysToIso(isoDate, days) {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + days);
+    return dt.toISOString().split('T')[0];
+}
+
+function calcolaScadenzaTesseraCsen(dataIso, livelloCopertura) {
+    const livello = String(livelloCopertura || 'BASE').toUpperCase();
+    if (livello === 'INTEGRATIVA_A' || livello === 'INTEGRATIVA_B') {
+        return addDaysToIso(dataIso, 365);
+    }
+    const [year, month] = dataIso.split('-').map(Number);
+    const scadYear = month >= 9 ? year + 1 : year;
+    return `${scadYear}-12-31`;
+}
+
+function pickLatestRecord(records, fallbackDateField = 'created_at') {
+    if (!records) return null;
+    const arr = Array.isArray(records) ? records : [records];
+    if (arr.length === 0) return null;
+    return [...arr].sort((a, b) => {
+        const va = a?.created_at || a?.[fallbackDateField] || '1970-01-01';
+        const vb = b?.created_at || b?.[fallbackDateField] || '1970-01-01';
+        return new Date(vb) - new Date(va);
+    })[0];
+}
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Credentials', true);
     const allowedOrigins = [
@@ -69,7 +101,7 @@ export default async function handler(req, res) {
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
 
     // Determina il tipo di richiesta dal body
-    const { eventId, giorni_presenza, data_ora_arrivo, data_ora_ripartenza, dettagli, nomePiano, renew, dataInizioCorso } = req.body;
+    const { eventId, giorni_presenza, data_ora_arrivo, data_ora_ripartenza, dettagli, nomePiano, renew, dataInizioCorso, type, rinnova_socio, rinnova_tessera, tipo_tessera } = req.body;
 
     try {
         const stripe = new Stripe(stripeSecretKey);
@@ -239,6 +271,231 @@ export default async function handler(req, res) {
                 .from('epika_iscrizioni_bozza')
                 .update({ stripe_session_id: session.id })
                 .eq('id', bozza.id);
+
+            return res.status(200).json({ url: session.url });
+        }
+
+        // ==========================================
+        // CASO B2: CHECKOUT RINNOVO ANNUALE SOCIO / TESSERA
+        // ==========================================
+        else if (type === 'rinnovo_annuale') {
+            const { data: allowed } = await supabase.rpc('check_rate_limit', {
+                p_key: `renewal_checkout:${utenteId}`,
+                p_max_requests: 20,
+                p_window_seconds: 3600
+            });
+            if (allowed === false) {
+                return res.status(429).json({ error: 'Troppe richieste di rinnovo dal tuo account. Riprova più tardi.' });
+            }
+
+            const doRinnovaSocio = rinnova_socio === true || rinnova_socio === 'true';
+            const doRinnovaTessera = rinnova_tessera === true || rinnova_tessera === 'true';
+
+            if (!doRinnovaSocio && !doRinnovaTessera) {
+                return res.status(400).json({ error: 'Seleziona almeno una voce da rinnovare (Quota Socio o Tessera CSEN).' });
+            }
+
+            const { data: profile, error: profileError } = await supabase
+                .from('utenti')
+                .select(`
+                    id, nome, cognome, email, tipo_adesione, tipo_tessera,
+                    anagrafiche(
+                        id,
+                        registro_soci(id_socio, stato_socio, quota_scadenza),
+                        registro_tesserati(id_tesserato, stato_tesseramento, livello_copertura, data_richiesta_tesseramento, data_scadenza_tessera),
+                        certificati_medici(id, stato_validazione, data_scadenza, created_at),
+                        documenti_identita(id, tipo_documento, stato_validazione, data_scadenza, created_at)
+                    )
+                `)
+                .eq('id', utenteId)
+                .maybeSingle();
+
+            if (profileError || !profile) {
+                return res.status(404).json({ error: 'Profilo utente non trovato.' });
+            }
+
+            const anag = Array.isArray(profile.anagrafiche) ? profile.anagrafiche[0] : profile.anagrafiche;
+            if (!anag) {
+                return res.status(400).json({ error: 'Anagrafica associato non trovata.' });
+            }
+
+            const regSocio = Array.isArray(anag.registro_soci) ? anag.registro_soci[0] : anag.registro_soci;
+            const regTess = Array.isArray(anag.registro_tesserati) ? anag.registro_tesserati[0] : anag.registro_tesserati;
+
+            const { data: tariffeRows, error: tariffeErr } = await supabase
+                .from('configurazioni_tariffe')
+                .select('chiave, valore');
+            if (tariffeErr || !tariffeRows) {
+                return res.status(500).json({ error: 'Impossibile recuperare il tariffario vigente.' });
+            }
+            const tariffeMap = {};
+            tariffeRows.forEach(r => {
+                tariffeMap[r.chiave] = parseFloat(r.valore);
+            });
+
+            const todayStr = getTodayRomeStr();
+            const [curYear, curMonth] = todayStr.split('-').map(Number);
+
+            const lineItems = [];
+            const causaleParts = [];
+            let totalBase = 0;
+
+            let nuovaScadenzaSocio = '';
+            let annoTargetSocio = curYear + (curMonth >= 11 ? 1 : 0);
+
+            if (doRinnovaSocio) {
+                if (!regSocio) {
+                    return res.status(400).json({ error: 'Non risulti iscritto al Registro Soci.' });
+                }
+                if (regSocio.stato_socio !== 'ATTIVO') {
+                    return res.status(400).json({ error: `Impossibile rinnovare automaticamente: stato socio attuale "${regSocio.stato_socio}". Contatta la segreteria.` });
+                }
+                const scadSocioStr = regSocio.quota_scadenza || `${curYear}-12-31`;
+                const annoScadSocio = parseInt(scadSocioStr.split('-')[0], 10);
+                const aperturaRinnovoSocio = `${annoScadSocio}-11-01`;
+
+                if (todayStr < aperturaRinnovoSocio) {
+                    return res.status(400).json({ error: `La quota sociale risulta valida fino al ${scadSocioStr}. Il rinnovo aprirà il 01/11/${annoScadSocio}.` });
+                }
+
+                annoTargetSocio = Math.max(curYear + (curMonth >= 11 ? 1 : 0), annoScadSocio + 1);
+                nuovaScadenzaSocio = `${annoTargetSocio}-12-31`;
+
+                const quotaSocio = Number(tariffeMap.quota_socio);
+                if (!quotaSocio || quotaSocio <= 0) {
+                    return res.status(500).json({ error: 'Tariffa quota socio non configurata.' });
+                }
+
+                totalBase += quotaSocio;
+                causaleParts.push(`Rinnovo Quota Socio ${annoTargetSocio}`);
+                lineItems.push({
+                    price_data: {
+                        currency: 'eur',
+                        product_data: {
+                            name: `Rinnovo Quota Associativa Socio ${annoTargetSocio}`,
+                            description: `Validità quota sociale fino al 31/12/${annoTargetSocio}`,
+                        },
+                        unit_amount: Math.round(quotaSocio * 100),
+                    },
+                    quantity: 1,
+                });
+            }
+
+            let nuovoTipoTessera = '';
+            let nuovoLivelloCopertura = '';
+            let nuovaScadenzaTessera = '';
+
+            if (doRinnovaTessera) {
+                if (!regTess) {
+                    return res.status(400).json({ error: 'Non risulti iscritto al Registro Tesserati.' });
+                }
+
+                const scadTessAttuale = regTess.data_scadenza_tessera || calcolaScadenzaTesseraCsen(regTess.data_richiesta_tesseramento || todayStr, regTess.livello_copertura);
+                const finestraAperturaTessera = addDaysToIso(scadTessAttuale, -60);
+
+                if (regTess.stato_tesseramento !== 'SCADUTO' && todayStr < finestraAperturaTessera) {
+                    return res.status(400).json({ error: `La tua tessera CSEN è valida fino al ${scadTessAttuale}. Il rinnovo apre 60 giorni prima (${finestraAperturaTessera}).` });
+                }
+
+                // Guardrail documento d'identità
+                const personalDocs = (anag.documenti_identita || []).filter(d => !d.tipo_documento || d.tipo_documento === 'PERSONALE');
+                const idDoc = pickLatestRecord(personalDocs);
+                if (!idDoc || idDoc.stato_validazione !== 'VERDE' || (idDoc.data_scadenza && idDoc.data_scadenza < todayStr)) {
+                    return res.status(400).json({ error: "Documento d'identità mancante, scaduto o non approvato. Aggiorna il documento in dashboard prima di rinnovare la tessera." });
+                }
+
+                const tutoreDocs = (anag.documenti_identita || []).filter(d => d.tipo_documento === 'TUTORE');
+                if (tutoreDocs.length > 0) {
+                    const tutoreDoc = pickLatestRecord(tutoreDocs);
+                    if (tutoreDoc.stato_validazione !== 'VERDE' || (tutoreDoc.data_scadenza && tutoreDoc.data_scadenza < todayStr)) {
+                        return res.status(400).json({ error: "Documento del tutore legale mancante, scaduto o non approvato." });
+                    }
+                }
+
+                // Guardrail certificato medico
+                const cert = pickLatestRecord(anag.certificati_medici);
+                if (!cert || cert.stato_validazione !== 'VERDE' || !cert.data_scadenza || cert.data_scadenza < todayStr) {
+                    return res.status(400).json({ error: "Certificato medico mancante, scaduto o non approvato. Carica un certificato medico valido prima di rinnovare la tessera." });
+                }
+
+                const allowedTessere = ['tessera_base_silver', 'tessera_base_gold', 'tessera_integrativa_a', 'tessera_integrativa_b'];
+                const chosenTipo = allowedTessere.includes(tipo_tessera)
+                    ? tipo_tessera
+                    : (allowedTessere.includes(profile.tipo_tessera) ? profile.tipo_tessera : 'tessera_base_silver');
+
+                nuovoTipoTessera = chosenTipo;
+                if (chosenTipo === 'tessera_integrativa_a') nuovoLivelloCopertura = 'INTEGRATIVA_A';
+                else if (chosenTipo === 'tessera_integrativa_b') nuovoLivelloCopertura = 'INTEGRATIVA_B';
+                else nuovoLivelloCopertura = 'BASE';
+
+                const quotaTessera = Number(tariffeMap[chosenTipo]);
+                if (!quotaTessera || quotaTessera <= 0) {
+                    return res.status(500).json({ error: `Tariffa non configurata per ${chosenTipo}.` });
+                }
+
+                nuovaScadenzaTessera = calcolaScadenzaTesseraCsen(todayStr, nuovoLivelloCopertura);
+                const tessLabelMap = {
+                    tessera_base_silver: 'Base Silver',
+                    tessera_base_gold: 'Base Gold',
+                    tessera_integrativa_a: 'Integrativa A',
+                    tessera_integrativa_b: 'Integrativa B',
+                };
+                const tessLabel = tessLabelMap[chosenTipo] || nuovoLivelloCopertura;
+
+                totalBase += quotaTessera;
+                causaleParts.push(`Rinnovo Tessera CSEN ${tessLabel}`);
+                lineItems.push({
+                    price_data: {
+                        currency: 'eur',
+                        product_data: {
+                            name: `Rinnovo Tessera CSEN (${tessLabel})`,
+                            description: `Nuova scadenza stimata: ${nuovaScadenzaTessera.split('-').reverse().join('/')}`,
+                        },
+                        unit_amount: Math.round(quotaTessera * 100),
+                    },
+                    quantity: 1,
+                });
+            }
+
+            const baseAmountCents = Math.round(totalBase * 100);
+            const feeAmountCents = Math.round(totalBase * 0.02 * 100);
+            const totalQuota = ((baseAmountCents + feeAmountCents) / 100).toFixed(2);
+            const causale = `${causaleParts.join(' + ')} - ${fullName(profile)}`;
+
+            lineItems.push({
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: `Spese di gestione transazione e amministrative (2%)`,
+                    },
+                    unit_amount: feeAmountCents,
+                },
+                quantity: 1,
+            });
+
+            const session = await stripe.checkout.sessions.create({
+                line_items: lineItems,
+                mode: 'payment',
+                payment_intent_data: {
+                    description: stripeDesc(causale)
+                },
+                customer_email: profile.email,
+                metadata: {
+                    is_membership_renewal: 'true',
+                    utenteId: utenteId,
+                    anagraficaId: String(anag.id),
+                    rinnova_socio: doRinnovaSocio ? 'true' : 'false',
+                    nuova_scadenza_socio: nuovaScadenzaSocio,
+                    rinnova_tessera: doRinnovaTessera ? 'true' : 'false',
+                    nuovo_tipo_tessera: nuovoTipoTessera,
+                    nuovo_livello_copertura: nuovoLivelloCopertura,
+                    nuova_scadenza_tessera: nuovaScadenzaTessera,
+                    importo: totalQuota,
+                    causale: causale
+                },
+                success_url: `${reqOrigin}/portal/dashboard.html?renewal_payment=success`,
+                cancel_url: `${reqOrigin}/portal/dashboard.html?renewal_payment=cancel`,
+            });
 
             return res.status(200).json({ url: session.url });
         }
