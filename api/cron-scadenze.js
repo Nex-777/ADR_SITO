@@ -2,17 +2,68 @@ import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from './_utils/resend-mail.js';
 import { sendTelegramAlert, escapeTelegramHtml } from './_utils/telegram-bot.js';
 
+/**
+ * Filtra ed elimina duplicati per anagrafica replicando 1:1 la logica di
+ * loadDocsAttesa() e loadCertificatiGialli() della Dashboard.
+ */
+export function filterVisibleApprovalItems(rows = []) {
+    const seenAnag = new Set();
+    const visible = [];
+
+    for (const item of rows) {
+        const anag = item?.anagrafiche;
+        const raList = Array.isArray(anag?.registro_approvazioni)
+            ? anag.registro_approvazioni
+            : (anag?.registro_approvazioni ? [anag.registro_approvazioni] : []);
+        const rtList = Array.isArray(anag?.registro_tesserati)
+            ? anag.registro_tesserati
+            : (anag?.registro_tesserati ? [anag.registro_tesserati] : []);
+
+        const isSocioRespinto = raList.some(r => r?.stato === 'RESPINTO');
+        const hasActiveTess = rtList.some(t => t?.stato_tesseramento === 'ATTIVO');
+        if (isSocioRespinto && !hasActiveTess) continue;
+
+        if (item?.anagrafica_id) {
+            if (seenAnag.has(item.anagrafica_id)) continue;
+            seenAnag.add(item.anagrafica_id);
+        }
+        visible.push(item);
+    }
+
+    return visible;
+}
+
+function appendDigestSection(lines, labelHtml, items, formatLine, overflowLabel = 'elementi') {
+    if (!items || items.length === 0) return;
+    lines.push(`${labelHtml} (${items.length}):</b>`);
+    items.slice(0, 10).forEach(item => lines.push(formatLine(item)));
+    if (items.length > 10) {
+        lines.push(`  <i>...e altri ${items.length - 10} ${overflowLabel}</i>`);
+    }
+    lines.push('');
+}
+
+function formatAnagName(anag) {
+    return `${anag?.nome || ''} ${anag?.cognome || ''}`.trim() || 'N/D';
+}
+
 export function buildDailyApprovalDigestMessage({
     pendingPayments = [],
     incompleteRegistrations = [],
+    docsAttesa = [],
+    certGialli = [],
+    sociAttesa = [],
+    tessAttesa = [],
+    recuperoPwd = [],
     counts = {}
 }) {
     const escapeTg = escapeTelegramHtml;
-    const docsCount = counts.docsAttesa || 0;
-    const certsCount = counts.certGialli || 0;
-    const sociCount = counts.sociAttesa || 0;
-    const tessCount = counts.tessAttesa || 0;
-    const pwdCount = counts.recuperoPwd || 0;
+
+    const docsCount = docsAttesa.length > 0 ? docsAttesa.length : (counts.docsAttesa || 0);
+    const certsCount = certGialli.length > 0 ? certGialli.length : (counts.certGialli || 0);
+    const sociCount = sociAttesa.length > 0 ? sociAttesa.length : (counts.sociAttesa || 0);
+    const tessCount = tessAttesa.length > 0 ? tessAttesa.length : (counts.tessAttesa || 0);
+    const pwdCount = recuperoPwd.length > 0 ? recuperoPwd.length : (counts.recuperoPwd || 0);
 
     const totalItems =
         pendingPayments.length +
@@ -29,46 +80,82 @@ export function buildDailyApprovalDigestMessage({
         `📋 <b>PROMEMORIA GIORNALIERO — REGISTRO APPROVAZIONI</b>\n`
     ];
 
-    if (pendingPayments.length > 0) {
-        lines.push(`💳 <b>In Attesa di Pagamento (${pendingPayments.length}):</b>`);
-        pendingPayments.slice(0, 10).forEach(item => {
+    appendDigestSection(
+        lines,
+        '💳 <b>In Attesa di Pagamento',
+        pendingPayments,
+        item => {
             const anag = item.anagrafiche || {};
-            const nome = `${anag.nome || ''} ${anag.cognome || ''}`.trim() || 'N/D';
             const quota = parseFloat(anag.utenti?.quota_totale || 0);
             const quotaTxt = quota > 0 ? ` — €${quota.toFixed(2)}` : '';
-            lines.push(`• ${escapeTg(nome)} (${escapeTg(item.tipo || 'N/D')}${quotaTxt})`);
-        });
-        if (pendingPayments.length > 10) {
-            lines.push(`  <i>...e altri ${pendingPayments.length - 10} utenti</i>`);
-        }
-        lines.push('');
-    }
+            return `• ${escapeTg(formatAnagName(anag))} (${escapeTg(item.tipo || 'N/D')}${quotaTxt})`;
+        },
+        'utenti'
+    );
 
-    if (incompleteRegistrations.length > 0) {
-        lines.push(`⚠️ <b>Registrazioni Incomplete / OTP Sospeso (&gt;1h) (${incompleteRegistrations.length}):</b>`);
-        incompleteRegistrations.slice(0, 10).forEach(g => {
-            const nome = `${g.nome || ''} ${g.cognome || ''}`.trim() || 'N/D';
+    appendDigestSection(
+        lines,
+        '⚠️ <b>Registrazioni Incomplete / OTP Sospeso (&gt;1h)',
+        incompleteRegistrations,
+        g => {
             const dateIt = g.data_creazione
                 ? new Date(g.data_creazione).toLocaleDateString('it-IT', { timeZone: 'Europe/Rome' })
                 : '';
-            lines.push(`• ${escapeTg(nome)} (${escapeTg(g.email || '')}${dateIt ? ` — ${dateIt}` : ''})`);
-        });
-        if (incompleteRegistrations.length > 10) {
-            lines.push(`  <i>...e altre ${incompleteRegistrations.length - 10} pratiche</i>`);
+            return `• ${escapeTg(formatAnagName(g))} (${escapeTg(g.email || '')}${dateIt ? ` — ${dateIt}` : ''})`;
+        },
+        'pratiche'
+    );
+
+    appendDigestSection(
+        lines,
+        '🪪 <b>Documenti Identità da Verificare',
+        docsAttesa,
+        d => `• ${escapeTg(formatAnagName(d.anagrafiche))} (${escapeTg(d.stato_validazione || 'IN_ATTESA')})`
+    );
+
+    appendDigestSection(
+        lines,
+        '🩺 <b>Certificati Medici in Revisione',
+        certGialli,
+        c => `• ${escapeTg(formatAnagName(c.anagrafiche))} (${escapeTg(c.stato_validazione || 'GIALLO')})`
+    );
+
+    appendDigestSection(
+        lines,
+        '🤝 <b>Soci in Attesa Delibera',
+        sociAttesa,
+        s => `• ${escapeTg(formatAnagName(s.anagrafiche))} (${escapeTg(s.tipo || 'SOCIO')})`
+    );
+
+    appendDigestSection(
+        lines,
+        '🥋 <b>Tesserati in Attesa Attivazione',
+        tessAttesa,
+        t => `• ${escapeTg(formatAnagName(t.anagrafiche))}`
+    );
+
+    appendDigestSection(
+        lines,
+        '🔑 <b>Richieste Recupero Password',
+        recuperoPwd,
+        p => {
+            const nom = p.nominativo || formatAnagName(p);
+            const label = nom !== 'N/D' ? `${escapeTg(nom)} (${escapeTg(p.email || '')})` : escapeTg(p.email || 'N/D');
+            return `• ${label}`;
         }
-        lines.push('');
-    }
+    );
 
-    const otherCards = [];
-    if (docsCount > 0) otherCards.push(`🪪 Documenti Identità da Verificare: <b>${docsCount}</b>`);
-    if (certsCount > 0) otherCards.push(`🩺 Certificati Medici in Revisione: <b>${certsCount}</b>`);
-    if (sociCount > 0) otherCards.push(`🤝 Soci in Attesa Delibera: <b>${sociCount}</b>`);
-    if (tessCount > 0) otherCards.push(`🥋 Tesserati in Attesa Attivazione: <b>${tessCount}</b>`);
-    if (pwdCount > 0) otherCards.push(`🔑 Richieste Recupero Password: <b>${pwdCount}</b>`);
+    // Fallback numerico per chiamate che passano solo counts senza array dettagliati
+    const otherCounts = [];
+    if (docsAttesa.length === 0 && (counts.docsAttesa || 0) > 0) otherCounts.push(`🪪 Documenti Identità da Verificare: <b>${counts.docsAttesa}</b>`);
+    if (certGialli.length === 0 && (counts.certGialli || 0) > 0) otherCounts.push(`🩺 Certificati Medici in Revisione: <b>${counts.certGialli}</b>`);
+    if (sociAttesa.length === 0 && (counts.sociAttesa || 0) > 0) otherCounts.push(`🤝 Soci in Attesa Delibera: <b>${counts.sociAttesa}</b>`);
+    if (tessAttesa.length === 0 && (counts.tessAttesa || 0) > 0) otherCounts.push(`🥋 Tesserati in Attesa Attivazione: <b>${counts.tessAttesa}</b>`);
+    if (recuperoPwd.length === 0 && (counts.recuperoPwd || 0) > 0) otherCounts.push(`🔑 Richieste Recupero Password: <b>${counts.recuperoPwd}</b>`);
 
-    if (otherCards.length > 0) {
+    if (otherCounts.length > 0) {
         lines.push(`📌 <b>Altre Code Aperte nel Registro:</b>`);
-        otherCards.forEach(c => lines.push(`• ${c}`));
+        otherCounts.forEach(c => lines.push(`• ${c}`));
         lines.push('');
     }
 
@@ -77,8 +164,9 @@ export function buildDailyApprovalDigestMessage({
 }
 
 export async function runApprovalDigest(supabase) {
-    // 4a. Auto-archiviazione richieste recupero password più vecchie di 7 giorni
     const sevenDaysAgoIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // 4a. Auto-archiviazione richieste recupero password più vecchie di 7 giorni
     await supabase
         .from('richieste_recupero_password')
         .update({ stato: 'archiviato', risolto_il: new Date().toISOString() })
@@ -100,38 +188,66 @@ export async function runApprovalDigest(supabase) {
         .lt('data_creazione', oneHourAgoIso)
         .order('data_creazione', { ascending: false });
 
-    // 4d. Contatori sintetici delle altre card pendenti
-    const [docsRes, certsRes, sociRes, tessRes, pwdRes] = await Promise.all([
+    // 4d. Card 1, 2, 3, 4, 7 con filtri allineati 1:1 alla Dashboard e nominativi espliciti
+    const [docsRes, certsRes, pendingApprRes, pwdRes] = await Promise.all([
         supabase.from('documenti_identita')
-            .select('id', { count: 'exact', head: true })
+            .select('id, anagrafica_id, stato_validazione, created_at, anagrafiche(nome, cognome, registro_approvazioni(stato), registro_tesserati(stato_tesseramento))')
             .in('stato_validazione', ['GIALLO', 'IN_ATTESA'])
-            .eq('revisionato_manualmente', false),
+            .eq('revisionato_manualmente', false)
+            .order('created_at', { ascending: false }),
         supabase.from('certificati_medici')
-            .select('id', { count: 'exact', head: true })
-            .eq('stato_validazione', 'GIALLO'),
+            .select('id, anagrafica_id, stato_validazione, created_at, anagrafiche(nome, cognome, registro_approvazioni(stato), registro_tesserati(stato_tesseramento))')
+            .not('file_url', 'is', null)
+            .neq('file_url', '')
+            .neq('file_url', 'fittizio')
+            .eq('revisionato_manualmente', false)
+            .or(`stato_validazione.in.(GIALLO,IN_ATTESA),and(stato_validazione.eq.ROSSO,created_at.gte.${sevenDaysAgoIso})`)
+            .order('created_at', { ascending: false }),
         supabase.from('registro_approvazioni')
-            .select('id', { count: 'exact', head: true })
+            .select('id, tipo, anagrafica_id, data_richiesta, anagrafiche(nome, cognome)')
             .eq('stato', 'IN_ATTESA')
-            .in('tipo', ['SOCIO', 'SOCIO_TESSERATO']),
-        supabase.from('registro_approvazioni')
-            .select('id', { count: 'exact', head: true })
-            .eq('stato', 'IN_ATTESA')
-            .in('tipo', ['TESSERATO', 'SOCIO_TESSERATO']),
+            .in('tipo', ['SOCIO', 'SOCIO_TESSERATO', 'TESSERATO'])
+            .order('data_richiesta', { ascending: true }),
         supabase.from('richieste_recupero_password')
-            .select('id', { count: 'exact', head: true })
+            .select('id, email, created_at')
             .eq('stato', 'in_attesa')
+            .order('created_at', { ascending: false })
     ]);
+
+    const docsAttesa = filterVisibleApprovalItems(docsRes?.data || []);
+    const certGialli = filterVisibleApprovalItems(certsRes?.data || []);
+    const pendingAppr = pendingApprRes?.data || [];
+    const sociAttesa = pendingAppr.filter(x => x.tipo === 'SOCIO' || x.tipo === 'SOCIO_TESSERATO');
+    const tessAttesa = pendingAppr.filter(x => x.tipo === 'TESSERATO' || x.tipo === 'SOCIO_TESSERATO');
+
+    let recuperoPwd = pwdRes?.data || [];
+    if (recuperoPwd.length > 0) {
+        const emails = [...new Set(recuperoPwd.map(r => (r.email || '').trim().toLowerCase()).filter(Boolean))];
+        if (emails.length > 0) {
+            const orFilter = emails.map(e => `email.ilike."${e.replace(/["\\]/g, '')}"`).join(',');
+            const { data: matchedUsers } = await supabase
+                .from('utenti')
+                .select('email, nome, cognome')
+                .or(orFilter);
+            const userMap = {};
+            (matchedUsers || []).forEach(u => {
+                if (u.email) userMap[u.email.trim().toLowerCase()] = `${u.nome || ''} ${u.cognome || ''}`.trim();
+            });
+            recuperoPwd = recuperoPwd.map(r => ({
+                ...r,
+                nominativo: userMap[(r.email || '').trim().toLowerCase()] || 'Utente non censito'
+            }));
+        }
+    }
 
     const digestMsg = buildDailyApprovalDigestMessage({
         pendingPayments: pendingPayments || [],
         incompleteRegistrations: incompleteRegistrations || [],
-        counts: {
-            docsAttesa: docsRes?.count || 0,
-            certGialli: certsRes?.count || 0,
-            sociAttesa: sociRes?.count || 0,
-            tessAttesa: tessRes?.count || 0,
-            recuperoPwd: pwdRes?.count || 0
-        }
+        docsAttesa,
+        certGialli,
+        sociAttesa,
+        tessAttesa,
+        recuperoPwd
     });
 
     if (digestMsg) {

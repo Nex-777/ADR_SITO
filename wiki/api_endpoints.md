@@ -135,5 +135,5 @@ Generates secure single-use password recovery links on-demand for board members 
 -   **Actions**:
     -   Scans medical certificates and CSEN cards for expirations (-60d, -30d, -15d, expired) and social dues renewals.
     -   Archives `richieste_recupero_password` rows older than 7 days.
-    -   Sends a daily unified Telegram digest (`buildDailyApprovalDigestMessage`) covering pending payments (`IN_ATTESA_PAGAMENTO`), stuck incomplete registrations (`vw_registrazioni_incomplete` > 1h), and summary counters of all other open cards in `#panel-approvazioni`.
+    -   Sends a daily unified Telegram digest (`buildDailyApprovalDigestMessage` + `filterVisibleApprovalItems`) with athlete names (up to 10 per card) across all 7 cards of `#panel-approvazioni`, mirroring 1:1 the Dashboard's visibility rules (`revisionato_manualmente = false`, valid `file_url`, excluding rejected candidates without active membership, per-athlete deduplication).
 

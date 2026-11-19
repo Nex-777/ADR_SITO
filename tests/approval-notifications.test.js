@@ -3,7 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { buildRegistrationTelegramMessage } from '../api/otp-verify.js';
 import { handleNotifyRecoveryRequest } from '../api/admin-recovery-link.js';
-import { buildDailyApprovalDigestMessage } from '../api/cron-scadenze.js';
+import {
+    buildDailyApprovalDigestMessage,
+    filterVisibleApprovalItems,
+    runApprovalDigest
+} from '../api/cron-scadenze.js';
 
 describe('Registro Approvazioni — Messaggio Riepilogativo & Notifiche Telegram', () => {
     const originalEnv = { ...process.env };
@@ -258,17 +262,60 @@ describe('Registro Approvazioni — Messaggio Riepilogativo & Notifiche Telegram
         });
     });
 
-    describe('buildDailyApprovalDigestMessage (api/cron-scadenze.js)', () => {
+    describe('filterVisibleApprovalItems & buildDailyApprovalDigestMessage (api/cron-scadenze.js)', () => {
+        it('filtra candidati respinti senza tesseramento attivo e deduplica per anagrafica_id', () => {
+            const rows = [
+                {
+                    id: 'c1',
+                    anagrafica_id: 'a-respinto',
+                    anagrafiche: {
+                        nome: 'Respinto',
+                        cognome: 'Uno',
+                        registro_approvazioni: [{ stato: 'RESPINTO' }],
+                        registro_tesserati: []
+                    }
+                },
+                {
+                    id: 'c2',
+                    anagrafica_id: 'a-respinto-attivo',
+                    anagrafiche: {
+                        nome: 'Respinto',
+                        cognome: 'Attivo',
+                        registro_approvazioni: [{ stato: 'RESPINTO' }],
+                        registro_tesserati: [{ stato_tesseramento: 'ATTIVO' }]
+                    }
+                },
+                {
+                    id: 'c3-new',
+                    anagrafica_id: 'a-dup',
+                    anagrafiche: { nome: 'Mario', cognome: 'Rossi', registro_approvazioni: [], registro_tesserati: [] }
+                },
+                {
+                    id: 'c3-old',
+                    anagrafica_id: 'a-dup',
+                    anagrafiche: { nome: 'Mario', cognome: 'Rossi', registro_approvazioni: [], registro_tesserati: [] }
+                }
+            ];
+
+            const visible = filterVisibleApprovalItems(rows);
+            expect(visible.map(v => v.id)).toEqual(['c2', 'c3-new']);
+        });
+
         it('ritorna null se non ci sono elementi pendenti in nessuna card', () => {
             const msg = buildDailyApprovalDigestMessage({
                 pendingPayments: [],
                 incompleteRegistrations: [],
+                docsAttesa: [],
+                certGialli: [],
+                sociAttesa: [],
+                tessAttesa: [],
+                recuperoPwd: [],
                 counts: { docsAttesa: 0, certGialli: 0, sociAttesa: 0, tessAttesa: 0, recuperoPwd: 0 }
             });
             expect(msg).toBeNull();
         });
 
-        it('genera digest unificato per Attesa Pagamento, Registrazioni Incomplete >1h e altre code aperte', () => {
+        it('genera digest unificato con nominativi per tutte le card popolate', () => {
             const msg = buildDailyApprovalDigestMessage({
                 pendingPayments: [
                     { tipo: 'TESSERATO', anagrafiche: { nome: 'Elena', cognome: 'Neri', utenti: { quota_totale: 45 } } }
@@ -276,16 +323,87 @@ describe('Registro Approvazioni — Messaggio Riepilogativo & Notifiche Telegram
                 incompleteRegistrations: [
                     { nome: 'Marco', cognome: 'Blu', email: 'marco@blu.it', data_creazione: '2026-11-16T10:00:00Z' }
                 ],
-                counts: { docsAttesa: 2, certGialli: 1, sociAttesa: 3, tessAttesa: 0, recuperoPwd: 1 }
+                docsAttesa: [
+                    { stato_validazione: 'GIALLO', anagrafiche: { nome: 'Giulia', cognome: 'Viola' } }
+                ],
+                certGialli: [
+                    { stato_validazione: 'GIALLO', anagrafiche: { nome: 'Luca', cognome: 'Verdi' } }
+                ],
+                sociAttesa: [
+                    { tipo: 'SOCIO', anagrafiche: { nome: 'Paolo', cognome: 'Bianchi' } }
+                ],
+                tessAttesa: [
+                    { anagrafiche: { nome: 'Sara', cognome: 'Neri' } }
+                ],
+                recuperoPwd: [
+                    { nominativo: 'Andrea Flaiani', email: 'aflaiani@libero.it' }
+                ]
             });
 
             expect(msg).toContain('PROMEMORIA GIORNALIERO — REGISTRO APPROVAZIONI');
-            expect(msg).toContain('In Attesa di Pagamento (1)');
-            expect(msg).toContain('Elena Neri (TESSERATO — €45.00)');
-            expect(msg).toContain('Registrazioni Incomplete / OTP Sospeso (&gt;1h) (1)');
-            expect(msg).toContain('Marco Blu (marco@blu.it');
+            expect(msg).toContain('💳 <b>In Attesa di Pagamento (1):</b>');
+            expect(msg).toContain('• Elena Neri (TESSERATO — €45.00)');
+            expect(msg).toContain('⚠️ <b>Registrazioni Incomplete / OTP Sospeso (&gt;1h) (1):</b>');
+            expect(msg).toContain('• Marco Blu (marco@blu.it');
+            expect(msg).toContain('🪪 <b>Documenti Identità da Verificare (1):</b>');
+            expect(msg).toContain('• Giulia Viola (GIALLO)');
+            expect(msg).toContain('🩺 <b>Certificati Medici in Revisione (1):</b>');
+            expect(msg).toContain('• Luca Verdi (GIALLO)');
+            expect(msg).toContain('🤝 <b>Soci in Attesa Delibera (1):</b>');
+            expect(msg).toContain('• Paolo Bianchi (SOCIO)');
+            expect(msg).toContain('🥋 <b>Tesserati in Attesa Attivazione (1):</b>');
+            expect(msg).toContain('• Sara Neri');
+            expect(msg).toContain('🔑 <b>Richieste Recupero Password (1):</b>');
+            expect(msg).toContain('• Andrea Flaiani (aflaiani@libero.it)');
+        });
+
+        it('mantiene retrocompatibilita con counts numerici e tronca liste > 10 nominativi', () => {
+            const manyCerts = Array.from({ length: 12 }, (_, idx) => ({
+                stato_validazione: 'GIALLO',
+                anagrafiche: { nome: `Atleta${idx + 1}`, cognome: 'Test' }
+            }));
+            const msg = buildDailyApprovalDigestMessage({
+                certGialli: manyCerts,
+                counts: { docsAttesa: 2 }
+            });
+
+            expect(msg).toContain('🩺 <b>Certificati Medici in Revisione (12):</b>');
+            expect(msg).toContain('• Atleta10 Test (GIALLO)');
+            expect(msg).not.toContain('• Atleta11 Test');
+            expect(msg).toContain('...e altri 2 elementi');
             expect(msg).toContain('Documenti Identità da Verificare: <b>2</b>');
-            expect(msg).toContain('Richieste Recupero Password: <b>1</b>');
+        });
+
+        it('runApprovalDigest filtra revisionato_manualmente = false su certificati_medici e non invia alert se zero pratiche', async () => {
+            const mockFetch = vi.fn();
+            globalThis.fetch = mockFetch;
+
+            const recordedCertEqs = [];
+            const makeChain = (tableName) => {
+                const chain = {
+                    select: vi.fn(() => chain),
+                    update: vi.fn(() => chain),
+                    eq: vi.fn((col, val) => {
+                        if (tableName === 'certificati_medici') recordedCertEqs.push([col, val]);
+                        return chain;
+                    }),
+                    neq: vi.fn(() => chain),
+                    not: vi.fn(() => chain),
+                    in: vi.fn(() => chain),
+                    lt: vi.fn(() => chain),
+                    or: vi.fn(() => chain),
+                    order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+                    then: (resolve) => resolve({ data: [], error: null })
+                };
+                return chain;
+            };
+
+            const supabase = { from: vi.fn((tbl) => makeChain(tbl)) };
+            const sent = await runApprovalDigest(supabase);
+
+            expect(sent).toBe(false);
+            expect(recordedCertEqs).toContainEqual(['revisionato_manualmente', false]);
+            expect(mockFetch).not.toHaveBeenCalled();
         });
     });
 

@@ -4461,3 +4461,12 @@ pm audit --omit=dev riporta 0 vulnerabilità).
 - **Testing & Quality Assurance**:
   - Creata suite `tests/approval-notifications.test.js` (10 test unitari). Test globali: 30 file passati (335/335 test).
   - Aggiornati `wiki/api_endpoints.md`, `wiki/database_schema.md` e `wiki/log.md`. Versione bumped a `v1.06.42`.
+
+## [2026-11-19] fix | Parità Filtri Digest Cron con Dashboard & Nominativi Code Telegram (v1.06.43)
+- **Cron Giornaliero (`api/cron-scadenze.js`)**:
+  - Risolti i falsi positivi di `Certificati Medici in Revisione: 1` (record storico di Marco Giuseppe Balloni del 30/10/2026 già marcato `revisionato_manualmente = true` e sostituito da certificato `VERDE`).
+  - Introdotta `filterVisibleApprovalItems(rows)` con parità 1:1 rispetto a `loadDocsAttesa()` e `loadCertificatiGialli()` della Dashboard (`revisionato_manualmente = false`, `file_url` valido, esclusione candidati respinti senza tesseramento attivo, deduplicazione per atleta).
+  - Estesa `buildDailyApprovalDigestMessage(...)` per includere i nominativi (fino a 10 per card, con proiezione minima PII conforme a `SECURITY.md` §2.4) su tutte le 7 card del Registro Approvazioni.
+- **Testing & Quality Assurance**:
+  - Aggiornata suite `tests/approval-notifications.test.js` (13 test specifici). Test globali: 30 file passati (338/338 test).
+  - Aggiornati `wiki/api_endpoints.md` e `wiki/log.md`. Versione bumped a `v1.06.43`.
